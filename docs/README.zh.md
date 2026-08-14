@@ -6,9 +6,33 @@
 
 通过 OAuth 将你的 ChatGPT 订阅连接到 DeepSeek Harness，同时保留用户自主默认项、Harness 原生审批、非敏感诊断和可靠的会话恢复。
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/hero.jpg" alt="Codex Connect — 通过 ChatGPT OAuth 连接 DeepSeek Harness" width="100%">
+</p>
+
 `dsh-codex-connect` 提供 `openai-codex` 模型目录和独立的 ChatGPT OAuth 登录。模型仍走 Harness 标准 LLM 服务，因此流式输出、工具调用、reasoning replay、压缩、文件系统控制、权限门禁和审批提示仍由 Harness 负责。ChatGPT 订阅不会因此变成 OpenAI Platform API 凭据。
 
 安装是增量的：bundle 不会替换当前主模型或搜索路由；独立搜索提供方和 `view_image` 工具也默认关闭，必须显式开启。
+
+## 在 Harness 中的样子
+
+在 **设置 → 插件 → 插件配置 → Codex Connect** 中登录并管理插件。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/oauth-status.jpg" alt="Harness 插件配置中的 Codex Connect ChatGPT OAuth 状态" width="720">
+</p>
+
+Codex 搜索与 `view_image` 都是显式、按 profile 控制的可选能力：
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/plugin-configuration.jpg" alt="DeepSeek Harness 中的 Codex Connect 可选能力设置" width="720">
+</p>
+
+Codex 模型会和现有提供方一起出现在 Harness 原生模型选择器中：
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/model-selector.jpg" alt="DeepSeek Harness 模型选择器中的 OpenAI Codex 模型" width="320">
+</p>
 
 ## 安装
 
@@ -17,7 +41,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 dsh web
 ```
 
-如需精确固定此版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.4`。若 npm 不可用，可使用 GitHub tag 兜底：`dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.4'`。在 DeepSeek Harness 源码 checkout 中运行时，在命令前加 `pnpm`。本地开发可安装 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确固定此版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.5`。若 npm 不可用，可使用 GitHub tag 兜底：`dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.5'`。在 DeepSeek Harness 源码 checkout 中运行时，在命令前加 `pnpm`。本地开发可安装 `link:/absolute/path/to/dsh-codex-connect`。
 
 可在 **设置 → 插件 → 插件配置 → Codex Connect → 使用 ChatGPT 登录**，也可使用 CLI：
 

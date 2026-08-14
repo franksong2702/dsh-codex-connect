@@ -6,9 +6,33 @@ English | [中文](docs/README.zh.md)
 
 Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
+</p>
+
 `dsh-codex-connect` adds the `openai-codex` model catalog and a separate ChatGPT OAuth login. Models run through Harness's normal LLM service, so streaming, tool calls, reasoning replay, compaction, filesystem controls, permission gates, and approval prompts remain Harness-owned. It does not turn a ChatGPT subscription into an OpenAI Platform API credential.
 
 Installation is additive. The bundle does not replace the current default model or search route, and its standalone search provider and `view_image` tool are disabled until explicitly enabled.
+
+## See it in Harness
+
+Sign in and manage the plugin from **Settings → Plugins → Plugin configuration → Codex Connect**.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/oauth-status.jpg" alt="Codex Connect ChatGPT OAuth status inside Harness plugin configuration" width="720">
+</p>
+
+Optional Codex search and `view_image` capabilities remain explicit, profile-scoped choices:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/plugin-configuration.jpg" alt="Codex Connect optional capability settings in DeepSeek Harness" width="720">
+</p>
+
+Codex models then appear in Harness's normal model picker alongside the existing providers:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/model-selector.jpg" alt="OpenAI Codex models in the DeepSeek Harness model picker" width="320">
+</p>
 
 ## Install
 
@@ -17,7 +41,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 dsh web
 ```
 
-To pin this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.4`. If npm is unavailable, use the GitHub tag fallback: `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.4'`. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. For a local checkout, install `link:/absolute/path/to/dsh-codex-connect`.
+To pin this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.5`. If npm is unavailable, use the GitHub tag fallback: `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.5'`. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. For a local checkout, install `link:/absolute/path/to/dsh-codex-connect`.
 
 Sign in from **Settings → Plugins → Plugin configuration → Codex Connect → Sign in with ChatGPT**, or use the CLI:
 
