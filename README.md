@@ -1,6 +1,8 @@
 # Codex Connect
 
-English | [中文](README.zh.md)
+[![npm version](https://img.shields.io/npm/v/dsh-codex-connect?label=npm&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
+
+English | [中文](docs/README.zh.md)
 
 Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
@@ -11,11 +13,11 @@ Installation is additive. The bundle does not replace the current default model 
 ## Install
 
 ```sh
-dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.3'
+dsh plugin --profile web add dsh-codex-connect@alpha
 dsh web
 ```
 
-This installs the current alpha directly from its tagged GitHub release using Harness's supported Git package path. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. For a local checkout, install `link:/absolute/path/to/dsh-codex-connect`.
+To pin this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.4`. If npm is unavailable, use the GitHub tag fallback: `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.4'`. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. For a local checkout, install `link:/absolute/path/to/dsh-codex-connect`.
 
 Sign in from **Settings → Plugins → Plugin configuration → Codex Connect → Sign in with ChatGPT**, or use the CLI:
 
@@ -92,7 +94,7 @@ To add the image-loading tool, set `enableImageTool: true` on `llm-openai-codex`
 - Remote `view_image` URLs are limited to public HTTP(S) destinations. Every DNS result and redirect is checked, and the connection is pinned to the validated address so localhost, private networks, link-local services, and cloud metadata endpoints remain unreachable.
 - No real OAuth operation is required for installation, build, tests, doctor, or package validation.
 
-See [INSTALL.md](INSTALL.md) for the idempotent agent runbook, [MIGRATION.md](MIGRATION.md) for migration from `dsh-codex`, and [docs/design.md](docs/design.md) for architecture details.
+See [INSTALL.md](INSTALL.md) for the idempotent agent runbook, [RELEASING.md](RELEASING.md) for the Alpha release checklist, [MIGRATION.md](MIGRATION.md) for migration from `dsh-codex`, and [docs/design.md](docs/design.md) for architecture details.
 
 ## Development
 

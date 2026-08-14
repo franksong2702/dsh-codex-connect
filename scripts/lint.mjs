@@ -1,10 +1,11 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 const failures = []
 
 if (packageJson.name !== 'dsh-codex-connect') failures.push('package name must be dsh-codex-connect')
 if (!/^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u.test(packageJson.version)) failures.push('package version must be a 0.1.0 alpha release')
+if (packageJson.publishConfig?.tag !== 'alpha') failures.push('publishConfig.tag must be alpha')
 if (packageJson.displayName !== 'Codex Connect') failures.push('displayName mismatch')
 if (packageJson.description !== 'ChatGPT OAuth and Codex models for DeepSeek Harness.') failures.push('description mismatch')
 if (packageJson.author !== 'Frank Song') failures.push('package author must identify the Codex Connect author')
@@ -18,7 +19,7 @@ for (const keyword of ['dsh-plugin', 'deepseek-harness', 'openai-codex', 'chatgp
 const productFiles = [
   'package.json',
   'README.md',
-  'README.zh.md',
+  'docs/README.zh.md',
   'INSTALL.md',
   'MIGRATION.md',
   'NOTICE',
@@ -37,8 +38,18 @@ for (const filename of productFiles) {
 
 const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8')
 const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.'
-if (!readme.startsWith(`# Codex Connect\n\nEnglish | [中文](README.zh.md)\n\n${fullDescription}\n`)) {
+if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect?label=npm&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
   failures.push('README opening description mismatch')
+}
+if (!readme.includes('dsh plugin --profile web add dsh-codex-connect@alpha')) failures.push('README must prefer the npm alpha install command')
+if (!(await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')).includes('dsh plugin --profile web add dsh-codex-connect@alpha')) {
+  failures.push('Chinese README must prefer the npm alpha install command')
+}
+try {
+  await stat(new URL('../README.zh.md', import.meta.url))
+  failures.push('root README.zh.md must migrate to docs/README.zh.md')
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
 }
 
 const notice = await readFile(new URL('../NOTICE', import.meta.url), 'utf8')

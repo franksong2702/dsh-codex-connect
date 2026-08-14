@@ -1,6 +1,8 @@
 # Codex Connect
 
-[English](README.md) | 中文
+[![npm version](https://img.shields.io/npm/v/dsh-codex-connect?label=npm&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
+
+[English](../README.md) | 中文
 
 通过 OAuth 将你的 ChatGPT 订阅连接到 DeepSeek Harness，同时保留用户自主默认项、Harness 原生审批、非敏感诊断和可靠的会话恢复。
 
@@ -11,11 +13,11 @@
 ## 安装
 
 ```sh
-dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.3'
+dsh plugin --profile web add dsh-codex-connect@alpha
 dsh web
 ```
 
-该命令通过 Harness 支持的 Git package 方式，直接安装 GitHub 上带版本标签的当前 Alpha。在 DeepSeek Harness 源码 checkout 中运行时，在命令前加 `pnpm`。本地开发可安装 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确固定此版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.4`。若 npm 不可用，可使用 GitHub tag 兜底：`dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.4'`。在 DeepSeek Harness 源码 checkout 中运行时，在命令前加 `pnpm`。本地开发可安装 `link:/absolute/path/to/dsh-codex-connect`。
 
 可在 **设置 → 插件 → 插件配置 → Codex Connect → 使用 ChatGPT 登录**，也可使用 CLI：
 
@@ -82,11 +84,11 @@ dsh plugin --profile web exec dsh-codex-connect doctor
 - 远程 `view_image` 只允许公共 HTTP(S) 目标；每一次 DNS 结果与重定向都会重新检查，并将连接固定到已验证地址，从而阻止 localhost、私网、link-local 服务和云元数据地址。
 - 安装、构建、测试、doctor 和包内容验证均不需要真实 OAuth。
 
-详见 [INSTALL.md](INSTALL.md)、[MIGRATION.md](MIGRATION.md) 与 [docs/design.zh.md](docs/design.zh.md)。
+详见 [安装运行手册](../INSTALL.md)、[Alpha 发布清单](../RELEASING.md)、[MIGRATION.md](../MIGRATION.md) 与 [架构说明](design.zh.md)。
 
 ## 法律与致谢
 
-Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包含派生自 [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex) 的软件；上游内容继续保留 Copyright 2026 Yan-Zero。两部分均按 Apache-2.0 发布，详情见 [NOTICE](NOTICE)。本项目与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。
+Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包含派生自 [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex) 的软件；上游内容继续保留 Copyright 2026 Yan-Zero。两部分均按 Apache-2.0 发布，详情见 [NOTICE](../NOTICE)。本项目与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。
 
 ## 许可证
 

@@ -16,8 +16,10 @@ Install `dsh-codex-connect` into one requested DeepSeek Harness profile without 
 2. Install the package:
 
    ```sh
-   dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.3'
+   dsh plugin --profile web add dsh-codex-connect@alpha
    ```
+
+   To pin this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.4`. If npm is unavailable, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.4'`.
 
 3. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
 4. Confirm the effective `agent-default-model` and `web.searchProvider` values are unchanged from before installation.
@@ -61,9 +63,11 @@ Do not add the last two rows unless the user separately requested those routing 
 ## Update and removal
 
 ```sh
-dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#<new-release-tag>'
+dsh plugin --profile web update dsh-codex-connect@alpha
 dsh plugin --profile web remove dsh-codex-connect
 ```
+
+Use an exact npm version when a reproducible update is required; use a GitHub tag only as the npm-unavailable fallback.
 
 Removal of the package and removal of its separate OAuth file are different actions. Run `dsh plugin --profile web exec dsh-codex-connect logout` only with explicit credential-deletion authorization.
 
