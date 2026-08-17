@@ -27,6 +27,15 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("'@deepseek-ai/dsh-client-ui-model-selection/client'")
   })
 
+  it('registers Fast Mode before quota in the same additive Composer slot', async () => {
+    const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+    expect(client).toContain("id: 'openai-codex-fast-mode'")
+    expect(client).toContain('order: 10')
+    expect(client).toContain("id: 'openai-codex-quota'")
+    expect(client).toContain('order: 20')
+    expect(client.indexOf("id: 'openai-codex-fast-mode'")).toBeLessThan(client.indexOf("id: 'openai-codex-quota'"))
+  })
+
   it('renders a Codex Connect card and uses OpenAI Codex for the Composer provider', async () => {
     const [clientCard, locales, adapter] = await Promise.all([
       readFile(new URL('../src/client/OpenAICodexPluginCard.tsx', import.meta.url), 'utf8'),

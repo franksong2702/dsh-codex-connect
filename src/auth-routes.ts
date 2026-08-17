@@ -23,12 +23,15 @@ import {
   OpenAICodexTrustedOriginsStore,
   normalizeTrustedOrigin,
 } from './trusted-origins.ts'
+import { FastModeRegistry, isFastModeSessionId } from './fast-mode.ts'
+import { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
 
 export {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from './auth-paths.ts'
+export { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
 
 /** Maximum time a browser request waits for the provider's authorization URL. */
 export const OPENAI_CODEX_AUTH_URL_TIMEOUT_MS = 30_000
@@ -307,14 +310,100 @@ function json(res: ServerResponse, status: number, value: unknown): void {
   res.end(JSON.stringify(value))
 }
 
+export const OPENAI_CODEX_FAST_MODE_BODY_LIMIT = 4_096
+
+function header(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name]
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+function contentLength(req: IncomingMessage): number | undefined {
+  const raw = header(req, 'content-length')
+  if (raw === undefined) return undefined
+  if (!/^\d+$/u.test(raw.trim())) throw new TypeError('Fast Mode request content length is invalid')
+  const value = Number(raw)
+  if (!Number.isSafeInteger(value)) throw new TypeError('Fast Mode request content length is invalid')
+  return value
+}
+
+/** Collect one small JSON body without exposing or logging its contents. */
+async function readFastModeBody(req: IncomingMessage): Promise<unknown> {
+  const declared = contentLength(req)
+  if (declared !== undefined && (!Number.isFinite(declared) || declared > OPENAI_CODEX_FAST_MODE_BODY_LIMIT)) {
+    throw new RangeError('Fast Mode request body is too large')
+  }
+  const chunks: Uint8Array[] = []
+  let total = 0
+  const iterable = req as unknown as AsyncIterable<Uint8Array | string>
+  if (typeof (req as unknown as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] === 'function') {
+    for await (const chunk of iterable) {
+      const bytes = typeof chunk === 'string' ? Buffer.from(chunk) : new Uint8Array(chunk)
+      total += bytes.byteLength
+      if (total > OPENAI_CODEX_FAST_MODE_BODY_LIMIT) throw new RangeError('Fast Mode request body is too large')
+      chunks.push(bytes)
+    }
+  } else {
+    const body = (req as IncomingMessage & { body?: unknown }).body
+    if (typeof body === 'string') {
+      const bytes = Buffer.from(body)
+      if (bytes.byteLength > OPENAI_CODEX_FAST_MODE_BODY_LIMIT) throw new RangeError('Fast Mode request body is too large')
+      chunks.push(bytes)
+    } else if (body instanceof Uint8Array) {
+      if (body.byteLength > OPENAI_CODEX_FAST_MODE_BODY_LIMIT) throw new RangeError('Fast Mode request body is too large')
+      chunks.push(new Uint8Array(body))
+    } else if (body !== undefined) {
+      throw new TypeError('Fast Mode request body is invalid')
+    }
+  }
+  const bytes = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)))
+  if (bytes.byteLength === 0) throw new TypeError('Fast Mode request body is invalid')
+  let text: string
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    throw new TypeError('Fast Mode request body is invalid')
+  }
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    throw new TypeError('Fast Mode request body is invalid')
+  }
+}
+
+function fastModeSessionIdFromQuery(req: IncomingMessage): string | undefined {
+  const rawUrl = req.url
+  if (typeof rawUrl !== 'string') return undefined
+  try {
+    const url = new URL(rawUrl, 'http://dsh.invalid')
+    const values = url.searchParams.getAll('sessionId')
+    return values.length === 1 && isFastModeSessionId(values[0]) ? values[0] : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function fastModeBody(value: unknown): { sessionId: string; enabled: boolean } | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).length !== 2) return undefined
+  const sessionId = record['sessionId']
+  const enabled = record['enabled']
+  return isFastModeSessionId(sessionId) && typeof enabled === 'boolean'
+    ? { sessionId, enabled }
+    : undefined
+}
+
 /** Register the plugin-owned OAuth routes when the Web server is composed. */
 export function registerOpenAICodexAuthRoutes(
   ctx: Context,
   store: OpenAICodexCredentialStore,
   trustedOriginsOverride?: OpenAICodexTrustedOriginsStore,
+  fastModeOverride?: FastModeRegistry,
 ): void {
   const auth = new OpenAICodexWebAuth(store)
   const storedFilename = (store as OpenAICodexCredentialStore & { filename?: unknown }).filename
+  const fastMode = fastModeOverride ?? new FastModeRegistry()
   const trustedOrigins = trustedOriginsOverride ?? (typeof storedFilename === 'string'
     ? new OpenAICodexTrustedOriginsStore(join(dirname(storedFilename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME))
     : new OpenAICodexTrustedOriginsStore())
@@ -359,6 +448,31 @@ export function registerOpenAICodexAuthRoutes(
             json(res, 200, { ok: true })
           } catch (error: unknown) {
             json(res, 500, { error: safeMessage(error) })
+          }
+        },
+      }),
+      ctx.webServer.register({
+        kind: 'exact',
+        path: OPENAI_CODEX_FAST_MODE_PATH,
+        handler: async (req, res) => {
+          if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
+          if (!await authorize(req, res)) return
+          if (req.method === 'GET') {
+            const sessionId = fastModeSessionIdFromQuery(req)
+            if (sessionId === undefined) return json(res, 400, { error: 'invalid input' })
+            return json(res, 200, { enabled: fastMode.isEnabled(sessionId) })
+          }
+          const type = header(req, 'content-type')
+          if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
+            return json(res, 415, { error: 'unsupported content type' })
+          }
+          try {
+            const body = fastModeBody(await readFastModeBody(req))
+            if (body === undefined) return json(res, 400, { error: 'invalid input' })
+            fastMode.set(body.sessionId, body.enabled)
+            return json(res, 200, { enabled: fastMode.isEnabled(body.sessionId) })
+          } catch (error: unknown) {
+            return json(res, error instanceof RangeError ? 413 : 400, { error: error instanceof RangeError ? 'request body too large' : 'invalid input' })
           }
         },
       }),

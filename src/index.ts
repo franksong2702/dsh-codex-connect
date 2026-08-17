@@ -17,6 +17,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
 import { createOpenAICodexAdapter } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
+import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { viewImageTool } from './view-image.ts'
 import {
@@ -93,6 +94,14 @@ export type { OpenAICodexSettingsConfig } from './settings-contract.ts'
 export { loginOpenAICodex, logoutOpenAICodex, openAICodexAuthStatus } from './auth.ts'
 export type { OpenAICodexAuthStatus } from './auth.ts'
 export {
+  FastModeRegistry,
+  OpenAICodexFastModeRegistry,
+  isFastModeSessionId,
+  OPENAI_CODEX_FAST_MODE_MAX_SESSIONS,
+  OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH,
+} from './fast-mode.ts'
+export { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
+export {
   OpenAICodexCredentialStore,
   OPENAI_CODEX_AUTH_FILENAME,
   OPENAI_CODEX_PROVIDER,
@@ -160,10 +169,11 @@ export const Config: z<Config> = z.object({
 export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const credentials = new OpenAICodexCredentialStore()
+  const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
-    createOpenAICodexAdapter(credentials, () => ctx.get('attachments')),
+    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode),
   )
   ctx.llm.registerConfigurableProviders([{
     provider: OPENAI_CODEX_PROVIDER,
@@ -172,7 +182,7 @@ export function apply(ctx: Context, config: Config): void {
     settingsPath: [],
     declared: false,
   }])
-  ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials))
+  ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials, undefined, fastMode))
 
   let stopped = false
   let searchFiber: Fiber | undefined
