@@ -113,14 +113,16 @@ function printHelp(): void {
 }
 
 function doctorExitCode(report: DiagnosticReport): number {
-  return report.credentialFile.state === 'permissions-too-broad'
+  const credentialFailure = report.credentialFile.state === 'permissions-too-broad'
     || report.credentialFile.state === 'not-a-regular-file'
-    || report.credentialFile.state === 'unreadable-metadata' ? 1 : 0
+    || report.credentialFile.state === 'unreadable-metadata'
+  const compatibilityFailure = report.compatibility !== undefined && report.compatibility.status !== 'compatible'
+  return credentialFailure || compatibilityFailure ? 1 : 0
 }
 
 /** Project the diagnostic report without its absolute credential pathname. */
 function doctorJson(report: DiagnosticReport): Record<string, unknown> {
-  return {
+  const result: Record<string, unknown> = {
     schemaVersion: JSON_SCHEMA_VERSION,
     package: report.package,
     version: report.version,
@@ -133,6 +135,8 @@ function doctorJson(report: DiagnosticReport): Record<string, unknown> {
     providerConflict: report.providerConflict,
     hints: report.hints,
   }
+  if (report.compatibility !== undefined) result.compatibility = report.compatibility
+  return result
 }
 
 function printJson(value: unknown): void {
@@ -175,6 +179,9 @@ export async function run(argv: readonly string[]): Promise<number> {
         process.stdout.write([
           `Codex Connect ${report.version} on ${report.node}`,
           `OAuth file metadata: ${report.credentialFile.state} (${report.credentialFile.path})`,
+          ...(report.compatibility === undefined ? [] : [
+            `Compatibility: ${report.compatibility.status} (Node ${report.compatibility.node.installed ?? 'unknown'}; DSH API ${report.compatibility.packages['@deepseek-ai/dsh-llm'].installed ?? 'unknown'}; pi-ai ${report.compatibility.packages['@earendil-works/pi-ai'].installed ?? 'unknown'})`,
+          ]),
           `Optional capability defaults: search=${report.capabilities.search ? 'enabled' : 'disabled'}, imageTool=${report.capabilities.imageTool ? 'enabled' : 'disabled'}`,
           'Harness defaults: unchanged by this plugin',
           ...report.hints.map(hint => `Hint: ${hint}`),

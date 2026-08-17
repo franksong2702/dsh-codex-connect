@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dshPluginApi": {
+    "version": "0.1.0-rc.6",
+    "packages": [
+      "@deepseek-ai/dsh-agent",
+      "@deepseek-ai/dsh-atomic-write",
+      "@deepseek-ai/dsh-attachment",
+      "@deepseek-ai/dsh-home-paths",
+      "@deepseek-ai/dsh-host-webserver",
+      "@deepseek-ai/dsh-invariants",
+      "@deepseek-ai/dsh-llm",
+      "@deepseek-ai/dsh-llm-pi-ai",
+      "@deepseek-ai/dsh-fs",
+      "@deepseek-ai/dsh-session",
+      "@deepseek-ai/dsh-settings",
+      "@deepseek-ai/dsh-tools",
+      "@deepseek-ai/dsh-web"
+    ]
+  },
+  "piAi": {
+    "package": "@earendil-works/pi-ai",
+    "version": "0.82.1"
+  }
+}

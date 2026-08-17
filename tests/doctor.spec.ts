@@ -26,6 +26,7 @@ describe('Codex Connect doctor', () => {
       changesHarnessDefaultModel: false,
       changesHarnessSearchRoute: false,
     })
+    expect(report.compatibility.status).toBe('compatible')
   })
 
   it('uses metadata only and never returns credential content', async () => {
@@ -44,5 +45,28 @@ describe('Codex Connect doctor', () => {
     expect(failure).toThrow(/legacy dsh-codex bundle or manual openai-codex provider row/)
     await expect(diagnoseOpenAICodex({ providerIds: ['openai-codex'] }))
       .resolves.toMatchObject({ providerConflict: true })
+  })
+
+  it('reports incompatible dependencies and gives a non-mutating repair hint', async () => {
+    const report = await diagnoseOpenAICodex({
+      compatibilityOptions: {
+        nodeVersion: 'v22.19.0',
+        packageVersions: {
+          '@deepseek-ai/dsh-llm': '0.1.0-rc.6',
+          '@deepseek-ai/dsh-llm-pi-ai': '0.1.0-rc.5',
+          '@earendil-works/pi-ai': '0.82.1',
+        },
+      },
+    })
+    expect(report.compatibility.status).toBe('incompatible')
+    expect(report.hints.join('\n')).toMatch(/pin @earendil-works\/pi-ai to 0\.82\.1/)
+  })
+
+  it('reports unknown compatibility without pretending it is supported', async () => {
+    const report = await diagnoseOpenAICodex({
+      compatibilityOptions: { nodeVersion: 'not-a-node-version', packageVersions: {} },
+    })
+    expect(report.compatibility.status).toBe('unknown')
+    expect(report.hints.join('\n')).toMatch(/Compatibility is unknown/)
   })
 })

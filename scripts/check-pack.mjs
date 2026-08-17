@@ -11,7 +11,7 @@ if (result.status !== 0) {
 
 const [manifest] = JSON.parse(result.stdout)
 const names = manifest.files.map(file => file.path)
-const required = ['LICENSE', 'NOTICE', 'README.md', 'package.json', 'cordis.patch.yml', 'lib/index.js', 'lib/client.js', 'lib/bin.js']
+const required = ['LICENSE', 'NOTICE', 'README.md', 'package.json', 'compatibility.json', 'cordis.patch.yml', 'lib/index.js', 'lib/client.js', 'lib/bin.js']
 for (const name of required) {
   if (!names.includes(name)) throw new Error(`packed artifact is missing ${name}`)
 }

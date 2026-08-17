@@ -46,6 +46,11 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # pi-ai must be upgraded together with the DSH plugin API contract.
+      - dependency-name: "@earendil-works/pi-ai"
+        versions:
+          - ">=0.82.2"
 
   - package-ecosystem: github-actions
     directory: /

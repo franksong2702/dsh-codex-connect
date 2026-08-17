@@ -34,6 +34,27 @@ export type {
   OpenAICodexDiagnosticOptions,
   OpenAICodexDiagnosticReport,
 } from './doctor.ts'
+export {
+  assessCompatibility,
+  COMPATIBILITY_CONTRACT,
+  COMPATIBILITY_PACKAGES,
+  COMPATIBILITY_SCHEMA_VERSION,
+  detectCompatibility,
+  DSH_PLUGIN_API_PACKAGES,
+  PI_AI_PACKAGE,
+  SUPPORTED_DSH_PLUGIN_API_VERSION,
+  SUPPORTED_NODE_RANGE,
+  SUPPORTED_PI_AI_VERSION,
+  evaluateCompatibility,
+} from './compatibility.ts'
+export type {
+  CompatibilityDetectionOptions,
+  CompatibilityEntry,
+  CompatibilityEvaluationInput,
+  CompatibilityPackageName,
+  CompatibilityReport,
+  CompatibilityStatus,
+} from './compatibility.ts'
 export { OPENAI_CODEX_USAGE_URL, parseOpenAICodexUsage, readOpenAICodexRateLimits } from './usage.ts'
 export type {
   OpenAICodexCredits,

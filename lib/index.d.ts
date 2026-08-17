@@ -7,6 +7,68 @@ import { Context } from "@deepseek-ai/cordis";
 /** Stable Codex tool name. */
 declare const VIEW_IMAGE_TOOL_NAME = "view_image";
 //#endregion
+//#region src/compatibility.d.ts
+declare const COMPATIBILITY_SCHEMA_VERSION: 1;
+declare const SUPPORTED_NODE_RANGE = "^22.19.0 || >=24.0.0";
+declare const SUPPORTED_DSH_PLUGIN_API_VERSION = "0.1.0-rc.6";
+declare const SUPPORTED_PI_AI_VERSION = "0.82.1";
+declare const PI_AI_PACKAGE = "@earendil-works/pi-ai";
+declare const DSH_PLUGIN_API_PACKAGES: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-web"];
+declare const COMPATIBILITY_PACKAGES: readonly ["@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@earendil-works/pi-ai"];
+type CompatibilityPackageName = (typeof COMPATIBILITY_PACKAGES)[number];
+type CompatibilityStatus = 'compatible' | 'incompatible' | 'unknown';
+interface CompatibilityEntry {
+  supported: string;
+  installed: string | null;
+  status: CompatibilityStatus;
+}
+interface CompatibilityReport {
+  schemaVersion: typeof COMPATIBILITY_SCHEMA_VERSION;
+  status: CompatibilityStatus;
+  node: CompatibilityEntry;
+  packages: Record<CompatibilityPackageName, CompatibilityEntry>;
+}
+interface CompatibilityEvaluationInput {
+  /** Node version to evaluate; defaults to the running process in detectCompatibility. */
+  nodeVersion?: string | null;
+  /** Alias accepted by callers that already group installed values. */
+  node?: string | null;
+  /** Installed package versions keyed by package name. */
+  packageVersions?: Partial<Record<CompatibilityPackageName, string | null | undefined>>;
+  /** Alias accepted by callers that already group installed values. */
+  packages?: Partial<Record<CompatibilityPackageName, string | null | undefined>>;
+  /** Nested installed values are useful when feeding a captured diagnostic fixture. */
+  installed?: {
+    node?: string | null;
+    packages?: Partial<Record<CompatibilityPackageName, string | null | undefined>>;
+  };
+}
+interface CompatibilityDetectionOptions extends CompatibilityEvaluationInput {
+  /** Test seam for package metadata resolution; no package paths are returned. */
+  readPackageVersion?: (name: CompatibilityPackageName) => string | null | undefined | Promise<string | null | undefined>;
+}
+/** Public contract data mirrored by compatibility.json without importing JSON at runtime. */
+declare const COMPATIBILITY_CONTRACT: {
+  readonly schemaVersion: 1;
+  readonly engines: {
+    readonly node: "^22.19.0 || >=24.0.0";
+  };
+  readonly dshPluginApi: {
+    readonly version: "0.1.0-rc.6";
+    readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-web"];
+  };
+  readonly piAi: {
+    readonly package: "@earendil-works/pi-ai";
+    readonly version: "0.82.1";
+  };
+};
+/** Evaluate a captured set of versions without touching the filesystem. */
+declare function evaluateCompatibility(input?: CompatibilityEvaluationInput): CompatibilityReport;
+/** Alias for callers that prefer assessment terminology. */
+declare const assessCompatibility: typeof evaluateCompatibility;
+/** Read installed package metadata and return only versions and statuses. */
+declare function detectCompatibility(options?: CompatibilityDetectionOptions): Promise<CompatibilityReport>;
+//#endregion
 //#region src/doctor.d.ts
 /** Inputs that are safe to obtain without booting OAuth. */
 interface OpenAICodexDiagnosticOptions {
@@ -18,6 +80,8 @@ interface OpenAICodexDiagnosticOptions {
   enableSearch?: boolean;
   /** Whether the optional image tool is enabled. */
   enableImageTool?: boolean;
+  /** Optional pure-function seam for compatibility checks in tests/diagnostic callers. */
+  compatibilityOptions?: CompatibilityDetectionOptions;
 }
 interface OpenAICodexDiagnosticReport {
   package: 'dsh-codex-connect';
@@ -36,6 +100,7 @@ interface OpenAICodexDiagnosticReport {
     changesHarnessSearchRoute: false;
   };
   providerConflict: boolean;
+  compatibility: CompatibilityReport;
   hints: string[];
 }
 /** Actionable message for legacy/manual `openai-codex` adapter collisions. */
@@ -330,4 +395,4 @@ declare const Config: z<Config>;
  */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, type OpenAICodexUsage, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, decodeOpenAICodexSettings, diagnoseOpenAICodex, inject, installOpenAICodexSearchEvent, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, recordOpenAICodexSearchRequest, resolveOpenAICodexSettings };
+export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, installOpenAICodexSearchEvent, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, recordOpenAICodexSearchRequest, resolveOpenAICodexSettings };

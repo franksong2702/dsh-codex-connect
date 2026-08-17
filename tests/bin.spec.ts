@@ -100,6 +100,16 @@ describe('dsh-codex-connect CLI', () => {
         changesHarnessSearchRoute: false,
       },
       providerConflict: false,
+      compatibility: {
+        schemaVersion: 1,
+        status: 'compatible',
+        node: { supported: '^22.19.0 || >=24.0.0', installed: 'v22.19.0', status: 'compatible' },
+        packages: {
+          '@deepseek-ai/dsh-llm': { supported: '0.1.0-rc.6', installed: '0.1.0-rc.6', status: 'compatible' },
+          '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.0-rc.6', installed: '0.1.0-rc.6', status: 'compatible' },
+          '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
+        },
+      },
       hints: ['Safe diagnostic hint'],
     })
     let output = ''
@@ -127,6 +137,7 @@ describe('dsh-codex-connect CLI', () => {
       hints: ['Safe diagnostic hint'],
     })
     expect(parsed).not.toHaveProperty('credentialFile.path')
+    expect(parsed).toMatchObject({ compatibility: { schemaVersion: 1, status: 'compatible' } })
     for (const secret of [
       credentialPath,
       'https://auth.openai.com/oauth/authorize?fixture=secret',
@@ -137,6 +148,42 @@ describe('dsh-codex-connect CLI', () => {
     ]) {
       expect(output).not.toContain(secret)
     }
+  })
+
+  it('returns exit 1 and a JSON compatibility status for an incompatible doctor report', async () => {
+    mocked.diagnose.mockResolvedValue({
+      package: 'dsh-codex-connect',
+      version: '0.1.0-alpha.4.7',
+      node: 'v22.19.0',
+      credentialFile: { path: '/Users/fixture/.dsh/openai-codex-auth.json', state: 'missing' },
+      capabilities: {
+        modelProvider: true,
+        search: false,
+        imageTool: false,
+        changesHarnessDefaultModel: false,
+        changesHarnessSearchRoute: false,
+      },
+      providerConflict: false,
+      compatibility: {
+        schemaVersion: 1,
+        status: 'incompatible',
+        node: { supported: '^22.19.0 || >=24.0.0', installed: 'v22.19.0', status: 'compatible' },
+        packages: {
+          '@deepseek-ai/dsh-llm': { supported: '0.1.0-rc.6', installed: '0.1.0-rc.5', status: 'incompatible' },
+          '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.0-rc.6', installed: '0.1.0-rc.5', status: 'incompatible' },
+          '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
+        },
+      },
+      hints: ['Compatibility mismatch'],
+    })
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      output += String(chunk)
+      return true
+    })
+    await expect(run(['doctor', '--json'])).resolves.toBe(1)
+    expect(JSON.parse(output)).toMatchObject({ compatibility: { status: 'incompatible' } })
+    expect(output).not.toContain('/Users/fixture')
   })
 
   it.each([

@@ -74,6 +74,21 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   if (report['credentialFile']?.['path'] !== undefined || report['credentialFile']?.['expiresAt'] !== undefined) {
     throw new Error('doctor JSON exposed credential path or expiry data')
   }
+  const compatibility = report['compatibility']
+  const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai']
+  if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || compatibility?.['status'] !== 'compatible') {
+    throw new Error('doctor JSON did not report schemaVersion 1 and compatible runtime dependencies')
+  }
+  if (compatibility?.['node']?.['status'] !== 'compatible') {
+    throw new Error('doctor JSON did not report a compatible Node engine')
+  }
+  for (const name of expectedPackages) {
+    const entry = compatibility?.['packages']?.[name]
+    const supported = name === '@earendil-works/pi-ai' ? '0.82.1' : '0.1.0-rc.6'
+    if (entry?.['supported'] !== supported || entry?.['installed'] !== supported || entry?.['status'] !== 'compatible') {
+      throw new Error(`doctor JSON did not report compatible ${name}`)
+    }
+  }
   const serialized = JSON.stringify(report)
   for (const forbidden of [dshHome, repoRoot, 'authorization', 'access-token', 'refresh-token', 'account-id']) {
     if (serialized.includes(forbidden)) throw new Error(`doctor JSON exposed forbidden text: ${forbidden}`)
@@ -84,9 +99,11 @@ async function main() {
   const build = runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: process.env })
   requireSuccess('local build', build)
 
-  const dshVersion = process.env.DSH_VERSION === undefined || process.env.DSH_VERSION === ''
-    ? DEFAULT_DSH_VERSION
-    : process.env.DSH_VERSION
+  const requestedDshVersion = process.env.DSH_VERSION
+  if (requestedDshVersion !== undefined && requestedDshVersion !== '' && requestedDshVersion !== DEFAULT_DSH_VERSION) {
+    throw new Error(`check-dsh-install only verifies the declared DSH CLI version ${DEFAULT_DSH_VERSION}`)
+  }
+  const dshVersion = DEFAULT_DSH_VERSION
   const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-install-'))
   const dshHome = join(tempRoot, 'dsh-home')
   const installRoot = join(tempRoot, 'dsh-install')

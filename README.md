@@ -163,7 +163,8 @@ Selecting Codex as the profile's global search route is another explicit change:
 
 ## Compatibility and security boundary
 
-- Alpha compatibility targets the current Harness `0.1.0-rc.5` main-line composition and compatible `0.1.0-rc.6` plugin APIs, Node.js `^22.19.0 || >=24.0.0`, and the pinned `@earendil-works/pi-ai` Codex provider.
+- The only verified compatibility combination is DSH plugin API packages `0.1.0-rc.6`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json).
+- Upgrade the DSH plugin API packages and `@earendil-works/pi-ai` as one group, then run `dsh-codex-connect doctor --json` and the compatibility check again. This contract does not make claims about future versions.
 - ChatGPT plan eligibility, model access, quotas, and backend behavior are controlled by OpenAI and may change.
 - The Codex endpoint does not enforce the ordinary Responses `max_output_tokens` field. Harness compaction still works, but that summary cap cannot be imposed server-side on this route.
 - Shell, filesystem, skills, MCP, subagents, approvals, permissions, attachments, session persistence, compaction, and recovery continue to come from the active Harness profile.
