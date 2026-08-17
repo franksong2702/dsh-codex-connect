@@ -11,25 +11,41 @@ updates:
     open-pull-requests-limit: 5
     groups:
       deepseek-harness:
+        applies-to: version-updates
         patterns:
           - "@deepseek-ai/*"
+        update-types:
+          - minor
+          - patch
       pi-ai:
+        applies-to: version-updates
         patterns:
           - "@earendil-works/*"
+        update-types:
+          - minor
+          - patch
       npm-development:
+        applies-to: version-updates
         dependency-type: development
         patterns:
           - "*"
         exclude-patterns:
           - "@deepseek-ai/*"
           - "@earendil-works/*"
+        update-types:
+          - minor
+          - patch
       npm-production:
+        applies-to: version-updates
         dependency-type: production
         patterns:
           - "*"
         exclude-patterns:
           - "@deepseek-ai/*"
           - "@earendil-works/*"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: github-actions
     directory: /
@@ -41,5 +57,9 @@ updates:
     open-pull-requests-limit: 2
     groups:
       github-actions:
+        applies-to: version-updates
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
