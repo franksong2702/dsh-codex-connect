@@ -34,13 +34,13 @@ function directoryState(model: string, provider = 'openai-codex'): ModelDirector
   }
 }
 
-function usage(resetAt?: number): unknown {
+function usage(resetAt?: number, remainingPercent = 72.5): unknown {
   return {
     rateLimits: [{
       id: 'codex',
       name: 'Codex',
       windows: [{
-        remainingPercent: 72.5,
+        remainingPercent,
         windowSeconds: 7 * 24 * 60 * 60,
         ...resetAt === undefined ? {} : { resetAt },
       }],
@@ -77,10 +77,14 @@ describe('OpenAI Codex Composer weekly quota', () => {
     render(<OpenAICodexQuotaIndicator directory={directory} t={t} />)
     const indicator = await screen.findByRole('status')
     const localReset = formatOpenAICodexResetAt(resetAt)
-    expect(indicator.textContent).toContain('72.5%')
-    expect(indicator.querySelector('svg[data-openai-codex-quota-ring="weekly"]')).toBeTruthy()
-    const progress = indicator.querySelector('[data-openai-codex-quota-progress="weekly"]')
-    expect(progress?.getAttribute('stroke-dashoffset')).toBe(String(2 * Math.PI * 13 * (1 - 0.725)))
+    expect(indicator.textContent).toBe('')
+    expect(indicator.querySelector('svg[data-openai-codex-quota-ring="weekly"]')).toBeNull()
+    const track = indicator.querySelector<HTMLElement>('[data-openai-codex-quota-track="weekly"]')
+    expect(track?.style.width).toBe('48px')
+    expect(track?.style.height).toBe('6px')
+    const progress = indicator.querySelector<HTMLElement>('[data-openai-codex-quota-progress="weekly"]')
+    expect(progress?.style.width).toBe('72.5%')
+    expect(progress?.getAttribute('data-openai-codex-quota-color')).toBe('green')
     expect(indicator.textContent).not.toContain(en.composerWeeklyQuota)
     expect(indicator.textContent).not.toContain(localReset)
     expect(indicator.getAttribute('title')).toBe(indicator.getAttribute('aria-label'))
@@ -88,6 +92,23 @@ describe('OpenAI Codex Composer weekly quota', () => {
     expect(indicator.getAttribute('title')).toContain('72.5%')
     expect(indicator.getAttribute('title')).toContain(localReset)
     expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    [80, 'green'],
+    [50, 'yellow'],
+    [35, 'orange'],
+    [10, 'red'],
+  ] as const)('maps %s%% remaining quota to the %s progress color', async (remainingPercent, color) => {
+    const fetchMock = vi.fn(async () => json({ status: 'signed-in', usage: usage(undefined, remainingPercent) }))
+    vi.stubGlobal('fetch', fetchMock)
+    const directory = directoryStore(directoryState('gpt-5'))
+
+    render(<OpenAICodexQuotaIndicator directory={directory} t={t} />)
+    const indicator = await screen.findByRole('status')
+    const progress = indicator.querySelector<HTMLElement>('[data-openai-codex-quota-progress="weekly"]')
+    expect(progress?.style.width).toBe(`${remainingPercent}%`)
+    expect(progress?.getAttribute('data-openai-codex-quota-color')).toBe(color)
   })
 
   it.each([

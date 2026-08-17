@@ -76,12 +76,30 @@ function formatPercent(percent: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(percent)
 }
 
-const QUOTA_RING_RADIUS = 13
-const QUOTA_RING_CIRCUMFERENCE = 2 * Math.PI * QUOTA_RING_RADIUS
+const QUOTA_PROGRESS_WIDTH_PX = 48
+const QUOTA_PROGRESS_TRACK_HEIGHT_PX = 6
 
-function quotaRingDashOffset(remainingPercent: number): number {
-  const bounded = Math.min(100, Math.max(0, remainingPercent))
-  return QUOTA_RING_CIRCUMFERENCE * (1 - bounded / 100)
+type QuotaProgressColor = 'green' | 'yellow' | 'orange' | 'red'
+
+function boundedQuotaPercent(remainingPercent: number): number {
+  return Math.min(100, Math.max(0, remainingPercent))
+}
+
+function quotaProgressColor(remainingPercent: number): {
+  readonly name: QuotaProgressColor
+  readonly value: string
+} {
+  const bounded = boundedQuotaPercent(remainingPercent)
+  if (bounded >= 60) {
+    return { name: 'green', value: 'var(--dsw-alias-state-success-primary, #22c55e)' }
+  }
+  if (bounded >= 40) {
+    return { name: 'yellow', value: 'var(--dsw-alias-state-warn-primary, #eab308)' }
+  }
+  if (bounded >= 20) {
+    return { name: 'orange', value: '#f97316' }
+  }
+  return { name: 'red', value: 'var(--dsw-alias-state-error-primary, #ef4444)' }
 }
 
 function subscribeDirectory(directory: SnapshotStore<ModelDirectoryState>, listener: () => void): () => void {
@@ -147,54 +165,47 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   const percent = formatPercent(weekly.remainingPercent)
   const fullResetTime = formatOpenAICodexResetAt(weekly.resetAt) ?? t('resetUnavailable')
   const summary = t('composerWeeklyQuotaSummary', { percent, time: fullResetTime })
-  const dashOffset = quotaRingDashOffset(weekly.remainingPercent)
+  const boundedPercent = boundedQuotaPercent(weekly.remainingPercent)
+  const progressColor = quotaProgressColor(weekly.remainingPercent)
   return (
     <span
       role="status"
       data-openai-codex-quota="weekly"
       title={summary}
       aria-label={summary}
-      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dsw-alias-label-secondary)' }}
+      style={{
+        display: 'inline-flex',
+        width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
+        height: '28px',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
-      <svg
-        width="36"
-        height="36"
-        viewBox="0 0 36 36"
+      <span
         aria-hidden="true"
-        focusable="false"
-        data-openai-codex-quota-ring="weekly"
+        data-openai-codex-quota-track="weekly"
+        style={{
+          display: 'block',
+          width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
+          height: `${QUOTA_PROGRESS_TRACK_HEIGHT_PX}px`,
+          borderRadius: '999px',
+          backgroundColor: 'var(--dsw-alias-border-l2)',
+          overflow: 'hidden',
+        }}
       >
-        <circle
-          cx="18"
-          cy="18"
-          r={QUOTA_RING_RADIUS}
-          fill="none"
-          stroke="var(--dsw-alias-border-l2)"
-          strokeWidth="3"
-        />
-        <circle
-          cx="18"
-          cy="18"
-          r={QUOTA_RING_RADIUS}
-          fill="none"
-          stroke="var(--dsw-alias-brand-primary)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={QUOTA_RING_CIRCUMFERENCE}
-          strokeDashoffset={dashOffset}
-          transform="rotate(-90 18 18)"
+        <span
+          aria-hidden="true"
           data-openai-codex-quota-progress="weekly"
+          data-openai-codex-quota-color={progressColor.name}
+          style={{
+            display: 'block',
+            width: `${boundedPercent}%`,
+            height: '100%',
+            borderRadius: 'inherit',
+            backgroundColor: progressColor.value,
+          }}
         />
-        <text
-          x="18"
-          y="18"
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="currentColor"
-          fontSize="6"
-          fontWeight="600"
-        >{percent}%</text>
-      </svg>
+      </span>
     </span>
   )
 }
