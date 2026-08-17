@@ -1,0 +1,89 @@
+name: Bug report
+description: Report a reproducible problem with Codex Connect
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never include an OAuth URL, authorization code, access or refresh token, account ID, credential-file contents, or other secrets.** Use the private security advisory link in the repository for suspected vulnerabilities.
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Codex Connect version
+      description: Give the installed plugin version only.
+      placeholder: 0.1.0-alpha.x
+    validations:
+      required: true
+  - type: input
+    id: dsh_version
+    attributes:
+      label: DeepSeek Harness version
+      description: Paste the version from `dsh --version`; remove unrelated output.
+      placeholder: 0.1.0-rc.x
+    validations:
+      required: true
+  - type: input
+    id: node_version
+    attributes:
+      label: Node.js version
+      description: Paste the version from `node --version`.
+      placeholder: v22.19.0
+    validations:
+      required: true
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: profile
+    attributes:
+      label: DeepSeek Harness profile
+      description: Give the profile name only; do not include a home directory or local path.
+      placeholder: web
+    validations:
+      required: true
+  - type: textarea
+    id: minimal_reproduction
+    attributes:
+      label: Minimal reproduction
+      description: List the smallest commands and UI steps that reproduce the problem. Redact secrets and local paths.
+      placeholder: |
+        1. Install or configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Secret-free diagnostics
+      description: Paste redacted output from both `doctor --json` and `status --json`. Do not paste credential contents, OAuth data, account IDs, or private paths.
+      render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: safe_report
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed OAuth URLs, authorization codes, tokens, account IDs, credential-file contents, and other secrets from this report.
+          required: true

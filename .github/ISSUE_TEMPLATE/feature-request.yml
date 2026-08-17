@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a focused improvement to Codex Connect
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep proposals focused. Do not include OAuth URLs, codes, tokens, account IDs, credential-file contents, or other secrets.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user problem should this address?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: Describe the smallest user-visible change and the profiles or commands it affects.
+    validations:
+      required: true
+  - type: dropdown
+    id: default_off
+    attributes:
+      label: Default-off behavior
+      description: State whether the feature is disabled unless a user explicitly opts in.
+      options:
+        - Yes — disabled by default
+        - No — changes an existing default (explain in scope)
+    validations:
+      required: true
+  - type: textarea
+    id: security_impact
+    attributes:
+      label: Security and privacy impact
+      description: Explain new permissions, network access, data handling, trust boundaries, and how users can disable it.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safe_report
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I have not included OAuth URLs, authorization codes, tokens, account IDs, credential-file contents, or other secrets.
+          required: true
