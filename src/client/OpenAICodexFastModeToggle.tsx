@@ -1,6 +1,6 @@
 /** Per-conversation OpenAI Codex Fast Mode control for the Composer row. */
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ModelDirectoryState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import { OPENAI_CODEX_FAST_MODE_PATH } from '../fast-mode-paths.ts'
@@ -63,7 +63,9 @@ export function OpenAICodexFastModeToggle({
   )
   const eligible = isEligible(directoryState)
   const [state, setState] = useState<FastModeState>({ status: 'loading', enabled: false })
+  const [tooltipVisible, setTooltipVisible] = useState(false)
   const controllerRef = useRef<AbortController | undefined>(undefined)
+  const tooltipId = useId()
 
   useEffect(() => () => { controllerRef.current?.abort() }, [])
 
@@ -151,40 +153,77 @@ export function OpenAICodexFastModeToggle({
 
   const active = state.enabled
   return (
-    <button
-      type="button"
-      data-openai-codex-fast-mode={active ? 'on' : 'off'}
-      aria-label={title}
-      aria-pressed={active}
-      aria-busy={busy}
-      title={title}
-      disabled={busy}
-      onClick={toggle}
+    <span
+      onMouseEnter={() => { setTooltipVisible(true) }}
+      onMouseLeave={() => { setTooltipVisible(false) }}
+      onFocus={() => { setTooltipVisible(true) }}
+      onBlur={() => { setTooltipVisible(false) }}
       style={{
         display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        position: 'relative',
         width: 30,
         height: 30,
-        padding: 0,
-        border: 0,
-        borderRadius: 8,
-        background: 'transparent',
-        color: active ? FAST_MODE_ACTIVE_COLOR : 'var(--dsw-alias-label-secondary)',
-        cursor: busy ? 'default' : 'pointer',
-        opacity: busy ? 0.6 : 1,
       }}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path
-          data-openai-codex-fast-mode-bolt={active ? 'filled' : 'outline'}
-          d="M13.1 2.75 5.35 13.1h5.8l-.95 8.15 8.45-11.2h-5.9l.35-7.3Z"
-          fill={active ? 'currentColor' : 'none'}
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
+      <button
+        type="button"
+        data-openai-codex-fast-mode={active ? 'on' : 'off'}
+        aria-label={title}
+        aria-describedby={tooltipVisible ? tooltipId : undefined}
+        aria-pressed={active}
+        aria-busy={busy}
+        disabled={busy}
+        onClick={toggle}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 30,
+          height: 30,
+          padding: 0,
+          border: 0,
+          borderRadius: 8,
+          background: 'transparent',
+          color: active ? FAST_MODE_ACTIVE_COLOR : 'var(--dsw-alias-label-secondary)',
+          cursor: busy ? 'default' : 'pointer',
+          opacity: busy ? 0.6 : 1,
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            data-openai-codex-fast-mode-bolt={active ? 'filled' : 'outline'}
+            d="M13.1 2.75 5.35 13.1h5.8l-.95 8.15 8.45-11.2h-5.9l.35-7.3Z"
+            fill={active ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {tooltipVisible && (
+        <span
+          id={tooltipId}
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 'calc(100% + 8px)',
+            zIndex: 1000,
+            transform: 'translateX(-50%)',
+            padding: '4px 8px',
+            borderRadius: 6,
+            background: 'var(--dsw-specific-tip, #1f2329)',
+            boxShadow: 'var(--dsw-shadow-lv2)',
+            color: 'var(--dsw-alias-label-primary, #fff)',
+            fontSize: 12,
+            lineHeight: '18px',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}
+        >
+          {title}
+        </span>
+      )}
+    </span>
   )
 }
