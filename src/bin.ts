@@ -14,8 +14,9 @@ import {
   openAICodexAuthStatus,
 } from './index.ts'
 import { CODEX_CONNECT_VERSION } from './doctor.ts'
+import { normalizeTrustedOrigin, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 
-type Action = 'doctor' | 'login' | 'logout' | 'status'
+type Action = 'doctor' | 'login' | 'logout' | 'status' | 'trust-origin' | 'trusted-origins' | 'untrust-origin'
 type DiagnosticReport = Awaited<ReturnType<typeof diagnoseOpenAICodex>>
 
 const JSON_SCHEMA_VERSION = 1
@@ -94,13 +95,19 @@ async function answerPrompt(
 function printHelp(): void {
   process.stdout.write([
     'Usage: dsh-codex-connect <doctor|login|logout|status> [--device-code|--json]',
+    '       dsh-codex-connect trust-origin <origin>',
+    '       dsh-codex-connect trusted-origins [--json]',
+    '       dsh-codex-connect untrust-origin <origin>',
     '',
     '  doctor         inspect secret-free runtime and OAuth file metadata',
     '  login          sign in with a separate ChatGPT OAuth session',
     '  logout         remove the dsh credential without changing ~/.codex',
     '  status         report non-secret dsh credential state',
+    '  trust-origin   allow one exact browser origin to reach Web OAuth routes',
+    '  trusted-origins list the currently allowed browser origins',
+    '  untrust-origin remove one exact browser origin from the allowlist',
     '  --device-code  use headless device-code login (login only)',
-    '  --json         emit one secret-free JSON document (doctor/status only)',
+    '  --json         emit one secret-free JSON document (doctor/status/trusted-origins only)',
     '',
   ].join('\n'))
 }
@@ -139,17 +146,21 @@ export async function run(argv: readonly string[]): Promise<number> {
     return 0
   }
   const [rawAction, ...flags] = argv
-  if (rawAction !== 'doctor' && rawAction !== 'login' && rawAction !== 'logout' && rawAction !== 'status') {
-    process.stderr.write(`dsh-codex-connect: expected doctor, login, logout, or status; got ${JSON.stringify(rawAction)}\n`)
+  const actions: readonly Action[] = ['doctor', 'login', 'logout', 'status', 'trust-origin', 'trusted-origins', 'untrust-origin']
+  if (!actions.includes(rawAction as Action)) {
+    process.stderr.write(`dsh-codex-connect: expected doctor, login, logout, status, trust-origin, trusted-origins, or untrust-origin; got ${JSON.stringify(rawAction)}\n`)
     return 1
   }
-  const action: Action = rawAction
-  const deviceCode = flags.includes('--device-code')
-  const jsonOutput = flags.includes('--json')
-  const unknown = flags.filter(flag => flag !== '--device-code' && flag !== '--json')
+  const action = rawAction as Action
+  const originArgument = action === 'trust-origin' || action === 'untrust-origin' ? flags[0] : undefined
+  const optionFlags = action === 'trust-origin' || action === 'untrust-origin' ? flags.slice(1) : flags
+  const deviceCode = optionFlags.includes('--device-code')
+  const jsonOutput = optionFlags.includes('--json')
+  const unknown = optionFlags.filter(flag => flag !== '--device-code' && flag !== '--json')
   if (unknown.length > 0
     || (deviceCode && action !== 'login')
-    || (jsonOutput && (action === 'login' || action === 'logout' || deviceCode))) {
+    || (jsonOutput && (action === 'login' || action === 'logout' || deviceCode))
+    || ((action === 'trust-origin' || action === 'untrust-origin') && (originArgument === undefined || optionFlags.length !== 0))) {
     process.stderr.write(`dsh-codex-connect: invalid options for ${action}: ${flags.join(' ')}\n`)
     return 1
   }
@@ -191,6 +202,31 @@ export async function run(argv: readonly string[]): Promise<number> {
           ? ''
           : `; access token expires ${expires.toISOString()} (refresh is automatic)`
         process.stdout.write(`Codex Connect: signed in${suffix}\n`)
+        return 0
+      }
+      case 'trusted-origins': {
+        const origins = await new OpenAICodexTrustedOriginsStore().list()
+        if (jsonOutput) {
+          printJson({ schemaVersion: JSON_SCHEMA_VERSION, origins })
+        } else {
+          for (const origin of origins) process.stdout.write(`${origin}\n`)
+        }
+        return 0
+      }
+      case 'trust-origin': {
+        if (originArgument === undefined) return 1
+        const normalized = normalizeTrustedOrigin(originArgument)
+        const origins = await new OpenAICodexTrustedOriginsStore().trust(originArgument)
+        process.stdout.write(`Trusted browser origin: ${normalized}\n`)
+        process.stdout.write(`Trusted origins: ${origins.join(', ') || '(none)'}\n`)
+        return 0
+      }
+      case 'untrust-origin': {
+        if (originArgument === undefined) return 1
+        const normalized = normalizeTrustedOrigin(originArgument)
+        const origins = await new OpenAICodexTrustedOriginsStore().untrust(originArgument)
+        process.stdout.write(`Untrusted browser origin: ${normalized}\n`)
+        process.stdout.write(`Trusted origins: ${origins.join(', ') || '(none)'}\n`)
         return 0
       }
       case 'logout':

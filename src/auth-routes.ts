@@ -1,6 +1,7 @@
 /** Same-origin Web settings routes for OpenAI Codex OAuth. */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { dirname, join } from 'node:path'
 import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-host-webserver'
@@ -17,6 +18,11 @@ import {
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from './auth-paths.ts'
+import {
+  OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME,
+  OpenAICodexTrustedOriginsStore,
+  normalizeTrustedOrigin,
+} from './trusted-origins.ts'
 
 export {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
@@ -26,6 +32,9 @@ export {
 
 /** Maximum time a browser request waits for the provider's authorization URL. */
 export const OPENAI_CODEX_AUTH_URL_TIMEOUT_MS = 30_000
+
+/** Stable, non-sensitive error returned when a browser origin needs CLI trust. */
+export const REMOTE_WEB_ORIGIN_NOT_TRUSTED = 'remote-web-origin-not-trusted'
 
 export type OpenAICodexWebAuthStatus =
   | { status: 'signed-out' }
@@ -220,25 +229,73 @@ function loopbackHost(rawHost: string): boolean {
 
 function exactOrigin(req: IncomingMessage, rawHost: string, rawOrigin: string): boolean {
   try {
-    const origin = new URL(rawOrigin)
-    if (origin.username !== '' || origin.password !== '' || origin.pathname !== '/' || origin.search !== '' || origin.hash !== '') return false
     const encrypted = (req.socket as IncomingMessage['socket'] & { encrypted?: boolean }).encrypted === true
-    return origin.origin === new URL(`${encrypted ? 'https' : 'http'}://${rawHost}`).origin
+    const effective = normalizeTrustedOrigin(`${encrypted ? 'https' : 'http'}://${rawHost}`)
+    return normalizeTrustedOrigin(rawOrigin) === effective
   } catch {
     return false
   }
 }
 
-/** Whether a request comes from this loopback page rather than a remote/rebinding site. */
-export function trustedRequest(req: IncomingMessage): boolean {
-  const remote = req.socket.remoteAddress
-  if (remote !== '127.0.0.1' && remote !== '::1' && remote !== '::ffff:127.0.0.1') return false
-  if (req.headers['sec-fetch-site'] === 'cross-site') return false
-  const host = req.headers.host
-  if (typeof host !== 'string' || !loopbackHost(host)) return false
+function effectiveOrigin(req: IncomingMessage, rawHost: string): string | undefined {
+  try {
+    const encrypted = (req.socket as IncomingMessage['socket'] & { encrypted?: boolean }).encrypted === true
+    return normalizeTrustedOrigin(`${encrypted ? 'https' : 'http'}://${rawHost}`)
+  } catch {
+    return undefined
+  }
+}
+
+function sameOriginMetadata(req: IncomingMessage, host: string): boolean {
   const origin = req.headers.origin
   if (origin === undefined) return true
   return typeof origin === 'string' && exactOrigin(req, host, origin)
+}
+
+export type TrustedRequestDecision = {
+  trusted: true
+  error?: undefined
+} | {
+  trusted: false
+  error: typeof REMOTE_WEB_ORIGIN_NOT_TRUSTED | 'forbidden'
+}
+
+/** Evaluate one request against loopback defaults and the current sidecar. */
+export async function trustedRequestDecision(
+  req: IncomingMessage,
+  trustedOrigins: OpenAICodexTrustedOriginsStore = new OpenAICodexTrustedOriginsStore(),
+): Promise<TrustedRequestDecision> {
+  const remote = req.socket.remoteAddress
+  const localPeer = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
+  const fetchSite: unknown = req.headers['sec-fetch-site']
+  const crossSite = typeof fetchSite === 'string'
+    ? fetchSite.trim().toLowerCase() === 'cross-site'
+    : Array.isArray(fetchSite) && fetchSite.some(value => value.trim().toLowerCase() === 'cross-site')
+  if (crossSite) return { trusted: false, error: 'forbidden' }
+  const host = req.headers.host
+  if (typeof host !== 'string') return { trusted: false, error: 'forbidden' }
+  const origin = effectiveOrigin(req, host)
+  if (origin === undefined) return { trusted: false, error: 'forbidden' }
+  if (!sameOriginMetadata(req, host)) return { trusted: false, error: 'forbidden' }
+  if (localPeer && loopbackHost(host)) return { trusted: true }
+  try {
+    if (await trustedOrigins.has(origin)) return { trusted: true }
+  } catch {
+    // A malformed or too-broad sidecar fails closed without exposing contents.
+    return { trusted: false, error: 'forbidden' }
+  }
+  return {
+    trusted: false,
+    error: REMOTE_WEB_ORIGIN_NOT_TRUSTED,
+  }
+}
+
+/** Whether a request is currently trusted; the sidecar is read on every call. */
+export async function trustedRequest(
+  req: IncomingMessage,
+  trustedOrigins?: OpenAICodexTrustedOriginsStore,
+): Promise<boolean> {
+  return (await trustedRequestDecision(req, trustedOrigins)).trusted
 }
 
 function json(res: ServerResponse, status: number, value: unknown): void {
@@ -254,16 +311,27 @@ function json(res: ServerResponse, status: number, value: unknown): void {
 export function registerOpenAICodexAuthRoutes(
   ctx: Context,
   store: OpenAICodexCredentialStore,
+  trustedOriginsOverride?: OpenAICodexTrustedOriginsStore,
 ): void {
   const auth = new OpenAICodexWebAuth(store)
+  const storedFilename = (store as OpenAICodexCredentialStore & { filename?: unknown }).filename
+  const trustedOrigins = trustedOriginsOverride ?? (typeof storedFilename === 'string'
+    ? new OpenAICodexTrustedOriginsStore(join(dirname(storedFilename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME))
+    : new OpenAICodexTrustedOriginsStore())
   ctx.effect(() => {
+    const authorize = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
+      const decision = await trustedRequestDecision(req, trustedOrigins)
+      if (decision.trusted) return true
+      json(res, 403, { error: decision.error })
+      return false
+    }
     const routes = [
       ctx.webServer.register({
         kind: 'exact',
         path: OPENAI_CODEX_AUTH_STATUS_PATH,
         handler: async (req, res) => {
           if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
-          if (!trustedRequest(req)) return json(res, 403, { error: 'forbidden' })
+          if (!await authorize(req, res)) return
           json(res, 200, await auth.status())
         },
       }),
@@ -272,7 +340,7 @@ export function registerOpenAICodexAuthRoutes(
         path: OPENAI_CODEX_AUTH_LOGIN_PATH,
         handler: async (req, res) => {
           if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-          if (!trustedRequest(req)) return json(res, 403, { error: 'forbidden' })
+          if (!await authorize(req, res)) return
           try {
             json(res, 200, await auth.signIn())
           } catch (error: unknown) {
@@ -285,7 +353,7 @@ export function registerOpenAICodexAuthRoutes(
         path: OPENAI_CODEX_AUTH_LOGOUT_PATH,
         handler: async (req, res) => {
           if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-          if (!trustedRequest(req)) return json(res, 403, { error: 'forbidden' })
+          if (!await authorize(req, res)) return
           try {
             await auth.signOut()
             json(res, 200, { ok: true })

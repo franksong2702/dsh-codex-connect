@@ -10,9 +10,9 @@ Host 将 `llm-openai-codex` 注册为插件自有 settings namespace，并在 LL
 
 ## OAuth 持久化
 
-插件使用 `$DSH_HOME/.openai-codex-auth.json`，与 Codex CLI/Desktop 状态分离。文件格式严格且有版本号；POSIX 上会拒绝组/其他用户可读文件。父目录和文件按仅所有者权限创建，写入采用原子替换，刷新修改使用 Harness 跨进程文件锁，返回给调用方的是凭据副本。
+插件使用 `$DSH_HOME/.openai-codex-auth.json`，与 Codex CLI/Desktop 状态分离。文件格式严格且有版本号；POSIX 上会拒绝组/其他用户可读文件。父目录和文件按仅所有者权限创建，写入采用原子替换，刷新修改使用 Harness 跨进程文件锁，返回给调用方的是凭据副本。浏览器 origin 授权单独存放于 `$DSH_HOME/.openai-codex-trusted-origins.json`，格式为 `version: 1`、`mode: "allowlist"` 和规范化的精确 HTTP(S) origin；其中不含 OAuth 内容，且只能通过独立 CLI 修改。
 
-为兼容迁移，设置页路由、OAuth 路径和 provider id 不改名。浏览器请求必须来自 loopback 对端，并带有 loopback Host；若带 Origin，则必须与该本地 HTTP(S) 源精确匹配。登录挑战只接受不含凭据的 HTTPS 地址；30 秒内未得到地址、provider 已结束但没有地址、退出登录或插件卸载时，所有 waiter 都会被清理。只有显式登录会输出授权 URL 或代码；状态输出会脱敏。doctor 只用 `lstat` 检查元数据，不打开文件。
+为兼容迁移，设置页路由、OAuth 路径和 provider id 不改名。浏览器请求默认只允许 loopback；远程请求必须使用当前 sidecar 中的精确有效 HTTP(S) origin，不能带 cross-site Fetch Metadata，若带 Origin 还必须精确匹配。每次请求都会重新读取 sidecar；未知字段或错误 mode 会快速失败。登录挑战只接受不含凭据的 HTTPS 地址；30 秒内未得到地址、provider 已结束但没有地址、退出登录或插件卸载时，所有 waiter 都会被清理。只有显式登录会输出授权 URL 或代码；状态输出会脱敏。doctor 只用 `lstat` 检查元数据，不打开文件。
 
 ## 搜索与图片
 

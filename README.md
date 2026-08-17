@@ -149,6 +149,15 @@ Selecting Codex as the profile's global search route is another explicit change:
 - `doctor` reads process and filesystem metadata only. `doctor --json` emits exactly one secret-free JSON document with schema version 1, package/version/Node metadata, credential-file state and safe mode, capabilities, conflict status, and hints. It omits the absolute credential path and OAuth, account, and expiry data.
 - `status --json` emits only signed-in or signed-out state with package metadata. `status --json` reads the credential only to determine sign-in state, but never prints credential contents or starts OAuth.
 - OAuth is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default). `~/.codex/auth.json` is never copied or modified. The parent directory and file use owner-only permissions where supported, writes are atomic, and refresh writes use a cross-process file lock.
+- By default, the OAuth routes accept loopback browser requests only. When DSH runs on one device and you open it from another device on a trusted network, approve the browser address-bar origin explicitly on the device that runs DSH:
+
+  ```sh
+  dsh plugin --profile web exec dsh-codex-connect trust-origin http://192.168.1.20:3080
+  dsh plugin --profile web exec dsh-codex-connect trusted-origins
+  dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.20:3080
+  ```
+
+  Replace the example with the exact origin from the browser address bar, including scheme and port; do not enter the accessing device's IP, a bare host, a path, a query, or a fragment. Trust only a network you control, never expose this route to the public Internet, and use an SSH tunnel as the fallback when explicit network trust is not appropriate. The browser page only displays and copies this command; it never changes the allowlist itself.
 - If startup reports an `openai-codex` collision, an old `dsh-codex` bundle or manual provider row may already own the adapter. Inspect the effective configuration and remove only the confirmed conflicting owner. Do not delete auth files or unrelated providers.
 - Removing the package does not delete OAuth state. Run `logout` only when credential removal is intended.
 

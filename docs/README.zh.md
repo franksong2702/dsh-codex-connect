@@ -149,6 +149,15 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - `doctor` 只读取进程与文件系统元数据。`doctor --json` 只输出一条可解析的非敏感 JSON，包含 schema version 1、包/版本/Node 信息、认证文件状态与安全 mode、能力、冲突状态和提示；它省略认证文件绝对路径以及 OAuth、账户和过期时间信息。
 - `status --json` 只输出 signed-in 或 signed-out 状态及包元数据。它只为判断登录态读取认证文件，但不会输出认证文件内容或启动 OAuth。
 - OAuth 单独存储于 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）。`~/.codex/auth.json` 不会被复制或修改。支持的平台上，父目录与文件使用仅所有者可访问权限；写入采用原子替换，刷新写入使用跨进程文件锁。
+- 默认情况下，OAuth 路由只接受 loopback 浏览器请求。当 DSH 在一台设备运行，而你从可信网络中的另一台设备打开 DSH 时，请在运行 DSH 的设备上显式批准浏览器地址栏中的 origin：
+
+  ```sh
+  dsh plugin --profile web exec dsh-codex-connect trust-origin http://192.168.1.20:3080
+  dsh plugin --profile web exec dsh-codex-connect trusted-origins
+  dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.20:3080
+  ```
+
+  将示例替换为浏览器地址栏中的精确 origin，包括协议和端口；不要填写当前访问设备的 IP、裸主机、路径、query 或 fragment。只在你信任的网络中使用，不要把该路由暴露到公网；不适合显式信任网络时，请使用 SSH tunnel。浏览器页面只会显示并复制这条命令，不会自行修改授权列表。
 - 启动报告 `openai-codex` 冲突时，旧 `dsh-codex` bundle 或手动 provider 配置可能已占用该 adapter。先检查有效配置，只移除已确认的冲突所有者。不要删除认证文件或无关 provider。
 - 移除包不会删除 OAuth 状态；只有确实需要删除凭据时才运行 `logout`。
 

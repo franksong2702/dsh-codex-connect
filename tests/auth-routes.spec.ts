@@ -1,13 +1,21 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { AuthInteraction } from '@earendil-works/pi-ai'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  OPENAI_CODEX_AUTH_LOGIN_PATH,
+  OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OpenAICodexWebAuth,
   OPENAI_CODEX_AUTH_STATUS_PATH,
+  REMOTE_WEB_ORIGIN_NOT_TRUSTED,
   registerOpenAICodexAuthRoutes,
+  trustedRequestDecision,
 } from '../src/auth-routes.ts'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
+import { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
 import {
   OPENAI_CODEX_REAUTH_REQUIRED_MESSAGE,
   OpenAICodexReauthRequiredError,
@@ -32,6 +40,10 @@ vi.mock('../src/usage.ts', async importOriginal => ({
 }))
 
 const store = {} as OpenAICodexCredentialStore
+const emptyTrustedOrigins = {
+  has: async () => false,
+} as unknown as OpenAICodexTrustedOriginsStore
+let root: string | undefined
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -57,7 +69,7 @@ interface CapturedRoute {
   handler(req: IncomingMessage, res: ServerResponse): Promise<void> | void
 }
 
-function captureRoutes(): CapturedRoute[] {
+function captureRoutes(trustedOrigins: OpenAICodexTrustedOriginsStore = emptyTrustedOrigins): CapturedRoute[] {
   const routes: CapturedRoute[] = []
   const ctx = {
     webServer: {
@@ -70,7 +82,7 @@ function captureRoutes(): CapturedRoute[] {
       return factory()
     },
   } as unknown as Context
-  registerOpenAICodexAuthRoutes(ctx, store)
+  registerOpenAICodexAuthRoutes(ctx, store, trustedOrigins)
   return routes
 }
 
@@ -114,7 +126,66 @@ beforeEach(() => {
   mocked.usage.mockResolvedValue({ rateLimits: [] })
 })
 
+afterEach(async () => {
+  if (root !== undefined) await rm(root, { recursive: true, force: true })
+  root = undefined
+})
+
 describe('OpenAI Codex Web OAuth boundary', () => {
+  it('returns a stable remote-origin error until the exact effective origin is trusted', async () => {
+    root = await mkdtemp(join(tmpdir(), 'dsh-auth-routes-'))
+    const origins = new OpenAICodexTrustedOriginsStore(join(root, '.openai-codex-trusted-origins.json'))
+    const remote = request({
+      remoteAddress: '192.168.1.8',
+      host: '192.168.1.20:3081',
+      origin: 'http://192.168.1.20:3081',
+      fetchSite: 'same-origin',
+    })
+    await expect(trustedRequestDecision(remote, origins)).resolves.toEqual({
+      trusted: false,
+      error: REMOTE_WEB_ORIGIN_NOT_TRUSTED,
+    })
+
+    await origins.trust('http://192.168.1.20:3081')
+    await expect(trustedRequestDecision(remote, origins)).resolves.toEqual({ trusted: true })
+    await expect(trustedRequestDecision(request({
+      remoteAddress: '192.168.1.8',
+      host: '192.168.1.20:3081',
+      origin: 'http://192.168.1.20:3082',
+      fetchSite: 'same-origin',
+    }), origins)).resolves.toEqual({ trusted: false, error: 'forbidden' })
+    await expect(trustedRequestDecision(request({
+      remoteAddress: '192.168.1.8',
+      host: '192.168.1.20:3081',
+      origin: 'http://192.168.1.20:3081',
+      fetchSite: 'cross-site',
+    }), origins)).resolves.toEqual({ trusted: false, error: 'forbidden' })
+  })
+
+  it.each([
+    ['status', OPENAI_CODEX_AUTH_STATUS_PATH, 'GET'],
+    ['login', OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'],
+    ['logout', OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST'],
+  ] as const)('applies the remote-origin boundary to %s', async (_label, path, method) => {
+    const route = captureRoutes().find(candidate => candidate.path === path)
+    if (route === undefined) throw new Error(`${path} route was not registered`)
+    const res = response()
+
+    await route.handler(request({
+      method,
+      remoteAddress: '192.168.1.8',
+      host: '192.168.1.20:3081',
+      origin: 'http://192.168.1.20:3081',
+      fetchSite: 'same-origin',
+    }), res)
+
+    expect(res.observed.status).toBe(403)
+    expect(JSON.parse(res.observed.body ?? 'null')).toEqual({ error: REMOTE_WEB_ORIGIN_NOT_TRUSTED })
+    expect(mocked.status).not.toHaveBeenCalled()
+    expect(mocked.login).not.toHaveBeenCalled()
+    expect(mocked.logout).not.toHaveBeenCalled()
+  })
+
   it('rejects a DNS-rebinding Host even when the peer and browser Origin agree', async () => {
     const route = captureRoutes().find(candidate => candidate.path === OPENAI_CODEX_AUTH_STATUS_PATH)
     if (route === undefined) throw new Error('status route was not registered')

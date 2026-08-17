@@ -88,6 +88,28 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex Plugin configuration card', () => {
+  it('shows a dedicated remote-origin trust state without auth mutations and copies only the suggested command', async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      expect(requestPath(input)).toBe(OPENAI_CODEX_AUTH_STATUS_PATH)
+      return json({ error: 'remote-web-origin-not-trusted' }, 403)
+    })
+    const writeText = vi.fn(async (_value: string): Promise<void> => undefined)
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    const popup = vi.spyOn(window, 'open')
+
+    render(<OpenAICodexSettings t={t} embedded />)
+    expect(await screen.findByText(en.remoteOriginDescription)).toBeTruthy()
+    const command = `dsh plugin --profile web exec dsh-codex-connect trust-origin ${window.location.origin}`
+    expect(screen.getByText(command)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.login })).toBeNull()
+    expect(screen.queryByRole('button', { name: en.logout })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: en.remoteOriginCopy }))
+    await waitFor(() => { expect(writeText).toHaveBeenCalledWith(command) })
+    expect(popup).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('reports a blocked popup without starting an orphaned login', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       expect(requestPath(input)).toBe(OPENAI_CODEX_AUTH_STATUS_PATH)

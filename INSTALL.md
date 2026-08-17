@@ -31,6 +31,17 @@ Install `dsh-codex-connect` into one requested DeepSeek Harness profile without 
 
 6. If the user explicitly requests login, open **Settings → Plugins → Plugin configuration → Codex Connect**, or check `status` and then use `login` or `login --device-code`. OAuth approval belongs to the user.
 
+### Remote browser access
+
+The default Web OAuth boundary is loopback-only. When DSH runs on one device and you open it from another device on a trusted network through an IP address or domain, run the following on the device that runs DSH with the exact origin from the browser address bar:
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect trust-origin http://192.168.1.20:3080
+dsh plugin --profile web exec dsh-codex-connect trusted-origins
+```
+
+The value is a full `http://` or `https://` origin including its port, not a bare device IP and not a path/query/fragment. Use `untrust-origin <origin>` to remove it. Restrict this to a trusted network and never expose the route publicly; use an SSH tunnel when that is safer. The Web client does not edit this list.
+
 ## Optional configuration
 
 Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits. The package row accepts the same `enableSearch` and `enableImageTool` fields as its composition base, both defaulting to `false`. Enabling search registers a provider but does not select it; selecting `web.searchProvider: openai-codex` is a second explicit profile change. Setting `agent-default-model` to `openai-codex` is also a separate explicit change.

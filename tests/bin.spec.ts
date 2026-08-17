@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const mocked = vi.hoisted(() => ({
   diagnose: vi.fn(),
@@ -18,15 +21,46 @@ vi.mock('../src/index.ts', () => ({
 
 import { run } from '../src/bin.ts'
 
+let root: string | undefined
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
+})
+
+afterEach(async () => {
+  if (root !== undefined) await rm(root, { recursive: true, force: true })
+  root = undefined
 })
 
 describe('dsh-codex-connect CLI', () => {
+  it('trusts, lists, and untrusts exact origins through the server CLI', async () => {
+    root = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-bin-'))
+    vi.stubEnv('DSH_HOME', root)
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      output += String(chunk)
+      return true
+    })
+
+    await expect(run(['trust-origin', 'HTTP://LAN.example:80/'])).resolves.toBe(0)
+    expect(output).toContain('Trusted browser origin: http://lan.example')
+    output = ''
+    await expect(run(['trust-origin', 'http://lan.example'])).resolves.toBe(0)
+    await expect(run(['trusted-origins'])).resolves.toBe(0)
+    expect(output).toContain('http://lan.example')
+    output = ''
+    await expect(run(['untrust-origin', 'http://lan.example'])).resolves.toBe(0)
+    output = ''
+    await expect(run(['trusted-origins', '--json'])).resolves.toBe(0)
+    expect(JSON.parse(output)).toEqual({ schemaVersion: 1, origins: [] })
+    await expect(readFile(join(root, '.openai-codex-trusted-origins.json'), 'utf8')).resolves.toContain('origins')
+  })
+
   it('documents doctor and uses the package executable name', async () => {
     let output = ''
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
@@ -35,6 +69,8 @@ describe('dsh-codex-connect CLI', () => {
     })
     await expect(run(['--help'])).resolves.toBe(0)
     expect(output).toContain('Usage: dsh-codex-connect <doctor|login|logout|status>')
+    expect(output).toContain('dsh-codex-connect trust-origin <origin>')
+    expect(output).toContain('dsh-codex-connect trusted-origins [--json]')
     expect(output).toContain('doctor         inspect secret-free')
   })
 
