@@ -76,16 +76,12 @@ function formatPercent(percent: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(percent)
 }
 
-/** Keep the one-row Composer readout compact; the hover text carries the full date. */
-function formatCompactResetAt(resetAt: number | undefined): string | undefined {
-  if (resetAt === undefined || !Number.isSafeInteger(resetAt) || resetAt <= 0) return undefined
-  const date = new Date(resetAt * 1_000)
-  if (!Number.isFinite(date.getTime())) return undefined
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+const QUOTA_RING_RADIUS = 13
+const QUOTA_RING_CIRCUMFERENCE = 2 * Math.PI * QUOTA_RING_RADIUS
+
+function quotaRingDashOffset(remainingPercent: number): number {
+  const bounded = Math.min(100, Math.max(0, remainingPercent))
+  return QUOTA_RING_CIRCUMFERENCE * (1 - bounded / 100)
 }
 
 function subscribeDirectory(directory: SnapshotStore<ModelDirectoryState>, listener: () => void): () => void {
@@ -150,19 +146,55 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
 
   const percent = formatPercent(weekly.remainingPercent)
   const fullResetTime = formatOpenAICodexResetAt(weekly.resetAt) ?? t('resetUnavailable')
-  const compactResetTime = formatCompactResetAt(weekly.resetAt) ?? t('resetUnavailable')
   const summary = t('composerWeeklyQuotaSummary', { percent, time: fullResetTime })
+  const dashOffset = quotaRingDashOffset(weekly.remainingPercent)
   return (
     <span
       role="status"
       data-openai-codex-quota="weekly"
       title={summary}
       aria-label={summary}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', color: 'var(--dsw-alias-label-secondary)' }}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dsw-alias-label-secondary)' }}
     >
-      <span>{percent}%</span>
-      <span aria-hidden="true">·</span>
-      <span>{compactResetTime}</span>
+      <svg
+        width="36"
+        height="36"
+        viewBox="0 0 36 36"
+        aria-hidden="true"
+        focusable="false"
+        data-openai-codex-quota-ring="weekly"
+      >
+        <circle
+          cx="18"
+          cy="18"
+          r={QUOTA_RING_RADIUS}
+          fill="none"
+          stroke="var(--dsw-alias-border-l2)"
+          strokeWidth="3"
+        />
+        <circle
+          cx="18"
+          cy="18"
+          r={QUOTA_RING_RADIUS}
+          fill="none"
+          stroke="var(--dsw-alias-brand-primary)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={QUOTA_RING_CIRCUMFERENCE}
+          strokeDashoffset={dashOffset}
+          transform="rotate(-90 18 18)"
+          data-openai-codex-quota-progress="weekly"
+        />
+        <text
+          x="18"
+          y="18"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="currentColor"
+          fontSize="6"
+          fontWeight="600"
+        >{percent}%</text>
+      </svg>
     </span>
   )
 }

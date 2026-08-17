@@ -78,6 +78,9 @@ describe('OpenAI Codex Composer weekly quota', () => {
     const indicator = await screen.findByRole('status')
     const localReset = formatOpenAICodexResetAt(resetAt)
     expect(indicator.textContent).toContain('72.5%')
+    expect(indicator.querySelector('svg[data-openai-codex-quota-ring="weekly"]')).toBeTruthy()
+    const progress = indicator.querySelector('[data-openai-codex-quota-progress="weekly"]')
+    expect(progress?.getAttribute('stroke-dashoffset')).toBe(String(2 * Math.PI * 13 * (1 - 0.725)))
     expect(indicator.textContent).not.toContain(en.composerWeeklyQuota)
     expect(indicator.textContent).not.toContain(localReset)
     expect(indicator.getAttribute('title')).toBe(indicator.getAttribute('aria-label'))
@@ -107,7 +110,8 @@ describe('OpenAI Codex Composer weekly quota', () => {
 
     render(<OpenAICodexQuotaIndicator directory={directory} t={t} />)
     const indicator = await screen.findByRole('status')
-    expect(indicator.textContent).toContain(en.resetUnavailable)
+    expect(indicator.textContent).not.toContain(en.resetUnavailable)
+    expect(indicator.getAttribute('title')).toContain(en.resetUnavailable)
     expect(indicator.getAttribute('aria-label')).toContain(en.resetUnavailable)
   })
 
