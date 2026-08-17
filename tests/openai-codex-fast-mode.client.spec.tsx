@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ModelDirectoryState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { OpenAICodexFastModeToggle } from '../src/client/OpenAICodexFastModeToggle.tsx'
-import { en } from '../src/client/locales.ts'
+import { en, zh } from '../src/client/locales.ts'
 import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import { OPENAI_CODEX_FAST_MODE_PATH } from '../src/fast-mode-paths.ts'
 
@@ -51,6 +51,13 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex Fast Mode Composer toggle', () => {
+  it('keeps the bilingual hover copy concise and state-specific', () => {
+    expect(en.fastModeDisabledTitle).toBe('Standard speed.')
+    expect(en.fastModeEnabledTitle).toBe('1.5× speed. Uses quota faster.')
+    expect(zh.fastModeDisabledTitle).toBe('标准速度')
+    expect(zh.fastModeEnabledTitle).toBe('1.5 倍速度，额度消耗更快')
+  })
+
   it('loads the current session state, toggles only that session, and exposes aria/title semantics', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
       if (init?.method === 'POST') {
@@ -68,12 +75,16 @@ describe('OpenAI Codex Fast Mode Composer toggle', () => {
     const bolt = button.querySelector('[data-openai-codex-fast-mode-bolt]')
     expect(button.getAttribute('aria-pressed')).toBe('false')
     expect(button.getAttribute('title')).toBe(en.fastModeDisabledTitle)
+    expect(button.getAttribute('title')).toBe('Standard speed.')
+    expect(button.getAttribute('aria-label')).toBe('Standard speed.')
     expect(button.getAttribute('style')).toContain('var(--dsw-alias-label-secondary)')
     expect(bolt?.getAttribute('data-openai-codex-fast-mode-bolt')).toBe('outline')
     expect(bolt?.getAttribute('fill')).toBe('none')
     fireEvent.click(button)
     await waitFor(() => { expect(button.getAttribute('aria-pressed')).toBe('true') })
     expect(button.getAttribute('title')).toBe(en.fastModeEnabledTitle)
+    expect(button.getAttribute('title')).toBe('1.5× speed. Uses quota faster.')
+    expect(button.getAttribute('aria-label')).toBe('1.5× speed. Uses quota faster.')
     expect(button.getAttribute('style')).toContain('rgb(249, 115, 22)')
     expect(bolt?.getAttribute('data-openai-codex-fast-mode-bolt')).toBe('filled')
     expect(bolt?.getAttribute('fill')).toBe('currentColor')
