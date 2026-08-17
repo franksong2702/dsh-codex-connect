@@ -1,6 +1,6 @@
 /** Compact weekly Codex quota indicator for the Composer tool row. */
 
-import { useEffect, useSyncExternalStore, useState } from 'react'
+import { useEffect, useId, useSyncExternalStore, useState } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ModelDirectoryState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type { OpenAICodexUsage, OpenAICodexRateLimitWindow } from '../usage.ts'
@@ -11,6 +11,8 @@ import type { OpenAICodexSettingsKey } from './locales.ts'
 const WEEK_SECONDS = 7 * 24 * 60 * 60
 const USAGE_POLL_INTERVAL_MS = 60_000
 const CODEX_PROVIDER = 'openai-codex'
+const SPARK_MODEL = 'gpt-5.3-codex-spark'
+const SPARK_QUOTA_ID = 'codex_bengalfox'
 
 type Translate = (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
 
@@ -58,9 +60,10 @@ function usageFromStatus(value: unknown): OpenAICodexUsage | undefined {
   return usage as unknown as OpenAICodexUsage
 }
 
-function weeklyQuotaOf(usage: OpenAICodexUsage): OpenAICodexRateLimitWindow | undefined {
+function weeklyQuotaOf(usage: OpenAICodexUsage, model: string | undefined): OpenAICodexRateLimitWindow | undefined {
+  const quotaId = model === SPARK_MODEL ? SPARK_QUOTA_ID : 'codex'
   return usage.rateLimits
-    .find(limit => limit.id === 'codex')
+    .find(limit => limit.id === quotaId)
     ?.windows.find(window => window.windowSeconds === WEEK_SECONDS)
 }
 
@@ -115,6 +118,9 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   )
   const eligible = isGptModel(directoryState)
   const [request, setRequest] = useState<UsageRequestState>({ status: 'loading' })
+  const [isHovered, setIsHovered] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const tooltipId = useId()
 
   useEffect(() => {
     if (!eligible) {
@@ -159,7 +165,7 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   }, [eligible])
 
   if (!eligible || request.status !== 'ready' || request.usage === undefined) return null
-  const weekly = weeklyQuotaOf(request.usage)
+  const weekly = weeklyQuotaOf(request.usage, directoryState.current?.model)
   if (weekly === undefined) return null
 
   const percent = formatPercent(weekly.remainingPercent)
@@ -167,16 +173,23 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   const summary = t('composerWeeklyQuotaSummary', { percent, time: fullResetTime })
   const boundedPercent = boundedQuotaPercent(weekly.remainingPercent)
   const progressColor = quotaProgressColor(weekly.remainingPercent)
+  const tooltipVisible = isHovered || isFocused
   return (
     <span
       role="status"
       data-openai-codex-quota="weekly"
-      title={summary}
       aria-label={summary}
+      aria-describedby={tooltipVisible ? tooltipId : undefined}
+      tabIndex={0}
+      onMouseEnter={() => { setIsHovered(true) }}
+      onMouseLeave={() => { setIsHovered(false) }}
+      onFocus={() => { setIsFocused(true) }}
+      onBlur={() => { setIsFocused(false) }}
       style={{
         display: 'inline-flex',
         width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
         height: '28px',
+        position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -206,6 +219,29 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
           }}
         />
       </span>
+      {tooltipVisible ? (
+        <span
+          id={tooltipId}
+          role="tooltip"
+          data-openai-codex-quota-tooltip="weekly"
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 6px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            backgroundColor: 'var(--dsw-specific-tip, #1f2329)',
+            color: 'var(--dsw-alias-label-primary, #ffffff)',
+            boxShadow: 'var(--dsw-shadow-lv2, 0 4px 12px rgb(0 0 0 / 12%))',
+            fontSize: '12px',
+            lineHeight: '18px',
+          }}
+        >{summary}</span>
+      ) : null}
     </span>
   )
 }
