@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
-import { OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
+import { formatOpenAICodexResetAt, OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { en, zh } from '../src/client/locales.ts'
 import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../src/settings-contract.ts'
@@ -200,6 +200,31 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.logout }))
     expect(await screen.findByText(en.signedOut)).toBeTruthy()
+  })
+
+  it('renders each quota window reset in the browser locale and names missing resets unavailable', async () => {
+    const resetAt = 1_735_689_600
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      expect(requestPath(input)).toBe(OPENAI_CODEX_AUTH_STATUS_PATH)
+      return json({
+        status: 'signed-in',
+        usage: {
+          rateLimits: [{
+            id: 'codex',
+            name: 'Codex',
+            windows: [
+              { remainingPercent: 72.5, windowSeconds: 18_000, resetAt },
+              { remainingPercent: 80, windowSeconds: 604_800 },
+            ],
+          }],
+        },
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} embedded />)
+    expect(await screen.findByText(en.resetAt.replace('{time}', formatOpenAICodexResetAt(resetAt) ?? ''))).toBeTruthy()
+    expect(screen.getAllByText(en.resetAt.replace('{time}', en.resetUnavailable))).toHaveLength(1)
   })
 
   it('disables account actions while a login request is pending', async () => {

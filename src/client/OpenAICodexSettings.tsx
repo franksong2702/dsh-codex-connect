@@ -81,6 +81,14 @@ function formatPercent(percent: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(percent)
 }
 
+/** Format a server-declared Unix-second reset in the user's local timezone. */
+export function formatOpenAICodexResetAt(resetAt: number | undefined): string | undefined {
+  if (resetAt === undefined || !Number.isSafeInteger(resetAt) || resetAt <= 0) return undefined
+  const date = new Date(resetAt * 1_000)
+  if (!Number.isFinite(date.getTime())) return undefined
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}
+
 function QuotaBar({
   label,
   percent,
@@ -132,6 +140,9 @@ function UsageLimits({ usage, quotaError, t }: {
               key={window.windowSeconds}
               label={windowLabel(window.windowSeconds, t)}
               percent={window.remainingPercent}
+              detail={t('resetAt', {
+                time: formatOpenAICodexResetAt(window.resetAt) ?? t('resetUnavailable'),
+              })}
               t={t}
             />
           ))}

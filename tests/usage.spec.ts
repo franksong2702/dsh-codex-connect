@@ -109,6 +109,56 @@ describe('OpenAI Codex usage', () => {
     })).toThrow(/invalid used percentage/)
   })
 
+  it('projects a valid WHAM reset_at without deriving a client-side timestamp', () => {
+    const parsed = parseOpenAICodexUsage({
+      rate_limit: {
+        primary_window: {
+          used_percent: 13,
+          limit_window_seconds: 604_800,
+          reset_at: 1_735_689_600,
+        },
+        secondary_window: {
+          used_percent: 40,
+          limit_window_seconds: 18_000,
+        },
+      },
+    })
+
+    expect(parsed.rateLimits[0]?.windows).toEqual([
+      { remainingPercent: 87, windowSeconds: 604_800, resetAt: 1_735_689_600 },
+      { remainingPercent: 60, windowSeconds: 18_000 },
+    ])
+  })
+
+  it('treats an explicit null reset_at as unavailable without dropping quota data', () => {
+    expect(parseOpenAICodexUsage({
+      rate_limit: {
+        primary_window: {
+          used_percent: 13,
+          limit_window_seconds: 604_800,
+          reset_at: null,
+        },
+      },
+    }).rateLimits[0]?.windows[0]).toEqual({
+      remainingPercent: 87,
+      windowSeconds: 604_800,
+    })
+  })
+
+  it.each(['1735689600', 0, -1, 1.5, Number.MAX_SAFE_INTEGER])(
+    'fails closed when reset_at is present but invalid (%s)', resetAt => {
+      expect(() => parseOpenAICodexUsage({
+        rate_limit: {
+          primary_window: {
+            used_percent: 0,
+            limit_window_seconds: 604_800,
+            reset_at: resetAt,
+          },
+        },
+      })).toThrow(/invalid rate-limit reset time/)
+    },
+  )
+
   it('reads the fixed usage endpoint with refreshed plugin credentials', async () => {
     const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => response(payload()))
     vi.stubGlobal('fetch', fetchMock)

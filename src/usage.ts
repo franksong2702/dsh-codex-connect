@@ -42,6 +42,8 @@ export interface OpenAICodexRateLimitWindow {
   readonly remainingPercent: number
   /** Server-declared rolling-window length in seconds. */
   readonly windowSeconds: number
+  /** Server-declared reset time as Unix seconds, when supplied and valid. */
+  readonly resetAt?: number
 }
 
 /** One separately metered Codex quota bucket. */
@@ -88,6 +90,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** JavaScript Date's maximum representable instant, expressed in Unix seconds. */
+const MAX_DATE_UNIX_SECONDS = Math.floor(8_640_000_000_000_000 / 1_000)
+
+function parseResetAt(record: Record<string, unknown>): number | undefined {
+  if (!Object.hasOwn(record, 'reset_at')) return undefined
+  const value = record['reset_at']
+  if (value === null) return undefined
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0 || value > MAX_DATE_UNIX_SECONDS) {
+    throw new Error('OpenAI Codex returned an invalid rate-limit reset time')
+  }
+  // Keep the projection bounded by Date's actual range rather than allowing an
+  // integer that would overflow when a browser formats it as milliseconds.
+  if (!Number.isFinite(new Date(value * 1_000).getTime())) {
+    throw new Error('OpenAI Codex returned an invalid rate-limit reset time')
+  }
+  return value
+}
+
 function parseWindow(value: unknown): OpenAICodexRateLimitWindow | undefined {
   if (value === undefined || value === null) return undefined
   if (!isRecord(value)) throw new Error('OpenAI Codex returned a malformed rate-limit window')
@@ -99,7 +119,12 @@ function parseWindow(value: unknown): OpenAICodexRateLimitWindow | undefined {
   if (typeof windowSeconds !== 'number' || !Number.isInteger(windowSeconds) || windowSeconds <= 0) {
     throw new Error('OpenAI Codex returned an invalid rate-limit window duration')
   }
-  return { remainingPercent: 100 - usedPercent, windowSeconds }
+  const resetAt = parseResetAt(value)
+  return {
+    remainingPercent: 100 - usedPercent,
+    windowSeconds,
+    ...resetAt === undefined ? {} : { resetAt },
+  }
 }
 
 function parseLimit(id: string, name: string | undefined, value: unknown): OpenAICodexRateLimit | undefined {

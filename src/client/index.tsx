@@ -6,6 +6,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
+// Type-only: pulls the conversation input-region SlotMap declaration.
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+// Type-only: pulls ctx.modelDirectories and its session directory contract.
+import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import {
   decodeOpenAICodexSettings,
@@ -13,6 +17,8 @@ import {
 } from '../settings-contract.ts'
 import { OpenAICodexPluginCard } from './OpenAICodexPluginCard.tsx'
 import type { OpenAICodexPluginCardInjected } from './OpenAICodexPluginCard.tsx'
+import { OpenAICodexQuotaIndicator } from './OpenAICodexQuotaIndicator.tsx'
+import type { OpenAICodexQuotaIndicatorInjected } from './OpenAICodexQuotaIndicator.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
@@ -43,4 +49,16 @@ export function apply(ctx: ClientContext): void {
     order: 30,
     inject: (): OpenAICodexPluginCardInjected => ({ t, configScope }),
   }, OpenAICodexPluginCard))
+
+  ctx.inject(['slots', 'modelDirectories'], (scope: ClientContext) => {
+    scope.slots.inject('conversation.input.right', () => scope.slots.register({
+      name: 'conversation.input.right',
+      id: 'openai-codex-quota',
+      order: 20,
+      locale: namespace,
+      inject: (sessionId): OpenAICodexQuotaIndicatorInjected => ({
+        directory: scope.modelDirectories.directoryFor(sessionId).store,
+      }),
+    }, OpenAICodexQuotaIndicator))
+  })
 }
