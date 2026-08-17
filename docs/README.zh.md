@@ -180,6 +180,10 @@ pnpm install --frozen-lockfile
 pnpm run check
 ```
 
+## 发布
+
+维护者通过[手动 OIDC 发布 workflow](../.github/workflows/release.yml)发布 Alpha；`latest` 的独立短期提升步骤见 [Alpha 发布清单](../RELEASING.md)。
+
 ## 法律与致谢
 
 Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包含派生自 [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex) 的软件；上游内容继续保留 Copyright 2026 Yan-Zero。两部分均按 Apache-2.0 发布，详情见 [NOTICE](../NOTICE)。本项目与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。

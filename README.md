@@ -180,6 +180,10 @@ pnpm install --frozen-lockfile
 pnpm run check
 ```
 
+## Releases
+
+Maintainers publish alpha versions through the [manual OIDC release workflow](.github/workflows/release.yml); see the [alpha release runbook](RELEASING.md) for the separate, short-lived `latest` promotion step.
+
 ## Legal / Acknowledgements
 
 Copyright 2026 Frank Song for the modifications and additional work in Codex Connect. This project includes software derived from [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex); Copyright 2026 Yan-Zero is retained for the upstream material. Both are distributed under Apache-2.0, with details in [NOTICE](NOTICE). This project is not affiliated with or endorsed by OpenAI, ChatGPT, Codex, DeepSeek, or DeepSeek Harness.

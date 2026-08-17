@@ -45,7 +45,8 @@
     "check:compatibility": "node scripts/check-compatibility.mjs",
     "pack:check": "node scripts/check-pack.mjs",
     "check:dsh-install": "node scripts/check-dsh-install.mjs",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "check:release-workflow": "node scripts/check-release-workflow.mjs",
+    "check": "pnpm run check:release-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm --silent run check:compatibility && pnpm run pack:check",
     "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
   },
   "exports": {
