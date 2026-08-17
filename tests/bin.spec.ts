@@ -89,7 +89,7 @@ describe('dsh-codex-connect CLI', () => {
     const credentialPath = '/Users/fixture/.dsh/openai-codex-auth.json'
     mocked.diagnose.mockResolvedValue({
       package: 'dsh-codex-connect',
-      version: '0.1.0-alpha.4.7',
+      version: '0.1.0-alpha.4.8',
       node: 'v22.19.0',
       credentialFile: { path: credentialPath, state: 'owner-only', mode: '600' },
       capabilities: {
@@ -123,7 +123,7 @@ describe('dsh-codex-connect CLI', () => {
     expect(parsed).toMatchObject({
       schemaVersion: 1,
       package: 'dsh-codex-connect',
-      version: '0.1.0-alpha.4.7',
+      version: '0.1.0-alpha.4.8',
       node: 'v22.19.0',
       credentialFile: { state: 'owner-only', mode: '600' },
       capabilities: {
@@ -153,7 +153,7 @@ describe('dsh-codex-connect CLI', () => {
   it('returns exit 1 and a JSON compatibility status for an incompatible doctor report', async () => {
     mocked.diagnose.mockResolvedValue({
       package: 'dsh-codex-connect',
-      version: '0.1.0-alpha.4.7',
+      version: '0.1.0-alpha.4.8',
       node: 'v22.19.0',
       credentialFile: { path: '/Users/fixture/.dsh/openai-codex-auth.json', state: 'missing' },
       capabilities: {

@@ -21,7 +21,7 @@ The only verified combination is DSH plugin API packages `0.1.0-rc.6`, `@earendi
    dsh plugin --profile web add dsh-codex-connect@alpha
    ```
 
-   After `0.1.0-alpha.4.7` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.7`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.7'`.
+   After `0.1.0-alpha.4.8` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.8`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.8'`.
 
 3. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
 4. Confirm the effective `agent-default-model` and `web.searchProvider` values are unchanged from before installation.

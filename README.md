@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.7`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.7'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.8`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.8'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
 
 ### 2. Start Harness
 

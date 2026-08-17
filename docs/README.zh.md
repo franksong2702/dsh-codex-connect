@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.7`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.7'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.8`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.8'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
 
 ### 2. 启动 Harness
 
