@@ -7,6 +7,7 @@ import { OPENAI_CODEX_FAST_MODE_PATH } from '../fast-mode-paths.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
 const CODEX_PROVIDER = 'openai-codex'
+const FAST_MODE_ACTIVE_COLOR = '#f97316'
 
 type Translate = (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
 
@@ -169,13 +170,20 @@ export function OpenAICodexFastModeToggle({
         border: 0,
         borderRadius: 8,
         background: 'transparent',
-        color: active ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
+        color: active ? FAST_MODE_ACTIVE_COLOR : 'var(--dsw-alias-label-secondary)',
         cursor: busy ? 'default' : 'pointer',
         opacity: busy ? 0.6 : 1,
       }}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-        <path d="M13.1 2.75 5.35 13.1h5.8l-.95 8.15 8.45-11.2h-5.9l.35-7.3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+          data-openai-codex-fast-mode-bolt={active ? 'filled' : 'outline'}
+          d="M13.1 2.75 5.35 13.1h5.8l-.95 8.15 8.45-11.2h-5.9l.35-7.3Z"
+          fill={active ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
       </svg>
     </button>
   )

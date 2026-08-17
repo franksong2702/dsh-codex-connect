@@ -65,11 +65,18 @@ describe('OpenAI Codex Fast Mode Composer toggle', () => {
     render(<OpenAICodexFastModeToggle directory={directoryStore(directoryState('gpt-5'))} sessionId="session-a" t={t} />)
 
     const button = await screen.findByRole('button')
+    const bolt = button.querySelector('[data-openai-codex-fast-mode-bolt]')
     expect(button.getAttribute('aria-pressed')).toBe('false')
     expect(button.getAttribute('title')).toBe(en.fastModeDisabledTitle)
+    expect(button.getAttribute('style')).toContain('var(--dsw-alias-label-secondary)')
+    expect(bolt?.getAttribute('data-openai-codex-fast-mode-bolt')).toBe('outline')
+    expect(bolt?.getAttribute('fill')).toBe('none')
     fireEvent.click(button)
     await waitFor(() => { expect(button.getAttribute('aria-pressed')).toBe('true') })
     expect(button.getAttribute('title')).toBe(en.fastModeEnabledTitle)
+    expect(button.getAttribute('style')).toContain('rgb(249, 115, 22)')
+    expect(bolt?.getAttribute('data-openai-codex-fast-mode-bolt')).toBe('filled')
+    expect(bolt?.getAttribute('fill')).toBe('currentColor')
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
