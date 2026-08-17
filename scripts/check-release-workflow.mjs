@@ -50,6 +50,17 @@ assertContract('input version is compared with package.json', /package_version[\
 assertContract('npm target existence is checked before publishing', /npm view "\$PACKAGE\@\$VERSION" version/.test(workflow))
 assertContract('git tag target existence is checked before publishing', /git ls-remote --exit-code --refs origin "refs\/tags\/v\$\{VERSION\}"/.test(workflow))
 assertContract('GitHub release target existence is checked before publishing', /gh release view "v\$\{VERSION\}"/.test(workflow))
+const releaseValidationStep = workflow.match(
+  /^      - name: Validate release input and target availability\n([\s\S]*?)(?=^      - name:|(?![\s\S]))/m,
+)?.[1] ?? ''
+const releaseValidationEnv = releaseValidationStep.match(
+  /^        env:\n((?:^          [^\n]*\n?)+)/m,
+)?.[1] ?? ''
+assertContract(
+  'GitHub release availability check uses the workflow token',
+  /gh release view "v\$\{VERSION\}"/.test(releaseValidationStep) &&
+    /GH_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/.test(releaseValidationEnv),
+)
 
 const publishIndex = workflow.indexOf('npm publish --tag alpha --provenance')
 const checkIndex = workflow.indexOf('pnpm run check')

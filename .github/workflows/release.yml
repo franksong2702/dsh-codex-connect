@@ -60,6 +60,7 @@ jobs:
       - name: Validate release input and target availability
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.version }}
           CONFIRM: ${{ inputs.confirm }}
         run: |
