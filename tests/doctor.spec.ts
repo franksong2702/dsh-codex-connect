@@ -52,8 +52,8 @@ describe('Codex Connect doctor', () => {
       compatibilityOptions: {
         nodeVersion: 'v22.19.0',
         packageVersions: {
-          '@deepseek-ai/dsh-llm': '0.1.0-rc.6',
-          '@deepseek-ai/dsh-llm-pi-ai': '0.1.0-rc.5',
+          '@deepseek-ai/dsh-llm': '0.1.0-rc.7',
+          '@deepseek-ai/dsh-llm-pi-ai': '0.1.0-rc.6',
           '@earendil-works/pi-ai': '0.82.1',
         },
       },

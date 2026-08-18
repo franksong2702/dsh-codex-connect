@@ -116,12 +116,14 @@ describe('OpenAI Codex compaction request', () => {
           provider: 'openai-codex',
           model: 'gpt-5.6-sol',
           replayState: {
-            kind: 'pi-ai',
-            version: 1,
-            api: 'openai-codex-responses',
-            provider: 'openai-codex',
-            model: 'gpt-5.6-sol',
-            stopReason: 'toolUse',
+            response: {
+              kind: 'pi-ai',
+              version: 2,
+              api: 'openai-codex-responses',
+              provider: 'openai-codex',
+              model: 'gpt-5.6-sol',
+              stopReason: 'toolUse',
+            },
             blocks: [
               { type: 'reasoning', thinkingSignature: JSON.stringify(reasoningItem) },
               { type: 'tool-call' },

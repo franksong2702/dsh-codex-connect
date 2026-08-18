@@ -26,4 +26,4 @@ Before registration the plugin checks current provider ids. An existing `openai-
 
 ## Compatibility boundary
 
-The Alpha pins Harness `0.1.0-rc.6` development dependencies while targeting the current `0.1.0-rc.5` main-line composition and compatible APIs; supported Node.js is `^22.19.0 || >=24.0.0`. It pins `@earendil-works/pi-ai` `0.82.1`. Backend eligibility, quotas, models, and protocol details remain controlled upstream. Tests use temporary OAuth documents and mocked network responses; CI does not perform real authentication.
+The Alpha pins Harness `0.1.0-rc.7` development dependencies and uses its keyed `settings.plugin.item` contract; supported Node.js is `^22.19.0 || >=24.0.0`. It pins `@earendil-works/pi-ai` `0.82.1`. Backend eligibility, quotas, models, and protocol details remain controlled upstream. Tests use temporary OAuth documents and mocked network responses; CI does not perform real authentication.

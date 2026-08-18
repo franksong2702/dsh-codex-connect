@@ -14,6 +14,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     render(
       <OpenAICodexPluginCard
         t={(key) => en[key]}
+        configScope={{} as never}
         useSessions={vi.fn() as never}
         useWorkspaces={vi.fn() as never}
       />,

@@ -10,7 +10,7 @@ const COMPATIBILITY_FILE = join(REPO_ROOT, 'compatibility.json')
 const PACKAGE_FILE = join(REPO_ROOT, 'package.json')
 const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
-const REQUIRED_DSH_VERSION = '0.1.0-rc.6'
+const REQUIRED_DSH_VERSION = '0.1.0-rc.7'
 const REQUIRED_PI_AI_VERSION = '0.82.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 const MAX_PACKAGE_JSON_SEARCH_DEPTH = 8

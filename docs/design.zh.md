@@ -22,4 +22,4 @@ Host 将 `llm-openai-codex` 注册为插件自有 settings namespace，并在 LL
 
 注册前检查现有 provider id；发现 `openai-codex` 已被占用时，给出旧 bundle 或手动 provider 配置的定向迁移提示。boot-free CLI doctor 只报告包/运行时版本、OAuth 路径元数据、能力默认值和安全提示。
 
-Alpha 固定使用 Harness `0.1.0-rc.6` 开发依赖，同时面向当前 `0.1.0-rc.5` 主线组合与兼容 API；Node.js 支持 `^22.19.0 || >=24.0.0`。`@earendil-works/pi-ai` 固定为 `0.82.1`。资格、额度、模型和后端协议仍由上游控制。测试仅使用临时 OAuth 文档和模拟网络响应，CI 不执行真实认证。
+Alpha 固定使用 Harness `0.1.0-rc.7` 开发依赖，并采用其 keyed `settings.plugin.item` 契约；Node.js 支持 `^22.19.0 || >=24.0.0`。`@earendil-works/pi-ai` 固定为 `0.82.1`。资格、额度、模型和后端协议仍由上游控制。测试仅使用临时 OAuth 文档和模拟网络响应，CI 不执行真实认证。

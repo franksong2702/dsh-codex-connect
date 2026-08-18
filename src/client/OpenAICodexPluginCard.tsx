@@ -13,7 +13,7 @@ export type OpenAICodexPluginCardInjected = OpenAICodexSettingsInjected
 /** Props delivered by the Plugin configuration item slot. */
 export type OpenAICodexPluginCardProps =
   PropsRuntime<'settings.plugin.item'>
-  & Partial<OpenAICodexPluginCardInjected>
+  & OpenAICodexPluginCardInjected
 
 const cardStyle: CSSProperties = {
   overflow: 'hidden',

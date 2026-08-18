@@ -31,4 +31,5 @@ jobs:
       - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
       - run: pnpm --silent run check:compatibility
       - run: pnpm --silent run check:dsh-install
-
+        env:
+          DSH_VERSION: 0.1.0-rc.7
