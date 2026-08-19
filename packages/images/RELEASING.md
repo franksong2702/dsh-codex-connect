@@ -1,6 +1,6 @@
 # Releasing Codex Connect — Images
 
-The PR-1 package is intentionally marked `private: true` and must not be published. Remove that guard only in the final implementation PR after all Host, browser, isolated-install, smoke, and pack checks are complete.
+The package is intentionally marked `private: true` while implementation is staged and must not be published. Remove that guard only in the final implementation PR after all Host, browser, isolated-install, smoke, and pack checks are complete.
 
 Before the first npm release, a maintainer must separately confirm that:
 

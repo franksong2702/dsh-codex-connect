@@ -29,7 +29,7 @@ function fakeCore(apiVersion: number) {
 }
 
 describe('Codex Connect Images transport dependency', () => {
-  it('warns once while missing and reacts to late availability without registering a tool', async () => {
+  it('warns once while missing and reacts to late transport availability', async () => {
     const ctx = new Context()
     context = ctx
     const logs = captureLogs(ctx)
@@ -52,7 +52,7 @@ describe('Codex Connect Images transport dependency', () => {
     expect(logs.filter(message => message.type === 'warn')).toHaveLength(1)
   })
 
-  it('rejects an unsupported transport api version without registering later-phase behavior', async () => {
+  it('rejects an unsupported transport api version without registering the tool', async () => {
     const ctx = new Context()
     context = ctx
     const logs = captureLogs(ctx)

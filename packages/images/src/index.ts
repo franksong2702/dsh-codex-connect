@@ -1,25 +1,25 @@
 /**
  * Optional Codex image generation for DeepSeek Harness.
- * PR-1 exposes configuration only: no tools, transport, or network calls.
+ * Registers the optional prompt-only image tool through the core transport.
  * @module dsh-codex-connect-images
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { OpenAICodexTransportV1 } from 'dsh-codex-connect'
+import { imageGenerateTool, IMAGE_GENERATE_TOOL_NAME } from './tool.ts'
 
 /** Stable Host plugin id. */
 export const name = 'llm-openai-codex-images'
 
-/** Tool name reserved for the later Host and browser contributions. */
-export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
+export { IMAGE_GENERATE_TOOL_NAME }
 
 const TRANSPORT_SERVICE = 'openaiCodexTransport'
 const SUPPORTED_TRANSPORT_API_VERSION = 1
 
 /** Optional image capability configuration. */
 export interface Config {
-  /** Register the image generation tool for new calls once the capability ships. */
+  /** Register the image generation tool for new calls. */
   enabled?: boolean
 }
 
@@ -27,8 +27,9 @@ export const Config: z<Config> = z.object({
   enabled: z.boolean().default(true),
 })
 
-/** Wait for the core Transport without registering the PR-3 image tool. */
-export function apply(ctx: Context, _config: Config): void {
+/** Register the image tool only for one enabled, compatible service lifecycle. */
+export function apply(ctx: Context, config: Config): void {
+  if (config.enabled !== true) return
   if (ctx.reflect.get(TRANSPORT_SERVICE) === undefined) {
     ctx.logger.warn(
       'dsh-codex-connect-images: waiting for the Codex Connect core transport; install it with '
@@ -44,6 +45,7 @@ export function apply(ctx: Context, _config: Config): void {
       )
       return
     }
-    // PR-3 registers codex_connect_image_generate inside this lifecycle callback.
+    transportCtx.inject(['tools', 'attachments'], toolCtx =>
+      toolCtx.tools.register(imageGenerateTool(toolCtx)))
   })
 }

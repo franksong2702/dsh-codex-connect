@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { access, mkdir, mkdtemp, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const DEFAULT_DSH_VERSION = '0.1.0-rc.7'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -59,6 +59,36 @@ async function assertNoCredential(home) {
   throw new Error('isolated plugin installation unexpectedly created an OAuth credential file')
 }
 
+function registrationProbe({ installRoot, imagesRoot, workspace }) {
+  const moduleUrl = path => JSON.stringify(pathToFileURL(path).href)
+  const source = `
+    import { Context } from ${moduleUrl(join(installRoot, 'node_modules/@deepseek-ai/cordis/lib/index.js'))};
+    import SystemPrompt from ${moduleUrl(join(installRoot, 'node_modules/@deepseek-ai/dsh-system-prompt/lib/index.js'))};
+    import ToolRuntime from ${moduleUrl(join(installRoot, 'node_modules/@deepseek-ai/dsh-tools/lib/index.js'))};
+    import * as Images from ${moduleUrl(join(imagesRoot, 'lib/index.js'))};
+    const ctx = new Context();
+    try {
+      await ctx.plugin(SystemPrompt);
+      await ctx.plugin(ToolRuntime, { mode: 'native' });
+      ctx.provide('attachments', {
+        imageLimits: { maxImageBytes: 5242880, maxImagesPerMessage: 4, maxMessageImageBytes: 20971520, maxImagePixels: 25000000, mediaTypes: ['image/png', 'image/jpeg', 'image/webp'] },
+        saveImages: async () => [],
+      });
+      ctx.provide('openaiCodexTransport', { apiVersion: 1, generateImages: async () => { throw new Error('probe must not generate'); } });
+      await ctx.plugin(Images, Images.Config({ enabled: true }));
+      await ctx.fiber.await();
+      process.stdout.write(JSON.stringify({ registered: ctx.tools.get(Images.IMAGE_GENERATE_TOOL_NAME) !== undefined }));
+    } finally {
+      await ctx.fiber.dispose();
+    }
+  `
+  const result = runCommand(process.execPath, ['--input-type=module', '--eval', source], { cwd: workspace, env: process.env })
+  requireSuccess('images tool registration probe', result)
+  const parsed = JSON.parse(result.stdout)
+  if (parsed.registered !== true) throw new Error('installed images package did not register its tool with compatible runtime services')
+  return true
+}
+
 async function installScenario({ dshBinary, dshVersion, home, workspace, withImages }) {
   const env = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_MODE: 'DISABLED' }
   const before = runCommand(dshBinary, ['--profile', 'web', '--dump-config'], { cwd: workspace, env })
@@ -104,10 +134,6 @@ async function installScenario({ dshBinary, dshVersion, home, workspace, withIma
     || configBlock(imagesDump.stdout, 'llm-openai-codex') !== coreBlock) {
     throw new Error('images installation changed core or Harness routing defaults')
   }
-  if (imagesDump.stdout.includes('codex_connect_image_generate')) {
-    throw new Error('PR-1 skeleton unexpectedly registered the image generation tool')
-  }
-
   const profileDir = join(home, 'profiles/web')
   const profileManifest = JSON.parse(await readFile(join(profileDir, 'package.json'), 'utf8'))
   if (profileManifest.dependencies?.['dsh-codex-connect'] === undefined
@@ -124,8 +150,9 @@ async function installScenario({ dshBinary, dshVersion, home, workspace, withIma
   if (profileCoreReal !== repoReal || workspaceCoreReal !== repoReal || profileImagesReal !== imagesReal) {
     throw new Error('profile links did not resolve to one workspace core and one images package')
   }
+  const toolRegistered = registrationProbe({ installRoot: dirname(dirname(dirname(dshBinary))), imagesRoot: profileImagesReal, workspace })
   await assertNoCredential(home)
-  return { coreOnlyImageFree: true, imagesConfigured: true, singleCoreInstance: true }
+  return { coreOnlyImageFree: true, imagesConfigured: true, singleCoreInstance: true, toolRegistered }
 }
 
 async function main() {
@@ -176,7 +203,7 @@ async function main() {
       imagesConfigured: withImages.imagesConfigured,
       defaultEnabled: true,
       singleCoreInstance: withImages.singleCoreInstance,
-      toolRegistered: false,
+      toolRegistered: withImages.toolRegistered,
       credentialsCreated: false,
     })}\n`)
   } finally {
