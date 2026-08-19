@@ -239,7 +239,12 @@ async function migrateArtifact(path: string, apply: boolean): Promise<OpenAICode
     }
     if (!(await readFile(path)).equals(original)) throw new Error(`session changed while migration was prepared: ${path}`)
     await rename(temporary, path)
-    await syncParentDirectory(path)
+    try {
+      await syncParentDirectory(path)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`session was repaired and backed up at ${backupPath}, but synchronizing its directory failed: ${message}`, { cause: error })
+    }
   } finally {
     await rm(temporary, { force: true })
   }
