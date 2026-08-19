@@ -20,6 +20,15 @@ import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { viewImageTool } from './view-image.ts'
+import { OpenAICodexTransport } from './transport.ts'
+import type { OpenAICodexTransportV1 } from './transport.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Host-only image transport owned by the Codex Connect core fiber. */
+    openaiCodexTransport: OpenAICodexTransportV1
+  }
+}
 
 export { VIEW_IMAGE_TOOL_NAME } from './view-image.ts'
 export {
@@ -81,6 +90,29 @@ export {
   resolveOpenAICodexSettings,
 } from './settings-contract.ts'
 export type { OpenAICodexSettingsConfig } from './settings-contract.ts'
+
+export {
+  isOpenAICodexTransportError,
+  OPENAI_CODEX_IMAGE_GENERATION_URL,
+  OPENAI_CODEX_IMAGE_MAX_COUNT,
+  OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES,
+  OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES,
+  OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH,
+  OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS,
+  OPENAI_CODEX_TRANSPORT_API_VERSION,
+  OPENAI_CODEX_TRANSPORT_ERROR_CODES,
+  OPENAI_CODEX_TRANSPORT_SERVICE,
+  OpenAICodexTransport,
+  OpenAICodexTransportError,
+} from './transport.ts'
+export type {
+  GeneratedImagePayload,
+  ImageGenerationRequest,
+  ImageGenerationResponse,
+  ImageRequestContext,
+  OpenAICodexTransportErrorCode,
+  OpenAICodexTransportV1,
+} from './transport.ts'
 
 export { loginOpenAICodex, logoutOpenAICodex, openAICodexAuthStatus } from './auth.ts'
 export type { OpenAICodexAuthStatus } from './auth.ts'
@@ -162,6 +194,7 @@ export function apply(ctx: Context, config: Config): void {
   const credentials = new OpenAICodexCredentialStore()
   const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
+  new OpenAICodexTransport(ctx, credentials)
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
     createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode),

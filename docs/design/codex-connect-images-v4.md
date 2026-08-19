@@ -121,11 +121,11 @@
 }
 ```
 
-分阶段约束：PR-1 的非功能骨架暂时使用
-`dsh-codex-connect: ">=0.1.0-alpha.4.10 <0.1.0-alpha.5"`，因为核心 Transport
-尚未存在且 workspace 根包仍是 4.10。PR-2 在引入 Transport 并把核心升到 4.11 时，
-必须同步把图片包 peer 下限升到 4.11。PR-1 图片包必须保留 `private: true`，直到
-PR-4 完成功能、测试和发布前置条件后才可移除，避免误发布一个空骨架。
+分阶段约束：PR-1 的非功能骨架使用了
+`dsh-codex-connect: ">=0.1.0-alpha.4.10 <0.1.0-alpha.5"`。PR-2 引入 Transport 时，
+必须同步把图片包 `package.json` 的 peer 下限和 `compatibility.json` 的核心版本下限升到
+4.11。图片包必须保留 `private: true`，直到 PR-4 完成功能、测试和发布前置条件后才可
+移除，避免误发布一个空骨架。
 
 不得使用 `workspace:.`，也不得把核心包放进图片包的普通 `dependencies`。
 
@@ -193,13 +193,17 @@ Transport 是统一出口和审计边界，不是两个 npm 包之间的权限�
 
 运行时只比较结构化 `apiVersion` 和固定错误 code，不使用跨包 `instanceof`、共享 Symbol 或类身份判断。
 
-PR-2 必须证明：
+PR-2 必须证明（服务依赖接线，不含工具注册）：
 
-- 核心缺失时有一次可读诊断，且图片工具零注册。
-- 核心后加载时自动注册图片工具。
-- 核心 fiber dispose 后 `ctx.reflect.get('openaiCodexTransport')` 返回 `undefined`。
-- `apiVersion !== 1` 时图片工具零注册。
+- 核心缺失时有一次可读诊断，且该 warning 只来自 `apply()` 的非阻塞探针。
+- 核心后加载时 `ctx.inject` 回调自动执行，且不重复输出缺失 warning。
+- 核心 fiber dispose 后 `ctx.reflect.get('openaiCodexTransport')` 返回 `undefined`；核心重新加载后回调再次执行。
+- `apiVersion !== 1` 时回调只输出一次 error 并立即返回。
 - 构建后的 d.ts 保留 Cordis 类型增强。
+- PR-2 全程零工具注册、零附件写入、零设置卡片、零真实上游请求。
+
+图片包只以 type-only 方式引用核心契约，核心缺失时模块仍可加载并输出 warning。
+图片工具的注册、卸载与后加载恢复由 PR-3 证明。
 
 ## 7. 配置与安装语义
 
@@ -295,7 +299,8 @@ codex_connect_image_generate
 
 插件在保存前读取运行期 `ctx.attachments.imageLimits`，并使用其中的
 `maxImageBytes`、`maxMessageImageBytes`、`maxImagePixels` 与 `mediaTypes` 先行拦截，
-以便由插件控制错误文案。总响应硬限制为 48 MB，错误正文硬限制为 64 KB，
+以便由插件控制错误文案。总响应硬限制为 48 MiB（50,331,648 字节），错误正文硬限制为
+64 KiB（65,536 字节），
 最多接受 4 张作为防御性上限；阶段零实测上游始终返回 1 张。
 
 首版不写工作区，避免路径逃逸、符号链接、覆盖和部分文件写入语义。
@@ -462,6 +467,8 @@ npm `latest` 策略不在本项目中自动改变。所有 Alpha 安装文档明
 - 类型增强和 d.ts pack 断言。
 - OAuth 刷新、固定路线、脱敏、超时、取消、响应上限。
 - 服务缺失 warning、后加载恢复、热重载和 API version 测试。
+- 图片包只增加等待服务与拒绝错误 `apiVersion` 的最小依赖生命周期骨架，不注册工具；
+  peer 与 compatibility 核心下限升到 `>=0.1.0-alpha.4.11 <0.1.0-alpha.5`。
 
 PR-2 未验证服务生命周期、d.ts 和 API version 前，不进入 PR-3。
 
@@ -472,6 +479,7 @@ PR-2 未验证服务生命周期、d.ts 和 API version 前，不进入 PR-3。
 - 去重、零重试和取消语义。
 - 图片验证、确定性名称、批量附件保存。
 - 所有模型可调用且 output.render 仅文本。
+- 工具注册、卸载与核心后加载恢复的证明。
 
 ### PR-4：聊天 UI 与发布准备
 

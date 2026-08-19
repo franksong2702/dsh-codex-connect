@@ -5,7 +5,7 @@
   },
   "core": {
     "package": "dsh-codex-connect",
-    "version": ">=0.1.0-alpha.4.10 <0.1.0-alpha.5"
+    "version": ">=0.1.0-alpha.4.11 <0.1.0-alpha.5"
   },
   "dshPluginApi": {
     "version": "0.1.0-rc.7",

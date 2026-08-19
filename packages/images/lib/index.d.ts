@@ -11,7 +11,7 @@ interface Config {
   enabled?: boolean;
 }
 declare const Config: z<Config>;
-/** PR-1 deliberately registers no services, tools, routes, or effects. */
-declare function apply(_ctx: Context, _config: Config): void;
+/** Wait for the core Transport without registering the PR-3 image tool. */
+declare function apply(ctx: Context, _config: Config): void;
 //#endregion
 export { Config, IMAGE_GENERATE_TOOL_NAME, apply, name };

@@ -1,8 +1,119 @@
 import z from "@deepseek-ai/schemastery";
 import { AuthInteraction, Credential, CredentialInfo, CredentialStore } from "@earendil-works/pi-ai";
 import "@deepseek-ai/dsh-tools";
+import { Context, Service } from "@deepseek-ai/cordis";
 import { WebSearchProvider, WebSearchRequest, WebSearchResult } from "@deepseek-ai/dsh-web";
-import { Context } from "@deepseek-ai/cordis";
+//#region src/store.d.ts
+/** Provider route and pi-ai provider id owned by this bundle. */
+declare const OPENAI_CODEX_PROVIDER = "openai-codex";
+/** Basename of the OAuth document inside the Harness home. */
+declare const OPENAI_CODEX_AUTH_FILENAME = ".openai-codex-auth.json";
+/**
+ * Resolve the default OAuth document path.
+ * @param dshHome - optional Harness-home override.
+ * @returns the absolute owner-only document path.
+ */
+declare function openAICodexAuthPath(dshHome?: string): string;
+/** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
+declare class OpenAICodexCredentialStore implements CredentialStore {
+  /** Absolute credential document path. */
+  readonly filename: string;
+  /**
+   * @param filename - explicit document path, defaulting under `$DSH_HOME`.
+   */
+  constructor(filename?: string);
+  /** Read and validate the current document without acquiring the writer lock. */
+  private readCurrent;
+  /** @inheritdoc */
+  read(providerId: string): Promise<Credential | undefined>;
+  /** @inheritdoc */
+  list(): Promise<readonly CredentialInfo[]>;
+  /** @inheritdoc */
+  modify(providerId: string, fn: (current: Credential | undefined) => Promise<Credential | undefined>): Promise<Credential | undefined>;
+  /** @inheritdoc */
+  delete(providerId: string): Promise<void>;
+}
+//#endregion
+//#region src/transport.d.ts
+/** Cordis service name owned by the core plugin fiber. */
+declare const OPENAI_CODEX_TRANSPORT_SERVICE = "openaiCodexTransport";
+/** Structured contract version used across the core and companion packages. */
+declare const OPENAI_CODEX_TRANSPORT_API_VERSION: 1;
+/** Stage-zero verified image-generation endpoint. */
+declare const OPENAI_CODEX_IMAGE_GENERATION_URL = "https://chatgpt.com/backend-api/codex/images/generations";
+/** Network deadline covering the request and bounded response read. */
+declare const OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS = 120000;
+/** Maximum accepted success-body size: 48 MiB. */
+declare const OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES: number;
+/** Maximum error-body size read and discarded: 64 KiB. */
+declare const OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES: number;
+/** Defensive upper bound for unexpected multi-image responses. */
+declare const OPENAI_CODEX_IMAGE_MAX_COUNT = 4;
+/** Local prompt limit enforced before any credential or network work. */
+declare const OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH = 32000;
+/** Stable, secret-free transport errors consumed structurally by companion packages. */
+declare const OPENAI_CODEX_TRANSPORT_ERROR_CODES: {
+  readonly invalidRequest: "OPENAI_CODEX_INVALID_REQUEST";
+  readonly signedOut: "OPENAI_CODEX_SIGNED_OUT";
+  readonly reauthRequired: "OPENAI_CODEX_REAUTH_REQUIRED";
+  readonly rateLimited: "OPENAI_CODEX_RATE_LIMITED";
+  readonly upstreamRejected: "OPENAI_CODEX_UPSTREAM_REJECTED";
+  readonly upstreamUnavailable: "OPENAI_CODEX_UPSTREAM_UNAVAILABLE";
+  readonly redirectRejected: "OPENAI_CODEX_REDIRECT_REJECTED";
+  readonly timeout: "OPENAI_CODEX_TIMEOUT";
+  readonly canceled: "OPENAI_CODEX_CANCELED";
+  readonly networkError: "OPENAI_CODEX_NETWORK_ERROR";
+  readonly responseTooLarge: "OPENAI_CODEX_RESPONSE_TOO_LARGE";
+  readonly malformedResponse: "OPENAI_CODEX_MALFORMED_RESPONSE";
+};
+/** Union of the stable transport error codes. */
+type OpenAICodexTransportErrorCode = (typeof OPENAI_CODEX_TRANSPORT_ERROR_CODES)[keyof typeof OPENAI_CODEX_TRANSPORT_ERROR_CODES];
+/** Fixed, secret-free transport failure. */
+declare class OpenAICodexTransportError extends Error {
+  readonly code: OpenAICodexTransportErrorCode;
+  readonly status?: number;
+  readonly retryAfterSeconds?: number;
+  constructor(code: OpenAICodexTransportErrorCode, options?: {
+    status?: number;
+    retryAfterSeconds?: number;
+  });
+}
+/** Identify transport failures structurally without relying on cross-package class identity. */
+declare function isOpenAICodexTransportError(error: unknown): error is OpenAICodexTransportError;
+/** Only caller-controlled field accepted by the Host transport. */
+interface ImageGenerationRequest {
+  readonly prompt: string;
+}
+/** Request lifecycle supplied by the Host tool in PR-3. */
+interface ImageRequestContext {
+  readonly signal?: AbortSignal | undefined;
+}
+/** One encoded image awaiting PR-3 signature and attachment validation. */
+interface GeneratedImagePayload {
+  readonly b64Json: string;
+}
+/** Bounded, structured success projection returned to the companion package. */
+interface ImageGenerationResponse {
+  readonly apiVersion: 1;
+  readonly traceId: string;
+  readonly elapsedMs: number;
+  readonly responseBytes: number;
+  readonly images: readonly GeneratedImagePayload[];
+}
+/** Versioned Host-only API provided by the core plugin. */
+interface OpenAICodexTransportV1 {
+  readonly apiVersion: 1;
+  generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
+}
+/** Core-owned Cordis service for the optional image package. */
+declare class OpenAICodexTransport extends Service implements OpenAICodexTransportV1 {
+  private readonly credentials;
+  readonly apiVersion: 1;
+  private readonly models;
+  constructor(ctx: Context, credentials: OpenAICodexCredentialStore);
+  generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
+}
+//#endregion
 //#region src/view-image.d.ts
 /** Stable Codex tool name. */
 declare const VIEW_IMAGE_TOOL_NAME = "view_image";
@@ -112,37 +223,6 @@ declare function assertNoOpenAICodexProviderConflict(providerIds: readonly strin
  * OAuth document, refreshes a token, or starts an authorization flow.
  */
 declare function diagnoseOpenAICodex(options?: OpenAICodexDiagnosticOptions): Promise<OpenAICodexDiagnosticReport>;
-//#endregion
-//#region src/store.d.ts
-/** Provider route and pi-ai provider id owned by this bundle. */
-declare const OPENAI_CODEX_PROVIDER = "openai-codex";
-/** Basename of the OAuth document inside the Harness home. */
-declare const OPENAI_CODEX_AUTH_FILENAME = ".openai-codex-auth.json";
-/**
- * Resolve the default OAuth document path.
- * @param dshHome - optional Harness-home override.
- * @returns the absolute owner-only document path.
- */
-declare function openAICodexAuthPath(dshHome?: string): string;
-/** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
-declare class OpenAICodexCredentialStore implements CredentialStore {
-  /** Absolute credential document path. */
-  readonly filename: string;
-  /**
-   * @param filename - explicit document path, defaulting under `$DSH_HOME`.
-   */
-  constructor(filename?: string);
-  /** Read and validate the current document without acquiring the writer lock. */
-  private readCurrent;
-  /** @inheritdoc */
-  read(providerId: string): Promise<Credential | undefined>;
-  /** @inheritdoc */
-  list(): Promise<readonly CredentialInfo[]>;
-  /** @inheritdoc */
-  modify(providerId: string, fn: (current: Credential | undefined) => Promise<Credential | undefined>): Promise<Credential | undefined>;
-  /** @inheritdoc */
-  delete(providerId: string): Promise<void>;
-}
 //#endregion
 //#region src/usage.d.ts
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
@@ -384,6 +464,12 @@ declare class FastModeRegistry {
 declare const OPENAI_CODEX_FAST_MODE_PATH = "/plugins/dsh-openai-codex/fast-mode";
 //#endregion
 //#region src/index.d.ts
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Host-only image transport owned by the Codex Connect core fiber. */
+    openaiCodexTransport: OpenAICodexTransportV1;
+  }
+}
 /** Stable Cordis plugin name. */
 declare const name = "llm-openai-codex";
 /** The model registry required before the provider can register. */
@@ -415,4 +501,4 @@ declare const Config: z<Config>;
  */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, isFastModeSessionId, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, resolveOpenAICodexSettings };
+export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_IMAGE_GENERATION_URL, OPENAI_CODEX_IMAGE_MAX_COUNT, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES, OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES, OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_TRANSPORT_API_VERSION, OPENAI_CODEX_TRANSPORT_ERROR_CODES, OPENAI_CODEX_TRANSPORT_SERVICE, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, OpenAICodexTransport, OpenAICodexTransportError, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, isFastModeSessionId, isOpenAICodexTransportError, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, resolveOpenAICodexSettings };

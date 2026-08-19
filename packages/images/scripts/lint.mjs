@@ -19,7 +19,8 @@ if (packageJson.dependencies?.['dsh-codex-connect'] !== undefined) failures.push
 
 const sources = (await Promise.all(sourcePaths.map(path => readFile(path, 'utf8')))).join('\n')
 if (/\bfetch\s*\(|https?:\/\/|node:https|undici|chatgpt\.com/u.test(sources)) failures.push('PR-1 source must not contain a network route')
-if (/openaiCodexTransport|registerTool|ctx\.tools|ImageGallery|ImageLightbox/u.test(sources)) failures.push('PR-1 source must not contain later-phase functionality')
+if (/registerTool|ctx\.tools|ImageGallery|ImageLightbox/u.test(sources)) failures.push('images source must not contain later-phase functionality')
+if (/^import\s+(?!type\b)[^\n]*['"]dsh-codex-connect['"]/mu.test(sources)) failures.push('images source must import the core as types only')
 
 const productFiles = ['README.md', 'docs/README.zh.md', 'SECURITY.md', 'RELEASING.md', 'NOTICE', 'LICENSE']
 for (const filename of productFiles) {
