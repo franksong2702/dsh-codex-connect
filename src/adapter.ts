@@ -96,13 +96,14 @@ export interface ContextWindowOverrides {
 
 function applyContextWindowOverrides(
   provider: Provider,
-  overrides: ContextWindowOverrides | undefined,
+  getOverrides: () => ContextWindowOverrides | undefined,
 ): Provider {
-  if (!overrides?.defaultContextWindow && !overrides?.modelContextWindows) return provider
   const getModels = provider.getModels.bind(provider)
   return {
     ...provider,
     getModels() {
+      const overrides = getOverrides()
+      if (!overrides?.defaultContextWindow && !overrides?.modelContextWindows) return getModels()
       return getModels().map(model => {
         const perModel = overrides.modelContextWindows?.[model.id]
         const cw = perModel ?? overrides.defaultContextWindow
@@ -124,9 +125,9 @@ export function createOpenAICodexAdapter(
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
   proxyConfig?: ProxyConfig,
-  contextWindowOverrides?: ContextWindowOverrides,
+  getContextWindowOverrides?: () => ContextWindowOverrides | undefined,
 ): PiAiAdapter {
-  const provider = applyContextWindowOverrides(openaiCodexProvider(), contextWindowOverrides)
+  const provider = applyContextWindowOverrides(openaiCodexProvider(), getContextWindowOverrides ?? (() => undefined))
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',
