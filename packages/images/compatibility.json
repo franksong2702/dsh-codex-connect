@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "core": {
+    "package": "dsh-codex-connect",
+    "version": ">=0.1.0-alpha.4.10 <0.1.0-alpha.5"
+  },
+  "dshPluginApi": {
+    "version": "0.1.0-rc.7",
+    "packages": [
+      "@deepseek-ai/dsh-attachment",
+      "@deepseek-ai/dsh-invariants",
+      "@deepseek-ai/dsh-tools"
+    ]
+  }
+}

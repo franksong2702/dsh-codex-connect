@@ -1,0 +1,98 @@
+{
+  "name": "dsh-codex-connect-images",
+  "displayName": "Codex Connect — Images",
+  "description": "Optional Codex image generation for DeepSeek Harness.",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "author": "Frank Song",
+  "contributors": [
+    "Yan-Zero (original dsh-codex author)"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "openai-codex",
+    "codex",
+    "image-generation"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "alpha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/franksong2702/dsh-codex-connect.git",
+    "directory": "packages/images"
+  },
+  "homepage": "https://github.com/franksong2702/dsh-codex-connect/tree/main/packages/images#readme",
+  "bugs": {
+    "url": "https://github.com/franksong2702/dsh-codex-connect/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "lint": "node scripts/lint.mjs",
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.client.json",
+    "check:compatibility": "node scripts/check-compatibility.mjs",
+    "pack:check": "node scripts/check-pack.mjs",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./compatibility.json": "./compatibility.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "compatibility.json",
+    "cordis.patch.yml",
+    "docs",
+    "NOTICE"
+  ],
+  "license": "Apache-2.0",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "dsh-codex-connect": ">=0.1.0-alpha.4.10 <0.1.0-alpha.5",
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-invariants": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
+    "@deepseek-ai/schemastery": "^3.18.1-rc.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "dsh-codex-connect": "workspace:*",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-attachment": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-invariants": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
+    "@deepseek-ai/schemastery": "3.18.1",
+    "@types/node": "^22.20.0",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
+  }
+}

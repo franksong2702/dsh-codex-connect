@@ -18,5 +18,8 @@ for (const name of required) {
 
 const forbidden = names.filter(name => /(^|\/)(?:\.env(?:\.|$)|\.git|node_modules|tests?|scripts?|src)(?:\/|$)|auth\.json$|credential|token/iu.test(name))
 if (forbidden.length > 0) throw new Error(`packed artifact contains forbidden files: ${forbidden.join(', ')}`)
+if (names.includes('docs/design/codex-connect-images-v4.md')) {
+  throw new Error('core packed artifact must not include the images implementation design')
+}
 
 process.stdout.write(`validated ${names.length} packed files (${manifest.size} bytes, ${manifest.unpackedSize} unpacked bytes)\n`)

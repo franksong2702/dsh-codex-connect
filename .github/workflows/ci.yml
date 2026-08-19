@@ -58,3 +58,40 @@ jobs:
 
   # Alpha CI deliberately has no npm-publish job. Publishing requires a later,
   # separately authorized release workflow.
+
+  validate-images:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.19.0', '24.x']
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
+      - name: Verify images workspace linkage
+        run: pnpm --silent run check:workspace-linkage
+      - name: Check images package
+        run: pnpm --filter dsh-codex-connect-images run check
+      - name: Validate images release workflow contract
+        run: pnpm run check:release-workflow-images
+      - name: Validate isolated images installation
+        run: pnpm --silent run check:dsh-images-install
+      - name: Verify committed images build output
+        shell: bash
+        run: |
+          changes="$(git status --porcelain --untracked-files=all -- packages/images/lib)"
+          if [[ -n "$changes" ]]; then
+            printf '%s\n' "$changes"
+            exit 1
+          fi

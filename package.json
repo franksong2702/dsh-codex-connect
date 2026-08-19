@@ -45,8 +45,12 @@
     "check:compatibility": "node scripts/check-compatibility.mjs",
     "pack:check": "node scripts/check-pack.mjs",
     "check:dsh-install": "node scripts/check-dsh-install.mjs",
+    "check:dsh-images-install": "node scripts/check-dsh-images-install.mjs",
     "check:release-workflow": "node scripts/check-release-workflow.mjs",
+    "check:release-workflow-images": "node scripts/check-release-workflow-images.mjs",
+    "check:workspace-linkage": "node scripts/check-workspace-linkage.mjs",
     "check": "pnpm run check:release-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "check:all": "pnpm run check && pnpm --filter dsh-codex-connect-images run check && pnpm run check:release-workflow-images && pnpm --silent run check:workspace-linkage",
     "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
   },
   "exports": {
@@ -68,6 +72,7 @@
     "compatibility.json",
     "cordis.patch.yml",
     "docs",
+    "!docs/design/codex-connect-images-v4.md",
     "INSTALL.md",
     "MIGRATION.md",
     "NOTICE"

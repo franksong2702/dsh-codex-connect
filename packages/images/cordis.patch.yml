@@ -1,0 +1,6 @@
+# Installing the optional images package adds only its own configuration row.
+- insert:
+    - id: llm-openai-codex-images
+      name: dsh-codex-connect-images
+      config:
+        enabled: true
