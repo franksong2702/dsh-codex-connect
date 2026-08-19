@@ -30,6 +30,9 @@ export interface OpenAICodexSettingsConfig {
   proxyEnabled: boolean
   proxyHost: string
   proxyPort: number
+  // Context window overrides for LLM models (0 = use catalog default)
+  defaultContextWindow: number
+  modelContextWindows: Record<string, number>
 }
 
 export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> = Object.freeze({
@@ -43,6 +46,9 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   proxyEnabled: false,
   proxyHost: '127.0.0.1',
   proxyPort: 7890,
+  // Context window overrides (0 = use catalog default)
+  defaultContextWindow: 0,
+  modelContextWindows: {},
 })
 
 /** Fill the schema defaults even when called without Cordis validation. */
@@ -68,6 +74,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const proxyEnabled = value['proxyEnabled']
   const proxyHost = value['proxyHost']
   const proxyPort = value['proxyPort']
+  const defaultContextWindow = value['defaultContextWindow']
+  const modelContextWindows = value['modelContextWindows']
   
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   if (typeof searchModel !== 'string' || searchModel.trim().length === 0) return undefined
@@ -79,7 +87,17 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (proxyEnabled !== undefined && typeof proxyEnabled !== 'boolean') return undefined
   if (proxyHost !== undefined && (typeof proxyHost !== 'string' || proxyHost.trim().length === 0)) return undefined
   if (proxyPort !== undefined && (typeof proxyPort !== 'number' || !Number.isInteger(proxyPort) || proxyPort < 1 || proxyPort > 65535)) return undefined
-  
+
+  // Validate context window overrides (0 = no override)
+  if (defaultContextWindow !== undefined && (typeof defaultContextWindow !== 'number' || !Number.isInteger(defaultContextWindow) || defaultContextWindow < 0)) return undefined
+  let validModelContextWindows: Record<string, number> = {}
+  if (modelContextWindows !== undefined && isRecord(modelContextWindows)) {
+    for (const [key, val] of Object.entries(modelContextWindows)) {
+      if (typeof val !== 'number' || !Number.isInteger(val) || val < 1) return undefined
+      validModelContextWindows[key] = val
+    }
+  }
+
   return {
     enableSearch,
     enableImageTool,
@@ -90,5 +108,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     proxyEnabled: typeof proxyEnabled === 'boolean' ? proxyEnabled : DEFAULT_OPENAI_CODEX_SETTINGS.proxyEnabled,
     proxyHost: typeof proxyHost === 'string' ? proxyHost : DEFAULT_OPENAI_CODEX_SETTINGS.proxyHost,
     proxyPort: typeof proxyPort === 'number' ? proxyPort : DEFAULT_OPENAI_CODEX_SETTINGS.proxyPort,
+    defaultContextWindow: typeof defaultContextWindow === 'number' ? defaultContextWindow : DEFAULT_OPENAI_CODEX_SETTINGS.defaultContextWindow,
+    modelContextWindows: validModelContextWindows,
   }
 }

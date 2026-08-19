@@ -89,6 +89,30 @@ function requestProvider(provider: Provider, fastMode?: FastModeRegistry, proxy?
   }
 }
 
+export interface ContextWindowOverrides {
+  defaultContextWindow: number | undefined
+  modelContextWindows: Record<string, number> | undefined
+}
+
+function applyContextWindowOverrides(
+  provider: Provider,
+  overrides: ContextWindowOverrides | undefined,
+): Provider {
+  if (!overrides?.defaultContextWindow && !overrides?.modelContextWindows) return provider
+  const getModels = provider.getModels.bind(provider)
+  return {
+    ...provider,
+    getModels() {
+      return getModels().map(model => {
+        const perModel = overrides.modelContextWindows?.[model.id]
+        const cw = perModel ?? overrides.defaultContextWindow
+        if (cw === undefined || cw === model.contextWindow) return model
+        return { ...model, contextWindow: cw }
+      })
+    },
+  }
+}
+
 /**
  * Create the Codex subscription adapter without requiring a dsh fork. The
  * public pi-ai adapter owns Harness message conversion, image attachment
@@ -100,8 +124,9 @@ export function createOpenAICodexAdapter(
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
   proxyConfig?: ProxyConfig,
+  contextWindowOverrides?: ContextWindowOverrides,
 ): PiAiAdapter {
-  const provider = openaiCodexProvider()
+  const provider = applyContextWindowOverrides(openaiCodexProvider(), contextWindowOverrides)
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',

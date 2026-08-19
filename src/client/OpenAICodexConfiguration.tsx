@@ -48,6 +48,8 @@ const CONFIG_FIELDS = [
   'proxyEnabled',
   'proxyHost',
   'proxyPort',
+  'defaultContextWindow',
+  'modelContextWindows',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
 
 function sameConfig(
@@ -95,7 +97,9 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const validTokens = draft !== undefined
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
-  const valid = validModel && validTokens
+  const validContextWindow = draft === undefined || draft.defaultContextWindow === 0
+    || (Number.isInteger(draft.defaultContextWindow) && draft.defaultContextWindow > 0)
+  const valid = validModel && validTokens && validContextWindow
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
@@ -249,10 +253,31 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
               </label>
             </div>
           ) : null}
+          <div style={formGridStyle}>
+            <label style={formFieldStyle}>
+              <span style={labelStyle}>{t('defaultContextWindow')}</span>
+              <span style={bodyStyle}>{t('defaultContextWindowHelp')}</span>
+              <input
+                style={controlStyle}
+                type="number"
+                min={1}
+                step={1}
+                value={draft.defaultContextWindow || ''}
+                disabled={!editable}
+                aria-invalid={!validContextWindow}
+                placeholder="272000"
+                onChange={event => {
+                  const raw = event.currentTarget.value
+                  update('defaultContextWindow', raw === '' ? 0 : event.currentTarget.valueAsNumber)
+                }}
+              />
+            </label>
+          </div>
         </fieldset>
       )}
       {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
       {!validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
+      {!validContextWindow && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidContextWindow')}</p> : null}
       <p style={bodyStyle}>{t('routingNote')}</p>
       <div style={actionsStyle}>
         <span aria-live="polite">

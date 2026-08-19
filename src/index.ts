@@ -16,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
 import { createOpenAICodexAdapter } from './adapter.ts'
+import type { ContextWindowOverrides } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
@@ -156,6 +157,10 @@ export interface Config {
   proxyHost?: string
   /** Proxy port number */
   proxyPort?: number
+  /** Default context window for all Codex models (tokens). 0 = use catalog default. */
+  defaultContextWindow?: number
+  /** Per-model context window overrides (model id -> tokens). */
+  modelContextWindows?: Record<string, number>
 }
 
 export const Config: z<Config> = z.object({
@@ -168,6 +173,8 @@ export const Config: z<Config> = z.object({
   proxyEnabled: z.boolean().default(false),
   proxyHost: z.string().default('127.0.0.1'),
   proxyPort: z.number().step(1).min(1).max(65535).default(7890),
+  defaultContextWindow: z.number().step(1).min(0).default(0) as any,
+  modelContextWindows: z.dict(z.string(), z.number().step(1).min(1) as any).default({}) as any,
 })
 
 /**
@@ -190,10 +197,18 @@ export function apply(ctx: Context, config: Config): void {
     return resolveProxyConfig()
   }
 
+  const getContextWindowOverrides = (): ContextWindowOverrides | undefined => {
+    const cfg = current()
+    const d = cfg.defaultContextWindow ?? 0
+    const m = cfg.modelContextWindows
+    if ((!d || d <= 0) && (!m || Object.keys(m).length === 0)) return undefined
+    return { defaultContextWindow: d > 0 ? d : undefined, modelContextWindows: m && Object.keys(m).length > 0 ? m : undefined }
+  }
+
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
-    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode, getProxyConfig()),
+    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode, getProxyConfig(), getContextWindowOverrides()),
   )
   ctx.llm.registerConfigurableProviders([{
     provider: OPENAI_CODEX_PROVIDER,

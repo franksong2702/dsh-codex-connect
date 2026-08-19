@@ -240,6 +240,8 @@ interface OpenAICodexSettingsConfig {
   proxyEnabled: boolean;
   proxyHost: string;
   proxyPort: number;
+  defaultContextWindow: number;
+  modelContextWindows: Record<string, number>;
 }
 declare const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig>;
 /** Fill the schema defaults even when called without Cordis validation. */
@@ -448,6 +450,10 @@ interface Config {
   proxyHost?: string;
   /** Proxy port number */
   proxyPort?: number;
+  /** Default context window for all Codex models (tokens). 0 = use catalog default. */
+  defaultContextWindow?: number;
+  /** Per-model context window overrides (model id -> tokens). */
+  modelContextWindows?: Record<string, number>;
 }
 declare const Config: z<Config>;
 /**
