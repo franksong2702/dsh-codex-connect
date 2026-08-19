@@ -20,10 +20,6 @@ import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { viewImageTool } from './view-image.ts'
-import {
-  installOpenAICodexSearchEvent,
-  recordOpenAICodexSearchRequest,
-} from './search-event.ts'
 
 export { VIEW_IMAGE_TOOL_NAME } from './view-image.ts'
 export {
@@ -64,11 +60,6 @@ export type {
   OpenAICodexRateLimitWindow,
   OpenAICodexUsage,
 } from './usage.ts'
-export {
-  installOpenAICodexSearchEvent,
-  OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT,
-  recordOpenAICodexSearchRequest,
-} from './search-event.ts'
 import {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -208,7 +199,6 @@ export function apply(ctx: Context, config: Config): void {
     searchRegistration = undefined
     if (previous !== undefined) await previous.dispose()
     if (stopped || nextRegistration === undefined) return
-    installOpenAICodexSearchEvent()
     const fiber = ctx.inject(['web'], webCtx => webCtx.web.registerSearchProvider(new OpenAICodexSearchProvider({
       credentials,
       model: nextRegistration.model,
@@ -216,7 +206,6 @@ export function apply(ctx: Context, config: Config): void {
       contextSize: nextRegistration.contextSize,
       maxOutputTokens: nextRegistration.maxOutputTokens,
       resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
-      recordRequest: request => { recordOpenAICodexSearchRequest(webCtx, request) },
     })))
     searchFiber = fiber
     searchRegistration = nextRegistration

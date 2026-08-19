@@ -16,7 +16,7 @@ The settings routes and CLI reuse the existing OAuth path and route names for mi
 
 ## Search and images
 
-When `enableSearch: true`, the plugin registers its standalone search provider and secret-free request event. Harness still requires explicit `web.searchProvider: openai-codex` when multiple providers exist. Search responses are mapped to Harness text and citation records.
+When `enableSearch: true`, the plugin registers its standalone search provider. It does not append a plugin-owned required-on-read Session event because an external package cannot guarantee that its `@deepseek-ai/dsh-session` module instance owns the Host persistence vocabulary; the standard web Tool call and result remain in the Session log. Harness still requires explicit `web.searchProvider: openai-codex` when multiple providers exist. Search responses are mapped to Harness text and citation records.
 
 When `enableImageTool: true`, `view_image` is registered only after tools, filesystem, and attachment services are available. Local files remain bounded by the Harness filesystem surface. Remote images allow only credential-free public HTTP(S): all DNS answers must be public unicast, each redirect is revalidated, and each socket is pinned to the validated address to close DNS-rebinding gaps. The tool also checks bounded bytes, accepted media signatures, and current-model image support before saving a Harness attachment.
 

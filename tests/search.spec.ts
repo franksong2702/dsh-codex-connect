@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import WebRuntime from '@deepseek-ai/dsh-web'
 import * as OpenAICodex from '../src/index.ts'
@@ -217,10 +216,9 @@ describe('OpenAI Codex composite plugin', () => {
     vi.stubGlobal('fetch', fetchMock)
     const ctx = new Context()
     context = ctx
-    const append = vi.fn()
     ctx.provide('agents', {
       currentInitiator: () => ({
-        session: { id: 'session-codex-search', append },
+        session: { id: 'session-codex-search' },
       }),
     } as never)
     await ctx.plugin(LlmRuntime)
@@ -238,30 +236,7 @@ describe('OpenAI Codex composite plugin', () => {
       sources: [{ url: 'https://example.com/a', title: 'A', snippet: 'First' }],
       truncated: true,
     })
-    expect(KNOWN_SESSION_EVENT_TYPES.has(OpenAICodex.OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT)).toBe(true)
-    expect(KNOWN_SESSION_EVENT_TYPES.has('web/search-model-request')).toBe(false)
-    expect(append).toHaveBeenCalledOnce()
-    expect(append).toHaveBeenCalledWith(
-      OpenAICodex.OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT,
-      {
-        endpoint: OpenAICodex.OPENAI_CODEX_SEARCH_URL,
-        body: {
-          id: 'session-codex-search',
-          model: 'gpt-search-plugin',
-          input: [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'q' }] }],
-          commands: { search_query: [{ q: 'q' }] },
-          settings: {
-            search_context_size: 'high',
-            allowed_callers: ['direct'],
-            external_web_access: true,
-          },
-          max_output_tokens: 321,
-        },
-      },
-    )
-    expect(append.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0] ?? 0)
     await fiber.dispose()
-    expect(KNOWN_SESSION_EVENT_TYPES.has(OpenAICodex.OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT)).toBe(true)
     await expect(ctx.web.search({ query: 'q' }))
       .rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_CONFIGURED_MISSING' }))
   })
