@@ -102,6 +102,7 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect** to mana
 
 - `enableSearch: true` registers Codex as an available search provider. It does not select the profile's global search route.
 - `enableImageTool: true` enables `view_image` for approved local reads and public-network image fetches on vision-capable models.
+- `proxyEnabled: true` routes all OpenAI requests (OAuth, LLM streaming, usage queries, search) through a local HTTP proxy. Set `proxyHost` and `proxyPort` to match your proxy. This is required in regions where OpenAI is directly unreachable.
 
 The screenshot below is an example after someone has explicitly enabled capabilities. It does not show the fresh-install default. This English guide uses the English-localized capture; the Chinese guide shows the matching Chinese-localized state.
 
@@ -142,6 +143,9 @@ Selecting Codex as the profile's global search route is another explicit change:
 | `searchMode` | `cached` | `cached`, `indexed`, `live` |
 | `searchContextSize` | `medium` | `low`, `medium`, `high` |
 | `searchMaxOutputTokens` | `10000` | positive integer |
+| `proxyEnabled` | `false` | boolean |
+| `proxyHost` | `127.0.0.1` | string |
+| `proxyPort` | `7890` | positive integer |
 
 ## Reauthentication, diagnostics, and conflicts
 

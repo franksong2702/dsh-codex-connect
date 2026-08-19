@@ -22,6 +22,8 @@ import {
   DEFAULT_OPENAI_CODEX_SEARCH_MODEL,
 } from './settings-contract.ts'
 import type { OpenAICodexSearchContextSize, OpenAICodexSearchMode } from './settings-contract.ts'
+import type { ProxyConfig } from './proxy.ts'
+import { disableGlobalProxy, enableGlobalProxy, resolveProxyConfig } from './proxy.ts'
 
 export {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
@@ -83,6 +85,8 @@ export interface OpenAICodexSearchProviderOptions {
   readonly resolveRequestId: () => string
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
+  /** Optional proxy configuration for OpenAI requests. */
+  readonly proxyConfig?: ProxyConfig
 }
 
 /** Convert the configured mode to the official endpoint field. */
@@ -277,6 +281,9 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
     this.options.recordRequest?.({ endpoint: OPENAI_CODEX_SEARCH_URL, body })
     throwIfSearchAborted(signal)
 
+    const effectiveProxy = this.options.proxyConfig || resolveProxyConfig()
+    if (effectiveProxy) enableGlobalProxy(effectiveProxy)
+
     let response: Response
     try {
       response = await fetch(OPENAI_CODEX_SEARCH_URL, {
@@ -296,6 +303,8 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
       throwIfSearchAborted(signal)
       if (isAbortError(error)) throw searchAborted(signal, error)
       throw new WebError('OpenAI Codex search request failed', 'WEB_PROVIDER_ERROR', { cause: error })
+    } finally {
+      if (effectiveProxy) disableGlobalProxy()
     }
 
     let payload: unknown

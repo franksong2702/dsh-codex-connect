@@ -20,6 +20,8 @@ import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { viewImageTool } from './view-image.ts'
+import type { ProxyConfig } from './proxy.ts'
+import { resolveProxyConfig } from './proxy.ts'
 import {
   installOpenAICodexSearchEvent,
   recordOpenAICodexSearchRequest,
@@ -148,6 +150,12 @@ export interface Config {
   searchContextSize?: OpenAICodexSearchContextSize
   /** Maximum generated tokens returned by the standalone search endpoint. */
   searchMaxOutputTokens?: number
+  /** Enable proxy for OpenAI requests */
+  proxyEnabled?: boolean
+  /** Proxy host address */
+  proxyHost?: string
+  /** Proxy port number */
+  proxyPort?: number
 }
 
 export const Config: z<Config> = z.object({
@@ -157,6 +165,9 @@ export const Config: z<Config> = z.object({
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),
   searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE),
   searchMaxOutputTokens: z.number().step(1).min(1).default(DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS),
+  proxyEnabled: z.boolean().default(false),
+  proxyHost: z.string().default('127.0.0.1'),
+  proxyPort: z.number().step(1).min(1).max(65535).default(7890),
 })
 
 /**
@@ -170,10 +181,19 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const credentials = new OpenAICodexCredentialStore()
   const fastMode = new FastModeRegistry()
+
+  const getProxyConfig = (): ProxyConfig | undefined => {
+    const cfg = current()
+    if (cfg.proxyEnabled) {
+      return { host: cfg.proxyHost || '127.0.0.1', port: cfg.proxyPort || 7890 }
+    }
+    return resolveProxyConfig()
+  }
+
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
-    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode),
+    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode, getProxyConfig()),
   )
   ctx.llm.registerConfigurableProviders([{
     provider: OPENAI_CODEX_PROVIDER,
@@ -182,7 +202,7 @@ export function apply(ctx: Context, config: Config): void {
     settingsPath: [],
     declared: false,
   }])
-  ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials, undefined, fastMode))
+  ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials, undefined, fastMode, getProxyConfig))
 
   let stopped = false
   let searchFiber: Fiber | undefined
@@ -217,6 +237,7 @@ export function apply(ctx: Context, config: Config): void {
       maxOutputTokens: nextRegistration.maxOutputTokens,
       resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
       recordRequest: request => { recordOpenAICodexSearchRequest(webCtx, request) },
+      proxyConfig: getProxyConfig(),
     })))
     searchFiber = fiber
     searchRegistration = nextRegistration
@@ -275,7 +296,9 @@ export function apply(ctx: Context, config: Config): void {
   }, 'dsh-codex-connect: optional capability lifecycle')
 
   installSettingsSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
-    setSource(source) { current = source },
+    setSource(source) {
+      current = source
+    },
     onChange: scheduleCapabilities,
   })
   scheduleCapabilities()

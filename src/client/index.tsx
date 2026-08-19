@@ -47,6 +47,7 @@ export function apply(ctx: ClientContext): void {
   })
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
+    id: 'openai-codex',
     key: OPENAI_CODEX_SETTINGS_NAMESPACE,
     inject: (): OpenAICodexPluginCardInjected => ({ t, configScope }),
   }, OpenAICodexPluginCard))

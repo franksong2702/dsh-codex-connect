@@ -26,6 +26,10 @@ export interface OpenAICodexSettingsConfig {
   searchMode: OpenAICodexSearchMode
   searchContextSize: OpenAICodexSearchContextSize
   searchMaxOutputTokens: number
+  // Proxy configuration for OpenAI requests
+  proxyEnabled: boolean
+  proxyHost: string
+  proxyPort: number
 }
 
 export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> = Object.freeze({
@@ -35,6 +39,10 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   searchMode: DEFAULT_OPENAI_CODEX_SEARCH_MODE,
   searchContextSize: DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   searchMaxOutputTokens: DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
+  // Default proxy settings
+  proxyEnabled: false,
+  proxyHost: '127.0.0.1',
+  proxyPort: 7890,
 })
 
 /** Fill the schema defaults even when called without Cordis validation. */
@@ -57,11 +65,21 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const searchMode = value['searchMode']
   const searchContextSize = value['searchContextSize']
   const searchMaxOutputTokens = value['searchMaxOutputTokens']
+  const proxyEnabled = value['proxyEnabled']
+  const proxyHost = value['proxyHost']
+  const proxyPort = value['proxyPort']
+  
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   if (typeof searchModel !== 'string' || searchModel.trim().length === 0) return undefined
   if (searchMode !== 'cached' && searchMode !== 'indexed' && searchMode !== 'live') return undefined
   if (searchContextSize !== 'low' && searchContextSize !== 'medium' && searchContextSize !== 'high') return undefined
   if (typeof searchMaxOutputTokens !== 'number' || !Number.isInteger(searchMaxOutputTokens) || searchMaxOutputTokens < 1) return undefined
+  
+  // Validate proxy settings (optional fields)
+  if (proxyEnabled !== undefined && typeof proxyEnabled !== 'boolean') return undefined
+  if (proxyHost !== undefined && (typeof proxyHost !== 'string' || proxyHost.trim().length === 0)) return undefined
+  if (proxyPort !== undefined && (typeof proxyPort !== 'number' || !Number.isInteger(proxyPort) || proxyPort < 1 || proxyPort > 65535)) return undefined
+  
   return {
     enableSearch,
     enableImageTool,
@@ -69,5 +87,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     searchMode,
     searchContextSize,
     searchMaxOutputTokens,
+    proxyEnabled: typeof proxyEnabled === 'boolean' ? proxyEnabled : DEFAULT_OPENAI_CODEX_SETTINGS.proxyEnabled,
+    proxyHost: typeof proxyHost === 'string' ? proxyHost : DEFAULT_OPENAI_CODEX_SETTINGS.proxyHost,
+    proxyPort: typeof proxyPort === 'number' ? proxyPort : DEFAULT_OPENAI_CODEX_SETTINGS.proxyPort,
   }
 }

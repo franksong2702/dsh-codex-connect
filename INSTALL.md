@@ -69,6 +69,20 @@ Apply only requested choices and preserve unrelated keys:
 
 Do not add the last two rows unless the user separately requested those routing changes.
 
+### Proxy configuration
+
+In regions where OpenAI endpoints are directly unreachable, enable the proxy to route all OpenAI requests (OAuth, LLM streaming, usage, search) through a local HTTP proxy:
+
+```yaml
+- id: llm-openai-codex
+  config:
+    proxyEnabled: true
+    proxyHost: '127.0.0.1'
+    proxyPort: 7890
+```
+
+Or configure via **Settings → Plugins → Plugin configuration → Codex Connect**. The proxy uses `undici`'s `ProxyAgent` with `setGlobalDispatcher` to intercept all `fetch` calls, which is required because Node.js 24's built-in `fetch` does not respect `HTTP_PROXY`/`HTTPS_PROXY` environment variables.
+
 ## Conflict handling
 
 `openai-codex` can have only one adapter. If startup reports a collision, inspect the effective config and remove only the old `dsh-codex` bundle or manual `openai-codex` provider row after confirming it is the conflicting owner. Do not delete auth files or unrelated providers.

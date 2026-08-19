@@ -45,6 +45,9 @@ const CONFIG_FIELDS = [
   'searchMode',
   'searchContextSize',
   'searchMaxOutputTokens',
+  'proxyEnabled',
+  'proxyHost',
+  'proxyPort',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
 
 function sameConfig(
@@ -210,6 +213,42 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
               <span style={bodyStyle}>{t('enableImageToolHelp')}</span>
             </span>
           </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.proxyEnabled}
+              onChange={event => { update('proxyEnabled', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableProxy')}</span>
+              <span style={bodyStyle}>{t('enableProxyHelp')}</span>
+            </span>
+          </label>
+          {draft.proxyEnabled ? (
+            <div style={formGridStyle}>
+              <label style={formFieldStyle}>
+                <span style={labelStyle}>{t('proxyHost')}</span>
+                <input
+                  style={controlStyle}
+                  value={draft.proxyHost}
+                  disabled={!editable}
+                  onChange={event => { update('proxyHost', event.currentTarget.value) }}
+                />
+              </label>
+              <label style={formFieldStyle}>
+                <span style={labelStyle}>{t('proxyPort')}</span>
+                <input
+                  style={controlStyle}
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={draft.proxyPort}
+                  disabled={!editable}
+                  onChange={event => { update('proxyPort', event.currentTarget.valueAsNumber) }}
+                />
+              </label>
+            </div>
+          ) : null}
         </fieldset>
       )}
       {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}

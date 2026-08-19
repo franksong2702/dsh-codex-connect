@@ -144,6 +144,12 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
   delete(providerId: string): Promise<void>;
 }
 //#endregion
+//#region src/proxy.d.ts
+interface ProxyConfig {
+  host: string;
+  port: number;
+}
+//#endregion
 //#region src/usage.d.ts
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
 declare const OPENAI_CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
@@ -202,9 +208,10 @@ declare function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage;
  * Read current quota without issuing a model request. OAuth is refreshed through
  * the same provider-native credential lifecycle used by normal Codex turns.
  * @param store - plugin-owned OAuth credential store.
+ * @param proxyConfig - optional proxy configuration for OpenAI requests.
  * @returns current rate-limit buckets safe to expose to the local browser page.
  */
-declare function readOpenAICodexRateLimits(store: OpenAICodexCredentialStore): Promise<OpenAICodexUsage>;
+declare function readOpenAICodexRateLimits(store: OpenAICodexCredentialStore, proxyConfig?: ProxyConfig): Promise<OpenAICodexUsage>;
 //#endregion
 //#region src/settings-contract.d.ts
 /** Node-free settings contract shared by the Host plugin and browser card. */
@@ -230,6 +237,9 @@ interface OpenAICodexSettingsConfig {
   searchMode: OpenAICodexSearchMode;
   searchContextSize: OpenAICodexSearchContextSize;
   searchMaxOutputTokens: number;
+  proxyEnabled: boolean;
+  proxyHost: string;
+  proxyPort: number;
 }
 declare const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig>;
 /** Fill the schema defaults even when called without Cordis validation. */
@@ -290,6 +300,8 @@ interface OpenAICodexSearchProviderOptions {
   readonly resolveRequestId: () => string;
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void;
+  /** Optional proxy configuration for OpenAI requests. */
+  readonly proxyConfig?: ProxyConfig;
 }
 /**
  * Map the standalone endpoint's forward-compatible result DTOs into the dsh
@@ -351,8 +363,9 @@ interface OpenAICodexAuthStatus {
  * Complete provider-native OAuth and persist the resulting credential.
  * @param interaction - terminal or UI callbacks for the provider flow.
  * @param store - credential store, defaulting under `$DSH_HOME`.
+ * @param proxyConfig - optional proxy configuration for OpenAI requests.
  */
-declare function loginOpenAICodex(interaction: AuthInteraction, store?: OpenAICodexCredentialStore): Promise<void>;
+declare function loginOpenAICodex(interaction: AuthInteraction, store?: OpenAICodexCredentialStore, proxyConfig?: ProxyConfig): Promise<void>;
 /**
  * Remove the stored OpenAI Codex credential.
  * @param store - credential store, defaulting under `$DSH_HOME`.
@@ -429,6 +442,12 @@ interface Config {
   searchContextSize?: OpenAICodexSearchContextSize;
   /** Maximum generated tokens returned by the standalone search endpoint. */
   searchMaxOutputTokens?: number;
+  /** Enable proxy for OpenAI requests */
+  proxyEnabled?: boolean;
+  /** Proxy host address */
+  proxyHost?: string;
+  /** Proxy port number */
+  proxyPort?: number;
 }
 declare const Config: z<Config>;
 /**

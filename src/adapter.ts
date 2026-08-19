@@ -10,6 +10,8 @@ import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
+import type { ProxyConfig } from './proxy.ts'
+import { disableGlobalProxy, enableGlobalProxy } from './proxy.ts'
 
 /** Provider idle ceiling used by the composite route. */
 export const OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS = 300_000
@@ -55,9 +57,23 @@ export function withOpenAICodexFastMode(
   }
 }
 
-function requestProvider(provider: Provider, fastMode?: FastModeRegistry): Provider {
+function requestProvider(provider: Provider, fastMode?: FastModeRegistry, proxy?: ProxyConfig): Provider {
+  const base = withOpenAICodexFastMode(provider, fastMode)
+  const streamSimple = base.streamSimple
+
   return {
-    ...withOpenAICodexFastMode(provider, fastMode),
+    ...base,
+    streamSimple(model, context, options) {
+      if (proxy) enableGlobalProxy(proxy)
+      const iter = streamSimple.call(base, model, context, options)
+      return (async function* () {
+        try {
+          yield* iter
+        } finally {
+          if (proxy) disableGlobalProxy()
+        }
+      })()
+    },
     auth: {
       ...provider.auth,
       apiKey: {
@@ -83,6 +99,7 @@ export function createOpenAICodexAdapter(
   credentials: OpenAICodexCredentialStore,
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
+  proxyConfig?: ProxyConfig,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, {
@@ -91,7 +108,7 @@ export function createOpenAICodexAdapter(
     streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
-    piProvider: requestProvider(provider, fastMode),
+    piProvider: requestProvider(provider, fastMode, proxyConfig),
   }]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)

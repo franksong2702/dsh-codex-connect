@@ -92,26 +92,25 @@
     }
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "0.82.1",
     "@deepseek-ai/cordis": "^4.0.1-rc.1",
     "@deepseek-ai/dsh-agent": "0.1.0-rc.7",
     "@deepseek-ai/dsh-atomic-write": "0.1.0-rc.7",
     "@deepseek-ai/dsh-attachment": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-fs": "0.1.0-rc.7",
     "@deepseek-ai/dsh-home-paths": "0.1.0-rc.7",
     "@deepseek-ai/dsh-host-webserver": "0.1.0-rc.7",
     "@deepseek-ai/dsh-invariants": "0.1.0-rc.7",
     "@deepseek-ai/dsh-llm": "0.1.0-rc.7",
     "@deepseek-ai/dsh-llm-pi-ai": "0.1.0-rc.7",
-    "@deepseek-ai/dsh-fs": "0.1.0-rc.7",
     "@deepseek-ai/dsh-session": "0.1.0-rc.7",
     "@deepseek-ai/dsh-settings": "0.1.0-rc.7",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
     "@deepseek-ai/dsh-web": "0.1.0-rc.7",
     "@deepseek-ai/schemastery": "^3.18.1-rc.1",
+    "@earendil-works/pi-ai": "0.82.1",
     "react": "^18.2.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "0.82.1",
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/cordis-plugin-include": "1.0.6",
     "@deepseek-ai/cordis-plugin-loader": "1.0.2",
@@ -120,8 +119,8 @@
     "@deepseek-ai/dsh-atomic-write": "0.1.0-rc.7",
     "@deepseek-ai/dsh-attachment": "0.1.0-rc.7",
     "@deepseek-ai/dsh-attachment-local": "0.1.0-rc.7",
-    "@deepseek-ai/dsh-client-locale": "0.1.0-rc.7",
     "@deepseek-ai/dsh-client-connection": "0.1.0-rc.7",
+    "@deepseek-ai/dsh-client-locale": "0.1.0-rc.7",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.7",
     "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.7",
     "@deepseek-ai/dsh-client-ui-model-selection": "0.1.0-rc.7",
@@ -141,15 +140,21 @@
     "@deepseek-ai/dsh-tools": "0.1.0-rc.7",
     "@deepseek-ai/dsh-web": "0.1.0-rc.7",
     "@deepseek-ai/schemastery": "3.18.1",
+    "@earendil-works/pi-ai": "0.82.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.1",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
     "jsdom": "29.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsdown": "^0.22.2",
     "typescript": "^5.9.3",
     "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "undici": "^8.10.0"
   }
 }

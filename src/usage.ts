@@ -4,6 +4,8 @@ import { createModels } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
+import type { ProxyConfig } from './proxy.ts'
+import { disableGlobalProxy, enableGlobalProxy, resolveProxyConfig } from './proxy.ts'
 
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -220,10 +222,12 @@ export function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage {
  * Read current quota without issuing a model request. OAuth is refreshed through
  * the same provider-native credential lifecycle used by normal Codex turns.
  * @param store - plugin-owned OAuth credential store.
+ * @param proxyConfig - optional proxy configuration for OpenAI requests.
  * @returns current rate-limit buckets safe to expose to the local browser page.
  */
 export async function readOpenAICodexRateLimits(
   store: OpenAICodexCredentialStore,
+  proxyConfig?: ProxyConfig,
 ): Promise<OpenAICodexUsage> {
   const models = createModels({ credentials: store })
   models.setProvider(openaiCodexProvider())
@@ -234,29 +238,37 @@ export async function readOpenAICodexRateLimits(
   if (access === undefined || access.length === 0 || typeof accountId !== 'string' || accountId.length === 0) {
     throw new Error('OpenAI Codex is signed out')
   }
-  const response = await fetch(OPENAI_CODEX_USAGE_URL, {
-    method: 'GET',
-    redirect: 'error',
-    headers: {
-      authorization: `Bearer ${access}`,
-      'chatgpt-account-id': accountId,
-      accept: 'application/json',
-      'cache-control': 'no-store',
-      'user-agent': 'dsh-codex-connect',
-    },
-    signal: AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS),
-  })
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new OpenAICodexReauthRequiredError()
-    }
-    throw new Error(`OpenAI Codex usage request failed with HTTP ${response.status}`)
-  }
-  let value: unknown
+
+  const effectiveProxy = proxyConfig || resolveProxyConfig()
+  if (effectiveProxy) enableGlobalProxy(effectiveProxy)
+
   try {
-    value = await response.json()
-  } catch (error: unknown) {
-    throw new Error('OpenAI Codex returned an unreadable usage response', { cause: error })
+    const response = await fetch(OPENAI_CODEX_USAGE_URL, {
+      method: 'GET',
+      redirect: 'error',
+      headers: {
+        authorization: `Bearer ${access}`,
+        'chatgpt-account-id': accountId,
+        accept: 'application/json',
+        'cache-control': 'no-store',
+        'user-agent': 'dsh-codex-connect',
+      },
+      signal: AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS),
+    })
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new OpenAICodexReauthRequiredError()
+      }
+      throw new Error(`OpenAI Codex usage request failed with HTTP ${response.status}`)
+    }
+    let value: unknown
+    try {
+      value = await response.json()
+    } catch (error: unknown) {
+      throw new Error('OpenAI Codex returned an unreadable usage response', { cause: error })
+    }
+    return parseOpenAICodexUsage(value)
+  } finally {
+    if (effectiveProxy) disableGlobalProxy()
   }
-  return parseOpenAICodexUsage(value)
 }

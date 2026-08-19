@@ -8,6 +8,8 @@ import { request as requestHttps } from 'node:https'
 import { basename } from 'node:path'
 import { BlockList, isIP } from 'node:net'
 import type { LookupFunction } from 'node:net'
+import type { ProxyConfig } from './proxy.ts'
+import { createProxyAgent } from './proxy.ts'
 
 /** Maximum time one DNS-plus-HTTP hop may occupy. */
 export const PUBLIC_HTTP_HOP_TIMEOUT_MS = 30_000
@@ -35,6 +37,7 @@ export interface PublicHttpRuntime {
     address: ResolvedNetworkAddress,
     maxBytes: number,
     signal: AbortSignal,
+    proxy?: ProxyConfig,
   ): Promise<PublicHttpHop>
 }
 
@@ -182,6 +185,7 @@ async function requestPinned(
   address: ResolvedNetworkAddress,
   maxBytes: number,
   signal: AbortSignal,
+  proxy?: ProxyConfig,
 ): Promise<PublicHttpHop> {
   if (signal.aborted) throw abortError(signal)
   return new Promise<PublicHttpHop>((resolve, reject) => {
@@ -196,9 +200,10 @@ async function requestPinned(
       else reject(result.error)
     }
     const requester = url.protocol === 'https:' ? requestHttps : requestHttp
+    const agent = proxy ? createProxyAgent(proxy, url.protocol === 'https:' ? 'https' : 'http') : false
     const request = requester(url, {
       method: 'GET',
-      agent: false,
+      agent,
       lookup: pinnedLookup(address),
       headers: {
         accept: 'image/png, image/jpeg, image/webp, image/gif',
@@ -252,6 +257,7 @@ export async function fetchPublicHttpResource(
   maxBytes: number,
   signal: AbortSignal,
   runtime: PublicHttpRuntime = NODE_PUBLIC_HTTP_RUNTIME,
+  proxy?: ProxyConfig,
 ): Promise<PublicHttpResource> {
   let url = new URL(source)
   assertTargetUrl(url)
@@ -261,7 +267,7 @@ export async function fetchPublicHttpResource(
     if (addresses.length === 0 || addresses.some(candidate => !isPublicNetworkAddress(candidate.address))) {
       throw new Error(`remote image host ${JSON.stringify(url.hostname)} must resolve only to public network addresses`)
     }
-    const hop = await runtime.get(url, addresses[0]!, maxBytes, signal)
+    const hop = await runtime.get(url, addresses[0]!, maxBytes, signal, proxy)
     if (hop.status >= 300 && hop.status < 400) {
       if (redirects >= PUBLIC_HTTP_MAX_REDIRECTS) {
         throw new Error(`remote image exceeded ${String(PUBLIC_HTTP_MAX_REDIRECTS)} redirects`)
