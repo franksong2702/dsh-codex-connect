@@ -57,13 +57,14 @@ export function withOpenAICodexFastMode(
   }
 }
 
-function requestProvider(provider: Provider, fastMode?: FastModeRegistry, proxy?: ProxyConfig): Provider {
+function requestProvider(provider: Provider, fastMode?: FastModeRegistry, getProxy?: () => ProxyConfig | undefined): Provider {
   const base = withOpenAICodexFastMode(provider, fastMode)
   const streamSimple = base.streamSimple
 
   return {
     ...base,
     streamSimple(model, context, options) {
+      const proxy = getProxy?.()
       if (proxy) enableGlobalProxy(proxy)
       const iter = streamSimple.call(base, model, context, options)
       return (async function* () {
@@ -124,7 +125,7 @@ export function createOpenAICodexAdapter(
   credentials: OpenAICodexCredentialStore,
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
-  proxyConfig?: ProxyConfig,
+  getProxyConfig?: () => ProxyConfig | undefined,
   getContextWindowOverrides?: () => ContextWindowOverrides | undefined,
 ): PiAiAdapter {
   const provider = applyContextWindowOverrides(openaiCodexProvider(), getContextWindowOverrides ?? (() => undefined))
@@ -134,7 +135,7 @@ export function createOpenAICodexAdapter(
     streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
-    piProvider: requestProvider(provider, fastMode, proxyConfig),
+    piProvider: requestProvider(provider, fastMode, getProxyConfig),
   }]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)

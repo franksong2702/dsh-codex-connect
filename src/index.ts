@@ -208,7 +208,7 @@ export function apply(ctx: Context, config: Config): void {
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
-    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode, getProxyConfig(), getContextWindowOverrides),
+    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode, getProxyConfig, getContextWindowOverrides),
   )
   ctx.llm.registerConfigurableProviders([{
     provider: OPENAI_CODEX_PROVIDER,
