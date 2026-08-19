@@ -54,7 +54,7 @@ interface LoginChallenge {
 /** Testable timing boundary; production uses the exported 30-second ceiling. */
 export interface OpenAICodexWebAuthOptions {
   challengeTimeoutMs?: number
-  getProxyConfig?: () => ProxyConfig | undefined
+  getProxyConfig?: (() => ProxyConfig | undefined) | undefined
 }
 
 /** Redact provider diagnostics before they cross to the browser. */
@@ -84,7 +84,7 @@ export class OpenAICodexWebAuth {
   private challengeWaiters: Array<{ resolve(value: LoginChallenge): void; reject(error: unknown): void }> = []
   private challengeTimer: ReturnType<typeof setTimeout> | undefined
   private readonly challengeTimeoutMs: number
-  private readonly getProxyConfig?: () => ProxyConfig | undefined
+  private readonly getProxyConfig: (() => ProxyConfig | undefined) | undefined
 
   constructor(
     private readonly store: OpenAICodexCredentialStore,

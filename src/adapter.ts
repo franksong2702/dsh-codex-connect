@@ -1,7 +1,7 @@
 /** OpenAI Codex adapter assembled from public dsh-llm-pi-ai extension points. */
 
 import { createModels } from '@earendil-works/pi-ai'
-import type { Context as PiContext, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
+import type { AssistantMessageEventStream, Context as PiContext, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -72,7 +72,7 @@ function requestProvider(provider: Provider, fastMode?: FastModeRegistry, proxy?
         } finally {
           if (proxy) disableGlobalProxy()
         }
-      })()
+      })() as unknown as AssistantMessageEventStream
     },
     auth: {
       ...provider.auth,

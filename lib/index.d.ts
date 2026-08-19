@@ -301,7 +301,7 @@ interface OpenAICodexSearchProviderOptions {
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void;
   /** Optional proxy configuration for OpenAI requests. */
-  readonly proxyConfig?: ProxyConfig;
+  readonly proxyConfig?: ProxyConfig | undefined;
 }
 /**
  * Map the standalone endpoint's forward-compatible result DTOs into the dsh

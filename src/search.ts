@@ -86,7 +86,7 @@ export interface OpenAICodexSearchProviderOptions {
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
   /** Optional proxy configuration for OpenAI requests. */
-  readonly proxyConfig?: ProxyConfig
+  readonly proxyConfig?: ProxyConfig | undefined
 }
 
 /** Convert the configured mode to the official endpoint field. */

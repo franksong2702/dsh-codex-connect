@@ -102,6 +102,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 - `enableSearch: true` 会把 Codex 注册为可选择的搜索提供方，不会把它选为 profile 的全局搜索路由。
 - `enableImageTool: true` 会为具备视觉能力的模型启用 `view_image`，用于审批后的本地读取和公网图片获取。
+- `proxyEnabled: true` 会将所有 OpenAI 请求（OAuth、LLM 流式输出、用量查询、搜索）路由到本地 HTTP 代理。设置 `proxyHost` 和 `proxyPort` 以匹配你的代理。在无法直接访问 OpenAI 的地区，此选项为必需。
 
 下图是有人显式开启能力之后的配置示例，不是新安装的默认状态。本中文指南使用中文本地化截图；English 版展示同一状态的英文截图。
 
@@ -142,6 +143,9 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | `searchMode` | `cached` | `cached`、`indexed`、`live` |
 | `searchContextSize` | `medium` | `low`、`medium`、`high` |
 | `searchMaxOutputTokens` | `10000` | 正整数 |
+| `proxyEnabled` | `false` | boolean |
+| `proxyHost` | `127.0.0.1` | string |
+| `proxyPort` | `7890` | 正整数 |
 
 ## 重新登录、诊断与冲突
 
