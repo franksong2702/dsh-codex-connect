@@ -147,6 +147,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 - 卡片显示 **重新登录**，或服务端要求重新认证时，点击该操作并完成同一套安全的浏览器流程。它会保留本插件的能力配置，不会偷偷改动默认模型或全局搜索路由。不要为了刷新会话而运行 `logout`。
 - `doctor` 只读取进程与文件系统元数据。`doctor --json` 只输出一条可解析的非敏感 JSON，包含 schema version 1、包/版本/Node 信息、认证文件状态与安全 mode、能力、冲突状态和提示；它省略认证文件绝对路径以及 OAuth、账户和过期时间信息。
+- Alpha 4.10 用户若因未知的 `web/openai-codex-search-llm-request` 事件而无法读取搜索历史，可先运行 `dsh-codex-connect migrate-history --json`，停止 DSH 后再以 `migrate-history --apply --json` 应用修复。该命令默认只预检，并会备份每个被修改的压缩 JSONL 文件；详见 [MIGRATION.md](../MIGRATION.md)。
 - `status --json` 只输出 signed-in 或 signed-out 状态及包元数据。它只为判断登录态读取认证文件，但不会输出认证文件内容或启动 OAuth。
 - OAuth 单独存储于 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）。`~/.codex/auth.json` 不会被复制或修改。支持的平台上，父目录与文件使用仅所有者可访问权限；写入采用原子替换，刷新写入使用跨进程文件锁。
 - 默认情况下，OAuth 路由只接受 loopback 浏览器请求。当 DSH 在一台设备运行，而你从可信网络中的另一台设备打开 DSH 时，请在运行 DSH 的设备上显式批准浏览器地址栏中的 origin：

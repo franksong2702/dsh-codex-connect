@@ -463,6 +463,48 @@ declare class FastModeRegistry {
 /** GET/POST endpoint for one conversation's process-local Fast Mode state. */
 declare const OPENAI_CODEX_FAST_MODE_PATH = "/plugins/dsh-openai-codex/fast-mode";
 //#endregion
+//#region src/history-migration.d.ts
+/** Private event written by Alpha 4.10 before the provider stopped persisting it. */
+declare const OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT = "web/openai-codex-search-llm-request";
+/** Backup suffix created beside every changed session artifact. */
+declare const OPENAI_CODEX_HISTORY_BACKUP_SUFFIX = ".pre-codex-search-history-migration";
+interface OpenAICodexHistoryMigrationOptions {
+  /** Apply changes; omitted/false performs a read-only dry run. */
+  readonly apply?: boolean;
+  /** Explicit JSONL persistence root. Defaults to `<DSH_HOME>/sessions`. */
+  readonly root?: string;
+  /** Optional Harness home override used only when `root` is omitted. */
+  readonly dshHome?: string;
+}
+interface OpenAICodexHistoryMigrationFile {
+  readonly path: string;
+  readonly changedEvents: number;
+  readonly backupPath?: string;
+}
+interface OpenAICodexHistoryMigrationResult {
+  readonly mode: 'apply' | 'dry-run';
+  readonly root: string;
+  readonly changedFiles: number;
+  readonly changedEvents: number;
+  readonly files: readonly OpenAICodexHistoryMigrationFile[];
+}
+/**
+ * Compatibility shell retained for Alpha 4.10 consumers. External plugins
+ * cannot register required-on-read events in the Host persistence vocabulary.
+ * @deprecated The provider now records searches through standard Tool events.
+ */
+declare function installOpenAICodexSearchEvent(): void;
+/**
+ * Compatibility shell retained without writing another private Session event.
+ * @deprecated The provider now records searches through standard Tool events.
+ */
+declare function recordOpenAICodexSearchRequest(_ctx: Context, _request: OpenAICodexSearchRequestRecord): void;
+/**
+ * Mark the retired Alpha 4.10 search event ignorable in compressed JSONL logs.
+ * The command is deliberately explicit: callers should stop DSH before apply.
+ */
+declare function migrateOpenAICodexSearchHistory(options?: OpenAICodexHistoryMigrationOptions): Promise<OpenAICodexHistoryMigrationResult>;
+//#endregion
 //#region src/index.d.ts
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -501,4 +543,4 @@ declare const Config: z<Config>;
  */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_IMAGE_GENERATION_URL, OPENAI_CODEX_IMAGE_MAX_COUNT, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES, OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES, OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_TRANSPORT_API_VERSION, OPENAI_CODEX_TRANSPORT_ERROR_CODES, OPENAI_CODEX_TRANSPORT_SERVICE, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, OpenAICodexTransport, OpenAICodexTransportError, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, isFastModeSessionId, isOpenAICodexTransportError, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, resolveOpenAICodexSettings };
+export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_HISTORY_BACKUP_SUFFIX, OPENAI_CODEX_IMAGE_GENERATION_URL, OPENAI_CODEX_IMAGE_MAX_COUNT, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES, OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES, OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_TRANSPORT_API_VERSION, OPENAI_CODEX_TRANSPORT_ERROR_CODES, OPENAI_CODEX_TRANSPORT_SERVICE, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexHistoryMigrationFile, type OpenAICodexHistoryMigrationOptions, type OpenAICodexHistoryMigrationResult, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, OpenAICodexTransport, OpenAICodexTransportError, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, installOpenAICodexSearchEvent, isFastModeSessionId, isOpenAICodexTransportError, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, migrateOpenAICodexSearchHistory, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUsage, readOpenAICodexRateLimits, recordOpenAICodexSearchRequest, resolveOpenAICodexSettings };
