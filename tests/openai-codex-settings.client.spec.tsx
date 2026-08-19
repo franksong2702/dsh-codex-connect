@@ -42,14 +42,20 @@ function popupFixture(): { popup: Window; close: ReturnType<typeof vi.fn>; repla
   }
 }
 
-function settingsScopeFixture(writable = true): {
+function settingsScopeFixture(
+  writable = true,
+  initial: OpenAICodexSettingsConfig = {
+    ...DEFAULT_OPENAI_CODEX_SETTINGS,
+    modelContextWindows: { ...DEFAULT_OPENAI_CODEX_SETTINGS.modelContextWindows },
+  },
+): {
   scope: SettingsScope<OpenAICodexSettingsConfig>
   set: ReturnType<typeof vi.fn>
 } {
   let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready',
-    value: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
-    base: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
+    value: structuredClone(initial),
+    base: structuredClone(initial),
     user: undefined,
     revision: 0,
     writable,
@@ -61,8 +67,10 @@ function settingsScopeFixture(writable = true): {
     if (current === undefined || !(field in current)) throw new Error(`unknown field ${field}`)
     snapshot = {
       ...snapshot,
-      value: { ...current, [field]: value },
-      user: { ...typeof snapshot.user === 'object' && snapshot.user !== null ? snapshot.user : {}, [field]: value },
+      // The Host wire returns a fresh decoded object, including nested fields
+      // that were not edited in this write.
+      value: structuredClone({ ...current, [field]: value }),
+      user: structuredClone({ ...typeof snapshot.user === 'object' && snapshot.user !== null ? snapshot.user : {}, [field]: value }),
       revision: (snapshot.revision ?? 0) + 1,
     }
     for (const listener of listeners) listener()
@@ -310,6 +318,25 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('searchModel', 'gpt-search-custom')
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
+  })
+
+  it('saves the default Codex context window after Host returns a fresh nested object', async () => {
+    const fetchMock = vi.fn(async (): Promise<Response> => json({ status: 'signed-out' }))
+    const { scope, set } = settingsScopeFixture(true, {
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      modelContextWindows: { 'gpt-5': 123456 },
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    const contextWindow = await screen.findByPlaceholderText('272000') as HTMLInputElement
+    fireEvent.change(contextWindow, { target: { value: '200000' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(set).toHaveBeenCalledWith('defaultContextWindow', 200000)
+    expect(set.mock.calls.filter(([field]) => field === 'modelContextWindows')).toHaveLength(0)
+    expect(contextWindow.value).toBe('200000')
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {

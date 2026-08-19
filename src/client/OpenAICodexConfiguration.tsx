@@ -52,12 +52,29 @@ const CONFIG_FIELDS = [
   'modelContextWindows',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
 
+function sameField(
+  field: keyof OpenAICodexSettingsConfig,
+  left: unknown,
+  right: unknown,
+): boolean {
+  if (left === right) return true
+  if (field !== 'modelContextWindows') return false
+  if (typeof left !== 'object' || left === null || Array.isArray(left)) return false
+  if (typeof right !== 'object' || right === null || Array.isArray(right)) return false
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every(key => leftRecord[key] === rightRecord[key])
+}
+
 function sameConfig(
   left: OpenAICodexSettingsConfig | undefined,
   right: OpenAICodexSettingsConfig | undefined,
 ): boolean {
   return left !== undefined && right !== undefined
-    && CONFIG_FIELDS.every(field => left[field] === right[field])
+    && CONFIG_FIELDS.every(field => sameField(field, left[field], right[field]))
 }
 
 /** Edit the Host-owned llm-openai-codex settings section with Save/Discard staging. */
@@ -109,9 +126,9 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     try {
       for (const field of CONFIG_FIELDS) {
         const accepted = scope.getSnapshot().value
-        if (accepted?.[field] === desired[field]) continue
+        if (sameField(field, accepted?.[field], desired[field])) continue
         await scope.set(field, desired[field])
-        if (scope.getSnapshot().value?.[field] !== desired[field]) {
+        if (!sameField(field, scope.getSnapshot().value?.[field], desired[field])) {
           throw new Error(`Host refused ${field}`)
         }
       }
