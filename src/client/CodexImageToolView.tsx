@@ -1,6 +1,6 @@
 /** Native browser view for Codex image-generation tool results. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { ISessions } from '@deepseek-ai/dsh-client-runtime/client'
@@ -8,6 +8,11 @@ import type { PropsRuntime, Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import { ImageGallery } from '@deepseek-ai/dsh-client-ui-attachment'
 import type { MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment'
+import {
+  IconCheckOutline16,
+  IconCopyOutline16,
+  writeClipboard,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import { decodeImagePresentationMeta } from '../image-presentation.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
@@ -17,13 +22,20 @@ export interface CodexImageToolViewInjected {
 
 export type CodexImageToolViewProps = PropsRuntime<'tool.call.toolview'> & CodexImageToolViewInjected & { t: Translate<OpenAICodexSettingsKey> }
 
-const shell: CSSProperties = { display: 'grid', gap: 10, padding: 12, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 10, background: 'var(--dsw-alias-bg-module-platform)', color: 'var(--dsw-alias-label-primary)' }
+const shell: CSSProperties = { containerType: 'inline-size', padding: 12, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 10, background: 'var(--dsw-alias-bg-module-platform)', color: 'var(--dsw-alias-label-primary)' }
 const header: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }
 const detail: CSSProperties = { color: 'var(--dsw-alias-label-tertiary)', fontSize: 13, lineHeight: '18px' }
 const progress: CSSProperties = { width: '100%', height: 4, accentColor: 'var(--dsw-alias-brand-primary)' }
 const action: CSSProperties = { justifySelf: 'start', minHeight: 28, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, padding: '3px 10px', background: 'transparent', color: 'var(--dsw-alias-label-primary)', font: 'inherit', cursor: 'pointer' }
-const promptShell: CSSProperties = { display: 'grid', gap: 6, minWidth: 0 }
-const promptText: CSSProperties = { boxSizing: 'border-box', width: '100%', maxHeight: 96, margin: 0, overflowY: 'auto', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, padding: '8px 10px', background: 'var(--dsw-alias-bg-base)', color: 'var(--dsw-alias-label-secondary)', font: 'inherit', fontSize: 13, lineHeight: '18px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', userSelect: 'text' }
+const promptText: CSSProperties = { boxSizing: 'border-box', width: '100%', maxHeight: 96, margin: 0, overflowY: 'auto', padding: '10px 42px 10px 12px', color: 'var(--dsw-alias-label-secondary)', fontFamily: 'var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)', fontSize: 12, lineHeight: '18px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', userSelect: 'text' }
+const layoutStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 14, minWidth: 0 }
+const visualStyle: CSSProperties = { display: 'grid', alignContent: 'start', flex: '1 1 240px', maxWidth: 320, gap: 10, minWidth: 0 }
+const sideStyle: CSSProperties = { display: 'grid', alignContent: 'start', flex: '2 1 280px', gap: 10, minWidth: 0 }
+const promptPanelStyle: CSSProperties = { display: 'grid', alignContent: 'start', gap: 10, minWidth: 0 }
+const promptLabelStyle: CSSProperties = { fontSize: 13, fontWeight: 600, lineHeight: '18px', color: 'var(--dsw-alias-label-primary)' }
+const promptBlockStyle: CSSProperties = { position: 'relative', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 8, background: 'var(--dsw-alias-bg-base)' }
+const copyButtonStyle: CSSProperties = { position: 'absolute', zIndex: 1, top: 7, right: 7, display: 'grid', placeItems: 'center', width: 28, height: 28, padding: 0, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, color: 'var(--dsw-alias-label-secondary)', background: 'var(--dsw-alias-bg-layer-1)', cursor: 'pointer', transition: 'opacity 120ms ease' }
+const tooltipStyle: CSSProperties = { position: 'absolute', zIndex: 100, top: -8, right: 0, transform: 'translateY(-100%)', width: 'max-content', maxWidth: 'min(260px, 50vw)', padding: '3px 7px', borderRadius: 8, background: 'var(--dsw-alias-tooltip-bg)', color: 'var(--dsw-static-neutral-bluish-00)', fontSize: 13, lineHeight: '20px', whiteSpace: 'pre-line', overflowWrap: 'break-word', pointerEvents: 'none' }
 
 function contentText(content: readonly unknown[]): string | undefined {
   for (const block of content) {
@@ -58,49 +70,69 @@ function promptFor(block: CodexImageToolViewProps['block']): string | undefined 
   return block.call === null ? undefined : promptFromArgs(block.call.argsRaw)
 }
 
-async function copyText(value: string): Promise<void> {
-  if (navigator.clipboard?.writeText !== undefined) {
-    await navigator.clipboard.writeText(value)
-    return
-  }
-  const textarea = document.createElement('textarea')
-  textarea.value = value
-  textarea.setAttribute('readonly', '')
-  Object.assign(textarea.style, { position: 'fixed', inset: '0', opacity: '0', pointerEvents: 'none' })
-  document.body.append(textarea)
-  textarea.select()
-  try {
-    if (!document.execCommand('copy')) throw new Error('Clipboard unavailable')
-  } finally {
-    textarea.remove()
-  }
-}
-
 function PromptPanel({ prompt, t }: { prompt: string; t: Translate<OpenAICodexSettingsKey> }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [hoverless, setHoverless] = useState(false)
+  const [tooltipVisible, setTooltipVisible] = useState(false)
+  const tooltipId = useId()
   useEffect(() => {
     if (copyState === 'idle') return
     const timer = window.setTimeout(() => { setCopyState('idle') }, 2_000)
     return () => { window.clearTimeout(timer) }
   }, [copyState])
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const query = window.matchMedia('(hover: none)')
+    const update = () => { setHoverless(query.matches) }
+    update()
+    query.addEventListener('change', update)
+    return () => { query.removeEventListener('change', update) }
+  }, [])
 
   async function copy(): Promise<void> {
-    try {
-      await copyText(prompt)
-      setCopyState('copied')
-    } catch {
-      setCopyState('failed')
-    }
+    setCopyState(await writeClipboard(prompt) ? 'copied' : 'failed')
   }
 
   const copyLabel = copyState === 'copied' ? t('promptCopied') : copyState === 'failed' ? t('promptCopyFailed') : t('copyPrompt')
-  return <section style={promptShell} aria-label={t('promptLabel')}>
-    <div style={header}>
-      <strong style={{ fontSize: 13 }}>{t('promptLabel')}</strong>
-      <button type="button" style={action} onClick={() => { void copy() }}>{copyLabel}</button>
+  const showCopy = hovered || focused || hoverless || copyState !== 'idle'
+  return <section style={promptPanelStyle} aria-label={t('promptLabel')}>
+    <strong style={promptLabelStyle}>{t('promptLabel')}</strong>
+    <div
+      style={promptBlockStyle}
+      onMouseEnter={() => { setHovered(true) }}
+      onMouseLeave={() => { setHovered(false) }}
+      onFocusCapture={() => { setFocused(true) }}
+      onBlurCapture={() => { setFocused(false) }}
+    >
+      <button
+        type="button"
+        style={{ ...copyButtonStyle, opacity: showCopy ? 1 : 0 }}
+        aria-label={copyLabel}
+        aria-describedby={tooltipVisible ? tooltipId : undefined}
+        data-copy-state={copyState}
+        onMouseEnter={() => { setTooltipVisible(true) }}
+        onMouseLeave={() => { setTooltipVisible(false) }}
+        onFocus={() => { setTooltipVisible(true) }}
+        onBlur={() => { setTooltipVisible(false) }}
+        onClick={() => { void copy() }}
+      >
+        {copyState === 'copied' ? <IconCheckOutline16 /> : <IconCopyOutline16 />}
+      </button>
+      {tooltipVisible ? <span id={tooltipId} role="tooltip" style={tooltipStyle}>{copyLabel}</span> : null}
+      <pre style={promptText} tabIndex={0}>{prompt}</pre>
     </div>
-    <pre style={promptText} tabIndex={0}>{prompt}</pre>
     <span role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>{copyState === 'idle' ? '' : copyLabel}</span>
+  </section>
+}
+
+function ResponsiveCard({ visual, side, label }: { visual: React.ReactNode; side?: React.ReactNode; label: string }) {
+  return <section style={shell} aria-label={label}>
+    <div style={layoutStyle} data-testid="image-generation-layout" data-responsive-layout="visual-prompt">
+      <div style={side === undefined ? { ...visualStyle, maxWidth: 'none' } : visualStyle} data-testid="image-generation-visual">{visual}</div>
+      {side === undefined ? null : <div style={sideStyle} data-testid="image-generation-prompt">{side}</div>}
+    </div>
   </section>
 }
 
@@ -178,10 +210,18 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
   const load = useImageLoader(sessionId, sessions)
   const galleryLabels = useMemo(() => labels(t), [t])
   const prompt = promptFor(block)
-  if (!('kind' in block)) return <section style={shell} aria-label={t('generating')}><div style={header}><strong>{t('generating')}</strong></div><progress style={progress} aria-label={t('generating')} /><div style={detail}>{t('generatingDetail')}</div>{prompt === undefined ? null : <PromptPanel prompt={prompt} t={t} />}</section>
+  if (!('kind' in block)) return <ResponsiveCard
+    label={t('generating')}
+    visual={<><div style={header}><strong>{t('generating')}</strong></div><progress style={progress} aria-label={t('generating')} /><div style={detail}>{t('generatingDetail')}</div></>}
+    side={prompt === undefined ? undefined : <PromptPanel prompt={prompt} t={t} />}
+  />
   if (block.isError) {
     const state = errorState(block, t)
-    return <section style={shell} role="status"><strong>{state.title}</strong>{state.detail === undefined ? null : <span style={detail}>{state.detail}</span>}{prompt === undefined ? null : <PromptPanel prompt={prompt} t={t} />}</section>
+    return <ResponsiveCard
+      label={state.title}
+      visual={<div role="status" style={{ display: 'grid', gap: 10 }}><strong>{state.title}</strong>{state.detail === undefined ? null : <span style={detail}>{state.detail}</span>}</div>}
+      side={prompt === undefined ? undefined : <PromptPanel prompt={prompt} t={t} />}
+    />
   }
   const decoded = presentation(block)
   if (decoded === undefined) return <section style={shell} role="status"><strong>{t('completed')}</strong><span style={detail}>{t('unknownResult')}</span></section>
@@ -197,14 +237,16 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
     anchor.remove()
   }
 
-  return <section style={shell} aria-label={t('completed')}>
-    <div style={header}><strong>{t('completed')}</strong></div>
-    <ImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} />
-    <PromptPanel prompt={decoded.prompt} t={t} />
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <button key={image.attachmentId as string} type="button" style={action} onClick={() => { void download(image) }}>{decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })}</button>)}</div>
-    <details>
-      <summary style={{ cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 }}>{t('imageDetails')}</summary>
-      <div style={{ ...detail, display: 'grid', gap: 4, marginTop: 6 }}>{decoded.images.map((image, index) => <span key={image.attachmentId as string}>{t('imageDetail', { name: image.name ?? String(index + 1), format: formatMediaType(image.mediaType), width: image.width, height: image.height, size: formatBytes(image.bytes) })}</span>)}</div>
-    </details>
-  </section>
+  return <ResponsiveCard
+    label={t('completed')}
+    visual={<><div style={header}><strong>{t('completed')}</strong></div><ImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
+    side={<>
+      <PromptPanel prompt={decoded.prompt} t={t} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <button key={image.attachmentId as string} type="button" style={action} onClick={() => { void download(image) }}>{decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })}</button>)}</div>
+      <details>
+        <summary style={{ cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 }}>{t('imageDetails')}</summary>
+        <div style={{ ...detail, display: 'grid', gap: 4, marginTop: 6 }}>{decoded.images.map((image, index) => <span key={image.attachmentId as string}>{t('imageDetail', { name: image.name ?? String(index + 1), format: formatMediaType(image.mediaType), width: image.width, height: image.height, size: formatBytes(image.bytes) })}</span>)}</div>
+      </details>
+    </>}
+  />
 }

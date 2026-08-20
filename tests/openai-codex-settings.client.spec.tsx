@@ -297,13 +297,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
-    const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable image generation/u }) as HTMLInputElement
+    const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
     expect(enableSearch.checked).toBe(false)
     expect(enableImageGeneration.checked).toBe(false)
-    expect(en.enableImageGenerationHelp).toBe('Use the image generation capability included with your current GPT subscription.')
-    expect(zh.enableImageGeneration).toBe('启用图片生成')
-    expect(zh.enableImageGenerationHelp).toBe('使用你当前 GPT 订阅计划提供的图片生成能力。')
+    expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
+    expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
+    expect(zh.enableImageGenerationHelp).toBe('启用后，GPT 模型可以在对话中调用 GPT Image 生成图片。')
     expect(model.disabled).toBe(true)
 
     fireEvent.click(enableSearch)
