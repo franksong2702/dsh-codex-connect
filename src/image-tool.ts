@@ -9,7 +9,7 @@ import type { OpenAICodexTransportV1 } from './transport.ts'
 import { decodeStrictBase64, estimateBase64Bytes } from './base64.ts'
 import { detectEncodedImage } from './image-format.ts'
 import type { CodexImageMediaType, DetectedImage } from './image-format.ts'
-import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION } from './image-presentation.ts'
+import { IMAGE_PRESENTATION_KIND } from './image-presentation.ts'
 
 /** Stable model-callable tool name. */
 export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
@@ -204,9 +204,9 @@ export function imageGenerateTool(ctx: Context): ToolDefinition {
         },
       },
       render: (_args, value) => outputContent(value),
-      presentationMeta: (_args, value) => ({
+      presentationMeta: (args, value) => ({
         kind: IMAGE_PRESENTATION_KIND,
-        schemaVersion: IMAGE_PRESENTATION_SCHEMA_VERSION,
+        prompt: args.prompt.trim(),
         images: value.images,
       }),
     },

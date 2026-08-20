@@ -109,7 +109,7 @@ describe('Codex image generation tool', () => {
 
   it('saves valid PNG output once and redacts transport/storage failures', async () => {
     const { ctx, generateImages, saved } = await setup()
-    const result = await execute(ctx, { prompt: 'draw a pixel' })
+    const result = await execute(ctx, { prompt: '  draw a pixel  ' })
     expect(result.isError).toBe(false)
     if (result.isError) throw new Error('expected image generation to succeed')
     expect(generateImages).toHaveBeenCalledWith({ prompt: 'draw a pixel' }, { signal })
@@ -128,7 +128,7 @@ describe('Codex image generation tool', () => {
     ])
     expect(result.meta).toEqual({
       kind: 'codex-connect-images',
-      schemaVersion: 1,
+      prompt: 'draw a pixel',
       images: [expect.objectContaining({ mediaType: 'image/png', name: 'codex-image-1.png' })],
     })
 
