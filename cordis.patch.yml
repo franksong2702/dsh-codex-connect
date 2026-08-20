@@ -6,3 +6,4 @@
       config:
         enableSearch: false
         enableImageTool: false
+        enableImageGeneration: false

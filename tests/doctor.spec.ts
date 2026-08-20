@@ -23,6 +23,7 @@ describe('Codex Connect doctor', () => {
       modelProvider: true,
       search: false,
       imageTool: false,
+      imageGeneration: false,
       changesHarnessDefaultModel: false,
       changesHarnessSearchRoute: false,
     })

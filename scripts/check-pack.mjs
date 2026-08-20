@@ -30,5 +30,13 @@ if (!/declare module ['"]@deepseek-ai\/cordis['"]/u.test(declaration)) {
 if (!/openaiCodexTransport/u.test(declaration)) {
   throw new Error('lib/index.d.ts does not expose openaiCodexTransport')
 }
+if (!/IMAGE_GENERATE_TOOL_NAME/u.test(declaration)) {
+  throw new Error('lib/index.d.ts does not expose the bundled image generation tool')
+}
+
+const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+if (!/codex_connect_image_generate/u.test(client)) {
+  throw new Error('lib/client.js does not register the image generation result view')
+}
 
 process.stdout.write(`validated ${names.length} packed files (${manifest.size} bytes, ${manifest.unpackedSize} unpacked bytes)\n`)

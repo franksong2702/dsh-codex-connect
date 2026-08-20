@@ -12,7 +12,7 @@
 
 `dsh-codex-connect` 提供 `openai-codex` 模型目录和独立的 ChatGPT OAuth 登录。模型仍走 Harness 标准 LLM 服务，因此流式输出、工具调用、reasoning replay、压缩、文件系统控制、权限门禁和审批提示仍由 Harness 负责。ChatGPT 订阅不会因此变成 OpenAI Platform API 凭据。
 
-安装是增量的：bundle 不会替换当前主模型或搜索路由；独立搜索提供方和 `view_image` 工具也默认关闭，必须显式开启。
+安装是增量的：bundle 不会替换当前主模型或搜索路由；独立搜索、`view_image` 和图片生成也默认关闭，必须显式开启。
 
 本中文指南中的 UI 截图均来自中文本地化的 Harness 界面；[English 版](../README.md) 使用同一状态的英文截图。模型与提供方标识保留其规范拼写，不随界面语言翻译。
 
@@ -94,6 +94,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
   config:
     enableSearch: false
     enableImageTool: false
+    enableImageGeneration: false
 ```
 
 打开 **设置 → 插件 → 插件配置 → Codex Connect**，即可在同一张卡片中管理账户和这些选项。**保存更改**只影响本插件的能力配置并即时生效，绝不会选择默认模型或全局搜索路由。
@@ -102,6 +103,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 - `enableSearch: true` 会把 Codex 注册为可选择的搜索提供方，不会把它选为 profile 的全局搜索路由。
 - `enableImageTool: true` 会为具备视觉能力的模型启用 `view_image`，用于审批后的本地读取和公网图片获取。
+- `enableImageGeneration: true` 会启用只接受文字描述的图片生成工具。使用你当前 GPT 订阅计划提供的图片生成能力。生成结果会保存为 DSH 附件，并通过对话中的原生图片画廊展示。
 
 下图是有人显式开启能力之后的配置示例，不是新安装的默认状态。本中文指南使用中文本地化截图；English 版展示同一状态的英文截图。
 
@@ -138,6 +140,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 |---|---:|---|
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
+| `enableImageGeneration` | `false` | boolean |
 | `searchModel` | `gpt-5.6-sol` | Codex model id |
 | `searchMode` | `cached` | `cached`、`indexed`、`live` |
 | `searchContextSize` | `medium` | `low`、`medium`、`high` |

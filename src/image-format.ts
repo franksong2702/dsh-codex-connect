@@ -7,6 +7,7 @@ export interface DetectedImage {
   width: number
   height: number
 }
+
 /** WebP's maximum representable canvas side; also bounds safe pixel multiplication. */
 export const MAX_IMAGE_DIMENSION = 1 << 24
 

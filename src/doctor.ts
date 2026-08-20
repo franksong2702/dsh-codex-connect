@@ -20,6 +20,8 @@ export interface OpenAICodexDiagnosticOptions {
   enableSearch?: boolean
   /** Whether the optional image tool is enabled. */
   enableImageTool?: boolean
+  /** Whether the optional image generation tool is enabled. */
+  enableImageGeneration?: boolean
   /** Optional pure-function seam for compatibility checks in tests/diagnostic callers. */
   compatibilityOptions?: CompatibilityDetectionOptions
 }
@@ -37,6 +39,7 @@ export interface OpenAICodexDiagnosticReport {
     modelProvider: true
     search: boolean
     imageTool: boolean
+    imageGeneration: boolean
     changesHarnessDefaultModel: false
     changesHarnessSearchRoute: false
   }
@@ -106,6 +109,7 @@ export async function diagnoseOpenAICodex(
       modelProvider: true,
       search: options.enableSearch === true,
       imageTool: options.enableImageTool === true,
+      imageGeneration: options.enableImageGeneration === true,
       changesHarnessDefaultModel: false,
       changesHarnessSearchRoute: false,
     },

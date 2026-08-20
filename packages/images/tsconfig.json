@@ -1,8 +1,0 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "baseUrl": "."
-  },
-  "include": ["src", "tests"],
-  "exclude": ["src/client", "tests/**/*.client.spec.tsx"]
-}

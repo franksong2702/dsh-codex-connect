@@ -19,6 +19,7 @@ import { createOpenAICodexAdapter } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
+import { imageGenerateTool } from './image-tool.ts'
 import { viewImageTool } from './view-image.ts'
 import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
@@ -31,6 +32,7 @@ declare module '@deepseek-ai/cordis' {
 }
 
 export { VIEW_IMAGE_TOOL_NAME } from './view-image.ts'
+export { IMAGE_GENERATE_TOOL_NAME } from './image-tool.ts'
 export {
   assertNoOpenAICodexProviderConflict,
   diagnoseOpenAICodex,
@@ -163,6 +165,8 @@ export interface Config {
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
+  /** Register the optional prompt-only image generation tool. */
+  enableImageGeneration?: boolean
   /** Model used for auxiliary standalone searches. */
   searchModel?: string
   /** Cached, indexed, or live web access. */
@@ -176,6 +180,7 @@ export interface Config {
 export const Config: z<Config> = z.object({
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
+  enableImageGeneration: z.boolean().default(false),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),
   searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE),
@@ -214,6 +219,8 @@ export function apply(ctx: Context, config: Config): void {
   let searchTail = Promise.resolve()
   let imageFiber: Fiber | undefined
   let imageTail = Promise.resolve()
+  let imageGenerationFiber: Fiber | undefined
+  let imageGenerationTail = Promise.resolve()
 
   const reconcileSearch = async (): Promise<void> => {
     if (stopped) return
@@ -272,6 +279,26 @@ export function apply(ctx: Context, config: Config): void {
     })
   }
 
+  const reconcileImageGeneration = async (): Promise<void> => {
+    if (stopped) return
+    const enabled = resolveOpenAICodexSettings(current()).enableImageGeneration
+    if (enabled === (imageGenerationFiber !== undefined)) return
+    const previous = imageGenerationFiber
+    imageGenerationFiber = undefined
+    if (previous !== undefined) await previous.dispose()
+    if (stopped || !enabled) return
+    const fiber = ctx.inject(
+      ['tools', 'attachments'],
+      toolCtx => toolCtx.tools.register(imageGenerateTool(toolCtx)),
+    )
+    imageGenerationFiber = fiber
+    void Promise.resolve(fiber).catch((error: unknown) => {
+      if (imageGenerationFiber === fiber) imageGenerationFiber = undefined
+      ctx.logger.error('dsh-codex-connect: optional image generation tool failed to activate')
+      ctx.logger.error(error)
+    })
+  }
+
   const scheduleCapabilities = (): void => {
     searchTail = searchTail.then(reconcileSearch, reconcileSearch).catch((error: unknown) => {
       ctx.logger.error('dsh-codex-connect: could not apply the updated search configuration')
@@ -281,18 +308,25 @@ export function apply(ctx: Context, config: Config): void {
       ctx.logger.error('dsh-codex-connect: could not apply the updated image-tool configuration')
       ctx.logger.error(error)
     })
+    imageGenerationTail = imageGenerationTail.then(reconcileImageGeneration, reconcileImageGeneration).catch((error: unknown) => {
+      ctx.logger.error('dsh-codex-connect: could not apply the updated image-generation configuration')
+      ctx.logger.error(error)
+    })
   }
 
   ctx.effect(() => async () => {
     stopped = true
-    await Promise.all([searchTail, imageTail])
+    await Promise.all([searchTail, imageTail, imageGenerationTail])
     const search = searchFiber
     const image = imageFiber
+    const imageGeneration = imageGenerationFiber
     searchFiber = undefined
     imageFiber = undefined
+    imageGenerationFiber = undefined
     await Promise.allSettled([
       search?.dispose() ?? Promise.resolve(),
       image?.dispose() ?? Promise.resolve(),
+      imageGeneration?.dispose() ?? Promise.resolve(),
     ])
   }, 'dsh-codex-connect: optional capability lifecycle')
 

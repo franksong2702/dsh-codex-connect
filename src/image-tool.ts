@@ -4,16 +4,18 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { ImageAttachmentRef, ImageMediaType, SaveImageAttachment } from '@deepseek-ai/dsh-attachment'
 import { defineTool, TOOL_ABORTED } from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition, ToolExecutionResult, ToolRunContext } from '@deepseek-ai/dsh-tools'
-import type { OpenAICodexTransportV1 } from 'dsh-codex-connect'
+import type { OpenAICodexTransportV1 } from './transport.ts'
 import { decodeStrictBase64, estimateBase64Bytes } from './base64.ts'
 import { detectEncodedImage } from './image-format.ts'
 import type { CodexImageMediaType, DetectedImage } from './image-format.ts'
+import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION } from './image-presentation.ts'
 
+/** Stable model-callable tool name. */
 export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
 const TRANSPORT_SERVICE = 'openaiCodexTransport'
 const PROMPT_MAX_LENGTH = 32_000
 const MAX_IMAGES_PER_RESPONSE = 4
-const QUOTA_WARNING = 'The upstream generation may continue and may still consume quota.'
+const CANCELED_REQUEST_NOTE = 'The request may still be processing.'
 
 interface ImageValue {
   images: Array<{
@@ -34,6 +36,7 @@ function failure(message: string): never {
   throw new SafeToolError(message)
 }
 
+/** Convert transport failures to fixed, secret-free user text. */
 function fixedTransportMessage(error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error
     ? (error as { code?: unknown }).code
@@ -41,14 +44,14 @@ function fixedTransportMessage(error: unknown): string {
   switch (code) {
     case 'OPENAI_CODEX_SIGNED_OUT': return 'Sign in to OpenAI Codex before generating images.'
     case 'OPENAI_CODEX_REAUTH_REQUIRED': return 'Renew OpenAI Codex authorization before generating images.'
-    case 'OPENAI_CODEX_RATE_LIMITED': return 'Image generation is rate limited. Try again later.'
-    case 'OPENAI_CODEX_TIMEOUT': return `Image generation timed out. ${QUOTA_WARNING}`
-    case 'OPENAI_CODEX_CANCELED': return `Image generation was canceled. ${QUOTA_WARNING}`
-    case 'OPENAI_CODEX_NETWORK_ERROR': return `The image generation request lost its network connection. ${QUOTA_WARNING}`
-    case 'OPENAI_CODEX_UPSTREAM_REJECTED': return 'The image generation service rejected this request.'
-    case 'OPENAI_CODEX_UPSTREAM_UNAVAILABLE': return 'The image generation service is temporarily unavailable.'
+    case 'OPENAI_CODEX_RATE_LIMITED': return 'Image generation is temporarily unavailable. Try again later.'
+    case 'OPENAI_CODEX_TIMEOUT': return `Image generation timed out. ${CANCELED_REQUEST_NOTE}`
+    case 'OPENAI_CODEX_CANCELED': return `Image generation was canceled. ${CANCELED_REQUEST_NOTE}`
+    case 'OPENAI_CODEX_NETWORK_ERROR': return `The image generation request lost its network connection. ${CANCELED_REQUEST_NOTE}`
+    case 'OPENAI_CODEX_UPSTREAM_REJECTED': return 'The image generation request was rejected.'
+    case 'OPENAI_CODEX_UPSTREAM_UNAVAILABLE': return 'Image generation is temporarily unavailable.'
     case 'OPENAI_CODEX_RESPONSE_TOO_LARGE': return 'The image generation response exceeded the safe size limit.'
-    case 'OPENAI_CODEX_MALFORMED_RESPONSE': return 'The image generation service returned an unreadable response.'
+    case 'OPENAI_CODEX_MALFORMED_RESPONSE': return 'The image generation response was unreadable.'
     default: return 'Image generation failed without exposing private response details.'
   }
 }
@@ -92,7 +95,7 @@ async function generate(ctx: Context, transport: OpenAICodexTransportV1, prompt:
   const estimates: number[] = []
   for (const image of response.images) {
     const estimate = estimateBase64Bytes(image.b64Json)
-    if (estimate === undefined) failure('The image generation service returned invalid image data.')
+    if (estimate === undefined) failure('The image generation response contained invalid image data.')
     if (estimate > limits.maxImageBytes) failure('A generated image exceeds this deployment\'s byte limit.')
     estimatedTotal += estimate
     if (!Number.isSafeInteger(estimatedTotal) || estimatedTotal > limits.maxMessageImageBytes) {
@@ -105,7 +108,7 @@ async function generate(ctx: Context, transport: OpenAICodexTransportV1, prompt:
   const parsedImages: DetectedImage[] = []
   for (const [index, image] of response.images.entries()) {
     const data = decodeStrictBase64(image.b64Json)
-    if (data === undefined || data.byteLength !== estimates[index]) failure('The image generation service returned invalid image data.')
+    if (data === undefined || data.byteLength !== estimates[index]) failure('The image generation response contained invalid image data.')
     const parsed = detectEncodedImage(data)
     if (parsed === undefined) failure('Generated images must be valid PNG, JPEG, or WebP files.')
     if (!limits.mediaTypes.includes(parsed.mediaType as ImageMediaType)) {
@@ -146,12 +149,12 @@ async function generate(ctx: Context, transport: OpenAICodexTransportV1, prompt:
   }
 }
 
-function appendAbortWarning(result: Readonly<ToolExecutionResult>): ToolContentBlock[] | undefined {
+function appendAbortNote(result: Readonly<ToolExecutionResult>): ToolContentBlock[] | undefined {
   if (!result.isError || result.error.info?.code !== TOOL_ABORTED) return undefined
   const existing = result.content.filter((block): block is Extract<ToolContentBlock, { type: 'text' }> => block.type === 'text')
     .map(block => block.text).join('\n')
-  if (existing.includes(QUOTA_WARNING)) return undefined
-  return [...result.content, { type: 'text', text: QUOTA_WARNING }]
+  if (existing.includes(CANCELED_REQUEST_NOTE)) return undefined
+  return [...result.content, { type: 'text', text: CANCELED_REQUEST_NOTE }]
 }
 
 /** Build one fiber-owned image tool, including in-flight call deduplication. */
@@ -187,19 +190,26 @@ export function imageGenerateTool(ctx: Context): ToolDefinition {
         },
       },
       render: (_args, value) => outputContent(value),
+      presentationMeta: (_args, value) => ({
+        kind: IMAGE_PRESENTATION_KIND,
+        schemaVersion: IMAGE_PRESENTATION_SCHEMA_VERSION,
+        images: value.images,
+      }),
     },
-    finalizeContent: (_exec, result) => appendAbortWarning(result),
+    // Generation is deliberately exclusive: one prompt maps to one request batch.
+    isConcurrencySafe: () => false,
+    finalizeContent: (_exec, result) => appendAbortNote(result),
     async execute(args, exec) {
       if (Object.keys(args).length !== 1 || !Object.hasOwn(args, 'prompt')) failure('Image generation accepts only the prompt field.')
       const prompt = args.prompt.trim()
-      if (prompt.length === 0 || args.prompt.length > PROMPT_MAX_LENGTH) failure('Image prompt must contain 1 to 32000 characters.')
+      if (prompt.length === 0 || prompt.length > PROMPT_MAX_LENGTH) failure('Image prompt must contain 1 to 32000 characters.')
       const transport = ctx.reflect.get(TRANSPORT_SERVICE) as OpenAICodexTransportV1 | undefined
       if (transport?.apiVersion !== 1) failure('The Codex Connect image transport is unavailable.')
 
       const key = executionKey(exec)
       const current = inFlight.get(key)
       if (current !== undefined) return current
-      const pending = generate(ctx, transport, args.prompt, exec)
+      const pending = generate(ctx, transport, prompt, exec)
         .catch(error => { if (error instanceof SafeToolError) throw error; failure(fixedTransportMessage(error)) })
         .finally(() => { inFlight.delete(key) })
       inFlight.set(key, pending)

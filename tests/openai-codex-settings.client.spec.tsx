@@ -288,8 +288,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
+    const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
     expect(enableSearch.checked).toBe(false)
+    expect(enableImageGeneration.checked).toBe(false)
+    expect(en.enableImageGenerationHelp).toBe('Use the image generation capability included with your current GPT subscription.')
+    expect(zh.enableImageGeneration).toBe('启用图片生成')
+    expect(zh.enableImageGenerationHelp).toBe('使用你当前 GPT 订阅计划提供的图片生成能力。')
     expect(model.disabled).toBe(true)
 
     fireEvent.click(enableSearch)
@@ -303,6 +308,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.change(model, { target: { value: 'gpt-search-custom' } })
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: en.searchMaxOutputTokens }), { target: { value: '2048' } })
+    fireEvent.click(enableImageGeneration)
     fireEvent.click(screen.getByRole('button', { name: en.save }))
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
@@ -310,6 +316,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('searchModel', 'gpt-search-custom')
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
+    expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {

@@ -12,7 +12,7 @@ Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlle
 
 `dsh-codex-connect` adds the `openai-codex` model catalog and a separate ChatGPT OAuth login. Models run through Harness's normal LLM service, so streaming, tool calls, reasoning replay, compaction, filesystem controls, permission gates, and approval prompts remain Harness-owned. It does not turn a ChatGPT subscription into an OpenAI Platform API credential.
 
-Installation is additive. The bundle does not replace the current default model or search route, and its standalone search provider and `view_image` tool are disabled until explicitly enabled.
+Installation is additive. The bundle does not replace the current default model or search route. Standalone search, `view_image`, and image generation remain disabled until explicitly enabled.
 
 Every UI screenshot in this English guide is captured from the English-localized Harness UI. The [Chinese guide](docs/README.zh.md) uses a Chinese capture of the same state. Model and provider identifiers keep their canonical spelling in both languages.
 
@@ -94,6 +94,7 @@ The installed bundle is intentionally inert beyond model-provider registration:
   config:
     enableSearch: false
     enableImageTool: false
+    enableImageGeneration: false
 ```
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
@@ -102,6 +103,7 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect** to mana
 
 - `enableSearch: true` registers Codex as an available search provider. It does not select the profile's global search route.
 - `enableImageTool: true` enables `view_image` for approved local reads and public-network image fetches on vision-capable models.
+- `enableImageGeneration: true` enables the prompt-only image generation tool. Use the image generation capability included with your current GPT subscription. Generated images are saved as DSH attachments and shown in the conversation with the native image gallery.
 
 The screenshot below is an example after someone has explicitly enabled capabilities. It does not show the fresh-install default. This English guide uses the English-localized capture; the Chinese guide shows the matching Chinese-localized state.
 
@@ -138,6 +140,7 @@ Selecting Codex as the profile's global search route is another explicit change:
 |---|---:|---|
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
+| `enableImageGeneration` | `false` | boolean |
 | `searchModel` | `gpt-5.6-sol` | Codex model id |
 | `searchMode` | `cached` | `cached`, `indexed`, `live` |
 | `searchContextSize` | `medium` | `low`, `medium`, `high` |

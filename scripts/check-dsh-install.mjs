@@ -160,8 +160,9 @@ async function main() {
 
     const pluginBlock = configBlock(afterDump.stdout, 'llm-openai-codex')
     if (!/^    enableSearch: false$/mu.test(pluginBlock)
-      || !/^    enableImageTool: false$/mu.test(pluginBlock)) {
-      throw new Error('local plugin configuration did not retain enableSearch:false and enableImageTool:false')
+      || !/^    enableImageTool: false$/mu.test(pluginBlock)
+      || !/^    enableImageGeneration: false$/mu.test(pluginBlock)) {
+      throw new Error('local plugin configuration did not retain all optional capabilities as false')
     }
 
     const doctor = runCommand(dshBinary, [
@@ -180,6 +181,7 @@ async function main() {
       capabilities: {
         enableSearch: false,
         enableImageTool: false,
+        enableImageGeneration: false,
       },
     })}\n`)
   } finally {

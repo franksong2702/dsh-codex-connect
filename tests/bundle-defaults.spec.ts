@@ -7,6 +7,7 @@ describe('bundle defaults', () => {
     expect(patch).toContain('name: dsh-codex-connect')
     expect(patch).toContain('enableSearch: false')
     expect(patch).toContain('enableImageTool: false')
+    expect(patch).toContain('enableImageGeneration: false')
     expect(patch).not.toMatch(/^- id: agent-default-model/mu)
     expect(patch).not.toMatch(/searchProvider:\s*openai-codex/u)
   })
