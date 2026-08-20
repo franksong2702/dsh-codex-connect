@@ -110,10 +110,12 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('reports a blocked popup without starting an orphaned login', async () => {
+  it('offers a user-clicked browser link when the popup is blocked', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
-      expect(requestPath(input)).toBe(OPENAI_CODEX_AUTH_STATUS_PATH)
-      return json({ status: 'signed-out' })
+      const path = requestPath(input)
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) return json({ status: 'signed-out' })
+      expect(path).toBe(OPENAI_CODEX_AUTH_LOGIN_PATH)
+      return json({ url: 'https://auth.openai.com/authorize' })
     })
     vi.stubGlobal('fetch', fetchMock)
     vi.spyOn(window, 'open').mockReturnValue(null)
@@ -121,8 +123,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
     render(<OpenAICodexSettings t={t} embedded />)
     fireEvent.click(await screen.findByRole('button', { name: en.login }))
 
-    expect(await screen.findByText(en.popupBlocked)).toBeTruthy()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText(en.popupBlockedFallback)).toBeTruthy()
+    const link = screen.getByRole('link', { name: en.openLoginInBrowser }) as HTMLAnchorElement
+    expect(link.href).toBe('https://auth.openai.com/authorize')
+    expect(link.target).toBe('_blank')
+    expect(link.rel).toContain('noopener')
+    expect(link.rel).toContain('noreferrer')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('closes the popup and surfaces a failed login request', async () => {
