@@ -4,7 +4,7 @@
 
 [English](../README.md) | 中文
 
-通过 OAuth 将你的 ChatGPT 订阅连接到 DeepSeek Harness，同时保留用户自主默认项、Harness 原生审批、非敏感诊断和可靠的会话恢复。
+通过 OAuth 将你的 ChatGPT 订阅连接到 DeepSeek Harness，并可选择使用 GPT Image 生成图片，同时保留用户自主默认项、Harness 原生审批、非敏感诊断和可靠的会话恢复。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/hero.jpg" alt="Codex Connect — 通过 ChatGPT OAuth 连接 DeepSeek Harness" width="100%">
@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.11`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.11'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.12`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.12'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
 
 ### 2. 启动 Harness
 
@@ -45,7 +45,7 @@ dsh web
 预期结果：新安装时账户区显示 **尚未登录**，并出现 **使用 ChatGPT 登录** 按钮。之后管理可选能力也在同一张卡片中完成。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/plugin-entry.jpg" alt="Harness 插件配置中的中文 Codex Connect 折叠入口" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/plugin-entry.jpg" alt="Harness 插件配置中的中文 Codex Connect 折叠入口" width="586">
 </p>
 
 ### 4. 使用 ChatGPT 登录
@@ -108,7 +108,20 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 下图是有人显式开启能力之后的配置示例，不是新安装的默认状态。本中文指南使用中文本地化截图；English 版展示同一状态的英文截图。
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/plugin-configuration.jpg" alt="中文 Codex Connect 显式开启可选能力后的配置示例" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/plugin-configuration.jpg" alt="中文 Codex Connect 显式开启可选能力后的配置示例" width="550">
+</p>
+
+### 使用 GPT Image 生成图片
+
+1. 在 Codex Connect 卡片中开启 **启用 GPT Image 图片生成**，然后点击 **保存更改**。
+2. 为当前对话选择一个 `openai-codex` GPT 模型。
+3. 用自然语言描述你想要的图片；Agent 可以在调用 GPT Image 前将这段描述扩展为更完整的提示词。
+4. 图片生成后会保存为 DSH 附件，并直接显示在对话中。你可以在结果卡片里查看和复制完整提示词、下载图片，以及展开图片详情。
+
+此能力使用你当前 GPT 订阅计划提供的图片生成权限，不需要 OpenAI Platform API Key；具体可用性仍取决于当前对话所选的 GPT 套餐和模型。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="Codex Connect 中文 GPT Image 结果卡片，包含图片预览、可复制提示词、下载操作和图片详情" width="780">
 </p>
 
 ### 单独更改默认模型或全局搜索路由

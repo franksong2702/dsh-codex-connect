@@ -4,7 +4,7 @@
 
 English | [中文](docs/README.zh.md)
 
-Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
+Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.11`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.11'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.12`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.12'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
 
 ### 2. Start Harness
 
@@ -45,7 +45,7 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect**.
 Expected result: a fresh installation shows **Not signed in** and a **Sign in with ChatGPT** button. The card is where you later manage optional capabilities too.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-entry.jpg" alt="Collapsed English-localized Codex Connect entry under Harness plugin configuration" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-entry.jpg" alt="Collapsed English-localized Codex Connect entry under Harness plugin configuration" width="586">
 </p>
 
 ### 4. Sign in with ChatGPT
@@ -108,7 +108,20 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect** to mana
 The screenshot below is an example after someone has explicitly enabled capabilities. It does not show the fresh-install default. This English guide uses the English-localized capture; the Chinese guide shows the matching Chinese-localized state.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-configuration.jpg" alt="English-localized Codex Connect optional capability configuration after explicit opt-in" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-configuration.jpg" alt="English-localized Codex Connect optional capability configuration after explicit opt-in" width="550">
+</p>
+
+### Generate images with GPT Image
+
+1. Turn on **Enable GPT Image generation** in the Codex Connect card and select **Save changes**.
+2. Choose an `openai-codex` GPT model for the conversation.
+3. Describe the image you want in ordinary language. The agent can expand that request into the prompt sent to GPT Image.
+4. The completed image is stored as a DSH attachment and rendered directly in the conversation. The result card lets you review and copy the full prompt, download the image, and inspect image details.
+
+This capability uses the image generation access included with your current GPT subscription; it does not require an OpenAI Platform API key. Availability remains subject to the GPT plan and model selected for the conversation.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="English-localized Codex Connect GPT Image result with preview, copyable prompt, download action, and image details" width="780">
 </p>
 
 ### Change a default model or global search route separately
