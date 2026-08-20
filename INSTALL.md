@@ -21,7 +21,7 @@ The only verified combination is DSH plugin API packages `0.1.0-rc.7`, `@earendi
    dsh plugin --profile web add dsh-codex-connect@alpha
    ```
 
-   After `0.1.0-alpha.4.11` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.11`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.11'`.
+   After `0.1.0-alpha.4.13` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.13`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.13'`.
 
 3. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
 4. Confirm the effective `agent-default-model` and `web.searchProvider` values are unchanged from before installation.
@@ -46,7 +46,7 @@ The value is a full `http://` or `https://` origin including its port, not a bar
 
 ## Optional configuration
 
-Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits. The package row accepts the same `enableSearch` and `enableImageTool` fields as its composition base, both defaulting to `false`. Enabling search registers a provider but does not select it; selecting `web.searchProvider: openai-codex` is a second explicit profile change. Setting `agent-default-model` to `openai-codex` is also a separate explicit change.
+Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits. The same card controls `enableSearch`, `enableImageTool`, and `enableImageGeneration`; all three default to `false`. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers a provider but does not select it; selecting `web.searchProvider: openai-codex` is a second explicit profile change. Setting `agent-default-model` to `openai-codex` is also a separate explicit change.
 
 Apply only requested choices and preserve unrelated keys:
 
@@ -55,6 +55,7 @@ Apply only requested choices and preserve unrelated keys:
   config:
     enableSearch: true
     enableImageTool: false
+    enableImageGeneration: false
     searchMode: live
 
 - id: web

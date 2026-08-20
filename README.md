@@ -1,10 +1,10 @@
 # Codex Connect
 
-[![npm version](https://img.shields.io/npm/v/dsh-codex-connect?label=npm&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
+[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
 
 English | [中文](docs/README.zh.md)
 
-Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
+Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
@@ -12,7 +12,7 @@ Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlle
 
 `dsh-codex-connect` adds the `openai-codex` model catalog and a separate ChatGPT OAuth login. Models run through Harness's normal LLM service, so streaming, tool calls, reasoning replay, compaction, filesystem controls, permission gates, and approval prompts remain Harness-owned. It does not turn a ChatGPT subscription into an OpenAI Platform API credential.
 
-Installation is additive. The bundle does not replace the current default model or search route, and its standalone search provider and `view_image` tool are disabled until explicitly enabled.
+Installation is additive. The bundle does not replace the current default model or search route. Standalone search, `view_image`, and image generation remain disabled until explicitly enabled.
 
 Every UI screenshot in this English guide is captured from the English-localized Harness UI. The [Chinese guide](docs/README.zh.md) uses a Chinese capture of the same state. Model and provider identifiers keep their canonical spelling in both languages.
 
@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.11`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.11'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.13`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.13'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
 
 ### 2. Start Harness
 
@@ -45,7 +45,7 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect**.
 Expected result: a fresh installation shows **Not signed in** and a **Sign in with ChatGPT** button. The card is where you later manage optional capabilities too.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-entry.jpg" alt="Collapsed English-localized Codex Connect entry under Harness plugin configuration" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-entry.jpg" alt="Collapsed English-localized Codex Connect entry under Harness plugin configuration" width="586">
 </p>
 
 ### 4. Sign in with ChatGPT
@@ -94,6 +94,7 @@ The installed bundle is intentionally inert beyond model-provider registration:
   config:
     enableSearch: false
     enableImageTool: false
+    enableImageGeneration: false
 ```
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
@@ -102,11 +103,25 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect** to mana
 
 - `enableSearch: true` registers Codex as an available search provider. It does not select the profile's global search route.
 - `enableImageTool: true` enables `view_image` for approved local reads and public-network image fetches on vision-capable models.
+- `enableImageGeneration: true` enables the prompt-only image generation tool. Use the image generation capability included with your current GPT subscription. Generated images are saved as DSH attachments and shown in the conversation with the native image gallery.
 
 The screenshot below is an example after someone has explicitly enabled capabilities. It does not show the fresh-install default. This English guide uses the English-localized capture; the Chinese guide shows the matching Chinese-localized state.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-configuration.jpg" alt="English-localized Codex Connect optional capability configuration after explicit opt-in" width="720">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-configuration.jpg" alt="English-localized Codex Connect optional capability configuration after explicit opt-in" width="550">
+</p>
+
+### Generate images with GPT Image
+
+1. Turn on **Enable GPT Image generation** in the Codex Connect card and select **Save changes**.
+2. Choose an `openai-codex` GPT model for the conversation.
+3. Describe the image you want in ordinary language. The agent can expand that request into the prompt sent to GPT Image.
+4. The completed image is stored as a DSH attachment and rendered directly in the conversation. The result card lets you review and copy the full prompt, download the image, and inspect image details.
+
+This capability uses the image generation access included with your current GPT subscription; it does not require an OpenAI Platform API key. Availability remains subject to the GPT plan and model selected for the conversation.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="English-localized Codex Connect GPT Image result with preview, copyable prompt, download action, and image details" width="780">
 </p>
 
 ### Change a default model or global search route separately
@@ -138,6 +153,7 @@ Selecting Codex as the profile's global search route is another explicit change:
 |---|---:|---|
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
+| `enableImageGeneration` | `false` | boolean |
 | `searchModel` | `gpt-5.6-sol` | Codex model id |
 | `searchMode` | `cached` | `cached`, `indexed`, `live` |
 | `searchContextSize` | `medium` | `low`, `medium`, `high` |

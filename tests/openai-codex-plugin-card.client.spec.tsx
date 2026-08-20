@@ -21,6 +21,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     )
 
     const header = screen.getByRole('button', { name: `${en.expand}: ${en.title}` })
+    expect(header.textContent).toContain('GPT Image')
     const icon = header.querySelector('svg')
 
     expect(icon?.getAttribute('viewBox')).toBe('0 0 14 14')

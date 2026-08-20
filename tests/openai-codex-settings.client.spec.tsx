@@ -191,6 +191,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
               id: 'codex',
               name: 'Codex',
               windows: [{ remainingPercent: 72.5, windowSeconds: 18_000 }],
+            }, {
+              id: 'codex_bengalfox',
+              name: 'GPT-5.3-Codex-Spark',
+              windows: [
+                { remainingPercent: 100, windowSeconds: 18_000 },
+                { remainingPercent: 50, windowSeconds: 604_800 },
+              ],
             }],
           },
         })
@@ -201,9 +208,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<OpenAICodexSettings t={t} embedded />)
-    const progress = await screen.findByRole('progressbar', { name: en.fiveHourLimit })
+    const progress = await screen.findByRole('progressbar', { name: `Codex · ${en.fiveHourLimit}` })
     expect(progress.getAttribute('aria-valuenow')).toBe('72.5')
     expect(progress.getAttribute('aria-valuetext')).toBe('72.5% remaining')
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.fiveHourLimit}` })).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.weeklyLimit}` })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: en.logout }))
     expect(await screen.findByText(en.signedOut)).toBeTruthy()
@@ -295,8 +304,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
+    const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
     expect(enableSearch.checked).toBe(false)
+    expect(enableImageGeneration.checked).toBe(false)
+    expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
+    expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
+    expect(zh.enableImageGenerationHelp).toBe('启用后，GPT 模型可以在对话中调用 GPT Image 生成图片。')
     expect(model.disabled).toBe(true)
 
     fireEvent.click(enableSearch)
@@ -310,6 +324,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.change(model, { target: { value: 'gpt-search-custom' } })
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: en.searchMaxOutputTokens }), { target: { value: '2048' } })
+    fireEvent.click(enableImageGeneration)
     fireEvent.click(screen.getByRole('button', { name: en.save }))
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
@@ -317,6 +332,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('searchModel', 'gpt-search-custom')
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
+    expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {

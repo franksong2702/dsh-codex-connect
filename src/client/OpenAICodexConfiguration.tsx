@@ -41,6 +41,7 @@ const UNAVAILABLE_SNAPSHOT = {
 const CONFIG_FIELDS = [
   'enableSearch',
   'enableImageTool',
+  'enableImageGeneration',
   'searchModel',
   'searchMode',
   'searchContextSize',
@@ -208,6 +209,17 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
             <span style={toggleCopyStyle}>
               <span style={labelStyle}>{t('enableImageTool')}</span>
               <span style={bodyStyle}>{t('enableImageToolHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableImageGeneration}
+              onChange={event => { update('enableImageGeneration', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableImageGeneration')}</span>
+              <span style={bodyStyle}>{t('enableImageGenerationHelp')}</span>
             </span>
           </label>
         </fieldset>

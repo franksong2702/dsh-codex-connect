@@ -4,6 +4,7 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
 // Type-only: pulls the conversation input-region SlotMap declaration.
@@ -23,6 +24,8 @@ import { OpenAICodexFastModeToggle } from './OpenAICodexFastModeToggle.tsx'
 import type { OpenAICodexFastModeToggleInjected } from './OpenAICodexFastModeToggle.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
+import { CodexImageToolView } from './CodexImageToolView.tsx'
+import type { CodexImageToolViewInjected } from './CodexImageToolView.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -34,7 +37,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Stable browser-plugin name. */
 export const name = 'dsh-codex-connect-client'
 /** Client services required by the Plugin configuration contribution. */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope', 'sessions']
 
 /** Register account copy and the OpenAI Codex card under Plugin configuration. */
 export function apply(ctx: ClientContext): void {
@@ -50,6 +53,13 @@ export function apply(ctx: ClientContext): void {
     key: OPENAI_CODEX_SETTINGS_NAMESPACE,
     inject: (): OpenAICodexPluginCardInjected => ({ t, configScope }),
   }, OpenAICodexPluginCard))
+
+  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
+    name: 'tool.call.toolview',
+    key: 'codex_connect_image_generate',
+    locale: namespace,
+    inject: (): CodexImageToolViewInjected => ({ sessions: ctx.sessions }),
+  }, CodexImageToolView))
 
   ctx.inject(['slots', 'modelDirectories'], (scope: ClientContext) => {
     scope.slots.inject('conversation.input.right', () => scope.slots.register({

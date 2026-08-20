@@ -37,13 +37,20 @@ for (const filename of productFiles) {
 }
 
 const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8')
-const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness with OAuth, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.'
-if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect?label=npm&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
+const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.'
+if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
   failures.push('README opening description mismatch')
 }
 if (!readme.includes('dsh plugin --profile web add dsh-codex-connect@alpha')) failures.push('README must prefer the npm alpha install command')
 if (!(await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')).includes('dsh plugin --profile web add dsh-codex-connect@alpha')) {
   failures.push('Chinese README must prefer the npm alpha install command')
+}
+if (!readme.includes('Use the image generation capability included with your current GPT subscription.')) {
+  failures.push('README must describe image generation with the approved subscription copy')
+}
+const chineseReadme = await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')
+if (!chineseReadme.includes('使用你当前 GPT 订阅计划提供的图片生成能力。')) {
+  failures.push('Chinese README must describe image generation with the approved subscription copy')
 }
 try {
   await stat(new URL('../README.zh.md', import.meta.url))
@@ -62,6 +69,25 @@ for (const [filename, text] of [['NOTICE', notice], ['LICENSE', license]]) {
 const patch = await readFile(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
 if (/^- id: agent-default-model/mu.test(patch) || /searchProvider:\s*openai-codex/u.test(patch)) {
   failures.push('bundle patch must not take over Harness routing')
+}
+if (!/^\s+enableImageGeneration: false$/mu.test(patch)) {
+  failures.push('bundle patch must keep image generation disabled by default')
+}
+
+const clientInject = packageJson.dsh?.client?.inject
+for (const platformModule of ['@deepseek-ai/dsh-client-ui-attachment', '@deepseek-ai/dsh-client-ui-slots']) {
+  if (Array.isArray(clientInject) && clientInject.includes(platformModule)) {
+    failures.push(`dsh.client.inject must not treat static platform module ${platformModule} as a plugin`)
+  }
+}
+if (Object.keys(packageJson.scripts ?? {}).some(script => /images-install|release-workflow-images|workspace-linkage/u.test(script))) {
+  failures.push('root package must not expose companion-package scripts')
+}
+try {
+  await stat(new URL('../packages/images/package.json', import.meta.url))
+  failures.push('companion images package must not remain in the single-plugin repository')
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
 }
 
 if (failures.length > 0) {

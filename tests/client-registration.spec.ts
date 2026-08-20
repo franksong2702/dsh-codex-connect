@@ -48,4 +48,16 @@ describe('OpenAI Codex browser contribution', () => {
     expect(locales.match(/title: 'Codex Connect'/gu)).toHaveLength(2)
     expect(adapter).toContain("displayName: 'OpenAI Codex'")
   })
+
+  it('registers the image-generation result view independently of the generation toggle', async () => {
+    const [client, manifest] = await Promise.all([
+      readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    ])
+    expect(client).toContain("ctx.slots.inject('tool.call.toolview'")
+    expect(client).toContain("key: 'codex_connect_image_generate'")
+    const parsed = JSON.parse(manifest) as { dsh: { client: { inject: string[] } } }
+    expect(parsed.dsh.client.inject).not.toContain('@deepseek-ai/dsh-client-ui-slots')
+    expect(parsed.dsh.client.inject).not.toContain('@deepseek-ai/dsh-client-ui-attachment')
+  })
 })

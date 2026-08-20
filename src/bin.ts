@@ -182,7 +182,7 @@ export async function run(argv: readonly string[]): Promise<number> {
           ...(report.compatibility === undefined ? [] : [
             `Compatibility: ${report.compatibility.status} (Node ${report.compatibility.node.installed ?? 'unknown'}; DSH API ${report.compatibility.packages['@deepseek-ai/dsh-llm'].installed ?? 'unknown'}; pi-ai ${report.compatibility.packages['@earendil-works/pi-ai'].installed ?? 'unknown'})`,
           ]),
-          `Optional capability defaults: search=${report.capabilities.search ? 'enabled' : 'disabled'}, imageTool=${report.capabilities.imageTool ? 'enabled' : 'disabled'}`,
+          `Optional capability defaults: search=${report.capabilities.search ? 'enabled' : 'disabled'}, imageTool=${report.capabilities.imageTool ? 'enabled' : 'disabled'}, imageGeneration=${report.capabilities.imageGeneration ? 'enabled' : 'disabled'}`,
           'Harness defaults: unchanged by this plugin',
           ...report.hints.map(hint => `Hint: ${hint}`),
           '',
