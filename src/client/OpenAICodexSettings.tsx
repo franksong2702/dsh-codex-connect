@@ -215,6 +215,7 @@ export function OpenAICodexSettings({ t, configScope, embedded = false }: OpenAI
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
+  const [loginUrl, setLoginUrl] = useState<string>()
   const mounted = useRef(true)
 
   const trustedOriginCommand = `dsh plugin --profile web exec dsh-codex-connect trust-origin ${window.location.origin}`
@@ -255,24 +256,30 @@ export function OpenAICodexSettings({ t, configScope, embedded = false }: OpenAI
     }
   }, [refresh, status.status])
 
+  useEffect(() => {
+    if (status.status !== 'signing-in') setLoginUrl(undefined)
+  }, [status.status])
+
   const signIn = async (): Promise<void> => {
     const popup = window.open('about:blank', '_blank')
-    if (popup === null) {
-      setStatus({ status: 'error', message: t('popupBlocked') })
-      return
-    }
-    popup.opener = null
+    if (popup !== null) popup.opener = null
     setBusy(true)
     setStatus({ status: 'signing-in' })
     try {
       const challenge = await jsonRequest<LoginChallenge>(OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST')
       if (!mounted.current) {
-        popup.close()
+        popup?.close()
         return
       }
-      popup.location.replace(challenge.url)
+      if (popup !== null) {
+        setLoginUrl(undefined)
+        popup.location.replace(challenge.url)
+      } else {
+        setLoginUrl(challenge.url)
+      }
     } catch (error: unknown) {
       popup?.close()
+      setLoginUrl(undefined)
       if (mounted.current) {
         setStatus(error instanceof AccountRequestError && error.code === 'remote-web-origin-not-trusted'
           ? { status: 'remote-web-origin-not-trusted' }
@@ -344,8 +351,23 @@ export function OpenAICodexSettings({ t, configScope, embedded = false }: OpenAI
             ? null
             : status.status === 'signed-in'
             ? <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void signOut() }}>{busy ? t('working') : t('logout')}</button>
+            : status.status === 'signing-in' && loginUrl !== undefined
+            ? null
             : <button type="button" style={primaryButtonStyle} disabled={busy} onClick={() => { void signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
         </div>
+        {loginUrl === undefined ? null : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+            <p style={bodyStyle}>{t('popupBlockedFallback')}</p>
+            <a
+              href={loginUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ ...primaryButtonStyle, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+            >
+              {t('openLoginInBrowser')}
+            </a>
+          </div>
+        )}
         {status.status === 'error' || status.status === 'reauth-required'
           ? <p style={errorStyle}>{status.message}</p>
           : null}
