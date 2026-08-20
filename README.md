@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.13`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.13'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.14`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.14'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
 
 ### 2. Start Harness
 
@@ -50,7 +50,7 @@ Expected result: a fresh installation shows **Not signed in** and a **Sign in wi
 
 ### 4. Sign in with ChatGPT
 
-Click **Sign in with ChatGPT** and complete the browser approval yourself. Do not copy an authorization URL, code, token, or account identifier into an issue, log, or configuration file.
+Click **Sign in with ChatGPT** and complete the browser approval yourself. If an embedded WebView blocks the sign-in window, use the displayed **Open ChatGPT sign-in page** link to continue in your system browser. Do not copy an authorization URL, code, token, or account identifier into an issue, log, or configuration file.
 
 Expected result: the account area changes to **Signed in**. The screenshot below is the successful end state after this step; it is not the initial sign-in screen.
 

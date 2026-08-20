@@ -28,7 +28,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.13`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.13'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.14`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.14'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
 
 ### 2. 启动 Harness
 
@@ -50,7 +50,7 @@ dsh web
 
 ### 4. 使用 ChatGPT 登录
 
-点击 **使用 ChatGPT 登录**，并自行完成浏览器审批。不要把授权 URL、授权码、token 或账户标识复制到 Issue、日志或配置文件中。
+点击 **使用 ChatGPT 登录**，并自行完成浏览器审批。如果内嵌 WebView 阻止登录窗口，请点击页面显示的 **打开 ChatGPT 登录页面**，在系统浏览器中继续。不要把授权 URL、授权码、token 或账户标识复制到 Issue、日志或配置文件中。
 
 预期结果：账户区变为 **已登录**。下图展示的是完成本步骤后的成功状态，不是开始登录前的页面。
 
