@@ -7,6 +7,7 @@ const mocked = vi.hoisted(() => ({
   diagnose: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  migrateHistory: vi.fn(),
   authPath: vi.fn(() => '/Users/fixture/.dsh/openai-codex-auth.json'),
   authStatus: vi.fn(),
 }))
@@ -15,6 +16,7 @@ vi.mock('../src/index.ts', () => ({
   diagnoseOpenAICodex: mocked.diagnose,
   loginOpenAICodex: mocked.login,
   logoutOpenAICodex: mocked.logout,
+  migrateOpenAICodexSearchHistory: mocked.migrateHistory,
   openAICodexAuthPath: mocked.authPath,
   openAICodexAuthStatus: mocked.authStatus,
 }))
@@ -72,6 +74,53 @@ describe('dsh-codex-connect CLI', () => {
     expect(output).toContain('dsh-codex-connect trust-origin <origin>')
     expect(output).toContain('dsh-codex-connect trusted-origins [--json]')
     expect(output).toContain('doctor         inspect secret-free')
+    expect(output).toContain('dsh-codex-connect migrate-history [--apply --confirm-stopped]')
+    expect(output).toContain('migrate-history find or repair')
+  })
+
+  it('runs history migration with dry-run defaults and explicit apply confirmation', async () => {
+    mocked.migrateHistory.mockResolvedValue({
+      mode: 'apply',
+      root: '/tmp/sessions',
+      changedFiles: 1,
+      changedEvents: 2,
+      files: [{ path: '/tmp/sessions/project/session/session.jsonl.zstd', changedEvents: 2, backupPath: '/tmp/backup' }],
+    })
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      output += String(chunk)
+      return true
+    })
+
+    await expect(run(['migrate-history', '--root', '/tmp/sessions', '--apply', '--confirm-stopped', '--json'])).resolves.toBe(0)
+    expect(mocked.migrateHistory).toHaveBeenCalledWith({ root: '/tmp/sessions', apply: true, confirmStopped: true })
+    expect(JSON.parse(output)).toMatchObject({ schemaVersion: 1, mode: 'apply', changedFiles: 1, changedEvents: 2 })
+
+    mocked.migrateHistory.mockClear()
+    output = ''
+    mocked.migrateHistory.mockResolvedValue({
+      mode: 'dry-run',
+      root: '/fixture/.dsh/sessions',
+      changedFiles: 1,
+      changedEvents: 2,
+      files: [{ path: '/fixture/session.jsonl.zstd', changedEvents: 2 }],
+    })
+    await expect(run(['migrate-history'])).resolves.toBe(0)
+    expect(mocked.migrateHistory).toHaveBeenCalledWith({ apply: false })
+    expect(output).toContain('Found 2 legacy Codex search event(s)')
+    expect(output).toContain('Stop DSH')
+  })
+
+  it('rejects applying history migration without the stopped-writer confirmation', async () => {
+    let output = ''
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      output += String(chunk)
+      return true
+    })
+
+    await expect(run(['migrate-history', '--apply'])).resolves.toBe(1)
+    expect(mocked.migrateHistory).not.toHaveBeenCalled()
+    expect(output).toMatch(/^dsh-codex-connect: invalid options for migrate-history/)
   })
 
   it('uses a consistent error prefix', async () => {
@@ -233,6 +282,10 @@ describe('dsh-codex-connect CLI', () => {
     ['doctor', '--device-code'],
     ['status', '--device-code'],
     ['login', '--device-code', '--json'],
+    ['migrate-history', '--root'],
+    ['migrate-history', '--device-code'],
+    ['migrate-history', '--confirm-stopped'],
+    ['migrate-history', '--apply', '--confirm-stopped', '--root'],
   ] as const)('rejects unsupported flags for %s', async (...argv) => {
     let output = ''
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk: string | Uint8Array) => {

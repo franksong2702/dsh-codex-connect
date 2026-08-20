@@ -149,6 +149,16 @@ export type {
   OpenAICodexSearchProviderOptions,
   OpenAICodexSearchRequestRecord,
 } from './search.ts'
+export {
+  migrateOpenAICodexSearchHistory,
+  OPENAI_CODEX_HISTORY_BACKUP_SUFFIX,
+  OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT,
+} from './history-migration.ts'
+export type {
+  OpenAICodexHistoryMigrationFile,
+  OpenAICodexHistoryMigrationOptions,
+  OpenAICodexHistoryMigrationResult,
+} from './history-migration.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'llm-openai-codex'

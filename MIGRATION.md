@@ -10,3 +10,21 @@
 6. Run `--dump-config`, then `dsh-codex-connect doctor`. Do not run OAuth again when `status` already reports signed in.
 
 Rollback is the inverse package swap. Do not delete or copy the separate OAuth file during either direction. If Harness reports a duplicate `openai-codex` adapter, the old bundle or a manual provider row is still active; resolve that one row instead of changing credentials.
+
+## Repairing search history written by Alpha 4.10
+
+Alpha 4.10 briefly wrote `web/openai-codex-search-llm-request` as a required private Session event. Because an external plugin cannot extend the Host persistence vocabulary across independent module instances, a newer Harness can refuse to read those histories after the event writer is removed.
+
+Upgrade Codex Connect, then inspect the default `$DSH_HOME/sessions` root without changing it:
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect migrate-history --json
+```
+
+If the dry run reports affected events, stop every DSH process that can write this Session root and apply the migration. `--confirm-stopped` is required together with `--apply`:
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect migrate-history --apply --confirm-stopped --json
+```
+
+The migration changes only that retired event's envelope by adding `"ignorable": true`. It preserves event data, sequence, time, and the concatenated Zstandard frame layout, and creates `session.jsonl.zstd.pre-codex-search-history-migration` beside every changed artifact before replacing it. Keep that backup until you have reopened and verified the repaired Session. Re-running the command is safe. For a non-default JSONL persistence root, pass `--root /absolute/path/to/sessions`. SQLite and uncompressed JSONL stores are not modified by this command. Applying fails closed when the filesystem cannot create the required same-directory hard-link backup. Applying is also fail-closed on Windows; Windows users can run the dry-run only.

@@ -10,13 +10,14 @@ import {
   diagnoseOpenAICodex,
   loginOpenAICodex,
   logoutOpenAICodex,
+  migrateOpenAICodexSearchHistory,
   openAICodexAuthPath,
   openAICodexAuthStatus,
 } from './index.ts'
 import { CODEX_CONNECT_VERSION } from './doctor.ts'
 import { normalizeTrustedOrigin, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 
-type Action = 'doctor' | 'login' | 'logout' | 'status' | 'trust-origin' | 'trusted-origins' | 'untrust-origin'
+type Action = 'doctor' | 'login' | 'logout' | 'migrate-history' | 'status' | 'trust-origin' | 'trusted-origins' | 'untrust-origin'
 type DiagnosticReport = Awaited<ReturnType<typeof diagnoseOpenAICodex>>
 
 const JSON_SCHEMA_VERSION = 1
@@ -95,6 +96,7 @@ async function answerPrompt(
 function printHelp(): void {
   process.stdout.write([
     'Usage: dsh-codex-connect <doctor|login|logout|status> [--device-code|--json]',
+    '       dsh-codex-connect migrate-history [--apply --confirm-stopped] [--root <path>] [--json]',
     '       dsh-codex-connect trust-origin <origin>',
     '       dsh-codex-connect trusted-origins [--json]',
     '       dsh-codex-connect untrust-origin <origin>',
@@ -102,12 +104,13 @@ function printHelp(): void {
     '  doctor         inspect secret-free runtime and OAuth file metadata',
     '  login          sign in with a separate ChatGPT OAuth session',
     '  logout         remove the dsh credential without changing ~/.codex',
+    '  migrate-history find or repair Alpha 4.10 private search events (dry-run by default)',
     '  status         report non-secret dsh credential state',
     '  trust-origin   allow one exact browser origin to reach Web OAuth routes',
     '  trusted-origins list the currently allowed browser origins',
     '  untrust-origin remove one exact browser origin from the allowlist',
     '  --device-code  use headless device-code login (login only)',
-    '  --json         emit one secret-free JSON document (doctor/status/trusted-origins only)',
+    '  --json         emit one JSON document (doctor/status/trusted-origins/migrate-history)',
     '',
   ].join('\n'))
 }
@@ -150,9 +153,9 @@ export async function run(argv: readonly string[]): Promise<number> {
     return 0
   }
   const [rawAction, ...flags] = argv
-  const actions: readonly Action[] = ['doctor', 'login', 'logout', 'status', 'trust-origin', 'trusted-origins', 'untrust-origin']
+  const actions: readonly Action[] = ['doctor', 'login', 'logout', 'migrate-history', 'status', 'trust-origin', 'trusted-origins', 'untrust-origin']
   if (!actions.includes(rawAction as Action)) {
-    process.stderr.write(`dsh-codex-connect: expected doctor, login, logout, status, trust-origin, trusted-origins, or untrust-origin; got ${JSON.stringify(rawAction)}\n`)
+    process.stderr.write(`dsh-codex-connect: expected doctor, login, logout, migrate-history, status, trust-origin, trusted-origins, or untrust-origin; got ${JSON.stringify(rawAction)}\n`)
     return 1
   }
   const action = rawAction as Action
@@ -160,10 +163,38 @@ export async function run(argv: readonly string[]): Promise<number> {
   const optionFlags = action === 'trust-origin' || action === 'untrust-origin' ? flags.slice(1) : flags
   const deviceCode = optionFlags.includes('--device-code')
   const jsonOutput = optionFlags.includes('--json')
-  const unknown = optionFlags.filter(flag => flag !== '--device-code' && flag !== '--json')
+  let migrationRoot: string | undefined
+  let migrationApply = false
+  let migrationConfirmStopped = false
+  const unknown: string[] = []
+  if (action === 'migrate-history') {
+    for (let index = 0; index < optionFlags.length; index += 1) {
+      const flag = optionFlags[index]
+      if (flag === '--apply') {
+        if (migrationApply) unknown.push(flag ?? '')
+        migrationApply = true
+      } else if (flag === '--confirm-stopped') {
+        if (migrationConfirmStopped) unknown.push(flag ?? '')
+        migrationConfirmStopped = true
+      } else if (flag === '--json') {
+        // Handled by the common output flag below.
+      } else if (flag === '--root'
+        && migrationRoot === undefined
+        && optionFlags[index + 1] !== undefined
+        && !optionFlags[index + 1]?.startsWith('--')) {
+        migrationRoot = optionFlags[index + 1]
+        index += 1
+      } else {
+        unknown.push(flag ?? '')
+      }
+    }
+  } else {
+    unknown.push(...optionFlags.filter(flag => flag !== '--device-code' && flag !== '--json'))
+  }
   if (unknown.length > 0
     || (deviceCode && action !== 'login')
     || (jsonOutput && (action === 'login' || action === 'logout' || deviceCode))
+    || (action === 'migrate-history' && (migrationConfirmStopped && !migrationApply || migrationApply && !migrationConfirmStopped))
     || ((action === 'trust-origin' || action === 'untrust-origin') && (originArgument === undefined || optionFlags.length !== 0))) {
     process.stderr.write(`dsh-codex-connect: invalid options for ${action}: ${flags.join(' ')}\n`)
     return 1
@@ -188,6 +219,23 @@ export async function run(argv: readonly string[]): Promise<number> {
           '',
         ].join('\n'))
         return doctorExitCode(report)
+      }
+      case 'migrate-history': {
+        const result = await migrateOpenAICodexSearchHistory({
+          apply: migrationApply,
+          ...migrationConfirmStopped ? { confirmStopped: true } : {},
+          ...migrationRoot === undefined ? {} : { root: migrationRoot },
+        })
+        if (jsonOutput) {
+          printJson({ schemaVersion: JSON_SCHEMA_VERSION, ...result })
+        } else {
+          const verb = result.mode === 'apply' ? 'Repaired' : 'Found'
+          process.stdout.write(`${verb} ${result.changedEvents} legacy Codex search event(s) in ${result.changedFiles} session file(s) under ${result.root}.\n`)
+          if (result.mode === 'dry-run' && result.changedEvents > 0) {
+            process.stdout.write('Stop DSH, then run again with --apply --confirm-stopped to create backups and repair these histories.\n')
+          }
+        }
+        return 0
       }
       case 'status': {
         const status = await openAICodexAuthStatus()
