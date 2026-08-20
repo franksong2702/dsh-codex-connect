@@ -184,6 +184,13 @@ describe('OpenAI Codex Plugin configuration card', () => {
               id: 'codex',
               name: 'Codex',
               windows: [{ remainingPercent: 72.5, windowSeconds: 18_000 }],
+            }, {
+              id: 'codex_bengalfox',
+              name: 'GPT-5.3-Codex-Spark',
+              windows: [
+                { remainingPercent: 100, windowSeconds: 18_000 },
+                { remainingPercent: 50, windowSeconds: 604_800 },
+              ],
             }],
           },
         })
@@ -194,9 +201,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<OpenAICodexSettings t={t} embedded />)
-    const progress = await screen.findByRole('progressbar', { name: en.fiveHourLimit })
+    const progress = await screen.findByRole('progressbar', { name: `Codex · ${en.fiveHourLimit}` })
     expect(progress.getAttribute('aria-valuenow')).toBe('72.5')
     expect(progress.getAttribute('aria-valuetext')).toBe('72.5% remaining')
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.fiveHourLimit}` })).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.weeklyLimit}` })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: en.logout }))
     expect(await screen.findByText(en.signedOut)).toBeTruthy()

@@ -134,11 +134,10 @@ function UsageLimits({ usage, quotaError, t }: {
       <h3 style={quotaTitleStyle}>{t('usageLimits')}</h3>
       {usage.rateLimits.map(limit => (
         <div key={limit.id} style={quotaGroupStyle}>
-          <h4 style={quotaTitleStyle}>{limit.name ?? limit.id}</h4>
           {limit.windows.map(window => (
             <QuotaBar
               key={window.windowSeconds}
-              label={windowLabel(window.windowSeconds, t)}
+              label={`${limit.name ?? limit.id} · ${windowLabel(window.windowSeconds, t)}`}
               percent={window.remainingPercent}
               detail={t('resetAt', {
                 time: formatOpenAICodexResetAt(window.resetAt) ?? t('resetUnavailable'),

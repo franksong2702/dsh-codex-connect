@@ -1,6 +1,7 @@
 /** Model-callable Codex image generation tool. */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { AttachmentId } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentRef, ImageMediaType, SaveImageAttachment } from '@deepseek-ai/dsh-attachment'
 import { defineTool, TOOL_ABORTED } from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition, ToolExecutionResult, ToolRunContext } from '@deepseek-ai/dsh-tools'
@@ -63,7 +64,20 @@ function extension(mediaType: CodexImageMediaType): string {
 function outputContent(value: ImageValue): ToolContentBlock[] {
   const lines = value.images.map((image, index) =>
     `${String(index + 1)}. ${image.mediaType}, ${String(image.width)}x${String(image.height)} px, ${String(image.bytes)} bytes, attachment ${image.attachmentId}`)
-  return [{ type: 'text', text: `Generated ${String(value.images.length)} image${value.images.length === 1 ? '' : 's'}:\n${lines.join('\n')}` }]
+  return [
+    { type: 'text', text: `Generated ${String(value.images.length)} image${value.images.length === 1 ? '' : 's'}:\n${lines.join('\n')}` },
+    ...value.images.map(image => ({
+      type: 'image' as const,
+      attachment: {
+        attachmentId: AttachmentId(image.attachmentId),
+        mediaType: image.mediaType,
+        width: image.width,
+        height: image.height,
+        bytes: image.bytes,
+        name: image.name,
+      },
+    })),
+  ]
 }
 
 function validateRef(ref: ImageAttachmentRef, parsed: DetectedImage, input: SaveImageAttachment, name: string): void {

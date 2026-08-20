@@ -111,9 +111,21 @@ describe('Codex image generation tool', () => {
     const { ctx, generateImages, saved } = await setup()
     const result = await execute(ctx, { prompt: 'draw a pixel' })
     expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected image generation to succeed')
     expect(generateImages).toHaveBeenCalledWith({ prompt: 'draw a pixel' }, { signal })
     expect(saved).toHaveLength(1)
     expect(result.value).toMatchObject({ images: [{ mediaType: 'image/png', name: 'codex-image-1.png' }] })
+    expect(result.content).toEqual([
+      expect.objectContaining({ type: 'text' }),
+      {
+        type: 'image',
+        attachment: expect.objectContaining({
+          attachmentId: 'sha256:1',
+          mediaType: 'image/png',
+          name: 'codex-image-1.png',
+        }),
+      },
+    ])
     expect(result.meta).toEqual({
       kind: 'codex-connect-images',
       schemaVersion: 1,
