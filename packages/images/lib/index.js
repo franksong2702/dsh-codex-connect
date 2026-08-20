@@ -117,6 +117,9 @@ function detectEncodedImage(data) {
 	}
 }
 //#endregion
+//#region src/image-presentation.ts
+const IMAGE_PRESENTATION_KIND = "codex-connect-images";
+//#endregion
 //#region src/tool.ts
 const IMAGE_GENERATE_TOOL_NAME = "codex_connect_image_generate";
 const TRANSPORT_SERVICE$1 = "openaiCodexTransport";
@@ -280,7 +283,12 @@ function imageGenerateTool(ctx) {
 					}
 				} }
 			},
-			render: (_args, value) => outputContent(value)
+			render: (_args, value) => outputContent(value),
+			presentationMeta: (_args, value) => ({
+				kind: IMAGE_PRESENTATION_KIND,
+				schemaVersion: 1,
+				images: value.images
+			})
 		},
 		finalizeContent: (_exec, result) => appendAbortWarning(result),
 		async execute(args, exec) {

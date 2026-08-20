@@ -6,8 +6,13 @@ const sourcePaths = [
   new URL('../src/index.ts', import.meta.url),
   new URL('../src/base64.ts', import.meta.url),
   new URL('../src/image-format.ts', import.meta.url),
+  new URL('../src/image-presentation.ts', import.meta.url),
   new URL('../src/tool.ts', import.meta.url),
   new URL('../src/client/index.tsx', import.meta.url),
+  new URL('../src/client/CodexImageToolView.tsx', import.meta.url),
+  new URL('../src/client/CodexImagesPluginCard.tsx', import.meta.url),
+  new URL('../src/client/locales.ts', import.meta.url),
+  new URL('../src/client/settings-contract.ts', import.meta.url),
 ]
 const failures = []
 
@@ -20,10 +25,14 @@ if (packageJson.peerDependencies?.['dsh-codex-connect'] !== compatibility.core?.
 if (packageJson.devDependencies?.['dsh-codex-connect'] !== 'workspace:*') failures.push('core dev dependency must use workspace:*')
 if (packageJson.dependencies?.['dsh-codex-connect'] !== undefined) failures.push('core must not be a regular dependency')
 
-const sources = (await Promise.all(sourcePaths.map(path => readFile(path, 'utf8')))).join('\n')
-if (/\bfetch\s*\(|https?:\/\/|node:https|undici|chatgpt\.com/u.test(sources)) failures.push('images source must not contain a direct network route')
+const sourceTexts = await Promise.all(sourcePaths.map(path => readFile(path, 'utf8')))
+const sources = sourceTexts.join('\n')
+const hostSources = sourceTexts.slice(0, 5).join('\n')
+if (/\bfetch\s*\(|https?:\/\/|node:https|undici|chatgpt\.com/u.test(hostSources)) failures.push('images Host source must not contain a direct network route')
+if (/https?:\/\/|node:https|undici|chatgpt\.com/u.test(sources)) failures.push('images source must not contain a direct upstream route')
 if (!sources.includes('toolCtx.tools.register(imageGenerateTool(toolCtx))')) failures.push('images source must register the PR-3 tool through its injected lifecycle')
-if (/ImageGallery|ImageLightbox/u.test(sources)) failures.push('images source must not contain PR-4 gallery or lightbox functionality')
+if (!sources.includes("key: 'codex_connect_image_generate'") || !sources.includes('ImageGallery')) failures.push('images client must register the PR-4 image tool view')
+if (!sources.includes('key: IMAGES_SETTINGS_NAMESPACE')) failures.push('images client must register its namespaced settings card')
 if (/^import\s+(?!type\b)[^\n]*['"]dsh-codex-connect['"]/mu.test(sources)) failures.push('images source must import the core as types only')
 
 const productFiles = ['README.md', 'docs/README.zh.md', 'SECURITY.md', 'RELEASING.md', 'NOTICE', 'LICENSE']

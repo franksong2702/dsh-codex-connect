@@ -151,6 +151,11 @@ describe('Codex image generation tool', () => {
     expect(result.value).toMatchObject({
       images: [{ attachmentId: 'sha256:1', mediaType: 'image/png', width: 1, height: 1, name: 'codex-image-1.png' }],
     })
+    expect(result.meta).toMatchObject({
+      kind: 'codex-connect-images',
+      schemaVersion: 1,
+      images: [{ attachmentId: 'sha256:1', mediaType: 'image/png', width: 1, height: 1, name: 'codex-image-1.png' }],
+    })
   })
 
   it('validates every image before making one storage call', async () => {
