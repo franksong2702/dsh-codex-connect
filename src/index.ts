@@ -6,6 +6,7 @@
 
 import type { Context, Fiber } from '@deepseek-ai/cordis'
 import { randomUUID } from 'node:crypto'
+import { dirname, join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { deepEqualJson, installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-attachment'
@@ -17,6 +18,15 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
 import { createOpenAICodexAdapter } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
+import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
+import { registerOpenAICodexUpdateRoutes } from './update-routes.ts'
+import {
+  checkForOpenAICodexUpdate,
+  compareOpenAICodexVersions,
+  parseOpenAICodexUpdateResult,
+  parseOpenAICodexVersion,
+} from './update.ts'
+import { CODEX_CONNECT_VERSION } from './version.ts'
 import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { imageGenerateTool } from './image-tool.ts'
@@ -126,6 +136,14 @@ export {
   OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH,
 } from './fast-mode.ts'
 export { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
+export { OPENAI_CODEX_UPDATE_PATH } from './update-paths.ts'
+export {
+  checkForOpenAICodexUpdate,
+  compareOpenAICodexVersions,
+  parseOpenAICodexUpdateResult,
+  parseOpenAICodexVersion,
+} from './update.ts'
+export type { OpenAICodexUpdateResult } from './update.ts'
 export {
   OpenAICodexCredentialStore,
   OPENAI_CODEX_AUTH_FILENAME,
@@ -207,6 +225,9 @@ export const Config: z<Config> = z.object({
 export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const credentials = new OpenAICodexCredentialStore()
+  const trustedOrigins = new OpenAICodexTrustedOriginsStore(
+    join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
+  )
   const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials)
@@ -221,7 +242,10 @@ export function apply(ctx: Context, config: Config): void {
     settingsPath: [],
     declared: false,
   }])
-  ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials, undefined, fastMode))
+  ctx.inject(['webServer'], webCtx => {
+    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode)
+    registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
+  })
 
   let stopped = false
   let searchFiber: Fiber | undefined

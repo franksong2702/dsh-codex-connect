@@ -30,6 +30,18 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.14`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.14'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
 
+### 版本更新提醒
+
+Codex Connect 会通过 DSH Web 服务定期检查公开的 npm 包信息。发现新版本后，即使你切换了对话，DSH 界面也会显示全局更新提醒。点击 **查看更新说明** 可以阅读发布摘要；设置卡片中也会保留同样的信息。插件不会自动执行升级命令。
+
+提醒中会提供可复制的升级命令。本指南使用的 profile 命令如下：
+
+```sh
+dsh plugin --profile web update dsh-codex-connect
+```
+
+复制命令后在终端中执行；如果你使用的是其他 Harness profile，请把 `web` 换成对应的 profile 名称。如果 DSH 没有自动重新加载插件，请重启该 profile 的 DSH Web 进程。公开包信息暂时不可用时不会显示更新提醒，账户和模型功能仍可正常使用。
+
 ### 2. 启动 Harness
 
 ```sh

@@ -12,6 +12,8 @@ import {
 } from '../auth-paths.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
+import { OpenAICodexUpdateSettings } from './OpenAICodexUpdateNotice.tsx'
+import type { OpenAICodexUpdateStore } from './update-store.ts'
 
 const POLL_INTERVAL_MS = 1_000
 const USAGE_POLL_INTERVAL_MS = 60_000
@@ -35,6 +37,8 @@ export interface OpenAICodexSettingsInjected {
   t: (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
   /** Host-owned optional capability settings. */
   configScope: SettingsScope<OpenAICodexSettingsConfig>
+  /** Shared browser update state used by the global overlay and this card. */
+  updater?: OpenAICodexUpdateStore
 }
 
 /** Props delivered by the settings slot renderer. */
@@ -208,7 +212,7 @@ async function jsonRequest<T>(path: string, method = 'GET', signal?: AbortSignal
 }
 
 /** OpenAI Codex account status and OAuth actions. */
-export function OpenAICodexSettings({ t, configScope, embedded = false }: OpenAICodexSettingsProps) {
+export function OpenAICodexSettings({ t, configScope, updater, embedded = false }: OpenAICodexSettingsProps) {
   if (t === undefined) throw new Error('OpenAI Codex settings requires its translation function')
   const [status, setStatus] = useState<AccountStatus>({ status: 'loading' })
   const [busy, setBusy] = useState(false)
@@ -340,6 +344,7 @@ export function OpenAICodexSettings({ t, configScope, embedded = false }: OpenAI
         </div>
       )}
       <div style={embedded ? embeddedCardStyle : cardStyle}>
+        {updater === undefined ? null : <OpenAICodexUpdateSettings t={t} updater={updater} />}
         <h3 style={quotaTitleStyle}>{t('accountHeading')}</h3>
         <div style={rowStyle}>
           <div style={statusStyle} role="status">

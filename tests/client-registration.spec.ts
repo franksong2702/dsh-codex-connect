@@ -37,6 +37,18 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client.indexOf("id: 'openai-codex-fast-mode'")).toBeLessThan(client.indexOf("id: 'openai-codex-quota'"))
   })
 
+  it('registers the version reminder in DSH’s frame-wide shell overlay', async () => {
+    const [client, manifest] = await Promise.all([
+      readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    ])
+    expect(client).toContain("ctx.slots.inject('shell.overlay'")
+    expect(client).toContain("id: 'dsh-codex-connect-update'")
+    expect(client).toContain("'@deepseek-ai/dsh-client-ui-layout/client'")
+    const parsed = JSON.parse(manifest) as { dsh: { client: { inject: string[] } } }
+    expect(parsed.dsh.client.inject).toContain('@deepseek-ai/dsh-client-ui-layout')
+  })
+
   it('renders a Codex Connect card and uses OpenAI Codex for the Composer provider', async () => {
     const [clientCard, locales, adapter] = await Promise.all([
       readFile(new URL('../src/client/OpenAICodexPluginCard.tsx', import.meta.url), 'utf8'),
