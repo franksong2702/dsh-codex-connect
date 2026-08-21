@@ -138,7 +138,11 @@ function renderReleaseNotes(markdown: string, t: OpenAICodexUpdateTranslation): 
       bullets.push(<li key={`item-${index}`}>{renderInlineMarkdown(bullet[1] ?? '', `item-${index}`, t)}</li>)
     } else if (heading !== null) {
       flushBullets()
-      content.push(<h4 key={`heading-${index}`} style={notesHeadingStyle}>{renderInlineMarkdown(heading[1] ?? '', `heading-${index}`, t)}</h4>)
+      const headingText = heading[1] ?? ''
+      const displayHeading = /^what(?:'s| is)?\s+changed$/iu.test(headingText.trim())
+        ? t('technicalDetailsHeading')
+        : headingText
+      content.push(<h4 key={`heading-${index}`} style={notesHeadingStyle}>{renderInlineMarkdown(displayHeading, `heading-${index}`, t)}</h4>)
     } else if (fullChangelog !== null) {
       flushBullets()
       const href = fullChangelog[2] === undefined ? undefined : safeReleaseUrl(fullChangelog[2])

@@ -75,6 +75,7 @@ describe('Codex Connect global update reminder', () => {
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStepsHeading)
     fireEvent.click(screen.getByRole('button', { name: en.viewTechnicalDetails }))
     expect(screen.getByRole('status').textContent).toContain('Manual upgrade command')
+    expect(screen.getByRole('heading', { name: en.technicalDetailsHeading })).toBeTruthy()
     expect(screen.getByRole('link', { name: en.viewFullChangelog })).toBeTruthy()
     expect(screen.getAllByRole('listitem')[0]?.textContent).not.toMatch(/^1\./u)
     fireEvent.click(screen.getByRole('button', { name: en.copyUpgradeCommand }))
