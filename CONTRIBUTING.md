@@ -29,6 +29,14 @@ build (`pnpm run build`); do not hand-edit generated files.
 - For suspected vulnerabilities, use the private security advisory link in
   `SECURITY.md` instead of a public issue.
 
+## Update summaries
+
+When a release adds a user-facing capability, record its version and highlight
+kind in `update-highlights.json` after checking the version diff and README.
+Leave documentation-only and internal maintenance releases out of the list.
+The update notice filters this catalog for each user's installed-to-latest
+version range; it does not show the whole catalog to every user.
+
 ## Pull requests
 
 Describe the problem, scope, validation command and result, evidence path, and

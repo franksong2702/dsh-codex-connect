@@ -4,6 +4,8 @@ import {
   compareOpenAICodexVersions,
   OPENAI_CODEX_NPM_METADATA_URL,
   OPENAI_CODEX_RELEASE_API_BASE,
+  OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
+  parseOpenAICodexUpdateHighlights,
   parseOpenAICodexUpdateResult,
   parseOpenAICodexVersion,
 } from '../src/update.ts'
@@ -29,6 +31,7 @@ describe('Codex Connect update metadata', () => {
       if (url === OPENAI_CODEX_NPM_METADATA_URL) {
         return json({ latest: '0.1.0-alpha.4.15', alpha: '0.1.0-alpha.4.16', experimental: '9.9.9' })
       }
+      if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) return json({ schemaVersion: 1, releases: [] })
       expect(url).toBe(`${OPENAI_CODEX_RELEASE_API_BASE}0.1.0-alpha.4.16`)
       return json({
         name: 'Alpha 4.16 — update notes',
@@ -48,13 +51,28 @@ describe('Codex Connect update metadata', () => {
       releaseNotes: '<not-rendered-as-markdown>\n- Global update reminder',
       publishedAt: '2026-08-21T12:00:00Z',
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
-  it('curates user-facing highlights across the full version range', async () => {
-    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
-      ? json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.14' })
-      : json({ name: 'Alpha 4.14', body: 'technical details' }))
+  it('selects user-facing highlights across every published version in the installed-to-latest range', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => {
+      if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.14' })
+      if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) {
+        return json({
+          schemaVersion: 1,
+          releases: [
+            { version: '0.1.0-alpha.4.8', highlights: ['trusted-origins'] },
+            { version: '0.1.0-alpha.4.9', highlights: ['quota-fast-mode'] },
+            { version: '0.1.0-alpha.4.10', highlights: ['dsh-rc7'] },
+            { version: '0.1.0-alpha.4.11', highlights: ['search-stability'] },
+            { version: '0.1.0-alpha.4.12', highlights: ['image-generation'] },
+            { version: '0.1.0-alpha.4.13', highlights: [] },
+            { version: '0.1.0-alpha.4.14', highlights: ['oauth-history'] },
+          ],
+        })
+      }
+      return json({ name: 'Alpha 4.14', body: 'technical details' })
+    })
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.8', fetchImpl: fetchMock })).resolves.toMatchObject({
       status: 'update-available',
       highlights: [
@@ -65,6 +83,35 @@ describe('Codex Connect update metadata', () => {
         { version: '0.1.0-alpha.4.14', kind: 'oauth-history' },
       ],
     })
+  })
+
+  it('does not show older highlights to a user who is one release behind', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => {
+      if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.14' })
+      if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) return json({
+        schemaVersion: 1,
+        releases: [
+          { version: '0.1.0-alpha.4.12', highlights: ['image-generation'] },
+          { version: '0.1.0-alpha.4.14', highlights: ['oauth-history'] },
+        ],
+      })
+      return json({ name: 'Alpha 4.14', body: 'technical details' })
+    })
+    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.13', fetchImpl: fetchMock })).resolves.toMatchObject({
+      status: 'update-available',
+      highlights: [{ version: '0.1.0-alpha.4.14', kind: 'oauth-history' }],
+    })
+  })
+
+  it('ignores malformed or unknown entries in an otherwise valid release-summary catalog', () => {
+    expect(parseOpenAICodexUpdateHighlights({
+      schemaVersion: 1,
+      releases: [
+        { version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'future-kind', 'oauth-history'] },
+        { version: 'not-a-version', highlights: ['image-generation'] },
+      ],
+    })).toEqual([{ version: '0.1.0-alpha.4.14', kind: 'oauth-history' }])
+    expect(parseOpenAICodexUpdateHighlights({ schemaVersion: 2, releases: [] })).toBeUndefined()
   })
 
   it('reports up-to-date without contacting GitHub when tags are not newer', async () => {

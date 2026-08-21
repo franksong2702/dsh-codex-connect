@@ -4,8 +4,10 @@ export const OPENAI_CODEX_PACKAGE_NAME = 'dsh-codex-connect'
 export const OPENAI_CODEX_NPM_METADATA_URL = `https://registry.npmjs.org/-/package/${OPENAI_CODEX_PACKAGE_NAME}/dist-tags`
 export const OPENAI_CODEX_RELEASE_API_BASE = 'https://api.github.com/repos/franksong2702/dsh-codex-connect/releases/tags/v'
 export const OPENAI_CODEX_RELEASE_PAGE_BASE = 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v'
+export const OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL = 'https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/update-highlights.json'
 export const OPENAI_CODEX_UPDATE_TIMEOUT_MS = 8_000
 export const OPENAI_CODEX_UPDATE_MAX_METADATA_BYTES = 64 * 1024
+export const OPENAI_CODEX_UPDATE_MAX_HIGHLIGHTS_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_RELEASE_BYTES = 32 * 1024
 
 export type OpenAICodexUpdateHighlightKind =
@@ -21,15 +23,42 @@ export interface OpenAICodexUpdateHighlight {
   kind: OpenAICodexUpdateHighlightKind
 }
 
-/** Curated user-facing changes for releases that are already published. */
-const CURATED_HIGHLIGHTS: readonly OpenAICodexUpdateHighlight[] = [
-  { version: '0.1.0-alpha.4.8', kind: 'trusted-origins' },
-  { version: '0.1.0-alpha.4.9', kind: 'quota-fast-mode' },
-  { version: '0.1.0-alpha.4.10', kind: 'dsh-rc7' },
-  { version: '0.1.0-alpha.4.11', kind: 'search-stability' },
-  { version: '0.1.0-alpha.4.12', kind: 'image-generation' },
-  { version: '0.1.0-alpha.4.14', kind: 'oauth-history' },
+const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
+  'trusted-origins',
+  'quota-fast-mode',
+  'dsh-rc7',
+  'search-stability',
+  'image-generation',
+  'oauth-history',
 ]
+
+function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {
+  return typeof value === 'string' && HIGHLIGHT_KINDS.includes(value as OpenAICodexUpdateHighlightKind)
+}
+
+/** Parse the public release-summary catalog without trusting arbitrary fields. */
+export function parseOpenAICodexUpdateHighlights(value: unknown): OpenAICodexUpdateHighlight[] | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (record['schemaVersion'] !== 1 || !Array.isArray(record['releases']) || record['releases'].length > 256) return undefined
+  const highlights: OpenAICodexUpdateHighlight[] = []
+  const seen = new Set<string>()
+  for (const rawRelease of record['releases']) {
+    if (typeof rawRelease !== 'object' || rawRelease === null || Array.isArray(rawRelease)) continue
+    const release = rawRelease as Record<string, unknown>
+    const version = release['version']
+    const kinds = release['highlights']
+    if (typeof version !== 'string' || parseOpenAICodexVersion(version) === undefined || !Array.isArray(kinds) || kinds.length > 32) continue
+    for (const kind of kinds) {
+      if (!isHighlightKind(kind)) continue
+      const key = `${version}:${kind}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      highlights.push({ version, kind })
+    }
+  }
+  return highlights
+}
 
 export type OpenAICodexUpdateResult =
   | {
@@ -195,11 +224,37 @@ function releaseApiUrl(version: string): string {
   return `${OPENAI_CODEX_RELEASE_API_BASE}${version}`
 }
 
-function releaseHighlightsBetween(currentVersion: string, latestVersion: string): OpenAICodexUpdateHighlight[] {
-  return CURATED_HIGHLIGHTS
+function releaseHighlightsBetween(
+  highlights: readonly OpenAICodexUpdateHighlight[],
+  currentVersion: string,
+  latestVersion: string,
+): OpenAICodexUpdateHighlight[] {
+  return highlights
     .filter(highlight => compareOpenAICodexVersions(highlight.version, currentVersion) > 0)
     .filter(highlight => compareOpenAICodexVersions(highlight.version, latestVersion) <= 0)
     .map(highlight => ({ ...highlight }))
+}
+
+async function releaseHighlights(
+  currentVersion: string,
+  latestVersion: string,
+  fetchImpl: FetchImpl,
+  timeoutMs: number,
+): Promise<OpenAICodexUpdateHighlight[]> {
+  try {
+    const { response, text } = await fetchBounded(
+      fetchImpl,
+      OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
+      OPENAI_CODEX_UPDATE_MAX_HIGHLIGHTS_BYTES,
+      timeoutMs,
+      { accept: 'application/json' },
+    )
+    if (!response.ok) return []
+    const parsed = parseOpenAICodexUpdateHighlights(JSON.parse(text) as unknown)
+    return parsed === undefined ? [] : releaseHighlightsBetween(parsed, currentVersion, latestVersion)
+  } catch {
+    return []
+  }
 }
 
 async function releaseDetails(
@@ -266,13 +321,17 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
   if (compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) {
     return { status: 'up-to-date', currentVersion, latestVersion: currentVersion }
   }
+  const [highlights, details] = await Promise.all([
+    releaseHighlights(currentVersion, latestVersion, fetchImpl, timeoutMs),
+    releaseDetails(latestVersion, fetchImpl, timeoutMs),
+  ])
   return {
     status: 'update-available',
     currentVersion,
     latestVersion,
     releaseUrl: releaseUrl(latestVersion),
-    highlights: releaseHighlightsBetween(currentVersion, latestVersion),
-    ...await releaseDetails(latestVersion, fetchImpl, timeoutMs),
+    highlights,
+    ...details,
   }
 }
 
@@ -306,9 +365,8 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
           const version = highlight['version']
           const kind = highlight['kind']
           if (typeof version !== 'string' || parseOpenAICodexVersion(version) === undefined) return []
-          if (kind !== 'trusted-origins' && kind !== 'quota-fast-mode' && kind !== 'dsh-rc7'
-            && kind !== 'search-stability' && kind !== 'image-generation' && kind !== 'oauth-history') return []
-          return [{ version, kind: kind as OpenAICodexUpdateHighlightKind }]
+          if (!isHighlightKind(kind)) return []
+          return [{ version, kind }]
         })
       : undefined
   if (highlights === undefined || (Array.isArray(rawHighlights) && highlights.length !== rawHighlights.length)) return undefined

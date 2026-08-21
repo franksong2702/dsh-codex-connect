@@ -6,7 +6,11 @@ import {
   registerOpenAICodexUpdateRoutes,
 } from '../src/update-routes.ts'
 import type { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
-import { OPENAI_CODEX_NPM_METADATA_URL, OPENAI_CODEX_RELEASE_API_BASE } from '../src/update.ts'
+import {
+  OPENAI_CODEX_NPM_METADATA_URL,
+  OPENAI_CODEX_RELEASE_API_BASE,
+  OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
+} from '../src/update.ts'
 
 interface CapturedRoute {
   path: string
@@ -63,9 +67,11 @@ function json(value: unknown, status = 200): Response {
 
 describe('Codex Connect update route', () => {
   it('returns a safe update result for trusted loopback GETs', async () => {
-    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
-      ? json({ alpha: '0.1.0-alpha.4.15' })
-      : json({ body: 'Global update reminder', name: 'Alpha 4.15', published_at: '2026-08-21T12:00:00Z' }))
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => {
+      if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ alpha: '0.1.0-alpha.4.15' })
+      if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) return json({ schemaVersion: 1, releases: [] })
+      return json({ body: 'Global update reminder', name: 'Alpha 4.15', published_at: '2026-08-21T12:00:00Z' })
+    })
     const route = capture(fetchMock)
     const res = response()
     await route.handler(request(), res)

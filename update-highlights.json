@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "version": "0.1.0-alpha.4.8",
+      "highlights": ["trusted-origins"]
+    },
+    {
+      "version": "0.1.0-alpha.4.9",
+      "highlights": ["quota-fast-mode"]
+    },
+    {
+      "version": "0.1.0-alpha.4.10",
+      "highlights": ["dsh-rc7"]
+    },
+    {
+      "version": "0.1.0-alpha.4.11",
+      "highlights": ["search-stability"]
+    },
+    {
+      "version": "0.1.0-alpha.4.12",
+      "highlights": ["image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.14",
+      "highlights": ["oauth-history"]
+    }
+  ]
+}

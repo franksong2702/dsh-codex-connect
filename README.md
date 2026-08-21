@@ -32,7 +32,7 @@ To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-c
 
 ### Version updates
 
-Codex Connect checks the public package metadata periodically through the DSH Web server. When a newer version is available, a frame-wide DSH notice appears even if you switch conversations. Select **View update notes** to read the release summary, or open the settings card for the same information. The plugin never runs an upgrade command by itself.
+Codex Connect checks the public package metadata periodically through the DSH Web server. When a newer version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes are available as a secondary detail, or from the release page. The plugin never runs an upgrade command by itself.
 
 The notice first summarizes the user-facing changes between your installed version and the newest version. Technical release notes remain available as a secondary detail. It also gives you a clear finish-up flow:
 

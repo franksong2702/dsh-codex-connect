@@ -20,6 +20,7 @@ const productFiles = [
   'package.json',
   'README.md',
   'docs/README.zh.md',
+  'update-highlights.json',
   'INSTALL.md',
   'MIGRATION.md',
   'NOTICE',
@@ -51,6 +52,31 @@ if (!readme.includes('Use the image generation capability included with your cur
 const chineseReadme = await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')
 if (!chineseReadme.includes('使用你当前 GPT 订阅计划提供的图片生成能力。')) {
   failures.push('Chinese README must describe image generation with the approved subscription copy')
+}
+
+try {
+  const manifest = JSON.parse(await readFile(new URL('../update-highlights.json', import.meta.url), 'utf8'))
+  const validKinds = new Set(['trusted-origins', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history'])
+  const versionPattern = /^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u
+  if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest?.releases) || manifest.releases.length > 256) {
+    failures.push('update-highlights.json must use schemaVersion 1 with at most 256 releases')
+  } else {
+    const seen = new Set()
+    for (const release of manifest.releases) {
+      if (typeof release?.version !== 'string' || !versionPattern.test(release.version) || !Array.isArray(release.highlights) || release.highlights.length > 32) {
+        failures.push('update-highlights.json contains an invalid release entry')
+        continue
+      }
+      for (const kind of release.highlights) {
+        if (typeof kind !== 'string' || !validKinds.has(kind)) failures.push(`update-highlights.json contains an unknown highlight kind: ${String(kind)}`)
+        const key = `${release.version}:${kind}`
+        if (seen.has(key)) failures.push(`update-highlights.json contains a duplicate highlight: ${key}`)
+        seen.add(key)
+      }
+    }
+  }
+} catch {
+  failures.push('update-highlights.json must be valid JSON')
 }
 try {
   await stat(new URL('../README.zh.md', import.meta.url))
