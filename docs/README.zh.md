@@ -10,7 +10,7 @@
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/hero.jpg" alt="Codex Connect — 通过 ChatGPT OAuth 连接 DeepSeek Harness" width="100%">
 </p>
 
-`dsh-codex-connect` 提供 `openai-codex` 模型目录和独立的 ChatGPT OAuth 登录。模型仍走 Harness 标准 LLM 服务，因此流式输出、工具调用、reasoning replay、压缩、文件系统控制、权限门禁和审批提示仍由 Harness 负责。ChatGPT 订阅不会因此变成 OpenAI Platform API 凭据。
+`dsh-codex-connect` 提供 `openai-codex` 模型目录和独立的 ChatGPT OAuth 登录。模型仍走 Harness 标准 LLM 服务，因此流式输出、工具调用、reasoning replay、压缩、文件系统控制、权限门禁和审批提示仍由 Harness 负责。ChatGPT 订阅不会因此变成 OpenAI Platform API 凭据。选择符合条件的 GPT Codex 模型后，Composer 还会显示按对话绑定的 Fast Mode 开关和紧凑的周额度指示条。
 
 安装是增量的：bundle 不会替换当前主模型或搜索路由；独立搜索、`view_image` 和图片生成也默认关闭，必须显式开启。
 
@@ -85,6 +85,18 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 预期结果：`status --json` 报告 `signed-in` 并以 `0` 退出，`doctor --json` 只输出一条非敏感 JSON。尚未登录时 `status --json` 会以 `1` 退出；回到第 4 步登录即可，不要把它当作插件故障。
 
+### GPT Codex 对话中的 Composer 控件
+
+只有当前对话选择了 `openai-codex` 提供方的 GPT 模型时，Composer 才会显示下面两个小控件。它们都是当前对话级别的控制，不是 profile 全局设置：
+
+- **Fast Mode（闪电图标）**：每个对话默认关闭。点击后请求更快的 `1.5 倍` 模式，再点一次恢复标准速度。它只绑定当前对话，不会改变模型选择，也不会影响其他对话。鼠标悬停或键盘聚焦闪电图标，可以看到当前状态和额度消耗提示。
+- **周额度进度条**：位于模型选择器旁边的短横条。剩余额度越低，颜色会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会显示精确剩余百分比和服务端提供的重置时间。非 GPT 模型或额度暂时不可用时不会显示。
+- 对于精确模型 `gpt-5.3-codex-spark`，Composer 读取 Spark 的每周额度；其他 GPT Codex 模型读取标准 Codex 周额度，两者是分开的额度桶。
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中按对话绑定的 Fast Mode 闪电控件和周额度进度条" width="820">
+</p>
+
 ## 可选能力（默认关闭）
 
 安装后的 bundle 只注册模型提供方，默认不额外启用任何能力：
@@ -123,6 +135,17 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="Codex Connect 中文 GPT Image 结果卡片，包含图片预览、可复制提示词、下载操作和图片详情" width="780">
 </p>
+
+图片的详细提示词由当前选择的 GPT 模型生成。Codex Connect 不会偷偷添加图片参数：它只校验“提示词”请求，通过 ChatGPT 订阅提供的图片能力发送，并把返回图片保存为 DSH 附件。结果卡片里的提示词可以滚动查看和复制。点击 **再次尝试** 或 **再生成一张** 时，会重新发送这张卡片自己的提示词，不会因为后来出现了新的对话消息而误用最新上下文。点击 **基于此图修改** 时，模型会先询问你想改什么，再基于这张卡片的提示词继续处理。
+
+### 插件配置中的额度说明
+
+登录后，Codex Connect 设置卡片可能显示多个服务端额度窗口。它们是不同的额度桶，不是同一个数字重复显示：
+
+- **Codex · 每周额度**：普通 GPT Codex 模型使用的标准 Codex 周额度。
+- **GPT-5.3-Codex-Spark · 5 小时额度** 和 **GPT-5.3-Codex-Spark · 每周额度**：Spark 模型返回的两个独立窗口。
+
+每条进度条都会显示剩余百分比和按本地时区格式化的重置时间。额度窗口、模型资格和重置时间由 OpenAI 返回；数据缺失时界面会显示不可用，不会自行猜测。
 
 ### 单独更改默认模型或全局搜索路由
 

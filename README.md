@@ -10,11 +10,11 @@ Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT I
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
 </p>
 
-`dsh-codex-connect` adds the `openai-codex` model catalog and a separate ChatGPT OAuth login. Models run through Harness's normal LLM service, so streaming, tool calls, reasoning replay, compaction, filesystem controls, permission gates, and approval prompts remain Harness-owned. It does not turn a ChatGPT subscription into an OpenAI Platform API credential.
+`dsh-codex-connect` adds the `openai-codex` model catalog and a separate ChatGPT OAuth login. Models run through Harness's normal LLM service, so streaming, tool calls, reasoning replay, compaction, filesystem controls, permission gates, and approval prompts remain Harness-owned. It does not turn a ChatGPT subscription into an OpenAI Platform API credential. When an eligible GPT Codex model is selected, the Composer also shows a conversation-scoped Fast Mode toggle and a compact weekly-quota indicator.
 
 Installation is additive. The bundle does not replace the current default model or search route. Standalone search, `view_image`, and image generation remain disabled until explicitly enabled.
 
-Every UI screenshot in this English guide is captured from the English-localized Harness UI. The [Chinese guide](docs/README.zh.md) uses a Chinese capture of the same state. Model and provider identifiers keep their canonical spelling in both languages.
+The setup and image-result screenshots in this English guide are captured from the English-localized Harness UI. The shared Composer crop is a language-neutral feature strip; the [Chinese guide](docs/README.zh.md) uses the same strip and Chinese captures for the other screens. Model and provider identifiers keep their canonical spelling in both languages.
 
 ## Quick start (about five minutes)
 
@@ -85,6 +85,18 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 Expected result: `status --json` reports `signed-in` and exits `0`, while `doctor --json` prints one secret-free JSON document. A signed-out `status --json` exits `1`; return to step 4 instead of treating that as a plugin failure.
 
+### Composer controls for GPT Codex conversations
+
+The two small controls are shown only when the current conversation is using a GPT model from the `openai-codex` provider. They are session controls, not profile-wide settings:
+
+- **Fast Mode (lightning icon)** is off by default for each conversation. Click it to request the faster `1.5×` mode; click it again to return to Standard speed. The control is bound to that conversation and does not change the selected model or other conversations. Hover or focus the icon to see the current state and its quota-consumption warning.
+- **Weekly quota bar** is the short horizontal bar beside the model selector. Its color moves from green through yellow/orange to red as the remaining amount falls. Hover or focus it to see the exact remaining percentage and the server-provided reset time. It is hidden for non-GPT models or when usage data is unavailable.
+- For the exact `gpt-5.3-codex-spark` model, the Composer reads the Spark weekly bucket. Other GPT Codex models read the standard Codex weekly bucket; these are separate limits.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer with the per-conversation Fast Mode lightning control and weekly quota bar" width="820">
+</p>
+
 ## Optional capabilities (off by default)
 
 The installed bundle is intentionally inert beyond model-provider registration:
@@ -123,6 +135,17 @@ This capability uses the image generation access included with your current GPT 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="English-localized Codex Connect GPT Image result with preview, copyable prompt, download action, and image details" width="780">
 </p>
+
+The detailed image prompt is authored by the selected GPT model. Codex Connect does not silently add image parameters: it validates the prompt-only request, forwards it through the ChatGPT subscription capability, and stores the returned image as a DSH attachment. On the result card you can scroll through and copy the complete prompt. **Try again** and **Generate another** send that card's own prompt again, so an older card is not accidentally regenerated from a newer conversation message. **Modify this image** first asks what you want to change, then continues from that card's prompt.
+
+### Usage limits in Plugin configuration
+
+After sign-in, the Codex Connect settings card can show several server-reported windows. They are separate buckets, not three views of one number:
+
+- **Codex · Weekly** is the standard Codex weekly bucket used by ordinary GPT Codex models.
+- **GPT-5.3-Codex-Spark · 5-hour** and **GPT-5.3-Codex-Spark · Weekly** are the two Spark windows returned for the Spark model.
+
+Each bar shows the remaining percentage and its local reset time. OpenAI controls the returned windows, eligibility, and reset values; missing usage data is treated as unavailable rather than guessed.
 
 ### Change a default model or global search route separately
 

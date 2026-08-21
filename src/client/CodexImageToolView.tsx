@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { PromptContentPart } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ISessions } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsRuntime, Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
@@ -27,6 +28,7 @@ const header: CSSProperties = { display: 'flex', alignItems: 'center', justifyCo
 const detail: CSSProperties = { color: 'var(--dsw-alias-label-tertiary)', fontSize: 13, lineHeight: '18px' }
 const progress: CSSProperties = { width: '100%', height: 4, accentColor: 'var(--dsw-alias-brand-primary)' }
 const action: CSSProperties = { justifySelf: 'start', minHeight: 28, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, padding: '3px 10px', background: 'transparent', color: 'var(--dsw-alias-label-primary)', font: 'inherit', cursor: 'pointer' }
+const actionRow: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }
 const promptText: CSSProperties = { boxSizing: 'border-box', width: '100%', maxHeight: 96, margin: 0, overflowY: 'auto', padding: '10px 42px 10px 12px', color: 'var(--dsw-alias-label-secondary)', fontFamily: 'var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)', fontSize: 12, lineHeight: '18px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', userSelect: 'text' }
 const layoutStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 14, minWidth: 0 }
 const visualStyle: CSSProperties = { display: 'grid', alignContent: 'start', flex: '1 1 240px', maxWidth: 320, gap: 10, minWidth: 0 }
@@ -68,6 +70,56 @@ function promptFor(block: CodexImageToolViewProps['block']): string | undefined 
   const decoded = decodeImagePresentationMeta(block.meta)
   if (decoded !== undefined) return decoded.prompt
   return block.call === null ? undefined : promptFromArgs(block.call.argsRaw)
+}
+
+type SessionAction = 'cancel' | 'follow-up'
+
+function useSessionActions(sessionId: string, sessions: ISessions) {
+  const [pending, setPending] = useState<SessionAction | null>(null)
+  const [failed, setFailed] = useState(false)
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
+
+  const run = useCallback(async (actionName: SessionAction, content?: PromptContentPart[]): Promise<boolean> => {
+    if (pending !== null) return false
+    const binding = sessions.binding(sessionId as Parameters<ISessions['binding']>[0])
+    if (binding === undefined) {
+      setFailed(true)
+      return false
+    }
+    setFailed(false)
+    setPending(actionName)
+    try {
+      const result = actionName === 'cancel'
+        ? await binding.session.cancel()
+        : await binding.session.prompt(content ?? [], 'queue')
+      const accepted = result.ok
+      if (alive.current) {
+        setPending(null)
+        setFailed(!accepted)
+      }
+      return accepted
+    } catch {
+      if (alive.current) {
+        setPending(null)
+        setFailed(true)
+      }
+      return false
+    }
+  }, [pending, sessionId, sessions])
+
+  const cancel = useCallback(() => run('cancel'), [run])
+  const followUp = useCallback((text: string) => run('follow-up', [{ type: 'text', text }]), [run])
+  return { pending, failed, cancel, followUp }
+}
+
+function followUpPrompt(kind: 'retry' | 'regenerate' | 'edit', prompt: string, t: Translate<OpenAICodexSettingsKey>): string {
+  if (kind === 'edit') return `${prompt}\n\n${t('editRequest')}`
+  return prompt
+}
+
+function ActionError({ visible, t }: { visible: boolean; t: Translate<OpenAICodexSettingsKey> }) {
+  return visible ? <span role="status" style={detail}>{t('actionFailed')}</span> : null
 }
 
 function PromptPanel({ prompt, t }: { prompt: string; t: Translate<OpenAICodexSettingsKey> }) {
@@ -208,18 +260,38 @@ function errorState(block: Extract<CodexImageToolViewProps['block'], { kind: 'to
 
 export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImageToolViewProps) {
   const load = useImageLoader(sessionId, sessions)
+  const sessionActions = useSessionActions(sessionId, sessions)
   const galleryLabels = useMemo(() => labels(t), [t])
   const prompt = promptFor(block)
   if (!('kind' in block)) return <ResponsiveCard
     label={t('generating')}
-    visual={<><div style={header}><strong>{t('generating')}</strong></div><progress style={progress} aria-label={t('generating')} /><div style={detail}>{t('generatingDetail')}</div></>}
+    visual={<div style={{ display: 'grid', gap: 10 }}>
+      <div style={header}><strong>{t('generating')}</strong></div>
+      <progress style={progress} aria-label={t('generating')} />
+      <div style={detail}>{t('generatingDetail')}</div>
+      <div style={actionRow}>
+        <button type="button" style={action} disabled={sessionActions.pending !== null} aria-busy={sessionActions.pending === 'cancel'} onClick={() => { void sessionActions.cancel() }}>
+          {sessionActions.pending === 'cancel' ? t('cancelingGeneration') : t('cancelGeneration')}
+        </button>
+        <ActionError visible={sessionActions.failed} t={t} />
+      </div>
+    </div>}
     side={prompt === undefined ? undefined : <PromptPanel prompt={prompt} t={t} />}
   />
   if (block.isError) {
     const state = errorState(block, t)
     return <ResponsiveCard
       label={state.title}
-      visual={<div role="status" style={{ display: 'grid', gap: 10 }}><strong>{state.title}</strong>{state.detail === undefined ? null : <span style={detail}>{state.detail}</span>}</div>}
+      visual={<div role="status" style={{ display: 'grid', gap: 10 }}>
+        <strong>{state.title}</strong>
+        {state.detail === undefined ? null : <span style={detail}>{state.detail}</span>}
+        {prompt === undefined ? null : <div style={actionRow}>
+          <button type="button" style={action} disabled={sessionActions.pending !== null} aria-busy={sessionActions.pending === 'follow-up'} onClick={() => { void sessionActions.followUp(followUpPrompt('retry', prompt, t)) }}>
+            {sessionActions.pending === 'follow-up' ? t('actionSending') : t('retryGeneration')}
+          </button>
+          <ActionError visible={sessionActions.failed} t={t} />
+        </div>}
+      </div>}
       side={prompt === undefined ? undefined : <PromptPanel prompt={prompt} t={t} />}
     />
   }
@@ -242,6 +314,15 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
     visual={<><div style={header}><strong>{t('completed')}</strong></div><ImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
     side={<>
       <PromptPanel prompt={decoded.prompt} t={t} />
+      <div style={actionRow}>
+        <button type="button" style={action} disabled={sessionActions.pending !== null} aria-busy={sessionActions.pending === 'follow-up'} onClick={() => { void sessionActions.followUp(followUpPrompt('regenerate', decoded.prompt, t)) }}>
+          {sessionActions.pending === 'follow-up' ? t('actionSending') : t('regenerate')}
+        </button>
+        <button type="button" style={action} disabled={sessionActions.pending !== null} aria-busy={sessionActions.pending === 'follow-up'} onClick={() => { void sessionActions.followUp(followUpPrompt('edit', decoded.prompt, t)) }}>
+          {sessionActions.pending === 'follow-up' ? t('actionSending') : t('editImage')}
+        </button>
+        <ActionError visible={sessionActions.failed} t={t} />
+      </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <button key={image.attachmentId as string} type="button" style={action} onClick={() => { void download(image) }}>{decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })}</button>)}</div>
       <details>
         <summary style={{ cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 }}>{t('imageDetails')}</summary>

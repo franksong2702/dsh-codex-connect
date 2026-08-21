@@ -41,6 +41,13 @@ function t(key: OpenAICodexSettingsKey, params: Record<string, unknown> = {}): s
 
 const image: ImageAttachmentRef = { attachmentId: 'sha256:one' as ImageAttachmentRef['attachmentId'], mediaType: 'image/png', width: 64, height: 32, bytes: 120, name: 'codex-image-1.png' }
 const sessions = { binding: vi.fn(() => ({ session: { readAttachment: vi.fn(async () => ({ ok: true, value: { attachment: image, data: new Uint8Array([1, 2, 3]) } })) } })) } as unknown as ISessions
+const actionPrompt = vi.fn(async () => ({ ok: true as const, value: { accepted: true as const } }))
+const actionCancel = vi.fn(async () => ({ ok: true as const, value: { accepted: true as const } }))
+const actionSessions = { binding: vi.fn(() => ({ session: {
+  readAttachment: vi.fn(async () => ({ ok: true, value: { attachment: image, data: new Uint8Array([1, 2, 3]) } })),
+  prompt: actionPrompt,
+  cancel: actionCancel,
+} })) } as unknown as ISessions
 const standard = {
   sessionId: 'session-1' as Parameters<ISessions['binding']>[0],
   callId: 'call-1',
@@ -54,7 +61,7 @@ const standard = {
   useWorkspaces: vi.fn(),
 } as unknown as Omit<CodexImageToolViewProps, 'block' | 't' | 'sessions'>
 
-afterEach(() => { cleanup(); gallery.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); gallery.mockClear(); actionPrompt.mockClear(); actionCancel.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('Codex image Tool view', () => {
   it('uses a responsive two-region card and an icon-only prompt copy control while generating', async () => {
@@ -117,6 +124,47 @@ describe('Codex image Tool view', () => {
     } finally {
       Object.defineProperty(document, 'execCommand', { configurable: true, value: originalExecCommand })
     }
+  })
+
+  it('can stop a running generation through the owning session', async () => {
+    const prompt = 'a quiet mountain lake'
+    render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ callId: 'call-1', name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt }), turn: 1, step: 1, time: 1, callView: null, subCalls: [] }} />)
+    fireEvent.click(screen.getByRole('button', { name: en.cancelGeneration }))
+    await waitFor(() => { expect(actionCancel).toHaveBeenCalledOnce() })
+    expect(actionPrompt).not.toHaveBeenCalled()
+  })
+
+  it('offers retry after failure and queues the original prompt', async () => {
+    const prompt = 'a red paper boat'
+    render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt }) }, callTime: 1, content: [], isError: true, error: { name: 'Error', code: 'UNKNOWN' }, callView: null, resultView: null, subCalls: [] }} />)
+    fireEvent.click(screen.getByRole('button', { name: en.retryGeneration }))
+    await waitFor(() => { expect(actionPrompt).toHaveBeenCalledOnce() })
+    expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: prompt }], 'queue')
+  })
+
+  it('keeps an old failed card bound to its own prompt after a later image', async () => {
+    const failedPrompt = 'the original failed prompt'
+    const laterPrompt = 'a later unrelated prompt'
+    render(<>
+      <CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt: failedPrompt }) }, callTime: 1, content: [], isError: true, error: { name: 'Error', code: 'UNKNOWN' }, callView: null, resultView: null, subCalls: [] }} />
+      <CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ kind: 'tool-result', seq: 4, time: 4, callId: 'call-2', call: null, callTime: 3, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt: laterPrompt, images: [image] }, callView: null, resultView: null, subCalls: [] }} />
+    </>)
+    fireEvent.click(screen.getByRole('button', { name: en.retryGeneration }))
+    await waitFor(() => { expect(actionPrompt).toHaveBeenCalledOnce() })
+    expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: failedPrompt }], 'queue')
+    expect(actionPrompt).not.toHaveBeenCalledWith([{ type: 'text', text: laterPrompt }], 'queue')
+  })
+
+  it('offers regenerate and edit follow-ups after success', async () => {
+    const prompt = 'a glass city at dawn'
+    render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt, images: [image] }, callView: null, resultView: null, subCalls: [] }} />)
+    fireEvent.click(screen.getByRole('button', { name: en.regenerate }))
+    await waitFor(() => { expect(actionPrompt).toHaveBeenCalledOnce() })
+    expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: prompt }], 'queue')
+    actionPrompt.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: en.editImage }))
+    await waitFor(() => { expect(actionPrompt).toHaveBeenCalledOnce() })
+    expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: `${prompt}\n\n${en.editRequest}` }], 'queue')
   })
 
   it('renders fixed canceled and redacted failure states', () => {
