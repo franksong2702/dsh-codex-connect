@@ -64,7 +64,7 @@ function json(value: unknown, status = 200): Response {
 describe('Codex Connect update route', () => {
   it('returns a safe update result for trusted loopback GETs', async () => {
     const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
-      ? json({ 'dist-tags': { alpha: '0.1.0-alpha.4.15' } })
+      ? json({ alpha: '0.1.0-alpha.4.15' })
       : json({ body: 'Global update reminder', name: 'Alpha 4.15', published_at: '2026-08-21T12:00:00Z' }))
     const route = capture(fetchMock)
     const res = response()
@@ -85,7 +85,7 @@ describe('Codex Connect update route', () => {
   })
 
   it('rejects wrong methods and non-loopback peers before public network access', async () => {
-    const fetchMock = vi.fn(async (): Promise<Response> => json({ 'dist-tags': { alpha: '0.1.0-alpha.4.15' } }))
+    const fetchMock = vi.fn(async (): Promise<Response> => json({ alpha: '0.1.0-alpha.4.15' }))
     const route = capture(fetchMock)
     const wrongMethod = response()
     await route.handler(request('POST'), wrongMethod)

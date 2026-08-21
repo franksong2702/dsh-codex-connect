@@ -27,7 +27,7 @@ describe('Codex Connect update metadata', () => {
   it('selects the newest public alpha/stable tag and fetches bounded release notes', async () => {
     const fetchMock = vi.fn(async (url: string): Promise<Response> => {
       if (url === OPENAI_CODEX_NPM_METADATA_URL) {
-        return json({ 'dist-tags': { latest: '0.1.0-alpha.4.15', alpha: '0.1.0-alpha.4.16', experimental: '9.9.9' } })
+        return json({ latest: '0.1.0-alpha.4.15', alpha: '0.1.0-alpha.4.16', experimental: '9.9.9' })
       }
       expect(url).toBe(`${OPENAI_CODEX_RELEASE_API_BASE}0.1.0-alpha.4.16`)
       return json({
@@ -51,7 +51,7 @@ describe('Codex Connect update metadata', () => {
   })
 
   it('reports up-to-date without contacting GitHub when tags are not newer', async () => {
-    const fetchMock = vi.fn(async (): Promise<Response> => json({ 'dist-tags': { latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.13' } }))
+    const fetchMock = vi.fn(async (): Promise<Response> => json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.13' }))
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: fetchMock })).resolves.toEqual({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
@@ -67,7 +67,7 @@ describe('Codex Connect update metadata', () => {
       reason: 'registry-unavailable',
     })
 
-    const malformed = vi.fn(async (): Promise<Response> => json({ 'dist-tags': { latest: 'not-a-version', alpha: 42 } }))
+    const malformed = vi.fn(async (): Promise<Response> => json({ latest: 'not-a-version', alpha: 42 }))
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: malformed })).resolves.toMatchObject({
       status: 'unavailable',
       reason: 'invalid-registry-response',

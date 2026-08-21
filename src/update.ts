@@ -1,7 +1,7 @@
 /** Public update metadata and bounded version checking for Codex Connect. */
 
 export const OPENAI_CODEX_PACKAGE_NAME = 'dsh-codex-connect'
-export const OPENAI_CODEX_NPM_METADATA_URL = `https://registry.npmjs.org/${OPENAI_CODEX_PACKAGE_NAME}`
+export const OPENAI_CODEX_NPM_METADATA_URL = `https://registry.npmjs.org/-/package/${OPENAI_CODEX_PACKAGE_NAME}/dist-tags`
 export const OPENAI_CODEX_RELEASE_API_BASE = 'https://api.github.com/repos/franksong2702/dsh-codex-connect/releases/tags/v'
 export const OPENAI_CODEX_RELEASE_PAGE_BASE = 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v'
 export const OPENAI_CODEX_UPDATE_TIMEOUT_MS = 8_000
@@ -155,7 +155,8 @@ function cleanReleaseText(value: unknown, maxLength: number): string | undefined
 
 function registryCandidates(value: unknown): string[] {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return []
-  const tags = (value as Record<string, unknown>)['dist-tags']
+  const record = value as Record<string, unknown>
+  const tags = record['dist-tags'] ?? record
   if (typeof tags !== 'object' || tags === null || Array.isArray(tags)) return []
   return ['latest', 'alpha']
     .map(tag => (tags as Record<string, unknown>)[tag])
