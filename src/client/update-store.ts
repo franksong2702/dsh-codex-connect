@@ -15,6 +15,7 @@ export type OpenAICodexUpdateSnapshot = {
   status: 'idle' | 'checking' | OpenAICodexUpdateResult['status']
   currentVersion: string
   latestVersion?: string
+  versionsBehind?: number
   highlights?: OpenAICodexUpdateHighlight[]
   releaseUrl?: string
   releaseName?: string
@@ -42,6 +43,9 @@ function resultSnapshot(result: OpenAICodexUpdateResult, dismissedVersion?: stri
     currentVersion: result.currentVersion,
     ...result.status === 'up-to-date' || result.status === 'update-available'
       ? { latestVersion: result.latestVersion }
+      : {},
+    ...result.status === 'update-available' && result.versionsBehind !== undefined
+      ? { versionsBehind: result.versionsBehind }
       : {},
     ...result.status === 'update-available' ? { highlights: result.highlights } : {},
     ...result.status === 'update-available'

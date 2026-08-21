@@ -75,6 +75,7 @@ describe('Codex Connect update metadata', () => {
     })
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.8', fetchImpl: fetchMock })).resolves.toMatchObject({
       status: 'update-available',
+      versionsBehind: 6,
       highlights: [
         { version: '0.1.0-alpha.4.9', kind: 'quota-fast-mode' },
         { version: '0.1.0-alpha.4.10', kind: 'dsh-rc7' },
@@ -99,6 +100,7 @@ describe('Codex Connect update metadata', () => {
     })
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.13', fetchImpl: fetchMock })).resolves.toMatchObject({
       status: 'update-available',
+      versionsBehind: 1,
       highlights: [{ version: '0.1.0-alpha.4.14', kind: 'oauth-history' }],
     })
   })
@@ -110,7 +112,10 @@ describe('Codex Connect update metadata', () => {
         { version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'future-kind', 'oauth-history'] },
         { version: 'not-a-version', highlights: ['image-generation'] },
       ],
-    })).toEqual([{ version: '0.1.0-alpha.4.14', kind: 'oauth-history' }])
+    })).toEqual({
+      schemaVersion: 1,
+      releases: [{ version: '0.1.0-alpha.4.14', highlights: ['oauth-history'] }],
+    })
     expect(parseOpenAICodexUpdateHighlights({ schemaVersion: 2, releases: [] })).toBeUndefined()
   })
 

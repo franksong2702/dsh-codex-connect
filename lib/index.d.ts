@@ -491,6 +491,7 @@ type OpenAICodexUpdateResult = {
   latestVersion: string;
   releaseUrl: string;
   highlights: OpenAICodexUpdateHighlight[];
+  versionsBehind?: number;
   releaseName?: string;
   releaseNotes?: string;
   publishedAt?: string;

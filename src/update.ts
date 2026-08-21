@@ -24,6 +24,16 @@ export interface OpenAICodexUpdateHighlight {
   kind: OpenAICodexUpdateHighlightKind
 }
 
+export interface OpenAICodexUpdateCatalogRelease {
+  version: string
+  highlights: OpenAICodexUpdateHighlightKind[]
+}
+
+export interface OpenAICodexUpdateCatalog {
+  schemaVersion: 1
+  releases: OpenAICodexUpdateCatalogRelease[]
+}
+
 const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'trusted-origins',
   'runtime-compatibility',
@@ -39,27 +49,25 @@ function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKin
 }
 
 /** Parse the public release-summary catalog without trusting arbitrary fields. */
-export function parseOpenAICodexUpdateHighlights(value: unknown): OpenAICodexUpdateHighlight[] | undefined {
+export function parseOpenAICodexUpdateHighlights(value: unknown): OpenAICodexUpdateCatalog | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
   if (record['schemaVersion'] !== 1 || !Array.isArray(record['releases']) || record['releases'].length > 256) return undefined
-  const highlights: OpenAICodexUpdateHighlight[] = []
-  const seen = new Set<string>()
+  const releases: OpenAICodexUpdateCatalogRelease[] = []
+  const seenVersions = new Set<string>()
   for (const rawRelease of record['releases']) {
     if (typeof rawRelease !== 'object' || rawRelease === null || Array.isArray(rawRelease)) continue
     const release = rawRelease as Record<string, unknown>
     const version = release['version']
     const kinds = release['highlights']
     if (typeof version !== 'string' || parseOpenAICodexVersion(version) === undefined || !Array.isArray(kinds) || kinds.length > 32) continue
-    for (const kind of kinds) {
-      if (!isHighlightKind(kind)) continue
-      const key = `${version}:${kind}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      highlights.push({ version, kind })
-    }
+    if (seenVersions.has(version)) continue
+    seenVersions.add(version)
+    const validKinds: OpenAICodexUpdateHighlightKind[] = []
+    for (const kind of kinds) if (isHighlightKind(kind) && !validKinds.includes(kind)) validKinds.push(kind)
+    releases.push({ version, highlights: validKinds })
   }
-  return highlights
+  return { schemaVersion: 1, releases }
 }
 
 export type OpenAICodexUpdateResult =
@@ -74,6 +82,7 @@ export type OpenAICodexUpdateResult =
       latestVersion: string
       releaseUrl: string
       highlights: OpenAICodexUpdateHighlight[]
+      versionsBehind?: number
       releaseName?: string
       releaseNotes?: string
       publishedAt?: string
@@ -227,14 +236,17 @@ function releaseApiUrl(version: string): string {
 }
 
 function releaseHighlightsBetween(
-  highlights: readonly OpenAICodexUpdateHighlight[],
+  catalog: OpenAICodexUpdateCatalog,
   currentVersion: string,
   latestVersion: string,
-): OpenAICodexUpdateHighlight[] {
-  return highlights
-    .filter(highlight => compareOpenAICodexVersions(highlight.version, currentVersion) > 0)
-    .filter(highlight => compareOpenAICodexVersions(highlight.version, latestVersion) <= 0)
-    .map(highlight => ({ ...highlight }))
+): { highlights: OpenAICodexUpdateHighlight[]; versionsBehind?: number } {
+  const releases = catalog.releases
+    .filter(release => compareOpenAICodexVersions(release.version, currentVersion) > 0)
+    .filter(release => compareOpenAICodexVersions(release.version, latestVersion) <= 0)
+  return {
+    ...releases.length === 0 ? {} : { versionsBehind: releases.length },
+    highlights: releases.flatMap(release => release.highlights.map(kind => ({ version: release.version, kind }))),
+  }
 }
 
 async function releaseHighlights(
@@ -242,7 +254,7 @@ async function releaseHighlights(
   latestVersion: string,
   fetchImpl: FetchImpl,
   timeoutMs: number,
-): Promise<OpenAICodexUpdateHighlight[]> {
+): Promise<{ highlights: OpenAICodexUpdateHighlight[]; versionsBehind?: number }> {
   try {
     const { response, text } = await fetchBounded(
       fetchImpl,
@@ -251,11 +263,11 @@ async function releaseHighlights(
       timeoutMs,
       { accept: 'application/json' },
     )
-    if (!response.ok) return []
+    if (!response.ok) return { highlights: [] }
     const parsed = parseOpenAICodexUpdateHighlights(JSON.parse(text) as unknown)
-    return parsed === undefined ? [] : releaseHighlightsBetween(parsed, currentVersion, latestVersion)
+    return parsed === undefined ? { highlights: [] } : releaseHighlightsBetween(parsed, currentVersion, latestVersion)
   } catch {
-    return []
+    return { highlights: [] }
   }
 }
 
@@ -323,7 +335,7 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
   if (compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) {
     return { status: 'up-to-date', currentVersion, latestVersion: currentVersion }
   }
-  const [highlights, details] = await Promise.all([
+  const [highlightResult, details] = await Promise.all([
     releaseHighlights(currentVersion, latestVersion, fetchImpl, timeoutMs),
     releaseDetails(latestVersion, fetchImpl, timeoutMs),
   ])
@@ -332,7 +344,8 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
     currentVersion,
     latestVersion,
     releaseUrl: releaseUrl(latestVersion),
-    highlights,
+    highlights: highlightResult.highlights,
+    ...highlightResult.versionsBehind === undefined ? {} : { versionsBehind: highlightResult.versionsBehind },
     ...details,
   }
 }
@@ -357,6 +370,13 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   if (record['status'] !== 'update-available' || compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) return undefined
   const expectedUrl = releaseUrl(latestVersion)
   if (record['releaseUrl'] !== expectedUrl) return undefined
+  const rawVersionsBehind = record['versionsBehind']
+  const versionsBehind = rawVersionsBehind === undefined
+    ? undefined
+    : typeof rawVersionsBehind === 'number' && Number.isSafeInteger(rawVersionsBehind) && rawVersionsBehind > 0 && rawVersionsBehind <= 256
+      ? rawVersionsBehind
+      : undefined
+  if (rawVersionsBehind !== undefined && versionsBehind === undefined) return undefined
   const rawHighlights = record['highlights']
   const highlights = rawHighlights === undefined
     ? []
@@ -383,6 +403,7 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
     latestVersion,
     releaseUrl: expectedUrl,
     highlights,
+    ...versionsBehind === undefined ? {} : { versionsBehind },
     ...releaseName === undefined ? {} : { releaseName },
     ...releaseNotes === undefined ? {} : { releaseNotes },
     ...publishedAt === undefined ? {} : { publishedAt },

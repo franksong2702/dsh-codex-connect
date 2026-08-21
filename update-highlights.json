@@ -2,6 +2,18 @@
   "schemaVersion": 1,
   "releases": [
     {
+      "version": "0.1.0-alpha.4.5",
+      "highlights": []
+    },
+    {
+      "version": "0.1.0-alpha.4.6",
+      "highlights": []
+    },
+    {
+      "version": "0.1.0-alpha.4.7",
+      "highlights": []
+    },
+    {
       "version": "0.1.0-alpha.4.8",
       "highlights": ["trusted-origins", "runtime-compatibility"]
     },
@@ -20,6 +32,10 @@
     {
       "version": "0.1.0-alpha.4.12",
       "highlights": ["image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.13",
+      "highlights": []
     },
     {
       "version": "0.1.0-alpha.4.14",

@@ -50,9 +50,10 @@ describe('Codex Connect global update reminder', () => {
         currentVersion: '0.1.0-alpha.4.14',
         latestVersion: '0.1.0-alpha.4.15',
         releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
+        versionsBehind: 1,
         highlights: [{ version: '0.1.0-alpha.4.12', kind: 'image-generation' }],
         releaseName: 'Alpha 4.15',
-        releaseNotes: 'Global update reminder\n- Manual upgrade command',
+        releaseNotes: '## What changed\n- Manual upgrade command\n\n**Full Changelog**: https://github.com/franksong2702/dsh-codex-connect/compare/v0.1.0-alpha.4.14...v0.1.0-alpha.4.15',
       })
     })
     const writeText = vi.fn(async (): Promise<void> => undefined)
@@ -65,11 +66,14 @@ describe('Codex Connect global update reminder', () => {
 
     render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
     expect(screen.getByRole('status').textContent).toContain(en.newVersionAvailable.replace('{version}', '0.1.0-alpha.4.15'))
+    expect(screen.getByRole('status').textContent).toContain(en.currentVersion.replace('{version}', '0.1.0-alpha.4.14'))
+    expect(screen.getByRole('status').textContent).toContain(en.versionsBehind.replace('{count}', '1'))
     expect(screen.getByRole('status').textContent).toContain(en.whatMatters)
     expect(screen.getByRole('status').textContent).toContain(en.updateHighlightImageGeneration)
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStepsHeading)
     fireEvent.click(screen.getByRole('button', { name: en.viewTechnicalDetails }))
-    expect(screen.getByRole('status').textContent).toContain('Global update reminder')
+    expect(screen.getByRole('status').textContent).toContain('Manual upgrade command')
+    expect(screen.getByRole('link', { name: 'Full Changelog' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: en.copyUpgradeCommand }))
     await waitFor(() => { expect(writeText).toHaveBeenCalledWith(OPENAI_CODEX_UPGRADE_COMMAND) })
     expect(screen.getByText(en.upgradeCommandCopied)).toBeTruthy()
