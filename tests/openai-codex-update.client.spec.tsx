@@ -65,7 +65,9 @@ describe('Codex Connect global update reminder', () => {
     await act(async () => { await updater.refresh(true) })
 
     render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
-    expect(screen.getByRole('status').textContent).toContain(en.newVersionAvailable.replace('{version}', '0.1.0-alpha.4.15'))
+    const initialStatusText = screen.getByRole('status').textContent ?? ''
+    expect(initialStatusText).toContain(en.newVersionAvailable.replace('{version}', '0.1.0-alpha.4.15'))
+    expect(initialStatusText.match(/0\.1\.0-alpha\.4\.15/gu)?.length).toBe(1)
     expect(screen.getByRole('status').textContent).toContain(en.versionSummary
       .replace('{current}', '0.1.0-alpha.4.14')
       .replace('{latest}', '0.1.0-alpha.4.15')
@@ -77,6 +79,7 @@ describe('Codex Connect global update reminder', () => {
     expect(screen.getByRole('status').textContent).toContain('Manual upgrade command')
     expect(screen.getByRole('heading', { name: en.technicalDetailsHeading })).toBeTruthy()
     expect(screen.getByRole('link', { name: en.viewFullChangelog })).toBeTruthy()
+    expect(screen.getByRole('link', { name: en.openReleasePage })).toBeTruthy()
     expect(screen.getAllByRole('listitem')[0]?.textContent).not.toMatch(/^1\./u)
     fireEvent.click(screen.getByRole('button', { name: en.copyUpgradeCommand }))
     await waitFor(() => { expect(writeText).toHaveBeenCalledWith(OPENAI_CODEX_UPGRADE_COMMAND) })

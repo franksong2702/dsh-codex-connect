@@ -45,6 +45,7 @@ const bodyStyle: CSSProperties = { margin: 0, color: 'var(--dsw-alias-label-seco
 const versionSummaryStyle: CSSProperties = { margin: 0, color: 'var(--dsw-alias-label-secondary)', fontSize: 13, lineHeight: '20px' }
 const sectionStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8 }
 const actionStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }
+const linkRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }
 const buttonStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box', minHeight: 32, padding: '4px 11px', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, background: 'var(--dsw-alias-bg-layer-1)', color: 'var(--dsw-alias-label-primary)', font: 'inherit', fontSize: 12, lineHeight: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }
 const primaryButtonStyle: CSSProperties = { ...buttonStyle, borderColor: 'var(--dsw-alias-brand-primary)', background: 'var(--dsw-alias-brand-primary)', color: 'white' }
 const textButtonStyle: CSSProperties = { border: 0, padding: 0, background: 'transparent', color: 'var(--dsw-alias-brand-primary)', font: 'inherit', fontSize: 12, lineHeight: '20px', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }
@@ -200,8 +201,8 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
             ? <p style={bodyStyle}>{t('updateCheckUnavailable')}</p>
             : <>
                 <p style={versionSummaryStyle}>{snapshot.versionsBehind === undefined
-                  ? t('versionSummaryUnknown', { current: snapshot.currentVersion, latest: snapshot.latestVersion })
-                  : t('versionSummary', { current: snapshot.currentVersion, latest: snapshot.latestVersion, count: snapshot.versionsBehind })}</p>
+                  ? t('versionSummaryUnknown', { current: snapshot.currentVersion })
+                  : t('versionSummary', { current: snapshot.currentVersion, count: snapshot.versionsBehind })}</p>
                 <div style={highlightsStyle}>
                   <strong style={titleStyle}>{t('whatMatters')}</strong>
                   {highlights.length === 0
@@ -231,15 +232,15 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
                     <button type="button" style={primaryButtonStyle} onClick={() => { setRecheckRequested(true); void updater.refresh(true) }}>
                       {t('recheckAfterUpgrade')}
                     </button>
-                    {snapshot.releaseUrl === undefined ? null : (
-                      <a href={snapshot.releaseUrl} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
-                        {t('openReleasePage')}
-                      </a>
-                    )}
                   </div>
                   {recheckRequested && snapshot.status === 'update-available' ? <p style={statusStyle}>{t('upgradeStillAvailable', { version: snapshot.currentVersion })}</p> : null}
                 </div>
-                <div style={actionStyle}>
+                <div style={linkRowStyle}>
+                  {snapshot.releaseUrl === undefined ? null : (
+                    <a href={snapshot.releaseUrl} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+                      {t('openReleasePage')}
+                    </a>
+                  )}
                   <button type="button" style={textButtonStyle} aria-expanded={technicalDetails} onClick={() => { setTechnicalDetailsOpen(!technicalDetailsOpen) }}>
                     {technicalDetails ? t('hideTechnicalDetails') : t('viewTechnicalDetails')}
                   </button>
