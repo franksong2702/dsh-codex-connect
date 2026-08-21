@@ -3,7 +3,7 @@
   "releases": [
     {
       "version": "0.1.0-alpha.4.8",
-      "highlights": ["trusted-origins"]
+      "highlights": ["trusted-origins", "runtime-compatibility"]
     },
     {
       "version": "0.1.0-alpha.4.9",

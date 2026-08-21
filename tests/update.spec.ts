@@ -61,7 +61,7 @@ describe('Codex Connect update metadata', () => {
         return json({
           schemaVersion: 1,
           releases: [
-            { version: '0.1.0-alpha.4.8', highlights: ['trusted-origins'] },
+            { version: '0.1.0-alpha.4.8', highlights: ['trusted-origins', 'runtime-compatibility'] },
             { version: '0.1.0-alpha.4.9', highlights: ['quota-fast-mode'] },
             { version: '0.1.0-alpha.4.10', highlights: ['dsh-rc7'] },
             { version: '0.1.0-alpha.4.11', highlights: ['search-stability'] },

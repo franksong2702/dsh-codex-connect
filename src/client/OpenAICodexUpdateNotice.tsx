@@ -51,6 +51,7 @@ const stepsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', ga
 
 const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsKey> = {
   'trusted-origins': 'updateHighlightTrustedOrigins',
+  'runtime-compatibility': 'updateHighlightRuntimeCompatibility',
   'quota-fast-mode': 'updateHighlightQuotaFastMode',
   'dsh-rc7': 'updateHighlightDshRc7',
   'search-stability': 'updateHighlightSearchStability',

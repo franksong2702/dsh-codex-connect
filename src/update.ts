@@ -12,6 +12,7 @@ export const OPENAI_CODEX_UPDATE_MAX_RELEASE_BYTES = 32 * 1024
 
 export type OpenAICodexUpdateHighlightKind =
   | 'trusted-origins'
+  | 'runtime-compatibility'
   | 'quota-fast-mode'
   | 'dsh-rc7'
   | 'search-stability'
@@ -25,6 +26,7 @@ export interface OpenAICodexUpdateHighlight {
 
 const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'trusted-origins',
+  'runtime-compatibility',
   'quota-fast-mode',
   'dsh-rc7',
   'search-stability',
