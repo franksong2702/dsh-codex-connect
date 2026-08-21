@@ -6,6 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
 // Type-only: pulls the conversation input-region SlotMap declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -26,6 +27,9 @@ import { en, zh } from './locales.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { CodexImageToolView } from './CodexImageToolView.tsx'
 import type { CodexImageToolViewInjected } from './CodexImageToolView.tsx'
+import { OpenAICodexUpdateOverlay } from './OpenAICodexUpdateNotice.tsx'
+import { OpenAICodexUpdateStore } from './update-store.ts'
+import { CODEX_CONNECT_VERSION } from '../version.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -42,6 +46,11 @@ export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope
 /** Register account copy and the OpenAI Codex card under Plugin configuration. */
 export function apply(ctx: ClientContext): void {
   const namespace = 'settings.openai-codex'
+  const updater = new OpenAICodexUpdateStore(CODEX_CONNECT_VERSION)
+  ctx.effect(() => {
+    void updater.refresh()
+    return () => { updater.dispose() }
+  }, 'dsh-codex-connect: update checker')
   ctx.effect(() => ctx.locale.register(namespace, { zh, en }), 'dsh-codex-connect: settings copy')
   const t = ctx.locale.bind(namespace) as OpenAICodexPluginCardInjected['t']
   const configScope = ctx.settingsScope.bind({
@@ -51,8 +60,16 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     key: OPENAI_CODEX_SETTINGS_NAMESPACE,
-    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope }),
+    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater }),
   }, OpenAICodexPluginCard))
+
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: 'dsh-codex-connect-update',
+    order: 40,
+    locale: namespace,
+    inject: (): { updater: OpenAICodexUpdateStore } => ({ updater }),
+  }, OpenAICodexUpdateOverlay))
 
   ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
     name: 'tool.call.toolview',

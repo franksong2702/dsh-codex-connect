@@ -30,6 +30,25 @@ Expected result: the package is added to that profile. This does not change the 
 
 To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.14`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.14'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
 
+### Version updates
+
+Codex Connect checks the public package metadata periodically through the DSH Web server. When a newer version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes are available as a secondary detail, or from the release page. The plugin never runs an upgrade command by itself.
+
+The notice first summarizes the user-facing changes between your installed version and the newest version. Technical release notes remain available as a secondary detail. It also gives you a clear finish-up flow:
+
+1. Copy the upgrade command.
+2. Run it in your terminal.
+3. Restart the current profile's DSH Web process if it does not reload plugins automatically.
+4. Return to the notice or settings card and select **I ran it — check again**.
+
+The notice includes a copyable command for the profile used in this guide:
+
+```sh
+dsh plugin --profile web update dsh-codex-connect
+```
+
+Replace `web` with your own Harness profile name when needed. If the running process still reports the old version after the check, restart that profile's DSH Web process and check again. If public metadata is unavailable, no update notice is shown; the account and model features continue working normally.
+
 ### 2. Start Harness
 
 ```sh
