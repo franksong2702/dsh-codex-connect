@@ -476,6 +476,11 @@ declare const OPENAI_CODEX_FAST_MODE_PATH = "/plugins/dsh-openai-codex/fast-mode
 declare const OPENAI_CODEX_UPDATE_PATH = "/openai-codex/update";
 //#endregion
 //#region src/update.d.ts
+type OpenAICodexUpdateHighlightKind = 'trusted-origins' | 'quota-fast-mode' | 'dsh-rc7' | 'search-stability' | 'image-generation' | 'oauth-history';
+interface OpenAICodexUpdateHighlight {
+  version: string;
+  kind: OpenAICodexUpdateHighlightKind;
+}
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';
   currentVersion: string;
@@ -485,6 +490,7 @@ type OpenAICodexUpdateResult = {
   currentVersion: string;
   latestVersion: string;
   releaseUrl: string;
+  highlights: OpenAICodexUpdateHighlight[];
   releaseName?: string;
   releaseNotes?: string;
   publishedAt?: string;

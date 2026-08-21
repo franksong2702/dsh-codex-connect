@@ -3,7 +3,7 @@
 import {
   parseOpenAICodexUpdateResult,
 } from '../update.ts'
-import type { OpenAICodexUpdateResult } from '../update.ts'
+import type { OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
 import { OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
 
 export const OPENAI_CODEX_UPGRADE_COMMAND = 'dsh plugin --profile web update dsh-codex-connect'
@@ -15,6 +15,7 @@ export type OpenAICodexUpdateSnapshot = {
   status: 'idle' | 'checking' | OpenAICodexUpdateResult['status']
   currentVersion: string
   latestVersion?: string
+  highlights?: OpenAICodexUpdateHighlight[]
   releaseUrl?: string
   releaseName?: string
   releaseNotes?: string
@@ -42,6 +43,7 @@ function resultSnapshot(result: OpenAICodexUpdateResult, dismissedVersion?: stri
     ...result.status === 'up-to-date' || result.status === 'update-available'
       ? { latestVersion: result.latestVersion }
       : {},
+    ...result.status === 'update-available' ? { highlights: result.highlights } : {},
     ...result.status === 'update-available'
       ? {
           releaseUrl: result.releaseUrl,

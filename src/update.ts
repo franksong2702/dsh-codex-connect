@@ -8,6 +8,29 @@ export const OPENAI_CODEX_UPDATE_TIMEOUT_MS = 8_000
 export const OPENAI_CODEX_UPDATE_MAX_METADATA_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_RELEASE_BYTES = 32 * 1024
 
+export type OpenAICodexUpdateHighlightKind =
+  | 'trusted-origins'
+  | 'quota-fast-mode'
+  | 'dsh-rc7'
+  | 'search-stability'
+  | 'image-generation'
+  | 'oauth-history'
+
+export interface OpenAICodexUpdateHighlight {
+  version: string
+  kind: OpenAICodexUpdateHighlightKind
+}
+
+/** Curated user-facing changes for releases that are already published. */
+const CURATED_HIGHLIGHTS: readonly OpenAICodexUpdateHighlight[] = [
+  { version: '0.1.0-alpha.4.8', kind: 'trusted-origins' },
+  { version: '0.1.0-alpha.4.9', kind: 'quota-fast-mode' },
+  { version: '0.1.0-alpha.4.10', kind: 'dsh-rc7' },
+  { version: '0.1.0-alpha.4.11', kind: 'search-stability' },
+  { version: '0.1.0-alpha.4.12', kind: 'image-generation' },
+  { version: '0.1.0-alpha.4.14', kind: 'oauth-history' },
+]
+
 export type OpenAICodexUpdateResult =
   | {
       status: 'up-to-date'
@@ -19,6 +42,7 @@ export type OpenAICodexUpdateResult =
       currentVersion: string
       latestVersion: string
       releaseUrl: string
+      highlights: OpenAICodexUpdateHighlight[]
       releaseName?: string
       releaseNotes?: string
       publishedAt?: string
@@ -171,6 +195,13 @@ function releaseApiUrl(version: string): string {
   return `${OPENAI_CODEX_RELEASE_API_BASE}${version}`
 }
 
+function releaseHighlightsBetween(currentVersion: string, latestVersion: string): OpenAICodexUpdateHighlight[] {
+  return CURATED_HIGHLIGHTS
+    .filter(highlight => compareOpenAICodexVersions(highlight.version, currentVersion) > 0)
+    .filter(highlight => compareOpenAICodexVersions(highlight.version, latestVersion) <= 0)
+    .map(highlight => ({ ...highlight }))
+}
+
 async function releaseDetails(
   version: string,
   fetchImpl: FetchImpl,
@@ -240,6 +271,7 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
     currentVersion,
     latestVersion,
     releaseUrl: releaseUrl(latestVersion),
+    highlights: releaseHighlightsBetween(currentVersion, latestVersion),
     ...await releaseDetails(latestVersion, fetchImpl, timeoutMs),
   }
 }
@@ -264,6 +296,22 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   if (record['status'] !== 'update-available' || compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) return undefined
   const expectedUrl = releaseUrl(latestVersion)
   if (record['releaseUrl'] !== expectedUrl) return undefined
+  const rawHighlights = record['highlights']
+  const highlights = rawHighlights === undefined
+    ? []
+    : Array.isArray(rawHighlights)
+      ? rawHighlights.flatMap(value => {
+          if (typeof value !== 'object' || value === null || Array.isArray(value)) return []
+          const highlight = value as Record<string, unknown>
+          const version = highlight['version']
+          const kind = highlight['kind']
+          if (typeof version !== 'string' || parseOpenAICodexVersion(version) === undefined) return []
+          if (kind !== 'trusted-origins' && kind !== 'quota-fast-mode' && kind !== 'dsh-rc7'
+            && kind !== 'search-stability' && kind !== 'image-generation' && kind !== 'oauth-history') return []
+          return [{ version, kind: kind as OpenAICodexUpdateHighlightKind }]
+        })
+      : undefined
+  if (highlights === undefined || (Array.isArray(rawHighlights) && highlights.length !== rawHighlights.length)) return undefined
   const releaseName = cleanReleaseText(record['releaseName'], 200)
   const releaseNotes = cleanReleaseText(record['releaseNotes'], 16_000)
   const publishedAt = typeof record['publishedAt'] === 'string' && /^\d{4}-\d{2}-\d{2}T/iu.test(record['publishedAt'])
@@ -274,6 +322,7 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
     currentVersion,
     latestVersion,
     releaseUrl: expectedUrl,
+    highlights,
     ...releaseName === undefined ? {} : { releaseName },
     ...releaseNotes === undefined ? {} : { releaseNotes },
     ...publishedAt === undefined ? {} : { publishedAt },

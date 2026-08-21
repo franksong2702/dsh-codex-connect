@@ -32,7 +32,14 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 ### 版本更新提醒
 
-Codex Connect 会通过 DSH Web 服务定期检查公开的 npm 包信息。发现新版本后，即使你切换了对话，DSH 界面也会显示全局更新提醒。点击 **查看更新说明** 可以阅读发布摘要；设置卡片中也会保留同样的信息。插件不会自动执行升级命令。
+Codex Connect 会通过 DSH Web 服务定期检查公开的 npm 包信息。发现新版本后，即使你切换了对话，DSH 界面也会显示全局更新提醒。提醒会先把你当前版本到最新版本之间对用户有用的功能整理出来；完整技术发布说明放在次级详情里。插件不会自动执行升级命令。
+
+完成升级的流程是：
+
+1. 复制升级命令。
+2. 在终端执行命令。
+3. 如果插件没有自动重新加载，请重启当前 profile 的 DSH Web。
+4. 回到提醒或设置卡片，点击 **我已执行，重新检查**。
 
 提醒中会提供可复制的升级命令。本指南使用的 profile 命令如下：
 
@@ -40,7 +47,7 @@ Codex Connect 会通过 DSH Web 服务定期检查公开的 npm 包信息。发�
 dsh plugin --profile web update dsh-codex-connect
 ```
 
-复制命令后在终端中执行；如果你使用的是其他 Harness profile，请把 `web` 换成对应的 profile 名称。如果 DSH 没有自动重新加载插件，请重启该 profile 的 DSH Web 进程。公开包信息暂时不可用时不会显示更新提醒，账户和模型功能仍可正常使用。
+如果你使用的是其他 Harness profile，请把 `web` 换成对应的 profile 名称。如果重新检查时仍显示旧版本，请先重启该 profile 的 DSH Web，再检查一次。公开包信息暂时不可用时不会显示更新提醒，账户和模型功能仍可正常使用。
 
 ### 2. 启动 Harness
 

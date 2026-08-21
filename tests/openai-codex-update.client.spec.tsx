@@ -50,6 +50,7 @@ describe('Codex Connect global update reminder', () => {
         currentVersion: '0.1.0-alpha.4.14',
         latestVersion: '0.1.0-alpha.4.15',
         releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
+        highlights: [{ version: '0.1.0-alpha.4.12', kind: 'image-generation' }],
         releaseName: 'Alpha 4.15',
         releaseNotes: 'Global update reminder\n- Manual upgrade command',
       })
@@ -64,11 +65,18 @@ describe('Codex Connect global update reminder', () => {
 
     render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
     expect(screen.getByRole('status').textContent).toContain(en.newVersionAvailable.replace('{version}', '0.1.0-alpha.4.15'))
-    fireEvent.click(screen.getByRole('button', { name: en.viewReleaseNotes }))
+    expect(screen.getByRole('status').textContent).toContain(en.whatMatters)
+    expect(screen.getByRole('status').textContent).toContain(en.updateHighlightImageGeneration)
+    expect(screen.getByRole('status').textContent).toContain(en.upgradeStepsHeading)
+    fireEvent.click(screen.getByRole('button', { name: en.viewTechnicalDetails }))
     expect(screen.getByRole('status').textContent).toContain('Global update reminder')
     fireEvent.click(screen.getByRole('button', { name: en.copyUpgradeCommand }))
     await waitFor(() => { expect(writeText).toHaveBeenCalledWith(OPENAI_CODEX_UPGRADE_COMMAND) })
     expect(screen.getByText(en.upgradeCommandCopied)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: en.recheckAfterUpgrade }))
+    await waitFor(() => { expect(fetchMock).toHaveBeenCalledTimes(2) })
+    expect(screen.getByRole('status').textContent).toContain(en.upgradeStillAvailable.replace('{version}', '0.1.0-alpha.4.14'))
 
     fireEvent.click(screen.getByRole('button', { name: en.dismissUpdate }))
     expect(screen.queryByRole('status')).toBeNull()

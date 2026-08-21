@@ -43,11 +43,28 @@ describe('Codex Connect update metadata', () => {
       currentVersion: '0.1.0-alpha.4.14',
       latestVersion: '0.1.0-alpha.4.16',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.16',
+      highlights: [],
       releaseName: 'Alpha 4.16 — update notes',
       releaseNotes: '<not-rendered-as-markdown>\n- Global update reminder',
       publishedAt: '2026-08-21T12:00:00Z',
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('curates user-facing highlights across the full version range', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
+      ? json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.14' })
+      : json({ name: 'Alpha 4.14', body: 'technical details' }))
+    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.8', fetchImpl: fetchMock })).resolves.toMatchObject({
+      status: 'update-available',
+      highlights: [
+        { version: '0.1.0-alpha.4.9', kind: 'quota-fast-mode' },
+        { version: '0.1.0-alpha.4.10', kind: 'dsh-rc7' },
+        { version: '0.1.0-alpha.4.11', kind: 'search-stability' },
+        { version: '0.1.0-alpha.4.12', kind: 'image-generation' },
+        { version: '0.1.0-alpha.4.14', kind: 'oauth-history' },
+      ],
+    })
   })
 
   it('reports up-to-date without contacting GitHub when tags are not newer', async () => {
