@@ -125,7 +125,7 @@ declare const IMAGE_GENERATE_TOOL_NAME = "codex_connect_image_generate";
 //#region src/compatibility.d.ts
 declare const COMPATIBILITY_SCHEMA_VERSION: 1;
 declare const SUPPORTED_NODE_RANGE = "^22.19.0 || >=24.0.0";
-declare const SUPPORTED_DSH_PLUGIN_API_VERSION = "0.1.0-rc.7";
+declare const SUPPORTED_DSH_PLUGIN_API_VERSION = "0.1.1-rc.2";
 declare const SUPPORTED_PI_AI_VERSION = "0.82.1";
 declare const PI_AI_PACKAGE = "@earendil-works/pi-ai";
 declare const DSH_PLUGIN_API_PACKAGES: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-web"];
@@ -169,7 +169,7 @@ declare const COMPATIBILITY_CONTRACT: {
     readonly node: "^22.19.0 || >=24.0.0";
   };
   readonly dshPluginApi: {
-    readonly version: "0.1.0-rc.7";
+    readonly version: "0.1.1-rc.2";
     readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-web"];
   };
   readonly piAi: {

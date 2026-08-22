@@ -7,8 +7,6 @@ import type { PromptContentPart } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ISessions } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsRuntime, Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
-import { ImageGallery } from '@deepseek-ai/dsh-client-ui-attachment'
-import type { MessageImageLabels } from '@deepseek-ai/dsh-client-ui-attachment'
 import {
   IconCheckOutline16,
   IconCopyOutline16,
@@ -16,6 +14,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { decodeImagePresentationMeta } from '../image-presentation.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
+import { CodexImageGallery } from './CodexImageGallery.tsx'
+import type { CodexImageGalleryLabels } from './CodexImageGallery.tsx'
 
 export interface CodexImageToolViewInjected {
   sessions: ISessions
@@ -239,7 +239,7 @@ function useImageLoader(sessionId: string, sessions: ISessions) {
   }, [sessionId, sessions])
 }
 
-function labels(t: Translate<OpenAICodexSettingsKey>): MessageImageLabels {
+function labels(t: Translate<OpenAICodexSettingsKey>): CodexImageGalleryLabels {
   return {
     image: t('image'),
     open: t('open'),
@@ -263,6 +263,7 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
   const sessionActions = useSessionActions(sessionId, sessions)
   const galleryLabels = useMemo(() => labels(t), [t])
   const prompt = promptFor(block)
+  const decoded = useMemo(() => presentation(block), [block])
   if (!('kind' in block)) return <ResponsiveCard
     label={t('generating')}
     visual={<div style={{ display: 'grid', gap: 10 }}>
@@ -295,7 +296,6 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
       side={prompt === undefined ? undefined : <PromptPanel prompt={prompt} t={t} />}
     />
   }
-  const decoded = presentation(block)
   if (decoded === undefined) return <section style={shell} role="status"><strong>{t('completed')}</strong><span style={detail}>{t('unknownResult')}</span></section>
 
   async function download(image: ImageAttachmentRef): Promise<void> {
@@ -311,7 +311,7 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
 
   return <ResponsiveCard
     label={t('completed')}
-    visual={<><div style={header}><strong>{t('completed')}</strong></div><ImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
+    visual={<><div style={header}><strong>{t('completed')}</strong></div><CodexImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
     side={<>
       <PromptPanel prompt={decoded.prompt} t={t} />
       <div style={actionRow}>

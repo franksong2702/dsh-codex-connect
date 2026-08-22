@@ -2,7 +2,7 @@
 
 状态：实现契约
 适用包：`dsh-codex-connect`
-适用 DSH：`0.1.0-rc.7`
+适用 DSH：`0.1.1-rc.2`
 
 ## 1. 产品结论
 
@@ -108,14 +108,14 @@
 
 展示要求：
 
-- 使用 DSH 原生 `ImageGallery` 和 Lightbox。
+- 工具结果视图自带纯 props 图片画廊和 Lightbox；rc.2 的 `dsh-client-ui-attachment` React atoms 只通过对话 slots 提供，工具视图不读取其私有 `src/*` 路径。
 - 通过当前 `sessionId` 的 session binding 读取附件，不能跨会话猜测或拼接路径。
 - 校验读回 attachment id 与请求 id 一致。
 - Blob URL 按 session 缓存，在 session 切换或组件卸载时 revoke。
 - 错误、取消、重新认证和未知旧结果使用固定本地化状态，不显示私密响应内容。
 - 下载动作使用同一条 session-bound 附件读取路径。
 
-`@deepseek-ai/dsh-client-ui-attachment` 与 slots 是 DSH Web 的静态平台模块：可以作为构建期依赖并 externalize，但不得写进 `dsh.client.inject`，否则 DSH 会尝试把它们当插件加载。
+`@deepseek-ai/dsh-client-ui-slots` 是 DSH Web 的静态平台模块，只作为构建期依赖并 externalize，不得写进 `dsh.client.inject`。工具结果不依赖 `@deepseek-ai/dsh-client-ui-attachment`；后者的 rc.2 React atoms 只服务它注册的对话 slots。
 
 ## 8. 打包与发布
 

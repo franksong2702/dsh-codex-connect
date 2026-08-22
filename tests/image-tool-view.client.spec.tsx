@@ -7,8 +7,6 @@ import type { ISessions } from '@deepseek-ai/dsh-client-runtime/client'
 import { en } from '../src/client/locales.ts'
 import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 
-const gallery = vi.hoisted(() => vi.fn((_props: unknown) => <div data-testid="native-image-gallery" />))
-vi.mock('@deepseek-ai/dsh-client-ui-attachment', () => ({ ImageGallery: gallery }))
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     IconCopyOutline16: () => <svg aria-hidden="true" data-icon="copy" />,
     IconCheckOutline16: () => <svg aria-hidden="true" data-icon="check" />,
@@ -61,7 +59,7 @@ const standard = {
   useWorkspaces: vi.fn(),
 } as unknown as Omit<CodexImageToolViewProps, 'block' | 't' | 'sessions'>
 
-afterEach(() => { cleanup(); gallery.mockClear(); actionPrompt.mockClear(); actionCancel.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); actionPrompt.mockClear(); actionCancel.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('Codex image Tool view', () => {
   it('uses a responsive two-region card and an icon-only prompt copy control while generating', async () => {
@@ -91,24 +89,33 @@ describe('Codex image Tool view', () => {
     expect(copied.querySelector('svg')).toBeTruthy()
   })
 
-  it('passes durable references to native ImageGallery and cleans Blob URLs', async () => {
+  it('renders durable references through its own gallery and cleans Blob URLs', async () => {
     const createObjectURL = vi.fn(() => 'blob:session-image')
     const revokeObjectURL = vi.fn()
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
     const { unmount } = render(<CodexImageToolView {...standard} t={t} sessions={sessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt: 'draw a pixel', images: [image] }, callView: null, resultView: null, subCalls: [] }} />)
-    expect(screen.getByTestId('native-image-gallery')).toBeTruthy()
+    expect(screen.getByTestId('codex-image-gallery')).toBeTruthy()
     expect(screen.getByTestId('image-generation-layout').getAttribute('data-responsive-layout')).toBe('visual-prompt')
     expect(screen.getByText('draw a pixel')).toBeTruthy()
-    const props = gallery.mock.calls[0]?.[0] as { images: Array<{ attachment: ImageAttachmentRef }>; load(image: ImageAttachmentRef): Promise<string> }
-    expect(props.images[0]?.attachment).toEqual(image)
-    await expect(props.load(image)).resolves.toBe('blob:session-image')
+    await waitFor(() => { expect(createObjectURL).toHaveBeenCalledOnce() })
     expect(sessions.binding).toHaveBeenCalledWith('session-1')
-    expect(createObjectURL).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: en.openNamed.replace('{name}', image.name ?? en.image) })).toBeTruthy()
     expect(screen.getByRole('button', { name: en.download })).toBeTruthy()
     expect(screen.getByText(en.imageDetails)).toBeTruthy()
     expect(screen.getByText('codex-image-1.png: PNG · 64 × 32 · 120 B')).toBeTruthy()
     unmount()
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:session-image')
+  })
+
+  it('keeps hook order stable when a running result settles into an image result', () => {
+    const createObjectURL = vi.fn(() => 'blob:session-image')
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() })
+    const running = { callId: 'call-1', name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt: 'settle this image' }), turn: 1, step: 1, time: 1, callView: null, subCalls: [] }
+    const settled = { kind: 'tool-result' as const, seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images' as const, prompt: 'settle this image', images: [image] }, callView: null, resultView: null, subCalls: [] }
+    const { rerender } = render(<CodexImageToolView {...standard} t={t} sessions={sessions} block={running} />)
+    expect(screen.getByText(en.generatingDetail)).toBeTruthy()
+    rerender(<CodexImageToolView {...standard} t={t} sessions={sessions} block={settled} />)
+    expect(screen.getByTestId('codex-image-gallery')).toBeTruthy()
   })
 
   it('copies the prompt on an HTTP page without the async clipboard API', async () => {

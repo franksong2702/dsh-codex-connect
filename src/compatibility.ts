@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
-export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.0-rc.7'
+export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.1-rc.2'
 export const SUPPORTED_PI_AI_VERSION = '0.82.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 

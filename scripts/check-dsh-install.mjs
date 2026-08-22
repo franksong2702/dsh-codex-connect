@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const JSON_SCHEMA_VERSION = 1
-const DEFAULT_DSH_VERSION = '0.1.0-rc.7'
+const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 function commandName(name) {

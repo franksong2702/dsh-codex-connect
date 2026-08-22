@@ -1,6 +1,6 @@
 /** OpenAI Codex adapter assembled from public dsh-llm-pi-ai extension points. */
 
-import { createModels } from '@earendil-works/pi-ai'
+import { createModels, defaultProviderAuthContext } from '@earendil-works/pi-ai'
 import type { Context as PiContext, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
@@ -13,6 +13,13 @@ import type { FastModeRegistry } from './fast-mode.ts'
 
 /** Provider idle ceiling used by the composite route. */
 export const OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS = 300_000
+
+/** rc.2 default maximum base64 image payload retained in one request. */
+export const OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
+/** rc.2 default total-pixel budget for one deterministic inline image version. */
+export const OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET = 2048 * 2048
+/** rc.2 default raw encoded-byte cap for one deterministic inline image version. */
+export const OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES = 1024 * 1024
 
 /**
  * Give the generic dsh adapter a request-scoped bearer-token entry without
@@ -73,6 +80,24 @@ function requestProvider(provider: Provider, fastMode?: FastModeRegistry): Provi
   }
 }
 
+/** Build the immutable profile consumed by the rc.2 pi-ai adapter. */
+export function createOpenAICodexProfile(
+  provider: Provider,
+  fastMode?: FastModeRegistry,
+): ResolvedPiAiProviderProfile {
+  return {
+    provider: OPENAI_CODEX_PROVIDER,
+    displayName: 'OpenAI Codex',
+    streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
+    maxRequestImageBytes: OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
+    requestImagePixelBudget: OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
+    requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
+    retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
+    configuredMaxTokens: new Map(),
+    piProvider: requestProvider(provider, fastMode),
+  }
+}
+
 /**
  * Create the Codex subscription adapter without requiring a dsh fork. The
  * public pi-ai adapter owns Harness message conversion, image attachment
@@ -85,19 +110,13 @@ export function createOpenAICodexAdapter(
   fastMode?: FastModeRegistry,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
-  const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, {
-    provider: OPENAI_CODEX_PROVIDER,
-    displayName: 'OpenAI Codex',
-    streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
-    retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
-    configuredMaxTokens: new Map(),
-    piProvider: requestProvider(provider, fastMode),
-  }]])
+  const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, createOpenAICodexProfile(provider, fastMode)]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)
   return new PiAiAdapter({
     profiles: () => profiles,
     resolveApiKey: async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey,
+    auth: { credentials, authContext: defaultProviderAuthContext() },
     resolveAttachments,
   })
 }
