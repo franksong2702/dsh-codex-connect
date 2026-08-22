@@ -6,7 +6,7 @@ The package registers `openai-codex` through Harness's public `LlmRuntime` and `
 
 The bundle patch inserts only `llm-openai-codex`. It never writes `agent-default-model` or `web.searchProvider`. `enableSearch` and `enableImageTool` are capability gates defaulting to `false`; the optional service injections are not registered while disabled.
 
-The Host registers `llm-openai-codex` as the plugin-owned settings namespace and declares `OpenAI Codex` in the LLM configurable-provider directory. The browser binds that namespace through Harness's settings-scope transport and renders account, quota, Save/Discard capability controls in the existing Plugin configuration card. Revision-fenced field writes preserve unrelated settings. Committed changes reconcile search and image registrations live; the default-model and global-search namespaces are never written.
+The Host registers `llm-openai-codex` as the plugin-owned capability settings namespace. DSH's `llm-pi-ai` catalog owns the `openai-codex` configurable-provider directory entry, while Codex Connect registers the active adapter without redeclaring that entry. The browser binds the plugin namespace through Harness's settings-scope transport and renders account, quota, Save/Discard capability controls in the existing Plugin configuration card. Revision-fenced field writes preserve unrelated settings. Committed changes reconcile search and image registrations live; the default-model and global-search namespaces are never written.
 
 ## OAuth persistence
 

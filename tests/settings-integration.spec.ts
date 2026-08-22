@@ -6,6 +6,7 @@ import { Context } from '@deepseek-ai/cordis'
 import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
+import * as PiAiRuntime from '@deepseek-ai/dsh-llm-pi-ai'
 import SettingsProvider from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -46,6 +47,7 @@ describe('OpenAI Codex Host settings integration', () => {
     const ctx = new Context()
     context = ctx
     await ctx.plugin(LlmRuntime)
+    const piAi = await ctx.plugin(PiAiRuntime, {})
     await ctx.plugin(WebRuntime)
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime, { mode: 'native' })
@@ -54,13 +56,13 @@ describe('OpenAI Codex Host settings integration', () => {
     await ctx.plugin(MemorySettings)
     const plugin = await ctx.plugin(OpenAICodex, {})
 
-    expect(ctx.llm.listConfigurableProviders()).toEqual([{
+    expect(ctx.llm.listConfigurableProviders()).toContainEqual({
       provider: 'openai-codex',
-      displayName: 'OpenAI Codex',
-      settingsNs: 'llm-openai-codex',
-      settingsPath: [],
+      displayName: 'openai-codex',
+      settingsNs: 'llm-pi-ai',
+      settingsPath: ['providers', 'openai-codex'],
       declared: false,
-    }])
+    })
     const descriptor = ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)
     expect(descriptor?.value).toEqual(OpenAICodex.DEFAULT_OPENAI_CODEX_SETTINGS)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
@@ -94,6 +96,14 @@ describe('OpenAI Codex Host settings integration', () => {
     await expect(ctx.web.search({ query: 'disabled again' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
 
     await plugin.dispose()
+    expect(ctx.llm.listConfigurableProviders()).toContainEqual({
+      provider: 'openai-codex',
+      displayName: 'openai-codex',
+      settingsNs: 'llm-pi-ai',
+      settingsPath: ['providers', 'openai-codex'],
+      declared: false,
+    })
+    await piAi.dispose()
     expect(ctx.llm.listConfigurableProviders()).toEqual([])
   })
 })

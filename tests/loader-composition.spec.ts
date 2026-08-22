@@ -7,6 +7,7 @@ import { Context } from '@deepseek-ai/cordis'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
+import * as PiAiRuntime from '@deepseek-ai/dsh-llm-pi-ai'
 import WebRuntime from '@deepseek-ai/dsh-web'
 import * as OpenAICodex from '../src/index.ts'
 
@@ -21,6 +22,14 @@ afterEach(async () => {
 })
 
 describe('OpenAI Codex real composition', () => {
+  it('composes with the rc.2 pi-ai catalog directory without duplicate declarations', async () => {
+    const ctx = new Context()
+    context = ctx
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(PiAiRuntime, {})
+    await expect(ctx.plugin(OpenAICodex, {})).resolves.toBeDefined()
+  })
+
   it('loads through the Loader, exposes the catalog, and unregisters on disposal', async () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-openai-codex-loader-'))
     const configPath = join(root, 'cordis.yml')

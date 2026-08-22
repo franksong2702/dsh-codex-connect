@@ -166,7 +166,7 @@ export const name = 'llm-openai-codex'
 /** The model registry required before the provider can register. */
 export const inject = ['llm']
 
-/** Branded Host settings namespace used by the configurable-provider directory. */
+/** Branded Host settings namespace for Codex Connect capability configuration. */
 export const OPENAI_CODEX_SETTINGS_NS = settingsNamespace(OPENAI_CODEX_SETTINGS_NAMESPACE)
 
 /** Composite model and standalone-search configuration. */
@@ -214,13 +214,6 @@ export function apply(ctx: Context, config: Config): void {
     [OPENAI_CODEX_PROVIDER],
     createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode),
   )
-  ctx.llm.registerConfigurableProviders([{
-    provider: OPENAI_CODEX_PROVIDER,
-    displayName: 'OpenAI Codex',
-    settingsNs: OPENAI_CODEX_SETTINGS_NS,
-    settingsPath: [],
-    declared: false,
-  }])
   ctx.inject(['webServer'], webCtx => registerOpenAICodexAuthRoutes(webCtx, credentials, undefined, fastMode))
 
   let stopped = false

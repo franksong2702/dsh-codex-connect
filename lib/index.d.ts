@@ -517,7 +517,7 @@ declare module '@deepseek-ai/cordis' {
 declare const name = "llm-openai-codex";
 /** The model registry required before the provider can register. */
 declare const inject: string[];
-/** Branded Host settings namespace used by the configurable-provider directory. */
+/** Branded Host settings namespace for Codex Connect capability configuration. */
 declare const OPENAI_CODEX_SETTINGS_NS: import("@deepseek-ai/dsh-settings").SettingsNamespace;
 /** Composite model and standalone-search configuration. */
 interface Config {
