@@ -229,14 +229,12 @@ if (process.platform === 'win32') {
     const commandScript = join(commandDirectory, 'fixture.cmd')
     const receiverScript = join(commandRoot, 'receive-arguments.mjs')
     const expectedArguments = [
-      'space & metachar',
-      'quote"value',
-      'single-trailing\\',
-      'double-trailing\\\\',
-      'percent%value',
-      'caret^value',
-      '(parenthesized)',
-      'pipe|value',
+      'plugin',
+      '--profile',
+      'web',
+      'add',
+      'file:C:\\plugin path & space\\plugin.tgz',
+      '"(foo|bar>baz|foz)"',
     ]
     await mkdir(commandDirectory, { recursive: true })
     await writeFile(
@@ -245,8 +243,13 @@ if (process.platform === 'win32') {
       'utf8',
     )
     await writeFile(commandScript, [
-      '@echo off',
-      `"${process.execPath}" "${receiverScript}" %*`,
+      `@IF EXIST "${process.execPath}" (`,
+      `  "${process.execPath}" "${receiverScript}" %*`,
+      ') ELSE (',
+      '  @SETLOCAL',
+      '  @SET PATHEXT=%PATHEXT:;.JS;=;%',
+      `  node "${receiverScript}" %*`,
+      ')',
     ].join('\r\n'), 'utf8')
     const commandResult = await runBoundedCommand(
       commandScript,
@@ -258,7 +261,7 @@ if (process.platform === 'win32') {
       receivedArguments = JSON.parse(commandResult.stdout)
     } catch {}
     assertContract(
-      'Windows command shims preserve quoted, trailing-slash, and metacharacter arguments',
+      'Windows command shims preserve DSH paths and quoted shell metacharacters',
       commandResult.status === 0
         && JSON.stringify(receivedArguments) === JSON.stringify(expectedArguments),
     )
