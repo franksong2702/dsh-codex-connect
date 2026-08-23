@@ -109,6 +109,28 @@ describe('Codex Connect update route', () => {
     expect(fetchMock).toHaveBeenCalledWith(OPENAI_CODEX_RELEASE_API_BASE + '0.1.0-alpha.4.15', expect.anything())
   })
 
+  it('evaluates a historical DSH version against its exact plugin record', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
+      ? json({ alpha: '0.1.0-alpha.4.14' })
+      : json({
+          schemaVersion: 1,
+          checkedAt: '2026-08-23',
+          latestDshVersion: '0.1.1-rc.2',
+          pluginVersions: [{ version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] }],
+        }))
+    const route = capture(fetchMock, async () => '0.1.0-rc.7')
+    const res = response()
+    await route.handler(request(), res)
+
+    expect(JSON.parse(res.observed.body ?? 'null')).toMatchObject({
+      currentDshVersion: '0.1.0-rc.7',
+      compatibility: {
+        status: 'compatible',
+        latestDshVersion: '0.1.1-rc.2',
+      },
+    })
+  })
+
   it('reports the running DSH version without public network access', async () => {
     const fetchMock = vi.fn(async (): Promise<Response> => json({ error: 'unexpected' }, 500))
     const route = capture(fetchMock, async () => '0.1.1-rc.2', OPENAI_CODEX_RUNTIME_PATH)

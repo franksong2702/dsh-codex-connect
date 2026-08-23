@@ -53,9 +53,10 @@ describe('Codex Connect update metadata', () => {
       })
     })
 
-    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: fetchMock })).resolves.toEqual({
+    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', currentDshVersion: '0.1.1-rc.2', fetchImpl: fetchMock })).resolves.toEqual({
       status: 'update-available',
       currentVersion: '0.1.0-alpha.4.14',
+      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.16',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.16',
       highlights: [],
@@ -140,9 +141,10 @@ describe('Codex Connect update metadata', () => {
     const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
       ? json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.13' })
       : json(verifiedCompatibility))
-    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: fetchMock })).resolves.toEqual({
+    await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', currentDshVersion: '0.1.1-rc.2', fetchImpl: fetchMock })).resolves.toEqual({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
+      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.14',
       compatibility: {
         status: 'compatible',
@@ -188,6 +190,7 @@ describe('Codex Connect update metadata', () => {
       compatibility: {
         status: 'unverified',
         latestPluginVersion: '0.1.0-alpha.4.14',
+        latestDshVersion: '0.1.1-rc.2',
       },
       credential: 'must not pass through',
     })).toEqual({
@@ -198,6 +201,7 @@ describe('Codex Connect update metadata', () => {
       compatibility: {
         status: 'unverified',
         latestPluginVersion: '0.1.0-alpha.4.14',
+        latestDshVersion: '0.1.1-rc.2',
       },
     })
     expect(parseOpenAICodexUpdateResult({
@@ -206,6 +210,16 @@ describe('Codex Connect update metadata', () => {
       currentDshVersion: 'not-a-version',
       latestVersion: '0.1.0-alpha.4.14',
       compatibility: { status: 'unverified', latestPluginVersion: '0.1.0-alpha.4.14' },
+    })).toBeUndefined()
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.14',
+      latestVersion: '0.1.0-alpha.4.14',
+      compatibility: {
+        status: 'compatible',
+        latestPluginVersion: '0.1.0-alpha.4.14',
+        latestDshVersion: '0.1.1-rc.2',
+      },
     })).toBeUndefined()
   })
 })

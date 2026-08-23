@@ -62,17 +62,29 @@ try {
     failures.push('update-highlights.json must use schemaVersion 1 with at most 256 releases')
   } else {
     const seen = new Set()
+    const seenVersions = new Set()
+    const releaseVersions = []
     for (const release of manifest.releases) {
       if (typeof release?.version !== 'string' || !versionPattern.test(release.version) || !Array.isArray(release.highlights) || release.highlights.length > 32) {
         failures.push('update-highlights.json contains an invalid release entry')
         continue
       }
+      if (seenVersions.has(release.version)) failures.push(`update-highlights.json contains a duplicate release: ${release.version}`)
+      seenVersions.add(release.version)
+      releaseVersions.push(release.version)
       for (const kind of release.highlights) {
         if (typeof kind !== 'string' || !validKinds.has(kind)) failures.push(`update-highlights.json contains an unknown highlight kind: ${String(kind)}`)
         const key = `${release.version}:${kind}`
         if (seen.has(key)) failures.push(`update-highlights.json contains a duplicate highlight: ${key}`)
         seen.add(key)
       }
+    }
+    const currentMatch = /^0\.1\.0-alpha\.4\.(\d+)$/u.exec(packageJson.version)
+    const expectedVersions = currentMatch === null
+      ? []
+      : Array.from({ length: Number(currentMatch[1]) - 4 }, (_, index) => `0.1.0-alpha.4.${index + 5}`)
+    if (releaseVersions.join('\n') !== expectedVersions.join('\n')) {
+      failures.push('update-highlights.json must contain every Alpha 4 release from 4.5 through the package version in order')
     }
   }
 } catch {
