@@ -12,7 +12,7 @@ Install `dsh-codex-connect` into one requested DeepSeek Harness profile without 
 
 ## Install and validate
 
-The only verified combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.16 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility`; the contract does not make claims about future versions.
+The only verified combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.17 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility`; the contract does not make claims about future versions.
 
 1. Check `dsh --version` or `dsh --help`. From a Harness checkout use `pnpm dsh`.
 2. Install the package:
@@ -21,7 +21,7 @@ The only verified combination is DSH plugin API packages `0.1.1-rc.2`, `@earendi
    dsh plugin --profile web add dsh-codex-connect@alpha
    ```
 
-   After `0.1.0-alpha.4.16` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.16`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.16'`.
+   After `0.1.0-alpha.4.17` is published, pin it exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.17`. If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.17'`.
 
 3. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
 4. Confirm the effective `agent-default-model` and `web.searchProvider` values are unchanged from before installation.

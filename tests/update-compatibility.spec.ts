@@ -7,12 +7,13 @@ import {
 
 const catalog = {
   schemaVersion: 1 as const,
-  checkedAt: '2026-08-23',
+  checkedAt: '2026-08-24',
   latestDshVersion: '0.1.1-rc.2',
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
     { version: '0.1.0-alpha.4.15', verifiedDshVersions: ['0.1.1-rc.2'] },
     { version: '0.1.0-alpha.4.16', verifiedDshVersions: ['0.1.1-rc.2'] },
+    { version: '0.1.0-alpha.4.17', verifiedDshVersions: ['0.1.1-rc.2'] },
   ],
 }
 
@@ -44,9 +45,9 @@ describe('Codex Connect verified DSH compatibility', () => {
       latestPluginVersion: '0.1.0-alpha.4.16',
       latestDshVersion: '0.1.1-rc.2',
     })
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', '0.1.1-rc.2', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.17', '0.1.0-alpha.4.17', '0.1.1-rc.2', catalog)).toEqual({
       status: 'compatible',
-      latestPluginVersion: '0.1.0-alpha.4.16',
+      latestPluginVersion: '0.1.0-alpha.4.17',
       latestDshVersion: '0.1.1-rc.2',
     })
   })
