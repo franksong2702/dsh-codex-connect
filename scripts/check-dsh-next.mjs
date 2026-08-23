@@ -6,12 +6,17 @@ import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { scrubCanaryEnvironment } from './canary-environment.mjs'
+
 const JSON_SCHEMA_VERSION = 1
-const PACKAGE_SPEC = '@deepseek-ai/dsh@next'
+const PACKAGE_NAME = '@deepseek-ai/dsh'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const COMPATIBILITY_FILE = resolve(REPO_ROOT, 'compatibility.json')
 const INSTALL_CHECK = resolve(REPO_ROOT, 'scripts/check-dsh-install.mjs')
 const MAX_SUMMARY_LENGTH = 1600
+const REGISTRY_TIMEOUT_MS = 60 * 1000
+const CANDIDATE_CHECK_TIMEOUT_MS = 25 * 60 * 1000
+const CHANNELS = new Set(['latest', 'next'])
 
 function commandName(name) {
   return process.platform === 'win32' && name === 'npm' ? `${name}.cmd` : name
@@ -23,6 +28,7 @@ function runCommand(command, args, options = {}) {
     env: options.env ?? process.env,
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
+    timeout: options.timeoutMs,
     windowsHide: true,
   })
   if (result.error !== undefined) {
@@ -52,6 +58,25 @@ export function parseRegistryVersion(output) {
   return value
 }
 
+export function parseRegistryDistTags(output) {
+  let value
+  try {
+    value = JSON.parse(output.trim())
+  } catch {
+    throw new Error('npm returned invalid DSH dist-tags JSON')
+  }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('npm returned invalid DSH dist-tags JSON')
+  }
+  if (typeof value.latest !== 'string' || typeof value.next !== 'string') {
+    throw new Error('npm returned incomplete DSH dist-tags JSON')
+  }
+  return {
+    latest: parseRegistryVersion(value.latest),
+    next: parseRegistryVersion(value.next),
+  }
+}
+
 export function sanitizeSummary(value) {
   const lines = value.trim().split(/\r?\n/u).slice(-12).join('\n')
   return lines
@@ -67,8 +92,14 @@ export function confirmedCompatibilityFailure(first, second) {
     && second?.status === 'fail'
     && first.classification === 'compatibility'
     && second.classification === 'compatibility'
+    && typeof first.channel === 'string'
+    && first.channel === second.channel
     && typeof first.candidateVersion === 'string'
     && first.candidateVersion === second.candidateVersion
+}
+
+export function duplicateCandidate(channel, dedupeAgainst, distTags) {
+  return dedupeAgainst !== undefined && distTags[channel] === distTags[dedupeAgainst]
 }
 
 export function classifyCandidateCheckFailure(value) {
@@ -84,13 +115,35 @@ export function classifyCandidateCheckFailure(value) {
   return 'compatibility'
 }
 
-function reportPath(args) {
-  if (args.length === 0) return undefined
-  const value = args[1]
-  if (args.length !== 2 || args[0] !== '--report' || value === undefined || value === '') {
-    throw new Error('usage: check-dsh-next [--report <json-file>]')
+export function parseCanaryArgs(args) {
+  const values = args[0] === '--' ? args.slice(1) : args
+  let channel = 'next'
+  let dedupeAgainst
+  let outputPath
+  for (let index = 0; index < values.length; index += 2) {
+    const name = values[index]
+    const value = values[index + 1]
+    if (value === undefined || value === '') {
+      throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--report <json-file>]')
+    }
+    if (name === '--channel' && CHANNELS.has(value)) {
+      channel = value
+      continue
+    }
+    if (name === '--dedupe-against' && CHANNELS.has(value)) {
+      dedupeAgainst = value
+      continue
+    }
+    if (name === '--report') {
+      outputPath = resolve(process.cwd(), value)
+      continue
+    }
+    throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--report <json-file>]')
   }
-  return resolve(process.cwd(), value)
+  if (dedupeAgainst === channel) {
+    throw new Error('the canary channel cannot deduplicate against itself')
+  }
+  return { channel, dedupeAgainst, outputPath }
 }
 
 async function emitReport(path, report) {
@@ -102,10 +155,10 @@ async function emitReport(path, report) {
   process.stdout.write(serialized)
 }
 
-function baseReport(supportedVersion) {
+function baseReport(supportedVersion, channel) {
   return {
     schemaVersion: JSON_SCHEMA_VERSION,
-    channel: 'next',
+    channel,
     supportedVersion,
     candidateVersion: null,
     nodeVersion: process.version,
@@ -114,14 +167,16 @@ function baseReport(supportedVersion) {
 }
 
 async function main() {
-  const outputPath = reportPath(process.argv.slice(2))
+  const { channel, dedupeAgainst, outputPath } = parseCanaryArgs(process.argv.slice(2))
   const compatibility = JSON.parse(await readFile(COMPATIBILITY_FILE, 'utf8'))
   const supportedVersion = compatibility?.dshPluginApi?.version
   if (typeof supportedVersion !== 'string' || supportedVersion.length === 0) {
     throw new Error('compatibility.json has no declared DSH plugin API version')
   }
-  const base = baseReport(supportedVersion)
-  const lookup = runCommand('npm', ['view', PACKAGE_SPEC, 'version', '--json'])
+  const base = baseReport(supportedVersion, channel)
+  const lookup = runCommand('npm', ['view', PACKAGE_NAME, 'dist-tags', '--json'], {
+    timeoutMs: REGISTRY_TIMEOUT_MS,
+  })
   if (lookup.status !== 0) {
     await emitReport(outputPath, {
       ...base,
@@ -133,9 +188,9 @@ async function main() {
     return 2
   }
 
-  let candidateVersion
+  let distTags
   try {
-    candidateVersion = parseRegistryVersion(lookup.stdout)
+    distTags = parseRegistryDistTags(lookup.stdout)
   } catch (error) {
     await emitReport(outputPath, {
       ...base,
@@ -146,6 +201,19 @@ async function main() {
     })
     return 2
   }
+  const candidateVersion = distTags[channel]
+
+  if (duplicateCandidate(channel, dedupeAgainst, distTags)) {
+    await emitReport(outputPath, {
+      ...base,
+      candidateVersion,
+      status: 'pass',
+      classification: 'duplicate',
+      stage: 'compare-candidate',
+      summary: `DSH ${channel} matches ${dedupeAgainst} at ${candidateVersion}; the ${dedupeAgainst} canary owns this candidate.`,
+    })
+    return 0
+  }
 
   if (candidateVersion === supportedVersion) {
     await emitReport(outputPath, {
@@ -154,17 +222,18 @@ async function main() {
       status: 'pass',
       classification: 'unchanged',
       stage: 'compare-candidate',
-      summary: `DSH next remains at the declared supported version ${supportedVersion}.`,
+      summary: `DSH ${channel} remains at the declared supported version ${supportedVersion}.`,
     })
     return 0
   }
 
   const candidateCheck = runCommand('node', [INSTALL_CHECK], {
     env: {
-      ...process.env,
+      ...scrubCanaryEnvironment(process.env),
       DSH_VERSION: candidateVersion,
       DSH_UNDECLARED_CANARY_VERSION: '1',
     },
+    timeoutMs: CANDIDATE_CHECK_TIMEOUT_MS,
   })
   if (candidateCheck.status !== 0) {
     const detail = candidateCheck.stderr || candidateCheck.stdout || 'isolated candidate check failed'
@@ -185,7 +254,7 @@ async function main() {
     status: 'pass',
     classification: 'candidate-compatible',
     stage: 'isolated-install',
-    summary: `The isolated install check passed with DSH ${candidateVersion}; declared support remains ${supportedVersion}.`,
+    summary: `The isolated ${channel} install check passed with DSH ${candidateVersion}; declared support remains ${supportedVersion}.`,
   })
   return 0
 }

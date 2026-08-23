@@ -15,8 +15,17 @@ permissions:
 
 jobs:
   canary:
+    name: canary (${{ matrix.channel }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - channel: latest
+            dedupe_args: ""
+          - channel: next
+            dedupe_args: --dedupe-against latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,15 +40,15 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install locked dependencies
         run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
-      - name: Check DSH next candidate
+      - name: Check DSH upstream candidate
         id: first-canary
         continue-on-error: true
-        run: pnpm --silent run check:dsh-next -- --report .canary/first.json
+        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --report .canary/first.json
       - name: Confirm a candidate failure
         id: second-canary
         if: steps.first-canary.outcome == 'failure'
         continue-on-error: true
-        run: pnpm --silent run check:dsh-next -- --report .canary/second.json
+        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --report .canary/second.json
       - name: Record a confirmed compatibility alert
         if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
@@ -55,6 +64,8 @@ jobs:
               && second.status === 'fail'
               && first.classification === 'compatibility'
               && second.classification === 'compatibility'
+              && typeof first.channel === 'string'
+              && first.channel === second.channel
               && typeof first.candidateVersion === 'string'
               && first.candidateVersion === second.candidateVersion
             if (!confirmed) {
@@ -63,14 +74,16 @@ jobs:
             }
 
             const version = first.candidateVersion
-            const marker = `<!-- dsh-next-canary:${version} -->`
+            const channel = first.channel
+            const marker = `<!-- dsh-canary:${version} -->`
+            const title = `compatibility: DSH ${version} ${channel} canary failure`
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             const safeSummary = String(second.summary ?? 'No bounded summary was available.').replaceAll('```', '---')
             const body = [
               marker,
               '## Upstream DSH compatibility alert',
               '',
-              `The isolated Codex Connect check failed twice against \`@deepseek-ai/dsh@next\` version \`${version}\`.`,
+              `The isolated Codex Connect check failed twice against \`@deepseek-ai/dsh@${channel}\` version \`${version}\`.`,
               '',
               `- Declared supported DSH version: \`${second.supportedVersion}\``,
               `- Candidate stage: \`${second.stage}\``,
@@ -98,7 +111,7 @@ jobs:
               const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: `compatibility: DSH ${version} canary failure`,
+                title,
                 body,
                 labels: ['bug'],
               })
@@ -111,6 +124,7 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: existing.number,
                 state: 'open',
+                title,
                 body,
               })
               core.notice(`Reopened compatibility issue ${existing.html_url}`)
@@ -120,6 +134,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: existing.number,
+              title,
               body,
             })
             core.notice(`Updated compatibility issue ${existing.html_url}`)

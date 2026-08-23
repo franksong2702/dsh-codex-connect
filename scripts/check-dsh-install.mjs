@@ -6,10 +6,13 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { scrubCanaryEnvironment } from './canary-environment.mjs'
+
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const COMMAND_TIMEOUT_MS = 20 * 60 * 1000
 
 function commandName(name) {
   return process.platform === 'win32' && (name === 'npm' || name === 'pnpm') ? `${name}.cmd` : name
@@ -21,6 +24,7 @@ function runCommand(command, args, options) {
     env: options.env,
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
+    timeout: COMMAND_TIMEOUT_MS,
     windowsHide: true,
   })
   if (result.error !== undefined) {
@@ -97,9 +101,6 @@ function assertDoctorJson(value, dshHome, repoRoot) {
 }
 
 async function main() {
-  const build = runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: process.env })
-  requireSuccess('local build', build)
-
   const requestedDshVersion = process.env.DSH_VERSION
   const allowUndeclaredCanaryVersion = process.env.DSH_UNDECLARED_CANARY_VERSION === UNDECLARED_CANARY_MODE
   if (requestedDshVersion !== undefined
@@ -111,13 +112,19 @@ async function main() {
   const dshVersion = requestedDshVersion === undefined || requestedDshVersion === ''
     ? DEFAULT_DSH_VERSION
     : requestedDshVersion
+  const inheritedEnvironment = allowUndeclaredCanaryVersion
+    ? scrubCanaryEnvironment(process.env)
+    : process.env
+  const build = runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: inheritedEnvironment })
+  requireSuccess('local build', build)
+
   const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-install-'))
   const dshHome = join(tempRoot, 'dsh-home')
   const installRoot = join(tempRoot, 'dsh-install')
   const workspace = join(tempRoot, 'workspace')
   await mkdir(workspace, { recursive: true })
   const env = {
-    ...process.env,
+    ...inheritedEnvironment,
     DSH_HOME: dshHome,
     DSH_TELEMETRY_MODE: 'DISABLED',
   }
