@@ -1,10 +1,11 @@
 /** Browser-owned cache and observable state for the global update reminder. */
 
 import {
+  parseOpenAICodexVersion,
   parseOpenAICodexUpdateResult,
 } from '../update.ts'
 import type { OpenAICodexDshCompatibilityAdvice, OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
-import { OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
+import { OPENAI_CODEX_RUNTIME_PATH, OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
 
 export const OPENAI_CODEX_REPOSITORY_URL = 'https://github.com/franksong2702/dsh-codex-connect'
 export const OPENAI_CODEX_UPDATE_CACHE_KEY = 'dsh-codex-connect:update-check'
@@ -14,6 +15,7 @@ export const OPENAI_CODEX_UPDATE_CACHE_TTL_MS = 24 * 60 * 60 * 1_000
 export type OpenAICodexUpdateSnapshot = {
   status: 'idle' | 'checking' | OpenAICodexUpdateResult['status']
   currentVersion: string
+  currentDshVersion?: string
   latestVersion?: string
   versionsBehind?: number
   highlights?: OpenAICodexUpdateHighlight[]
@@ -42,6 +44,7 @@ function resultSnapshot(result: OpenAICodexUpdateResult, dismissedNotice?: strin
   return {
     status: result.status,
     currentVersion: result.currentVersion,
+    ...result.currentDshVersion === undefined ? {} : { currentDshVersion: result.currentDshVersion },
     ...result.status === 'up-to-date' || result.status === 'update-available'
       ? { latestVersion: result.latestVersion, compatibility: result.compatibility }
       : {},
@@ -109,7 +112,8 @@ export class OpenAICodexUpdateStore {
   private writeCached(result: OpenAICodexUpdateResult): void {
     if (result.status === 'unavailable') return
     try {
-      storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result }))
+      const { currentDshVersion: _runtimeVersion, ...remoteResult } = result
+      storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result: remoteResult }))
     } catch {
       // A blocked or full browser storage should not disable the reminder.
     }
@@ -118,17 +122,34 @@ export class OpenAICodexUpdateStore {
   /** Check once per day by default; force=true is used by the settings button. */
   async refresh(force = false): Promise<void> {
     if (this.disposed || this.request !== undefined) return
-    if (!force) {
-      const cached = this.readCached()
-      if (cached !== undefined) {
-        this.setSnapshot(resultSnapshot(cached, this.dismissedNotice()))
-        return
-      }
-    }
     const controller = new AbortController()
     this.request = controller
     this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedNotice === undefined ? {} : { dismissedNotice: this.snapshot.dismissedNotice } })
     try {
+      const runtimeResponse = await fetch(OPENAI_CODEX_RUNTIME_PATH, {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+        credentials: 'same-origin',
+        signal: controller.signal,
+      })
+      const runtimeValue: unknown = await runtimeResponse.json().catch(() => undefined)
+      const runtimeRecord = typeof runtimeValue === 'object' && runtimeValue !== null && !Array.isArray(runtimeValue)
+        ? runtimeValue as Record<string, unknown>
+        : undefined
+      const rawCurrentDshVersion = runtimeRecord?.['currentDshVersion']
+      const currentDshVersion = runtimeResponse.ok
+        && typeof rawCurrentDshVersion === 'string'
+        && parseOpenAICodexVersion(rawCurrentDshVersion) !== undefined
+        ? rawCurrentDshVersion
+        : undefined
+      const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
+      if (!force) {
+        const cached = this.readCached()
+        if (cached !== undefined) {
+          this.setSnapshot(resultSnapshot({ ...cached, ...currentDsh }, this.dismissedNotice()))
+          return
+        }
+      }
       const response = await fetch(OPENAI_CODEX_UPDATE_PATH, {
         method: 'GET',
         headers: { accept: 'application/json' },
@@ -143,7 +164,7 @@ export class OpenAICodexUpdateStore {
         reason: 'registry-unavailable' as const,
       }
       this.writeCached(safeResult)
-      this.setSnapshot(resultSnapshot(safeResult, this.dismissedNotice()))
+      this.setSnapshot(resultSnapshot({ ...safeResult, ...currentDsh }, this.dismissedNotice()))
     } catch {
       if (!controller.signal.aborted && !this.disposed) {
         const unavailable: OpenAICodexUpdateResult = {

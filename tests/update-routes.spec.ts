@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { describe, expect, it, vi } from 'vitest'
 import {
   OPENAI_CODEX_UPDATE_PATH,
+  OPENAI_CODEX_RUNTIME_PATH,
   registerOpenAICodexUpdateRoutes,
 } from '../src/update-routes.ts'
 import type { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
@@ -20,7 +21,11 @@ interface CapturedRoute {
 
 const trustedOrigins = { has: async () => false } as unknown as OpenAICodexTrustedOriginsStore
 
-function capture(fetchImpl: (input: string, init?: RequestInit) => Promise<Response>): CapturedRoute {
+function capture(
+  fetchImpl: (input: string, init?: RequestInit) => Promise<Response>,
+  resolveCurrentDshVersion: () => Promise<string | undefined> = async () => '0.1.1-rc.2',
+  path = OPENAI_CODEX_UPDATE_PATH,
+): CapturedRoute {
   const routes: CapturedRoute[] = []
   const ctx = {
     webServer: {
@@ -33,8 +38,8 @@ function capture(fetchImpl: (input: string, init?: RequestInit) => Promise<Respo
       return factory()
     },
   } as unknown as Context
-  registerOpenAICodexUpdateRoutes(ctx, { currentVersion: '0.1.0-alpha.4.14', fetchImpl }, trustedOrigins)
-  const route = routes.find(candidate => candidate.path === OPENAI_CODEX_UPDATE_PATH)
+  registerOpenAICodexUpdateRoutes(ctx, { currentVersion: '0.1.0-alpha.4.14', fetchImpl, resolveCurrentDshVersion }, trustedOrigins)
+  const route = routes.find(candidate => candidate.path === path)
   if (route === undefined) throw new Error('update route was not registered')
   return route
 }
@@ -87,6 +92,7 @@ describe('Codex Connect update route', () => {
     expect(JSON.parse(res.observed.body ?? 'null')).toEqual({
       status: 'update-available',
       currentVersion: '0.1.0-alpha.4.14',
+      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.15',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
       highlights: [],
@@ -101,6 +107,33 @@ describe('Codex Connect update route', () => {
     })
     expect(JSON.parse(res.observed.body ?? 'null')).not.toHaveProperty('credential')
     expect(fetchMock).toHaveBeenCalledWith(OPENAI_CODEX_RELEASE_API_BASE + '0.1.0-alpha.4.15', expect.anything())
+  })
+
+  it('reports the running DSH version without public network access', async () => {
+    const fetchMock = vi.fn(async (): Promise<Response> => json({ error: 'unexpected' }, 500))
+    const route = capture(fetchMock, async () => '0.1.1-rc.2', OPENAI_CODEX_RUNTIME_PATH)
+    const res = response()
+    await route.handler(request(), res)
+
+    expect(JSON.parse(res.observed.body ?? 'null')).toEqual({ currentDshVersion: '0.1.1-rc.2' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('omits the current DSH version when local package detection fails', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
+      ? json({ alpha: '0.1.0-alpha.4.14' })
+      : json({
+          schemaVersion: 1,
+          checkedAt: '2026-08-23',
+          latestDshVersion: '0.1.1-rc.2',
+          pluginVersions: [{ version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.1-rc.2'] }],
+        }))
+    const route = capture(fetchMock, async () => { throw new Error('package metadata unavailable') })
+    const res = response()
+    await route.handler(request(), res)
+
+    expect(JSON.parse(res.observed.body ?? 'null')).not.toHaveProperty('currentDshVersion')
+    expect(res.observed.status).toBe(200)
   })
 
   it('rejects wrong methods and non-loopback peers before public network access', async () => {

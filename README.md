@@ -32,7 +32,7 @@ To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-c
 
 ### Version updates
 
-Codex Connect checks public package metadata and this repository's `verified-compatibility.json` periodically through the DSH Web server. The same card shows the installed and latest plugin versions, the latest DSH version recorded by this project, and whether that exact combination has been verified. It does not read the running DSH version and does not require a DSH Core change.
+Codex Connect checks public package metadata and this repository's `verified-compatibility.json` periodically through the DSH Web server. The same card reads the locally loaded DSH package version, shows it beside the latest DSH version recorded by this project, and compares the installed and latest plugin versions without repeating equal values. Local version detection uses package metadata already available to the plugin and does not require a DSH Core change.
 
 The compatibility record lists exact plugin and DSH versions rather than assuming every later release remains compatible. Maintainers can add a newly verified DSH version to the repository file without publishing another plugin release. A green result means the installed plugin was verified; yellow means the latest plugin was verified and should be installed first; red means neither the installed plugin nor the latest published plugin has been verified yet; gray means the record could not be checked. A red result includes a prefilled GitHub issue link so users can remind the maintainer without composing a report from scratch.
 

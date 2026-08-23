@@ -100,12 +100,14 @@ export type OpenAICodexUpdateResult =
   | {
       status: 'up-to-date'
       currentVersion: string
+      currentDshVersion?: string
       latestVersion: string
       compatibility: OpenAICodexDshCompatibilityAdvice
     }
   | {
       status: 'update-available'
       currentVersion: string
+      currentDshVersion?: string
       latestVersion: string
       releaseUrl: string
       highlights: OpenAICodexUpdateHighlight[]
@@ -118,6 +120,7 @@ export type OpenAICodexUpdateResult =
   | {
       status: 'unavailable'
       currentVersion: string
+      currentDshVersion?: string
       reason: 'invalid-current-version' | 'registry-unavailable' | 'invalid-registry-response'
     }
 
@@ -470,10 +473,18 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   const record = value as Record<string, unknown>
   const currentVersion = record['currentVersion']
   if (typeof currentVersion !== 'string' || parseOpenAICodexVersion(currentVersion) === undefined) return undefined
+  const rawCurrentDshVersion = record['currentDshVersion']
+  const currentDshVersion = rawCurrentDshVersion === undefined
+    ? undefined
+    : typeof rawCurrentDshVersion === 'string' && parseOpenAICodexVersion(rawCurrentDshVersion) !== undefined
+      ? rawCurrentDshVersion
+      : undefined
+  if (rawCurrentDshVersion !== undefined && currentDshVersion === undefined) return undefined
+  const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
   if (record['status'] === 'unavailable') {
     const reason = record['reason']
     return reason === 'invalid-current-version' || reason === 'registry-unavailable' || reason === 'invalid-registry-response'
-      ? { status: 'unavailable', currentVersion, reason }
+      ? { status: 'unavailable', currentVersion, ...currentDsh, reason }
       : undefined
   }
   const latestVersion = record['latestVersion']
@@ -481,7 +492,7 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   const compatibility = parseOpenAICodexDshCompatibilityAdvice(record['compatibility'], latestVersion)
   if (compatibility === undefined) return undefined
   if (record['status'] === 'up-to-date') {
-    return { status: 'up-to-date', currentVersion, latestVersion, compatibility }
+    return { status: 'up-to-date', currentVersion, ...currentDsh, latestVersion, compatibility }
   }
   if (record['status'] !== 'update-available' || compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) return undefined
   const expectedUrl = releaseUrl(latestVersion)
@@ -516,6 +527,7 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   return {
     status: 'update-available',
     currentVersion,
+    ...currentDsh,
     latestVersion,
     releaseUrl: expectedUrl,
     highlights,

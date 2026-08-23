@@ -490,11 +490,13 @@ interface OpenAICodexDshCompatibilityAdvice {
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';
   currentVersion: string;
+  currentDshVersion?: string;
   latestVersion: string;
   compatibility: OpenAICodexDshCompatibilityAdvice;
 } | {
   status: 'update-available';
   currentVersion: string;
+  currentDshVersion?: string;
   latestVersion: string;
   releaseUrl: string;
   highlights: OpenAICodexUpdateHighlight[];
@@ -506,6 +508,7 @@ type OpenAICodexUpdateResult = {
 } | {
   status: 'unavailable';
   currentVersion: string;
+  currentDshVersion?: string;
   reason: 'invalid-current-version' | 'registry-unavailable' | 'invalid-registry-response';
 };
 interface ParsedVersion {

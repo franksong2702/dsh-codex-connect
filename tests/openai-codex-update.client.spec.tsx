@@ -10,7 +10,7 @@ import {
   OPENAI_CODEX_REPOSITORY_URL,
   OpenAICodexUpdateStore,
 } from '../src/client/update-store.ts'
-import { OPENAI_CODEX_UPDATE_PATH } from '../src/update-paths.ts'
+import { OPENAI_CODEX_RUNTIME_PATH, OPENAI_CODEX_UPDATE_PATH } from '../src/update-paths.ts'
 
 function t(key: keyof typeof en, params: Record<string, unknown> = {}): string {
   return Object.entries(params).reduce(
@@ -44,10 +44,12 @@ afterEach(() => {
 describe('Codex Connect global update reminder', () => {
   it('shows release notes and copies the Agent prompt, then remembers dismissal', async () => {
     const fetchMock = vi.fn(async (input: string): Promise<Response> => {
+      if (input === OPENAI_CODEX_RUNTIME_PATH) return json({ currentDshVersion: '0.1.1-rc.1' })
       expect(input).toBe(OPENAI_CODEX_UPDATE_PATH)
       return json({
         status: 'update-available',
         currentVersion: '0.1.0-alpha.4.14',
+        currentDshVersion: '0.1.1-rc.1',
         latestVersion: '0.1.0-alpha.4.15',
         compatibility: {
           status: 'plugin-update-required',
@@ -73,11 +75,10 @@ describe('Codex Connect global update reminder', () => {
     expect(document.querySelector('[data-compatibility-status="plugin-update-required"]')).toBeTruthy()
     const initialStatusText = screen.getByRole('status').textContent ?? ''
     expect(initialStatusText).toContain(en.compatibilityPluginUpdateTitle)
-    expect(initialStatusText).toContain(en.compatibilityLatestPlugin.replace('{version}', '0.1.0-alpha.4.15'))
-    expect(screen.getByRole('status').textContent).toContain(en.versionSummary
+    expect(initialStatusText).toContain(en.compatibilityPluginDifferent
       .replace('{current}', '0.1.0-alpha.4.14')
-      .replace('{latest}', '0.1.0-alpha.4.15')
-      .replace('{count}', '1'))
+      .replace('{latest}', '0.1.0-alpha.4.15'))
+    expect(screen.getByRole('status').textContent).toContain(en.versionsBehind.replace('{count}', '1'))
     expect(screen.getByRole('status').textContent).toContain(en.whatMatters)
     expect(screen.getByRole('status').textContent).toContain(en.updateHighlightImageGeneration)
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStepsHeading)
@@ -94,7 +95,7 @@ describe('Codex Connect global update reminder', () => {
     expect(screen.getByText(en.agentPromptCopied)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: en.recheckAfterUpgrade }))
-    await waitFor(() => { expect(fetchMock).toHaveBeenCalledTimes(2) })
+    await waitFor(() => { expect(fetchMock).toHaveBeenCalledTimes(4) })
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStillAvailable.replace('{version}', '0.1.0-alpha.4.14'))
 
     fireEvent.click(screen.getByRole('button', { name: en.dismissUpdate }))
@@ -103,12 +104,14 @@ describe('Codex Connect global update reminder', () => {
     updater.dispose()
   })
 
-  it('renders current version in settings and reports when no update is available', async () => {
+  it('shows each current version once when DSH and Codex Connect are up to date', async () => {
     const fetchMock = vi.fn(async (input: string): Promise<Response> => {
+      if (input === OPENAI_CODEX_RUNTIME_PATH) return json({ currentDshVersion: '0.1.1-rc.2' })
       expect(input).toBe(OPENAI_CODEX_UPDATE_PATH)
       return json({
         status: 'up-to-date',
         currentVersion: '0.1.0-alpha.4.14',
+        currentDshVersion: '0.1.1-rc.2',
         latestVersion: '0.1.0-alpha.4.14',
         compatibility: {
           status: 'compatible',
@@ -124,10 +127,16 @@ describe('Codex Connect global update reminder', () => {
     render(<OpenAICodexUpdateSettings updater={updater} t={t} />)
     fireEvent.click(screen.getByRole('button', { name: en.checkForUpdates }))
 
-    expect(await screen.findByText(en.upToDate.replace('{version}', '0.1.0-alpha.4.14'))).toBeTruthy()
+    await waitFor(() => { expect(screen.getByRole('region').textContent).toContain(en.compatibilityCurrentTitle) })
     expect(document.querySelector('[data-compatibility-status="compatible"]')).toBeTruthy()
-    expect(screen.getByText(en.currentVersion.replace('{version}', '0.1.0-alpha.4.14'))).toBeTruthy()
-    expect(fetchMock).toHaveBeenCalledOnce()
+    const cardText = screen.getByRole('region').textContent ?? ''
+    expect(cardText).toContain(en.compatibilityDshSame.replace('{version}', '0.1.1-rc.2'))
+    expect(cardText).toContain(en.compatibilityPluginSame.replace('{version}', '0.1.0-alpha.4.14'))
+    expect(cardText.split('0.1.1-rc.2')).toHaveLength(2)
+    expect(cardText.split('0.1.0-alpha.4.14')).toHaveLength(2)
+    expect(cardText).not.toContain(en.upToDate.replace('{version}', '0.1.0-alpha.4.14'))
+    expect(cardText).not.toContain(en.currentVersion.replace('{version}', '0.1.0-alpha.4.14'))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(zh.dismissUpdate).toBe('稍后提醒')
     expect(browserStorage.getItem(OPENAI_CODEX_UPDATE_CACHE_KEY)).toContain('up-to-date')
     updater.dispose()
@@ -136,9 +145,12 @@ describe('Codex Connect global update reminder', () => {
   it('shows a red warning with a prefilled author reminder when no published plugin is verified', async () => {
     const browserStorage = storageFixture()
     vi.stubGlobal('localStorage', browserStorage)
-    vi.stubGlobal('fetch', vi.fn(async (): Promise<Response> => json({
+    vi.stubGlobal('fetch', vi.fn(async (input: string): Promise<Response> => input === OPENAI_CODEX_RUNTIME_PATH
+      ? json({ currentDshVersion: '0.1.1-rc.2' })
+      : json({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.15',
       compatibility: {
         status: 'not-yet-compatible',
@@ -163,9 +175,12 @@ describe('Codex Connect global update reminder', () => {
   it('shows gray instead of claiming compatibility when the public record is unavailable', async () => {
     const browserStorage = storageFixture()
     vi.stubGlobal('localStorage', browserStorage)
-    vi.stubGlobal('fetch', vi.fn(async (): Promise<Response> => json({
+    vi.stubGlobal('fetch', vi.fn(async (input: string): Promise<Response> => input === OPENAI_CODEX_RUNTIME_PATH
+      ? json({ currentDshVersion: '0.1.1-rc.2' })
+      : json({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.15',
       compatibility: {
         status: 'unverified',
@@ -179,6 +194,62 @@ describe('Codex Connect global update reminder', () => {
     expect(document.querySelector('[data-compatibility-status="unverified"]')).toBeTruthy()
     expect(screen.getByRole('region').textContent).toContain(en.compatibilityUnverifiedBody)
     expect(screen.getByRole('region').textContent).not.toContain('Canary')
+    updater.dispose()
+  })
+
+  it('shows an unknown current DSH state instead of presenting the remote version as installed', async () => {
+    const browserStorage = storageFixture()
+    vi.stubGlobal('localStorage', browserStorage)
+    vi.stubGlobal('fetch', vi.fn(async (input: string): Promise<Response> => input === OPENAI_CODEX_RUNTIME_PATH
+      ? json({})
+      : json({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.2',
+      },
+    })))
+    const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.15')
+    await act(async () => { await updater.refresh(true) })
+
+    render(<OpenAICodexUpdateSettings updater={updater} t={t} />)
+    expect(document.querySelector('[data-compatibility-status="unverified"]')).toBeTruthy()
+    expect(screen.getByRole('region').textContent).toContain(en.compatibilityCurrentDshUnknownTitle)
+    expect(screen.getByRole('region').textContent).toContain(en.compatibilityDshLatestOnly.replace('{latest}', '0.1.1-rc.2'))
+    updater.dispose()
+  })
+
+  it('refreshes the running DSH version even when public update metadata is cached', async () => {
+    const browserStorage = storageFixture()
+    browserStorage.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({
+      checkedAt: Date.now(),
+      result: {
+        status: 'up-to-date',
+        currentVersion: '0.1.0-alpha.4.15',
+        currentDshVersion: '0.1.1-rc.1',
+        latestVersion: '0.1.0-alpha.4.15',
+        compatibility: {
+          status: 'compatible',
+          latestPluginVersion: '0.1.0-alpha.4.15',
+          latestDshVersion: '0.1.1-rc.2',
+        },
+      },
+    }))
+    const fetchMock = vi.fn(async (input: string): Promise<Response> => {
+      expect(input).toBe(OPENAI_CODEX_RUNTIME_PATH)
+      return json({ currentDshVersion: '0.1.1-rc.2' })
+    })
+    vi.stubGlobal('localStorage', browserStorage)
+    vi.stubGlobal('fetch', fetchMock)
+    const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.15')
+
+    await act(async () => { await updater.refresh() })
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(updater.getSnapshot().currentDshVersion).toBe('0.1.1-rc.2')
     updater.dispose()
   })
 
