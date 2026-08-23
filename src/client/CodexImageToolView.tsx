@@ -38,6 +38,7 @@ const promptLabelStyle: CSSProperties = { fontSize: 13, fontWeight: 600, lineHei
 const promptBlockStyle: CSSProperties = { position: 'relative', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 8, background: 'var(--dsw-alias-bg-base)' }
 const copyButtonStyle: CSSProperties = { position: 'absolute', zIndex: 1, top: 7, right: 7, display: 'grid', placeItems: 'center', width: 28, height: 28, padding: 0, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, color: 'var(--dsw-alias-label-secondary)', background: 'var(--dsw-alias-bg-layer-1)', cursor: 'pointer', transition: 'opacity 120ms ease' }
 const tooltipStyle: CSSProperties = { position: 'absolute', zIndex: 100, top: -8, right: 0, transform: 'translateY(-100%)', width: 'max-content', maxWidth: 'min(260px, 50vw)', padding: '3px 7px', borderRadius: 8, background: 'var(--dsw-alias-tooltip-bg)', color: 'var(--dsw-static-neutral-bluish-00)', fontSize: 13, lineHeight: '20px', whiteSpace: 'pre-line', overflowWrap: 'break-word', pointerEvents: 'none' }
+const visuallyHidden: CSSProperties = { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0 }
 
 function contentText(content: readonly unknown[]): string | undefined {
   for (const block of content) {
@@ -120,6 +121,56 @@ function followUpPrompt(kind: 'retry' | 'regenerate' | 'edit', prompt: string, t
 
 function ActionError({ visible, t }: { visible: boolean; t: Translate<OpenAICodexSettingsKey> }) {
   return visible ? <span role="status" style={detail}>{t('actionFailed')}</span> : null
+}
+
+type DownloadState = 'idle' | 'pending' | 'failed'
+
+function DownloadButton({ image, label, load, t }: {
+  image: ImageAttachmentRef
+  label: string
+  load: (attachment: ImageAttachmentRef) => Promise<string>
+  t: Translate<OpenAICodexSettingsKey>
+}) {
+  const [state, setState] = useState<DownloadState>('idle')
+  const alive = useRef(true)
+  useEffect(() => () => { alive.current = false }, [])
+
+  async function download(): Promise<void> {
+    if (state === 'pending') return
+    setState('pending')
+    try {
+      const url = await load(image)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = image.name ?? t('image')
+      anchor.rel = 'noopener'
+      document.body.append(anchor)
+      try {
+        anchor.click()
+      } finally {
+        anchor.remove()
+      }
+      if (alive.current) setState('idle')
+    } catch {
+      if (alive.current) setState('failed')
+    }
+  }
+
+  const status = state === 'pending' ? t('downloading') : state === 'failed' ? t('downloadFailed') : undefined
+  const buttonLabel = status ?? label
+  return <>
+    <button
+      type="button"
+      style={action}
+      disabled={state === 'pending'}
+      aria-busy={state === 'pending'}
+      data-download-state={state}
+      onClick={() => { void download() }}
+    >
+      {buttonLabel}
+    </button>
+    {status === undefined ? null : <span role="status" aria-live="polite" style={visuallyHidden}>{status}</span>}
+  </>
 }
 
 function PromptPanel({ prompt, t }: { prompt: string; t: Translate<OpenAICodexSettingsKey> }) {
@@ -304,17 +355,6 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
   }
   if (decoded === undefined) return <section style={shell} role="status"><strong>{t('completed')}</strong><span style={detail}>{t('unknownResult')}</span></section>
 
-  async function download(image: ImageAttachmentRef): Promise<void> {
-    const url = await load(image)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = image.name ?? t('image')
-    anchor.rel = 'noopener'
-    document.body.append(anchor)
-    anchor.click()
-    anchor.remove()
-  }
-
   return <ResponsiveCard
     label={t('completed')}
     visual={<><div style={header}><strong>{t('completed')}</strong></div><CodexImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
@@ -329,7 +369,7 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
         </button>
         <ActionError visible={sessionActions.failed} t={t} />
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <button key={image.attachmentId as string} type="button" style={action} onClick={() => { void download(image) }}>{decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })}</button>)}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <DownloadButton key={image.attachmentId as string} image={image} load={load} t={t} label={decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })} />)}</div>
       <details>
         <summary style={{ cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 }}>{t('imageDetails')}</summary>
         <div style={{ ...detail, display: 'grid', gap: 4, marginTop: 6 }}>{decoded.images.map((image, index) => <span key={image.attachmentId as string}>{t('imageDetail', { name: image.name ?? String(index + 1), format: formatMediaType(image.mediaType), width: image.width, height: image.height, size: formatBytes(image.bytes) })}</span>)}</div>

@@ -107,6 +107,67 @@ describe('Codex image Tool view', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:session-image')
   })
 
+  it('tracks download pending state per image', async () => {
+    const createObjectURL = vi.fn(() => 'blob:session-image')
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    let resolveRead!: (result: unknown) => void
+    const read = new Promise(resolve => { resolveRead = resolve })
+    const first = image
+    const second: ImageAttachmentRef = { ...image, attachmentId: 'sha256:two' as ImageAttachmentRef['attachmentId'], name: 'codex-image-2.png' }
+    const readAttachment = vi.fn(async () => read)
+    const downloadSessions = { binding: vi.fn(() => ({ session: { readAttachment } })) } as unknown as ISessions
+    render(<CodexImageToolView {...standard} t={t} sessions={downloadSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt: 'two images', images: [first, second] }, callView: null, resultView: null, subCalls: [] }} />)
+    await waitFor(() => { expect(readAttachment).toHaveBeenCalled() })
+    const buttons = screen.getAllByRole('button', { name: /^Download / })
+    expect(buttons).toHaveLength(2)
+    const [firstButton, secondButton] = buttons
+    if (firstButton === undefined || secondButton === undefined) throw new Error('Expected two download buttons')
+    fireEvent.click(firstButton)
+    expect(firstButton.getAttribute('aria-busy')).toBe('true')
+    expect(firstButton.getAttribute('data-download-state')).toBe('pending')
+    expect(firstButton).toHaveProperty('disabled', true)
+    expect(secondButton.getAttribute('aria-busy')).toBe('false')
+    resolveRead({ ok: true, value: { attachment: first, data: new Uint8Array([1, 2, 3]) } })
+    await waitFor(() => { expect(firstButton.getAttribute('data-download-state')).toBe('idle') })
+  })
+
+  it('shows a retryable download error and clears it after success', async () => {
+    const createObjectURL = vi.fn(() => 'blob:session-image')
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    let fail = true
+    const readAttachment = vi.fn(async () => {
+      if (fail) throw new Error('attachment unavailable')
+      return { ok: true as const, value: { attachment: image, data: new Uint8Array([1, 2, 3]) } }
+    })
+    const downloadSessions = { binding: vi.fn(() => ({ session: { readAttachment } })) } as unknown as ISessions
+    render(<CodexImageToolView {...standard} t={t} sessions={downloadSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt: 'retry this download', images: [image] }, callView: null, resultView: null, subCalls: [] }} />)
+    await waitFor(() => { expect(readAttachment).toHaveBeenCalled() })
+    const download = screen.getByRole('button', { name: en.download })
+    fireEvent.click(download)
+    await waitFor(() => { expect(screen.getByRole('button', { name: en.downloadFailed })).toBeTruthy() })
+    expect(screen.getAllByRole('status').some(status => status.textContent === en.downloadFailed)).toBe(true)
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: en.downloadFailed }))
+    await waitFor(() => { expect(screen.getByRole('button', { name: en.download })).toBeTruthy() })
+    expect(screen.getAllByRole('status').some(status => status.textContent === en.downloadFailed)).toBe(false)
+  })
+
+  it('removes the temporary anchor when the browser download action fails', async () => {
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:session-image'), revokeObjectURL: vi.fn() })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => { throw new Error('download blocked') })
+    const readAttachment = vi.fn(async () => ({ ok: true as const, value: { attachment: image, data: new Uint8Array([1, 2, 3]) } }))
+    const downloadSessions = { binding: vi.fn(() => ({ session: { readAttachment } })) } as unknown as ISessions
+    render(<CodexImageToolView {...standard} t={t} sessions={downloadSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt: 'blocked download', images: [image] }, callView: null, resultView: null, subCalls: [] }} />)
+    await waitFor(() => { expect(readAttachment).toHaveBeenCalled() })
+
+    fireEvent.click(screen.getByRole('button', { name: en.download }))
+
+    await waitFor(() => { expect(screen.getByRole('button', { name: en.downloadFailed })).toBeTruthy() })
+    expect(document.querySelector('a[download]')).toBeNull()
+  })
+
   it('keeps hook order stable when a running result settles into an image result', () => {
     const createObjectURL = vi.fn(() => 'blob:session-image')
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() })
