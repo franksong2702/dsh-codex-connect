@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -33,13 +33,13 @@ function runCommand(command, args, options = {}) {
   })
   if (result.error !== undefined) {
     return {
-      status: 1,
+      status: 2,
       stdout: '',
       stderr: `${command} could not start: ${result.error.message}`,
     }
   }
   return {
-    status: result.status ?? 1,
+    status: result.status ?? 2,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   }
@@ -102,24 +102,24 @@ export function duplicateCandidate(channel, dedupeAgainst, distTags) {
   return dedupeAgainst !== undefined && distTags[channel] === distTags[dedupeAgainst]
 }
 
-export function classifyCandidateCheckFailure(value) {
-  const text = value.toLowerCase()
-  if (/\b(?:eai_again|econnreset|enotfound|etimedout|err_socket_timeout)\b/u.test(text)
-    || text.includes('network request failed')
-    || text.includes('fetch failed')) {
-    return 'infrastructure'
-  }
-  if (/check-dsh-install: (?:local build|npm pack|npm install|pre-install dump-config) failed/u.test(text)) {
-    return 'infrastructure'
-  }
-  return 'compatibility'
+export function classifyCandidateCheckStatus(status) {
+  return status === 1 ? 'compatibility' : 'infrastructure'
 }
 
 export function parseCanaryArgs(args) {
   const values = args[0] === '--' ? args.slice(1) : args
+  if (values[0] === '--dist-tags-output') {
+    const value = values[1]
+    if (values.length !== 2 || value === undefined || value === '') {
+      throw new Error('usage: check-dsh-next --dist-tags-output <github-output-file>')
+    }
+    return { distTagsOutputPath: resolve(process.cwd(), value) }
+  }
   let channel = 'next'
   let dedupeAgainst
   let outputPath
+  let resolvedLatest
+  let resolvedNext
   for (let index = 0; index < values.length; index += 2) {
     const name = values[index]
     const value = values[index + 1]
@@ -138,12 +138,24 @@ export function parseCanaryArgs(args) {
       outputPath = resolve(process.cwd(), value)
       continue
     }
-    throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--report <json-file>]')
+    if (name === '--resolved-latest') {
+      resolvedLatest = parseRegistryVersion(value)
+      continue
+    }
+    if (name === '--resolved-next') {
+      resolvedNext = parseRegistryVersion(value)
+      continue
+    }
+    throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--resolved-latest <version> --resolved-next <version>] [--report <json-file>]')
   }
   if (dedupeAgainst === channel) {
     throw new Error('the canary channel cannot deduplicate against itself')
   }
-  return { channel, dedupeAgainst, outputPath }
+  if ((resolvedLatest === undefined) !== (resolvedNext === undefined)) {
+    throw new Error('resolved latest and next versions must be supplied together')
+  }
+  const resolvedDistTags = resolvedLatest === undefined ? undefined : { latest: resolvedLatest, next: resolvedNext }
+  return { channel, dedupeAgainst, outputPath, resolvedDistTags }
 }
 
 async function emitReport(path, report) {
@@ -166,41 +178,52 @@ function baseReport(supportedVersion, channel) {
   }
 }
 
+function resolveRegistryDistTags() {
+  const lookup = runCommand('npm', ['view', PACKAGE_NAME, 'dist-tags', '--json'], {
+    timeoutMs: REGISTRY_TIMEOUT_MS,
+  })
+  if (lookup.status !== 0) {
+    return { error: sanitizeSummary(lookup.stderr || lookup.stdout || 'npm candidate lookup failed') }
+  }
+  try {
+    return { distTags: parseRegistryDistTags(lookup.stdout) }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
 async function main() {
-  const { channel, dedupeAgainst, outputPath } = parseCanaryArgs(process.argv.slice(2))
+  const options = parseCanaryArgs(process.argv.slice(2))
+  if (options.distTagsOutputPath !== undefined) {
+    const resolved = resolveRegistryDistTags()
+    if (resolved.distTags === undefined) throw new Error(resolved.error)
+    await appendFile(
+      options.distTagsOutputPath,
+      `latest=${resolved.distTags.latest}\nnext=${resolved.distTags.next}\n`,
+      'utf8',
+    )
+    process.stdout.write(`${JSON.stringify(resolved.distTags)}\n`)
+    return 0
+  }
+  const { channel, dedupeAgainst, outputPath, resolvedDistTags } = options
   const compatibility = JSON.parse(await readFile(COMPATIBILITY_FILE, 'utf8'))
   const supportedVersion = compatibility?.dshPluginApi?.version
   if (typeof supportedVersion !== 'string' || supportedVersion.length === 0) {
     throw new Error('compatibility.json has no declared DSH plugin API version')
   }
   const base = baseReport(supportedVersion, channel)
-  const lookup = runCommand('npm', ['view', PACKAGE_NAME, 'dist-tags', '--json'], {
-    timeoutMs: REGISTRY_TIMEOUT_MS,
-  })
-  if (lookup.status !== 0) {
+  const resolved = resolvedDistTags === undefined ? resolveRegistryDistTags() : { distTags: resolvedDistTags }
+  if (resolved.distTags === undefined) {
     await emitReport(outputPath, {
       ...base,
       status: 'fail',
       classification: 'infrastructure',
       stage: 'resolve-candidate',
-      summary: sanitizeSummary(lookup.stderr || lookup.stdout || 'npm candidate lookup failed'),
+      summary: resolved.error,
     })
     return 2
   }
-
-  let distTags
-  try {
-    distTags = parseRegistryDistTags(lookup.stdout)
-  } catch (error) {
-    await emitReport(outputPath, {
-      ...base,
-      status: 'fail',
-      classification: 'infrastructure',
-      stage: 'resolve-candidate',
-      summary: error instanceof Error ? error.message : String(error),
-    })
-    return 2
-  }
+  const distTags = resolved.distTags
   const candidateVersion = distTags[channel]
 
   if (duplicateCandidate(channel, dedupeAgainst, distTags)) {
@@ -237,15 +260,16 @@ async function main() {
   })
   if (candidateCheck.status !== 0) {
     const detail = candidateCheck.stderr || candidateCheck.stdout || 'isolated candidate check failed'
+    const classification = classifyCandidateCheckStatus(candidateCheck.status)
     await emitReport(outputPath, {
       ...base,
       candidateVersion,
       status: 'fail',
-      classification: classifyCandidateCheckFailure(detail),
+      classification,
       stage: 'isolated-install',
       summary: sanitizeSummary(detail),
     })
-    return 1
+    return classification === 'compatibility' ? 1 : 2
   }
 
   await emitReport(outputPath, {

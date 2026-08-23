@@ -3,7 +3,7 @@
 import { resolve } from 'node:path'
 
 import {
-  classifyCandidateCheckFailure,
+  classifyCandidateCheckStatus,
   confirmedCompatibilityFailure,
   duplicateCandidate,
   parseCanaryArgs,
@@ -12,6 +12,11 @@ import {
   sanitizeSummary,
 } from './check-dsh-next.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
+import {
+  CompatibilityCheckError,
+  InfrastructureCheckError,
+  installCheckExitCode,
+} from './check-dsh-install.mjs'
 
 const failures = []
 let assertionCount = 0
@@ -44,10 +49,31 @@ assertContract('invalid registry output is rejected', (() => {
   }
 })())
 assertContract('channel, deduplication, and report arguments are parsed', (() => {
-  const args = parseCanaryArgs(['--', '--channel', 'next', '--dedupe-against', 'latest', '--report', '.canary/report.json'])
+  const args = parseCanaryArgs([
+    '--',
+    '--channel', 'next',
+    '--dedupe-against', 'latest',
+    '--resolved-latest', '0.1.2',
+    '--resolved-next', '0.1.3-rc.1',
+    '--report', '.canary/report.json',
+  ])
   return args.channel === 'next'
     && args.dedupeAgainst === 'latest'
+    && args.resolvedDistTags.latest === '0.1.2'
+    && args.resolvedDistTags.next === '0.1.3-rc.1'
     && args.outputPath === resolve('.canary/report.json')
+})())
+assertContract('dist-tag output mode is parsed separately', (() => {
+  const args = parseCanaryArgs(['--dist-tags-output', '.canary/github-output'])
+  return args.distTagsOutputPath === resolve('.canary/github-output')
+})())
+assertContract('partial resolved snapshots are rejected', (() => {
+  try {
+    parseCanaryArgs(['--resolved-latest', '0.1.2'])
+    return false
+  } catch {
+    return true
+  }
 })())
 assertContract('a channel cannot deduplicate against itself', (() => {
   try {
@@ -110,24 +136,25 @@ assertContract(
   ),
 )
 assertContract(
-  'DSH installation failures are infrastructure failures',
-  classifyCandidateCheckFailure('check-dsh-install: npm install failed with exit 1') === 'infrastructure',
+  'candidate exit one is an explicit compatibility failure',
+  classifyCandidateCheckStatus(1) === 'compatibility',
 )
 assertContract(
-  'network failures during plugin installation are infrastructure failures',
-  classifyCandidateCheckFailure('check-dsh-install: local plugin install failed: ECONNRESET') === 'infrastructure',
+  'all other candidate exits fail closed as infrastructure',
+  classifyCandidateCheckStatus(2) === 'infrastructure' && classifyCandidateCheckStatus(null) === 'infrastructure',
 )
 assertContract(
-  'candidate command timeouts are infrastructure failures',
-  classifyCandidateCheckFailure('node could not start: spawnSync node ETIMEDOUT') === 'infrastructure',
+  'only typed compatibility errors use exit one',
+  installCheckExitCode(new CompatibilityCheckError('unmet peer dependency')) === 1,
 )
 assertContract(
-  'plugin installation contract failures are compatibility failures',
-  classifyCandidateCheckFailure('check-dsh-install: local plugin install failed: unmet peer dependency') === 'compatibility',
+  'typed infrastructure errors use exit two',
+  installCheckExitCode(new InfrastructureCheckError('ECONNRESET')) === 2,
 )
 assertContract(
-  'doctor mismatches are compatibility failures',
-  classifyCandidateCheckFailure('check-dsh-install: doctor JSON did not report compatible packages') === 'compatibility',
+  'unknown checker errors fail closed as infrastructure',
+  installCheckExitCode(new SyntaxError('Unexpected end of JSON input')) === 2
+    && installCheckExitCode(new Error('npm pack did not report one package filename')) === 2,
 )
 
 if (failures.length > 0) {

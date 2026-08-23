@@ -11,13 +11,33 @@ concurrency:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
+  resolve:
+    name: resolve upstream channels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      latest: ${{ steps.dist-tags.outputs.latest }}
+      next: ${{ steps.dist-tags.outputs.next }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.15.0
+      - name: Resolve one immutable dist-tag snapshot
+        id: dist-tags
+        run: node scripts/check-dsh-next.mjs --dist-tags-output "$GITHUB_OUTPUT"
   canary:
     name: canary (${{ matrix.channel }})
+    needs: resolve
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
     strategy:
       fail-fast: false
       matrix:
@@ -43,12 +63,12 @@ jobs:
       - name: Check DSH upstream candidate
         id: first-canary
         continue-on-error: true
-        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --report .canary/first.json
+        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --resolved-latest "${{ needs.resolve.outputs.latest }}" --resolved-next "${{ needs.resolve.outputs.next }}" --report .canary/first.json
       - name: Confirm a candidate failure
         id: second-canary
         if: steps.first-canary.outcome == 'failure'
         continue-on-error: true
-        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --report .canary/second.json
+        run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --resolved-latest "${{ needs.resolve.outputs.latest }}" --resolved-next "${{ needs.resolve.outputs.next }}" --report .canary/second.json
       - name: Record a confirmed compatibility alert
         if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
