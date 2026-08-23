@@ -246,7 +246,13 @@ function labels(t: Translate<OpenAICodexSettingsKey>): CodexImageGalleryLabels {
     openNamed: label => t('openNamed', { name: label }),
     loading: t('loading'),
     loadFailed: t('loadFailed'),
-    lightbox: { dialog: t('lightboxDialog'), close: t('lightboxClose') },
+    lightbox: {
+      dialog: t('lightboxDialog'),
+      close: t('lightboxClose'),
+      zoomIn: t('lightboxZoomIn'),
+      zoomOut: t('lightboxZoomOut'),
+      reset: t('lightboxReset'),
+    },
   }
 }
 

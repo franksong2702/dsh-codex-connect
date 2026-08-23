@@ -6,8 +6,8 @@
  * stateful work through props.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 
@@ -23,7 +23,7 @@ export interface CodexImageGalleryLabels {
   /** Retry-control label shown when loading fails. */
   loadFailed: string
   /** Lightbox labels. */
-  lightbox: { dialog: string; close: string }
+  lightbox: { dialog: string; close: string; zoomIn: string; zoomOut: string; reset: string }
 }
 
 export type CodexImageLoader = (attachment: ImageAttachmentRef) => Promise<string>
@@ -32,9 +32,24 @@ const galleryStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignIt
 const imageFrameStyle: CSSProperties = { display: 'grid', placeItems: 'center', padding: 0, overflow: 'hidden', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 8, background: 'var(--dsw-alias-bg-base)', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer' }
 const loadingStyle: CSSProperties = { padding: 10, fontSize: 12 }
 const errorStyle: CSSProperties = { minHeight: 32, padding: '6px 10px', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, background: 'transparent', color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer' }
-const lightboxStyle: CSSProperties = { position: 'relative', display: 'grid', maxWidth: 'min(96vw, 1200px)', maxHeight: '96vh', minWidth: 0, minHeight: 0 }
-const lightboxImageStyle: CSSProperties = { display: 'block', maxWidth: '96vw', maxHeight: '92vh', objectFit: 'contain' }
-const closeStyle: CSSProperties = { position: 'absolute', top: 8, right: 8, zIndex: 1, width: 32, height: 32, border: '1px solid rgba(255,255,255,0.35)', borderRadius: 7, background: 'rgba(0,0,0,0.5)', color: '#fff', font: 'inherit', cursor: 'pointer' }
+const lightboxStyle: CSSProperties = { position: 'relative', width: '100%', height: '92vh', minWidth: 0, minHeight: 0, overflow: 'hidden', background: 'var(--dsw-alias-bg-base, #111)' }
+const lightboxViewportStyle: CSSProperties = { width: '100%', height: '100%', overflow: 'auto', touchAction: 'none', overscrollBehavior: 'contain' }
+const lightboxImageStyle: CSSProperties = { display: 'block', width: '100%', height: '100%', objectFit: 'contain', userSelect: 'none', pointerEvents: 'none' }
+const lightboxControlsStyle: CSSProperties = { position: 'absolute', top: 8, left: 8, zIndex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: 4, borderRadius: 9, background: 'rgba(0,0,0,0.55)', color: '#fff' }
+const lightboxButtonStyle: CSSProperties = { minWidth: 32, height: 32, padding: '0 8px', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 7, background: 'rgba(0,0,0,0.35)', color: '#fff', font: 'inherit', cursor: 'pointer' }
+const closeStyle: CSSProperties = { ...lightboxButtonStyle, position: 'absolute', top: 8, right: 8, zIndex: 1, width: 32, padding: 0 }
+
+const MIN_ZOOM = 1
+const MAX_ZOOM = 4
+const ZOOM_STEP = 0.5
+
+interface DragStart {
+  pointerId: number
+  clientX: number
+  clientY: number
+  scrollLeft: number
+  scrollTop: number
+}
 
 function singleFit(attachment: ImageAttachmentRef): { width: number; height: number; objectPosition: string } {
   const natural = attachment.width / attachment.height
@@ -55,15 +70,81 @@ function CodexImageLightbox({ src, alt, labels, opener, onClose }: {
   opener: HTMLElement | null
   onClose: () => void
 }) {
+  const lightbox = useRef<HTMLDivElement | null>(null)
   const closeButton = useRef<HTMLButtonElement | null>(null)
+  const viewport = useRef<HTMLDivElement | null>(null)
+  const dragStart = useRef<DragStart | null>(null)
+  const [zoom, setZoom] = useState(MIN_ZOOM)
+  const [dragging, setDragging] = useState(false)
   useEffect(() => {
     closeButton.current?.focus()
     return () => { opener?.focus() }
   }, [opener])
+  useLayoutEffect(() => {
+    const dialog = lightbox.current?.closest<HTMLElement>('[role="dialog"]')
+    if (dialog === null || dialog === undefined) return
+    const previousWidth = dialog.style.width
+    const previousMaxWidth = dialog.style.maxWidth
+    dialog.style.width = '96vw'
+    dialog.style.maxWidth = '1200px'
+    return () => {
+      dialog.style.width = previousWidth
+      dialog.style.maxWidth = previousMaxWidth
+    }
+  }, [])
+  useEffect(() => {
+    if (zoom !== MIN_ZOOM || viewport.current === null) return
+    viewport.current.scrollLeft = 0
+    viewport.current.scrollTop = 0
+  }, [zoom])
+  const beginDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (zoom === MIN_ZOOM || event.button !== 0) return
+    dragStart.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      scrollLeft: event.currentTarget.scrollLeft,
+      scrollTop: event.currentTarget.scrollTop,
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    setDragging(true)
+  }
+  const drag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const start = dragStart.current
+    if (start === null || start.pointerId !== event.pointerId) return
+    event.currentTarget.scrollLeft = start.scrollLeft - (event.clientX - start.clientX)
+    event.currentTarget.scrollTop = start.scrollTop - (event.clientY - start.clientY)
+    event.preventDefault()
+  }
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (dragStart.current?.pointerId !== event.pointerId) return
+    dragStart.current = null
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId) === true) event.currentTarget.releasePointerCapture(event.pointerId)
+    setDragging(false)
+  }
   return <Modal open onClose={onClose} title={labels.dialog} closeLabel={labels.close} headless>
-    <div style={lightboxStyle}>
+    <div ref={lightbox} style={lightboxStyle}>
+      <div style={lightboxControlsStyle}>
+        <button type="button" aria-label={labels.zoomOut} title={labels.zoomOut} style={lightboxButtonStyle} disabled={zoom === MIN_ZOOM} onClick={() => { setZoom(value => Math.max(MIN_ZOOM, value - ZOOM_STEP)) }}>−</button>
+        <span>{Math.round(zoom * 100)}%</span>
+        <button type="button" aria-label={labels.zoomIn} title={labels.zoomIn} style={lightboxButtonStyle} disabled={zoom === MAX_ZOOM} onClick={() => { setZoom(value => Math.min(MAX_ZOOM, value + ZOOM_STEP)) }}>+</button>
+        <button type="button" aria-label={labels.reset} title={labels.reset} style={lightboxButtonStyle} disabled={zoom === MIN_ZOOM} onClick={() => { setZoom(MIN_ZOOM) }}>{labels.reset}</button>
+      </div>
       <button ref={closeButton} type="button" aria-label={labels.close} title={labels.close} style={closeStyle} onClick={onClose}>×</button>
-      <img src={src} alt={alt} style={lightboxImageStyle} />
+      <div
+        ref={viewport}
+        data-testid="codex-image-lightbox-viewport"
+        data-zoom={String(zoom)}
+        style={{ ...lightboxViewportStyle, cursor: zoom === MIN_ZOOM ? 'default' : dragging ? 'grabbing' : 'grab' }}
+        onPointerDown={beginDrag}
+        onPointerMove={drag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <div style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%` }}>
+          <img src={src} alt={alt} draggable={false} style={lightboxImageStyle} />
+        </div>
+      </div>
     </div>
   </Modal>
 }

@@ -30,7 +30,7 @@ const labels = {
   openNamed: (name: string) => `Open ${name}`,
   loading: 'Loading image',
   loadFailed: 'Image could not be loaded. Retry',
-  lightbox: { dialog: 'Image preview', close: 'Close image preview' },
+  lightbox: { dialog: 'Image preview', close: 'Close image preview', zoomIn: 'Zoom in', zoomOut: 'Zoom out', reset: 'Fit image' },
 }
 const image: ImageAttachmentRef = {
   attachmentId: 'sha256:gallery' as ImageAttachmentRef['attachmentId'],
@@ -53,8 +53,11 @@ describe('Codex image gallery', () => {
     fireEvent.click(thumbnail)
     const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })
     expect(dialog.parentElement?.parentElement).toBe(document.body)
+    expect(dialog.style.width).toBe('96vw')
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog', { name: labels.lightbox.dialog })).toBeNull()
+    expect(dialog.style.width).toBe('')
+    expect(dialog.style.maxWidth).toBe('')
     expect(document.activeElement).toBe(thumbnail)
     expect(load).toHaveBeenCalledOnce()
   })
@@ -69,6 +72,43 @@ describe('Codex image gallery', () => {
     expect(mask).not.toBeNull()
     fireEvent.click(mask as HTMLElement)
     expect(screen.queryByRole('dialog', { name: labels.lightbox.dialog })).toBeNull()
+  })
+
+  it('fits the whole image, zooms to four times, and restores the fitted view', async () => {
+    const load = vi.fn(async () => 'blob:gallery')
+    render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
+
+    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    fireEvent.click(screen.getByRole('button', { name: 'Open gallery.png' }))
+    const viewport = screen.getByTestId('codex-image-lightbox-viewport')
+    const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })
+    const preview = viewport.querySelector('img')
+    expect(preview).not.toBeNull()
+    expect(viewport.style.width).toBe('100%')
+    expect(viewport.style.height).toBe('100%')
+    expect(viewport.style.overflow).toBe('auto')
+    expect(dialog.style.width).toBe('96vw')
+    expect(dialog.style.maxWidth).toBe('1200px')
+    expect(preview?.style.objectFit).toBe('contain')
+    expect(viewport.dataset.zoom).toBe('1')
+
+    const zoomIn = screen.getByRole('button', { name: labels.lightbox.zoomIn })
+    for (let step = 0; step < 6; step += 1) fireEvent.click(zoomIn)
+    expect(viewport.dataset.zoom).toBe('4')
+    expect((zoomIn as HTMLButtonElement).disabled).toBe(true)
+
+    Object.defineProperty(viewport, 'scrollLeft', { configurable: true, writable: true, value: 120 })
+    Object.defineProperty(viewport, 'scrollTop', { configurable: true, writable: true, value: 80 })
+    fireEvent.pointerDown(viewport, { pointerId: 7, button: 0, clientX: 200, clientY: 180 })
+    fireEvent.pointerMove(viewport, { pointerId: 7, clientX: 140, clientY: 130 })
+    expect(viewport.scrollLeft).toBe(180)
+    expect(viewport.scrollTop).toBe(130)
+    fireEvent.pointerUp(viewport, { pointerId: 7 })
+
+    fireEvent.click(screen.getByRole('button', { name: labels.lightbox.reset }))
+    expect(viewport.dataset.zoom).toBe('1')
+    expect(viewport.scrollLeft).toBe(0)
+    expect(viewport.scrollTop).toBe(0)
   })
 
   it('offers retry after a failed load and does not reload on the loaded rerender', async () => {
