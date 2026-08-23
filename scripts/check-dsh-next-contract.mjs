@@ -225,22 +225,42 @@ assertContract(
 if (process.platform === 'win32') {
   const commandRoot = await mkdtemp(join(tmpdir(), 'dsh-command-contract-'))
   try {
-    const commandDirectory = join(commandRoot, 'command & space')
+    const commandDirectory = join(commandRoot, 'command & space', 'node_modules', '.bin')
     const commandScript = join(commandDirectory, 'fixture.cmd')
-    await mkdir(commandDirectory)
+    const receiverScript = join(commandRoot, 'receive-arguments.mjs')
+    const expectedArguments = [
+      'space & metachar',
+      'quote"value',
+      'single-trailing\\',
+      'double-trailing\\\\',
+      'percent%value',
+      'caret^value',
+      '(parenthesized)',
+      'pipe|value',
+    ]
+    await mkdir(commandDirectory, { recursive: true })
+    await writeFile(
+      receiverScript,
+      'process.stdout.write(JSON.stringify(process.argv.slice(2)))\n',
+      'utf8',
+    )
     await writeFile(commandScript, [
       '@echo off',
-      'if not "%~1"=="space & metachar" exit /b 9',
-      'echo cmd-script-ok',
+      `"${process.execPath}" "${receiverScript}" %*`,
     ].join('\r\n'), 'utf8')
     const commandResult = await runBoundedCommand(
       commandScript,
-      ['space & metachar'],
+      expectedArguments,
       { timeoutMs: 10_000 },
     )
+    let receivedArguments
+    try {
+      receivedArguments = JSON.parse(commandResult.stdout)
+    } catch {}
     assertContract(
-      'Windows command scripts execute with path and argument metacharacters preserved',
-      commandResult.status === 0 && commandResult.stdout.includes('cmd-script-ok'),
+      'Windows command shims preserve quoted, trailing-slash, and metacharacter arguments',
+      commandResult.status === 0
+        && JSON.stringify(receivedArguments) === JSON.stringify(expectedArguments),
     )
   } finally {
     await rm(commandRoot, { recursive: true, force: true })
