@@ -64,7 +64,7 @@ assertContract('open alerts receive the latest bounded report', /github\.rest\.i
 assertContract('confirmed failure leaves the workflow failed', /Fail after two unsuccessful checks[\s\S]*?run: exit 1/.test(workflow))
 assertContract('candidate checker opts into the undeclared-version mode', /DSH_UNDECLARED_CANARY_VERSION:\s*'1'/.test(nextCheck))
 assertContract('candidate classification is driven by fail-closed exit codes', /classifyCandidateCheckStatus\(candidateCheck\.status\)/.test(nextCheck) && /error instanceof CompatibilityCheckError \? 1 : 2/.test(installCheck))
-assertContract('registry and candidate subprocesses have explicit timeouts', /REGISTRY_TIMEOUT_MS\s*=\s*60 \* 1000[\s\S]*?CANDIDATE_CHECK_TIMEOUT_MS\s*=\s*25 \* 60 \* 1000/.test(nextCheck) && /timeout:\s*COMMAND_TIMEOUT_MS/.test(installCheck))
+assertContract('registry and candidate subprocesses have explicit timeouts', /REGISTRY_TIMEOUT_MS\s*=\s*60 \* 1000[\s\S]*?CANDIDATE_CHECK_TIMEOUT_MS\s*=\s*25 \* 60 \* 1000/.test(nextCheck) && /timeoutMs:\s*COMMAND_TIMEOUT_MS/.test(installCheck))
 assertContract('candidate subprocesses receive a scrubbed environment', /scrubCanaryEnvironment\(process\.env\)/.test(nextCheck) && /allowUndeclaredCanaryVersion[\s\S]*?scrubCanaryEnvironment\(process\.env\)/.test(installCheck))
 assertContract('credential-bearing environment names are filtered', /AUTH\|BEARER\|COOKIE\|CREDENTIAL\|JWT\|KEY\|PASS\|SECRET\|SESSION\|TOKEN/.test(canaryEnvironment))
 assertContract('undeclared candidates install the packed artifact', /allowUndeclaredCanaryVersion[\s\S]*?npm[\s\S]*?'pack'[\s\S]*?pluginSpec = `file:/.test(installCheck))

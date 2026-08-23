@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
+import { runBoundedCommand } from './bounded-command.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
@@ -21,17 +21,15 @@ function commandName(name) {
   return process.platform === 'win32' && (name === 'npm' || name === 'pnpm') ? `${name}.cmd` : name
 }
 
-function runCommand(command, args, options) {
-  const result = spawnSync(commandName(command), args, {
+async function runCommand(command, args, options) {
+  const result = await runBoundedCommand(commandName(command), args, {
     cwd: options.cwd,
     env: options.env,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    timeout: COMMAND_TIMEOUT_MS,
-    windowsHide: true,
+    timeoutMs: COMMAND_TIMEOUT_MS,
   })
   if (result.error !== undefined) {
-    throw new InfrastructureCheckError(`${command} ${args.join(' ')} could not start: ${result.error.message}`)
+    const cleanupDetail = result.cleanupError === undefined ? '' : `; process-tree cleanup failed: ${result.cleanupError.message}`
+    throw new InfrastructureCheckError(`${command} ${args.join(' ')} failed: ${result.error.message}${cleanupDetail}`)
   }
   return {
     status: result.status ?? 2,
@@ -49,12 +47,19 @@ function isInfrastructureFailure(value) {
     || text.includes('fetch failed')
 }
 
+export function commandFailureClassification(result, requestedClassification = 'infrastructure') {
+  const detail = [result.stderr, result.stdout].filter(value => value.trim() !== '').join('\n')
+  return requestedClassification === 'compatibility' && !isInfrastructureFailure(detail)
+    ? 'compatibility'
+    : 'infrastructure'
+}
+
 function requireSuccess(label, result, classification = 'infrastructure') {
   if (result.status === 0) return
-  const rawDetail = result.stderr || result.stdout
+  const rawDetail = [result.stderr, result.stdout].filter(value => value.trim() !== '').join('\n')
   const detail = rawDetail.trim().split(/\r?\n/u).slice(-12).join('\n')
   const message = `${label} failed with exit ${String(result.status)}${detail === '' ? '' : `:\n${detail}`}`
-  if (classification === 'compatibility' && !isInfrastructureFailure(rawDetail)) {
+  if (commandFailureClassification(result, classification) === 'compatibility') {
     throw new CompatibilityCheckError(message)
   }
   throw new InfrastructureCheckError(message)
@@ -139,7 +144,7 @@ async function main() {
   const inheritedEnvironment = allowUndeclaredCanaryVersion
     ? scrubCanaryEnvironment(process.env)
     : process.env
-  const build = runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: inheritedEnvironment })
+  const build = await runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: inheritedEnvironment })
   requireSuccess('local build', build)
 
   const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-install-'))
@@ -156,7 +161,7 @@ async function main() {
   try {
     let pluginSpec = `link:${REPO_ROOT}`
     if (allowUndeclaredCanaryVersion) {
-      const pack = runCommand('npm', [
+      const pack = await runCommand('npm', [
         'pack',
         '--json',
         '--ignore-scripts',
@@ -172,7 +177,7 @@ async function main() {
       pluginSpec = `file:${join(tempRoot, manifest.filename)}`
     }
 
-    const install = runCommand('npm', [
+    const install = await runCommand('npm', [
       'install',
       '--prefix', installRoot,
       '--ignore-scripts',
@@ -184,26 +189,26 @@ async function main() {
     requireSuccess('npm install', install)
 
     const dshBinary = join(installRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
-    const versionResult = runCommand(dshBinary, ['--version'], { cwd: workspace, env })
+    const versionResult = await runCommand(dshBinary, ['--version'], { cwd: workspace, env })
     requireSuccess('dsh --version', versionResult)
     const actualDshVersion = versionResult.stdout.trim()
     if (actualDshVersion !== dshVersion) {
       throw new Error(`dsh version mismatch: expected ${dshVersion}, got ${actualDshVersion}`)
     }
 
-    const beforeDump = runCommand(dshBinary, ['--profile', 'web', '--dump-config'], { cwd: workspace, env })
+    const beforeDump = await runCommand(dshBinary, ['--profile', 'web', '--dump-config'], { cwd: workspace, env })
     requireSuccess('pre-install dump-config', beforeDump)
     const beforeDefaults = {
       agentDefaultModel: configBlock(beforeDump.stdout, 'agent-default-model'),
       web: configBlock(beforeDump.stdout, 'web'),
     }
 
-    const add = runCommand(dshBinary, [
+    const add = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'add', pluginSpec,
     ], { cwd: workspace, env })
     requireSuccess('local plugin install', add, 'compatibility')
 
-    const afterDump = runCommand(dshBinary, ['--profile', 'web', '--dump-config'], { cwd: workspace, env })
+    const afterDump = await runCommand(dshBinary, ['--profile', 'web', '--dump-config'], { cwd: workspace, env })
     requireSuccess('post-install dump-config', afterDump, 'compatibility')
     const afterDefaults = {
       agentDefaultModel: configBlock(afterDump.stdout, 'agent-default-model', 'compatibility'),
@@ -221,7 +226,7 @@ async function main() {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
 
-    const doctor = runCommand(dshBinary, [
+    const doctor = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'exec', 'dsh-codex-connect', 'doctor', '--json',
     ], { cwd: workspace, env })
     requireSuccess('plugin doctor', doctor, 'compatibility')

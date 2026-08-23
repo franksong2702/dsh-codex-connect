@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process'
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
+import { runBoundedCommand } from './bounded-command.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const PACKAGE_NAME = '@deepseek-ai/dsh'
@@ -22,20 +22,18 @@ function commandName(name) {
   return process.platform === 'win32' && name === 'npm' ? `${name}.cmd` : name
 }
 
-function runCommand(command, args, options = {}) {
-  const result = spawnSync(commandName(command), args, {
+async function runCommand(command, args, options = {}) {
+  const result = await runBoundedCommand(commandName(command), args, {
     cwd: REPO_ROOT,
     env: options.env ?? process.env,
-    encoding: 'utf8',
-    maxBuffer: 16 * 1024 * 1024,
-    timeout: options.timeoutMs,
-    windowsHide: true,
+    timeoutMs: options.timeoutMs,
   })
   if (result.error !== undefined) {
+    const cleanupDetail = result.cleanupError === undefined ? '' : `; process-tree cleanup failed: ${result.cleanupError.message}`
     return {
       status: 2,
       stdout: '',
-      stderr: `${command} could not start: ${result.error.message}`,
+      stderr: `${command} failed: ${result.error.message}${cleanupDetail}`,
     }
   }
   return {
@@ -178,8 +176,8 @@ function baseReport(supportedVersion, channel) {
   }
 }
 
-function resolveRegistryDistTags() {
-  const lookup = runCommand('npm', ['view', PACKAGE_NAME, 'dist-tags', '--json'], {
+async function resolveRegistryDistTags() {
+  const lookup = await runCommand('npm', ['view', PACKAGE_NAME, 'dist-tags', '--json'], {
     timeoutMs: REGISTRY_TIMEOUT_MS,
   })
   if (lookup.status !== 0) {
@@ -192,10 +190,10 @@ function resolveRegistryDistTags() {
   }
 }
 
-async function main() {
-  const options = parseCanaryArgs(process.argv.slice(2))
+export async function runCanary(options, dependencies = {}) {
+  const candidateCheckPath = dependencies.candidateCheckPath ?? INSTALL_CHECK
   if (options.distTagsOutputPath !== undefined) {
-    const resolved = resolveRegistryDistTags()
+    const resolved = await resolveRegistryDistTags()
     if (resolved.distTags === undefined) throw new Error(resolved.error)
     await appendFile(
       options.distTagsOutputPath,
@@ -212,7 +210,7 @@ async function main() {
     throw new Error('compatibility.json has no declared DSH plugin API version')
   }
   const base = baseReport(supportedVersion, channel)
-  const resolved = resolvedDistTags === undefined ? resolveRegistryDistTags() : { distTags: resolvedDistTags }
+  const resolved = resolvedDistTags === undefined ? await resolveRegistryDistTags() : { distTags: resolvedDistTags }
   if (resolved.distTags === undefined) {
     await emitReport(outputPath, {
       ...base,
@@ -250,7 +248,7 @@ async function main() {
     return 0
   }
 
-  const candidateCheck = runCommand('node', [INSTALL_CHECK], {
+  const candidateCheck = await runCommand(process.execPath, [candidateCheckPath], {
     env: {
       ...scrubCanaryEnvironment(process.env),
       DSH_VERSION: candidateVersion,
@@ -281,6 +279,10 @@ async function main() {
     summary: `The isolated ${channel} install check passed with DSH ${candidateVersion}; declared support remains ${supportedVersion}.`,
   })
   return 0
+}
+
+async function main() {
+  return runCanary(parseCanaryArgs(process.argv.slice(2)))
 }
 
 const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)

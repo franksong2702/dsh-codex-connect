@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-import { resolve } from 'node:path'
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+
+import { runBoundedCommand } from './bounded-command.mjs'
 
 import {
   classifyCandidateCheckStatus,
@@ -9,12 +13,14 @@ import {
   parseCanaryArgs,
   parseRegistryDistTags,
   parseRegistryVersion,
+  runCanary,
   sanitizeSummary,
 } from './check-dsh-next.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import {
   CompatibilityCheckError,
   InfrastructureCheckError,
+  commandFailureClassification,
   installCheckExitCode,
 } from './check-dsh-install.mjs'
 
@@ -156,6 +162,90 @@ assertContract(
   installCheckExitCode(new SyntaxError('Unexpected end of JSON input')) === 2
     && installCheckExitCode(new Error('npm pack did not report one package filename')) === 2,
 )
+assertContract(
+  'network failures are recognized across stderr and stdout',
+  commandFailureClassification({
+    stderr: 'npm printed a warning',
+    stdout: 'fetch failed: ECONNRESET',
+  }, 'compatibility') === 'infrastructure',
+)
+
+async function runCandidateFixture(exitCode) {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-next-contract-'))
+  try {
+    const candidateCheck = join(root, 'candidate-check.mjs')
+    const reportPath = join(root, 'report.json')
+    await writeFile(
+      candidateCheck,
+      `process.stderr.write('candidate fixture exit ${String(exitCode)}\\n')\nprocess.exitCode = ${String(exitCode)}\n`,
+      'utf8',
+    )
+    const compatibility = JSON.parse(await readFile(resolve('compatibility.json'), 'utf8'))
+    const supportedVersion = compatibility.dshPluginApi.version
+    const status = await runCanary(parseCanaryArgs([
+      '--channel', 'next',
+      '--resolved-latest', supportedVersion,
+      '--resolved-next', '9.9.9-next.1',
+      '--report', reportPath,
+    ]), { candidateCheckPath: candidateCheck })
+    return {
+      status,
+      report: JSON.parse(await readFile(reportPath, 'utf8')),
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+const compatibilityFixture = await runCandidateFixture(1)
+assertContract(
+  'a real candidate child exit one produces a compatibility report',
+  compatibilityFixture.status === 1
+    && compatibilityFixture.report.status === 'fail'
+    && compatibilityFixture.report.classification === 'compatibility',
+)
+const infrastructureFixture = await runCandidateFixture(2)
+assertContract(
+  'a real candidate child exit two produces an infrastructure report',
+  infrastructureFixture.status === 2
+    && infrastructureFixture.report.status === 'fail'
+    && infrastructureFixture.report.classification === 'infrastructure',
+)
+
+const processTreeRoot = await mkdtemp(join(tmpdir(), 'dsh-process-tree-contract-'))
+try {
+  const marker = join(processTreeRoot, 'descendant-survived')
+  const descendant = [
+    "import { writeFileSync } from 'node:fs'",
+    `setTimeout(() => writeFileSync(${JSON.stringify(marker)}, 'survived'), 700)`,
+    'setTimeout(() => {}, 5_000)',
+  ].join('\n')
+  const parent = [
+    "import { spawn } from 'node:child_process'",
+    `spawn(process.execPath, ['--input-type=module', '-e', ${JSON.stringify(descendant)}], { stdio: 'ignore' })`,
+    'setTimeout(() => {}, 5_000)',
+  ].join('\n')
+  const timedOut = await runBoundedCommand(
+    process.execPath,
+    ['--input-type=module', '-e', parent],
+    { timeoutMs: 150 },
+  )
+  await new Promise(resolveDelay => setTimeout(resolveDelay, 900))
+  let descendantSurvived = true
+  try {
+    await access(marker)
+  } catch {
+    descendantSurvived = false
+  }
+  assertContract(
+    'timeout terminates the descendant process tree before retry',
+    timedOut.error?.code === 'ETIMEDOUT'
+      && timedOut.cleanupError === undefined
+      && !descendantSurvived,
+  )
+} finally {
+  await rm(processTreeRoot, { recursive: true, force: true })
+}
 
 if (failures.length > 0) {
   console.error(`DSH next checker contract failed (${failures.length}/${assertionCount}):`)
