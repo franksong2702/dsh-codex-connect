@@ -6,14 +6,36 @@ function cleanupFailure(value) {
   return value instanceof Error ? value : new Error(String(value))
 }
 
+const WINDOWS_META_CHARACTER = /([()\][%!^"`<>&|;, *?])/gu
+
+function escapeWindowsCommand(value) {
+  return value.replace(WINDOWS_META_CHARACTER, '^$1')
+}
+
+function escapeWindowsArgument(value, doubleEscapeMetaCharacters) {
+  let escaped = String(value)
+    .replace(/(?=(\\+?)?)\1"/gu, '$1$1\\"')
+    .replace(/(?=(\\+?)?)\1$/gu, '$1$1')
+  escaped = `"${escaped}"`.replace(WINDOWS_META_CHARACTER, '^$1')
+  return doubleEscapeMetaCharacters
+    ? escaped.replace(WINDOWS_META_CHARACTER, '^$1')
+    : escaped
+}
+
 export function resolveCommandInvocation(command, args, platform = process.platform) {
   if (platform === 'win32' && /\.(?:bat|cmd)$/iu.test(command)) {
+    const doubleEscapeMetaCharacters = /[\\/]node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/iu.test(command)
+    const shellCommand = [
+      escapeWindowsCommand(command),
+      ...args.map(argument => escapeWindowsArgument(argument, doubleEscapeMetaCharacters)),
+    ].join(' ')
     return {
-      command: process.env.ComSpec ?? process.env.COMSPEC ?? 'cmd.exe',
-      args: ['/d', '/s', '/c', command, ...args],
+      command: process.env.ComSpec ?? process.env.COMSPEC ?? process.env.comspec ?? 'cmd.exe',
+      args: ['/d', '/s', '/c', `"${shellCommand}"`],
+      windowsVerbatimArguments: true,
     }
   }
-  return { command, args }
+  return { command, args, windowsVerbatimArguments: false }
 }
 
 function terminateProcessTree(child) {
@@ -57,6 +79,7 @@ export function runBoundedCommand(command, args, options = {}) {
       env: options.env,
       detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments,
       windowsHide: true,
     })
     const stdout = []

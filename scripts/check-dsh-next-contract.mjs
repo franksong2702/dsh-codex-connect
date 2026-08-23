@@ -214,9 +214,12 @@ assertContract(
 
 const windowsInvocation = resolveCommandInvocation('C:\\tools\\check.cmd', ['argument with spaces'], 'win32')
 assertContract(
-  'Windows command scripts are invoked through cmd.exe with arguments retained',
+  'Windows command scripts are invoked through cmd.exe with an escaped command line',
   /cmd\.exe$/iu.test(windowsInvocation.command)
-    && windowsInvocation.args.join('\0') === ['/d', '/s', '/c', 'C:\\tools\\check.cmd', 'argument with spaces'].join('\0'),
+    && windowsInvocation.args.slice(0, 3).join('\0') === ['/d', '/s', '/c'].join('\0')
+    && windowsInvocation.args[3].includes('C:\\tools\\check.cmd')
+    && windowsInvocation.args[3].includes('argument^ with^ spaces')
+    && windowsInvocation.windowsVerbatimArguments,
 )
 
 if (process.platform === 'win32') {
