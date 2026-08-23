@@ -40,6 +40,10 @@
     {
       "version": "0.1.0-alpha.4.14",
       "highlights": ["oauth-history"]
+    },
+    {
+      "version": "0.1.0-alpha.4.16",
+      "highlights": ["runtime-compatibility", "image-generation"]
     }
   ]
 }

@@ -12,6 +12,7 @@ const catalog = {
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
     { version: '0.1.0-alpha.4.15', verifiedDshVersions: ['0.1.1-rc.2'] },
+    { version: '0.1.0-alpha.4.16', verifiedDshVersions: ['0.1.1-rc.2'] },
   ],
 }
 
@@ -40,6 +41,11 @@ describe('Codex Connect verified DSH compatibility', () => {
       latestPluginVersion: '0.1.0-alpha.4.15',
       latestDshVersion: '0.1.1-rc.2',
     })
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', catalog)).toEqual({
+      status: 'compatible',
+      latestPluginVersion: '0.1.0-alpha.4.16',
+      latestDshVersion: '0.1.1-rc.2',
+    })
   })
 
   it('returns yellow when only the latest plugin has been verified', () => {
@@ -51,9 +57,9 @@ describe('Codex Connect verified DSH compatibility', () => {
   })
 
   it('returns red when no published plugin is verified and gray when the record is unavailable', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.16', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.17', catalog)).toEqual({
       status: 'not-yet-compatible',
-      latestPluginVersion: '0.1.0-alpha.4.16',
+      latestPluginVersion: '0.1.0-alpha.4.17',
       latestDshVersion: '0.1.1-rc.2',
     })
     expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.15', '0.1.0-alpha.4.15')).toEqual({
