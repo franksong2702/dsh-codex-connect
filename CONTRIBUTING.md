@@ -13,6 +13,10 @@ pnpm install --frozen-lockfile
 pnpm run check
 ```
 
+The scheduled upstream DSH compatibility signal and its maintainer response
+procedure are documented in
+[.github/UPSTREAM_DSH_CANARY.md](.github/UPSTREAM_DSH_CANARY.md).
+
 The `lib/` directory is generated output. Update it only by running the project
 build (`pnpm run build`); do not hand-edit generated files.
 

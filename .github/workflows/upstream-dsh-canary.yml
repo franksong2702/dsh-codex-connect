@@ -1,0 +1,128 @@
+name: Upstream DSH canary
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-dsh-canary
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
+      - name: Check DSH next candidate
+        id: first-canary
+        continue-on-error: true
+        run: pnpm --silent run check:dsh-next -- --report .canary/first.json
+      - name: Confirm a candidate failure
+        id: second-canary
+        if: steps.first-canary.outcome == 'failure'
+        continue-on-error: true
+        run: pnpm --silent run check:dsh-next -- --report .canary/second.json
+      - name: Record a confirmed compatibility alert
+        if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          FIRST_REPORT: .canary/first.json
+          SECOND_REPORT: .canary/second.json
+        with:
+          script: |
+            const fs = require('node:fs')
+            const first = JSON.parse(fs.readFileSync(process.env.FIRST_REPORT, 'utf8'))
+            const second = JSON.parse(fs.readFileSync(process.env.SECOND_REPORT, 'utf8'))
+            const confirmed = first.status === 'fail'
+              && second.status === 'fail'
+              && first.classification === 'compatibility'
+              && second.classification === 'compatibility'
+              && typeof first.candidateVersion === 'string'
+              && first.candidateVersion === second.candidateVersion
+            if (!confirmed) {
+              core.info('The repeated failure was not a confirmed compatibility failure; no issue was created.')
+              return
+            }
+
+            const version = first.candidateVersion
+            const marker = `<!-- dsh-next-canary:${version} -->`
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const safeSummary = String(second.summary ?? 'No bounded summary was available.').replaceAll('```', '---')
+            const body = [
+              marker,
+              '## Upstream DSH compatibility alert',
+              '',
+              `The isolated Codex Connect check failed twice against \`@deepseek-ai/dsh@next\` version \`${version}\`.`,
+              '',
+              `- Declared supported DSH version: \`${second.supportedVersion}\``,
+              `- Candidate stage: \`${second.stage}\``,
+              `- Plugin commit: \`${second.pluginCommit ?? context.sha}\``,
+              `- Node.js: \`${second.nodeVersion}\``,
+              `- Workflow run: ${runUrl}`,
+              '',
+              'Bounded, path-redacted summary:',
+              '',
+              '```text',
+              safeSummary,
+              '```',
+              '',
+              'This alert does not widen the supported version range or publish a release. Reproduce the exact candidate check, inspect the upstream change, then use the test profile for full OAuth and model validation before changing `compatibility.json`.',
+              '',
+            ].join('\n')
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: 100,
+            })
+            const existing = issues.find(issue => issue.pull_request === undefined && issue.body?.includes(marker))
+            if (existing === undefined) {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `compatibility: DSH ${version} canary failure`,
+                body,
+                labels: ['bug'],
+              })
+              core.notice(`Created compatibility issue ${created.data.html_url}`)
+              return
+            }
+            if (existing.state === 'closed') {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'open',
+                body,
+              })
+              core.notice(`Reopened compatibility issue ${existing.html_url}`)
+              return
+            }
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existing.number,
+              body,
+            })
+            core.notice(`Updated compatibility issue ${existing.html_url}`)
+      - name: Fail after two unsuccessful checks
+        if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
+        run: exit 1

@@ -3,11 +3,12 @@
 import { spawnSync } from 'node:child_process'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
+const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 function commandName(name) {
@@ -100,10 +101,16 @@ async function main() {
   requireSuccess('local build', build)
 
   const requestedDshVersion = process.env.DSH_VERSION
-  if (requestedDshVersion !== undefined && requestedDshVersion !== '' && requestedDshVersion !== DEFAULT_DSH_VERSION) {
+  const allowUndeclaredCanaryVersion = process.env.DSH_UNDECLARED_CANARY_VERSION === UNDECLARED_CANARY_MODE
+  if (requestedDshVersion !== undefined
+    && requestedDshVersion !== ''
+    && requestedDshVersion !== DEFAULT_DSH_VERSION
+    && !allowUndeclaredCanaryVersion) {
     throw new Error(`check-dsh-install only verifies the declared DSH CLI version ${DEFAULT_DSH_VERSION}`)
   }
-  const dshVersion = DEFAULT_DSH_VERSION
+  const dshVersion = requestedDshVersion === undefined || requestedDshVersion === ''
+    ? DEFAULT_DSH_VERSION
+    : requestedDshVersion
   const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-install-'))
   const dshHome = join(tempRoot, 'dsh-home')
   const installRoot = join(tempRoot, 'dsh-install')
@@ -116,6 +123,24 @@ async function main() {
   }
 
   try {
+    let pluginSpec = `link:${REPO_ROOT}`
+    if (allowUndeclaredCanaryVersion) {
+      const pack = runCommand('npm', [
+        'pack',
+        '--json',
+        '--ignore-scripts',
+        '--pack-destination', tempRoot,
+      ], { cwd: REPO_ROOT, env })
+      requireSuccess('npm pack', pack)
+      const [manifest] = JSON.parse(pack.stdout)
+      if (typeof manifest?.filename !== 'string'
+        || manifest.filename.length === 0
+        || basename(manifest.filename) !== manifest.filename) {
+        throw new Error('npm pack did not report one package filename')
+      }
+      pluginSpec = `file:${join(tempRoot, manifest.filename)}`
+    }
+
     const install = runCommand('npm', [
       'install',
       '--prefix', installRoot,
@@ -143,7 +168,7 @@ async function main() {
     }
 
     const add = runCommand(dshBinary, [
-      'plugin', '--profile', 'web', 'add', `link:${REPO_ROOT}`,
+      'plugin', '--profile', 'web', 'add', pluginSpec,
     ], { cwd: workspace, env })
     requireSuccess('local plugin install', add)
 
