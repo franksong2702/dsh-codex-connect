@@ -49,6 +49,11 @@ describe('Codex Connect global update reminder', () => {
         status: 'update-available',
         currentVersion: '0.1.0-alpha.4.14',
         latestVersion: '0.1.0-alpha.4.15',
+        compatibility: {
+          status: 'plugin-update-required',
+          latestPluginVersion: '0.1.0-alpha.4.15',
+          latestDshVersion: '0.1.1-rc.2',
+        },
         releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
         versionsBehind: 1,
         highlights: [{ version: '0.1.0-alpha.4.12', kind: 'image-generation' }],
@@ -65,9 +70,10 @@ describe('Codex Connect global update reminder', () => {
     await act(async () => { await updater.refresh(true) })
 
     render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
+    expect(document.querySelector('[data-compatibility-status="plugin-update-required"]')).toBeTruthy()
     const initialStatusText = screen.getByRole('status').textContent ?? ''
-    expect(initialStatusText).toContain(en.newVersionAvailable.replace('{version}', '0.1.0-alpha.4.15'))
-    expect(initialStatusText.match(/0\.1\.0-alpha\.4\.15/gu)?.length).toBe(1)
+    expect(initialStatusText).toContain(en.compatibilityPluginUpdateTitle)
+    expect(initialStatusText).toContain(en.compatibilityLatestPlugin.replace('{version}', '0.1.0-alpha.4.15'))
     expect(screen.getByRole('status').textContent).toContain(en.versionSummary
       .replace('{current}', '0.1.0-alpha.4.14')
       .replace('{latest}', '0.1.0-alpha.4.15')
@@ -93,7 +99,7 @@ describe('Codex Connect global update reminder', () => {
 
     fireEvent.click(screen.getByRole('button', { name: en.dismissUpdate }))
     expect(screen.queryByRole('status')).toBeNull()
-    expect(browserStorage.getItem(OPENAI_CODEX_UPDATE_DISMISSED_KEY)).toBe('0.1.0-alpha.4.15')
+    expect(browserStorage.getItem(OPENAI_CODEX_UPDATE_DISMISSED_KEY)).toBe('0.1.0-alpha.4.15:0.1.1-rc.2:plugin-update-required')
     updater.dispose()
   })
 
@@ -104,6 +110,11 @@ describe('Codex Connect global update reminder', () => {
         status: 'up-to-date',
         currentVersion: '0.1.0-alpha.4.14',
         latestVersion: '0.1.0-alpha.4.14',
+        compatibility: {
+          status: 'compatible',
+          latestPluginVersion: '0.1.0-alpha.4.14',
+          latestDshVersion: '0.1.1-rc.2',
+        },
       })
     })
     const browserStorage = storageFixture()
@@ -114,10 +125,60 @@ describe('Codex Connect global update reminder', () => {
     fireEvent.click(screen.getByRole('button', { name: en.checkForUpdates }))
 
     expect(await screen.findByText(en.upToDate.replace('{version}', '0.1.0-alpha.4.14'))).toBeTruthy()
+    expect(document.querySelector('[data-compatibility-status="compatible"]')).toBeTruthy()
     expect(screen.getByText(en.currentVersion.replace('{version}', '0.1.0-alpha.4.14'))).toBeTruthy()
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(zh.dismissUpdate).toBe('稍后提醒')
     expect(browserStorage.getItem(OPENAI_CODEX_UPDATE_CACHE_KEY)).toContain('up-to-date')
+    updater.dispose()
+  })
+
+  it('shows a red warning with a prefilled author reminder when no published plugin is verified', async () => {
+    const browserStorage = storageFixture()
+    vi.stubGlobal('localStorage', browserStorage)
+    vi.stubGlobal('fetch', vi.fn(async (): Promise<Response> => json({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'not-yet-compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.3',
+      },
+    })))
+    const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.15')
+    await act(async () => { await updater.refresh(true) })
+
+    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
+    expect(document.querySelector('[data-compatibility-status="not-yet-compatible"]')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain(en.compatibilityNotReadyBody)
+    const reminder = screen.getByRole('link', { name: en.compatibilityReport }) as HTMLAnchorElement
+    const issueUrl = new URL(reminder.href)
+    expect(issueUrl.origin + issueUrl.pathname).toBe(`${OPENAI_CODEX_REPOSITORY_URL}/issues/new`)
+    expect(issueUrl.searchParams.get('title')).toContain('DSH 0.1.1-rc.3')
+    expect(issueUrl.searchParams.get('body')).toContain('0.1.0-alpha.4.15')
+    updater.dispose()
+  })
+
+  it('shows gray instead of claiming compatibility when the public record is unavailable', async () => {
+    const browserStorage = storageFixture()
+    vi.stubGlobal('localStorage', browserStorage)
+    vi.stubGlobal('fetch', vi.fn(async (): Promise<Response> => json({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'unverified',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+      },
+    })))
+    const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.15')
+    await act(async () => { await updater.refresh(true) })
+
+    render(<OpenAICodexUpdateSettings updater={updater} t={t} />)
+    expect(document.querySelector('[data-compatibility-status="unverified"]')).toBeTruthy()
+    expect(screen.getByRole('region').textContent).toContain(en.compatibilityUnverifiedBody)
+    expect(screen.getByRole('region').textContent).not.toContain('Canary')
     updater.dispose()
   })
 

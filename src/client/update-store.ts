@@ -3,7 +3,7 @@
 import {
   parseOpenAICodexUpdateResult,
 } from '../update.ts'
-import type { OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
+import type { OpenAICodexDshCompatibilityAdvice, OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
 import { OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
 
 export const OPENAI_CODEX_REPOSITORY_URL = 'https://github.com/franksong2702/dsh-codex-connect'
@@ -21,7 +21,8 @@ export type OpenAICodexUpdateSnapshot = {
   releaseName?: string
   releaseNotes?: string
   publishedAt?: string
-  dismissedVersion?: string
+  compatibility?: OpenAICodexDshCompatibilityAdvice
+  dismissedNotice?: string
 }
 
 interface CachedUpdate {
@@ -37,12 +38,12 @@ function storage(): Storage | undefined {
   }
 }
 
-function resultSnapshot(result: OpenAICodexUpdateResult, dismissedVersion?: string): OpenAICodexUpdateSnapshot {
+function resultSnapshot(result: OpenAICodexUpdateResult, dismissedNotice?: string): OpenAICodexUpdateSnapshot {
   return {
     status: result.status,
     currentVersion: result.currentVersion,
     ...result.status === 'up-to-date' || result.status === 'update-available'
-      ? { latestVersion: result.latestVersion }
+      ? { latestVersion: result.latestVersion, compatibility: result.compatibility }
       : {},
     ...result.status === 'update-available' && result.versionsBehind !== undefined
       ? { versionsBehind: result.versionsBehind }
@@ -56,7 +57,7 @@ function resultSnapshot(result: OpenAICodexUpdateResult, dismissedVersion?: stri
           ...result.publishedAt === undefined ? {} : { publishedAt: result.publishedAt },
         }
       : {},
-    ...dismissedVersion === undefined ? {} : { dismissedVersion },
+    ...dismissedNotice === undefined ? {} : { dismissedNotice },
   }
 }
 
@@ -84,7 +85,7 @@ export class OpenAICodexUpdateStore {
     for (const listener of this.listeners) listener()
   }
 
-  private dismissedVersion(): string | undefined {
+  private dismissedNotice(): string | undefined {
     try {
       const value = storage()?.getItem(OPENAI_CODEX_UPDATE_DISMISSED_KEY)
       return value === null || value === '' ? undefined : value
@@ -120,13 +121,13 @@ export class OpenAICodexUpdateStore {
     if (!force) {
       const cached = this.readCached()
       if (cached !== undefined) {
-        this.setSnapshot(resultSnapshot(cached, this.dismissedVersion()))
+        this.setSnapshot(resultSnapshot(cached, this.dismissedNotice()))
         return
       }
     }
     const controller = new AbortController()
     this.request = controller
-    this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedVersion === undefined ? {} : { dismissedVersion: this.snapshot.dismissedVersion } })
+    this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedNotice === undefined ? {} : { dismissedNotice: this.snapshot.dismissedNotice } })
     try {
       const response = await fetch(OPENAI_CODEX_UPDATE_PATH, {
         method: 'GET',
@@ -142,7 +143,7 @@ export class OpenAICodexUpdateStore {
         reason: 'registry-unavailable' as const,
       }
       this.writeCached(safeResult)
-      this.setSnapshot(resultSnapshot(safeResult, this.dismissedVersion()))
+      this.setSnapshot(resultSnapshot(safeResult, this.dismissedNotice()))
     } catch {
       if (!controller.signal.aborted && !this.disposed) {
         const unavailable: OpenAICodexUpdateResult = {
@@ -151,20 +152,20 @@ export class OpenAICodexUpdateStore {
           reason: 'registry-unavailable',
         }
         this.writeCached(unavailable)
-        this.setSnapshot(resultSnapshot(unavailable, this.dismissedVersion()))
+        this.setSnapshot(resultSnapshot(unavailable, this.dismissedNotice()))
       }
     } finally {
       if (this.request === controller) this.request = undefined
     }
   }
 
-  dismiss(version: string): void {
+  dismiss(notice: string): void {
     try {
-      storage()?.setItem(OPENAI_CODEX_UPDATE_DISMISSED_KEY, version)
+      storage()?.setItem(OPENAI_CODEX_UPDATE_DISMISSED_KEY, notice)
     } catch {
       // Dismissal remains effective for this mounted store even if storage is blocked.
     }
-    this.setSnapshot({ ...this.snapshot, dismissedVersion: version })
+    this.setSnapshot({ ...this.snapshot, dismissedNotice: notice })
   }
 
   dispose(): void {

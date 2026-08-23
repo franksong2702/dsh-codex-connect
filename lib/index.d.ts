@@ -481,10 +481,17 @@ interface OpenAICodexUpdateHighlight {
   version: string;
   kind: OpenAICodexUpdateHighlightKind;
 }
+type OpenAICodexDshCompatibilityStatus = 'compatible' | 'plugin-update-required' | 'not-yet-compatible' | 'unverified';
+interface OpenAICodexDshCompatibilityAdvice {
+  status: OpenAICodexDshCompatibilityStatus;
+  latestPluginVersion: string;
+  latestDshVersion?: string;
+}
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';
   currentVersion: string;
   latestVersion: string;
+  compatibility: OpenAICodexDshCompatibilityAdvice;
 } | {
   status: 'update-available';
   currentVersion: string;
@@ -495,6 +502,7 @@ type OpenAICodexUpdateResult = {
   releaseName?: string;
   releaseNotes?: string;
   publishedAt?: string;
+  compatibility: OpenAICodexDshCompatibilityAdvice;
 } | {
   status: 'unavailable';
   currentVersion: string;

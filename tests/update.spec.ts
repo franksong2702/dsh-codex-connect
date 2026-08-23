@@ -5,6 +5,7 @@ import {
   OPENAI_CODEX_NPM_METADATA_URL,
   OPENAI_CODEX_RELEASE_API_BASE,
   OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
+  OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL,
   parseOpenAICodexUpdateHighlights,
   parseOpenAICodexUpdateResult,
   parseOpenAICodexVersion,
@@ -15,6 +16,16 @@ function json(value: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' },
   })
+}
+
+const verifiedCompatibility = {
+  schemaVersion: 1,
+  checkedAt: '2026-08-23',
+  latestDshVersion: '0.1.1-rc.2',
+  pluginVersions: [
+    { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.1-rc.2'] },
+    { version: '0.1.0-alpha.4.16', verifiedDshVersions: ['0.1.1-rc.2'] },
+  ],
 }
 
 describe('Codex Connect update metadata', () => {
@@ -32,6 +43,7 @@ describe('Codex Connect update metadata', () => {
         return json({ latest: '0.1.0-alpha.4.15', alpha: '0.1.0-alpha.4.16', experimental: '9.9.9' })
       }
       if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) return json({ schemaVersion: 1, releases: [] })
+      if (url === OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL) return json(verifiedCompatibility)
       expect(url).toBe(`${OPENAI_CODEX_RELEASE_API_BASE}0.1.0-alpha.4.16`)
       return json({
         name: 'Alpha 4.16 — update notes',
@@ -47,11 +59,16 @@ describe('Codex Connect update metadata', () => {
       latestVersion: '0.1.0-alpha.4.16',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.16',
       highlights: [],
+      compatibility: {
+        status: 'compatible',
+        latestPluginVersion: '0.1.0-alpha.4.16',
+        latestDshVersion: '0.1.1-rc.2',
+      },
       releaseName: 'Alpha 4.16 — update notes',
       releaseNotes: '<not-rendered-as-markdown>\n- Global update reminder',
       publishedAt: '2026-08-21T12:00:00Z',
     })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
   it('selects user-facing highlights across every published version in the installed-to-latest range', async () => {
@@ -120,13 +137,20 @@ describe('Codex Connect update metadata', () => {
   })
 
   it('reports up-to-date without contacting GitHub when tags are not newer', async () => {
-    const fetchMock = vi.fn(async (): Promise<Response> => json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.13' }))
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
+      ? json({ latest: '0.1.0-alpha.4.14', alpha: '0.1.0-alpha.4.13' })
+      : json(verifiedCompatibility))
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: fetchMock })).resolves.toEqual({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
       latestVersion: '0.1.0-alpha.4.14',
+      compatibility: {
+        status: 'compatible',
+        latestPluginVersion: '0.1.0-alpha.4.14',
+        latestDshVersion: '0.1.1-rc.2',
+      },
     })
-    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('fails closed for network errors, malformed tags, and oversized bodies', async () => {
@@ -160,11 +184,19 @@ describe('Codex Connect update metadata', () => {
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
       latestVersion: '0.1.0-alpha.4.14',
+      compatibility: {
+        status: 'unverified',
+        latestPluginVersion: '0.1.0-alpha.4.14',
+      },
       credential: 'must not pass through',
     })).toEqual({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
       latestVersion: '0.1.0-alpha.4.14',
+      compatibility: {
+        status: 'unverified',
+        latestPluginVersion: '0.1.0-alpha.4.14',
+      },
     })
   })
 })

@@ -41,6 +41,15 @@ Leave documentation-only and internal maintenance releases out of the list.
 The update notice filters this catalog for each user's installed-to-latest
 version range; it does not show the whole catalog to every user.
 
+## Verified compatibility record
+
+Update `verified-compatibility.json` only after an exact plugin and DSH version
+combination has passed the project compatibility checks. Set
+`latestDshVersion` to the newest DSH release the project is reporting to users,
+then add that exact version under each plugin release that was verified. Do not
+replace the explicit lists with a minimum-version assumption. Updating this
+record does not require a plugin release.
+
 ## Pull requests
 
 Describe the problem, scope, validation command and result, evidence path, and

@@ -32,7 +32,11 @@ To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-c
 
 ### Version updates
 
-Codex Connect checks the public package metadata periodically through the DSH Web server. When a newer version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes are available as a secondary detail, or from the release page. The plugin never runs an upgrade command by itself.
+Codex Connect checks public package metadata and this repository's `verified-compatibility.json` periodically through the DSH Web server. The same card shows the installed and latest plugin versions, the latest DSH version recorded by this project, and whether that exact combination has been verified. It does not read the running DSH version and does not require a DSH Core change.
+
+The compatibility record lists exact plugin and DSH versions rather than assuming every later release remains compatible. Maintainers can add a newly verified DSH version to the repository file without publishing another plugin release. A green result means the installed plugin was verified; yellow means the latest plugin was verified and should be installed first; red means neither the installed plugin nor the latest published plugin has been verified yet; gray means the record could not be checked. A red result includes a prefilled GitHub issue link so users can remind the maintainer without composing a report from scratch.
+
+When a newer plugin version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes are available as a secondary detail, or from the release page. The plugin never runs an upgrade command by itself.
 
 The notice first summarizes the user-facing changes between your installed version and the newest version. Technical release notes remain available as a secondary detail. To update, copy the short request shown in the notice to the Agent you use for this DSH project. The Agent can inspect the project instructions and choose the appropriate install or update method; the plugin does not execute anything on your behalf.
 

@@ -10,6 +10,7 @@ import {
   OPENAI_CODEX_NPM_METADATA_URL,
   OPENAI_CODEX_RELEASE_API_BASE,
   OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
+  OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL,
 } from '../src/update.ts'
 
 interface CapturedRoute {
@@ -70,6 +71,12 @@ describe('Codex Connect update route', () => {
     const fetchMock = vi.fn(async (url: string): Promise<Response> => {
       if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ alpha: '0.1.0-alpha.4.15' })
       if (url === OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL) return json({ schemaVersion: 1, releases: [] })
+      if (url === OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL) return json({
+        schemaVersion: 1,
+        checkedAt: '2026-08-23',
+        latestDshVersion: '0.1.1-rc.2',
+        pluginVersions: [{ version: '0.1.0-alpha.4.15', verifiedDshVersions: ['0.1.1-rc.2'] }],
+      })
       return json({ body: 'Global update reminder', name: 'Alpha 4.15', published_at: '2026-08-21T12:00:00Z' })
     })
     const route = capture(fetchMock)
@@ -83,6 +90,11 @@ describe('Codex Connect update route', () => {
       latestVersion: '0.1.0-alpha.4.15',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
       highlights: [],
+      compatibility: {
+        status: 'plugin-update-required',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.2',
+      },
       releaseName: 'Alpha 4.15',
       releaseNotes: 'Global update reminder',
       publishedAt: '2026-08-21T12:00:00Z',

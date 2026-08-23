@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { OpenAICodexUpdateHighlightKind } from '../update.ts'
+import type { OpenAICodexDshCompatibilityStatus, OpenAICodexUpdateHighlightKind } from '../update.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OPENAI_CODEX_REPOSITORY_URL, OpenAICodexUpdateStore } from './update-store.ts'
 
@@ -55,6 +55,7 @@ const promptTextStyle: CSSProperties = { flex: '1 1 auto', minWidth: 0, margin: 
 const notesListStyle: CSSProperties = { margin: '4px 0', paddingLeft: 18 }
 const notesHeadingStyle: CSSProperties = { margin: '0 0 4px', fontSize: 12, lineHeight: '19px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }
 const highlightsStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 7, margin: 0, padding: '9px 10px', borderRadius: 7, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04))' }
+const compatibilityStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5, margin: 0, padding: '9px 10px', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04))' }
 const statusStyle: CSSProperties = { margin: 0, padding: '7px 9px', borderRadius: 7, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04))', color: 'var(--dsw-alias-label-secondary)', fontSize: 12, lineHeight: '19px' }
 
 const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsKey> = {
@@ -65,6 +66,35 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'search-stability': 'updateHighlightSearchStability',
   'image-generation': 'updateHighlightImageGeneration',
   'oauth-history': 'updateHighlightOauthHistory',
+}
+
+const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
+  compatible: 'compatibilityCompatibleTitle',
+  'plugin-update-required': 'compatibilityPluginUpdateTitle',
+  'not-yet-compatible': 'compatibilityNotReadyTitle',
+  unverified: 'compatibilityUnverifiedTitle',
+}
+
+const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
+  compatible: 'compatibilityCompatibleBody',
+  'plugin-update-required': 'compatibilityPluginUpdateBody',
+  'not-yet-compatible': 'compatibilityNotReadyBody',
+  unverified: 'compatibilityUnverifiedBody',
+}
+
+const compatibilityIcons: Record<OpenAICodexDshCompatibilityStatus, string> = {
+  compatible: '🟢',
+  'plugin-update-required': '🟡',
+  'not-yet-compatible': '🔴',
+  unverified: '⚪',
+}
+
+function compatibilityIssueUrl(currentVersion: string, latestPluginVersion: string, latestDshVersion: string): string {
+  const params = new URLSearchParams({
+    title: `Verify Codex Connect compatibility with DSH ${latestDshVersion}`,
+    body: `The compatibility card reports that Codex Connect ${currentVersion} is not verified with DSH ${latestDshVersion}. The latest published plugin version shown is ${latestPluginVersion}. Please verify or update the public compatibility record.`,
+  })
+  return `${OPENAI_CODEX_REPOSITORY_URL}/issues/new?${params.toString()}`
 }
 
 async function copyAgentPrompt(prompt: string): Promise<boolean> {
@@ -168,7 +198,12 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
   const [copyFailed, setCopyFailed] = useState(false)
   const [recheckRequested, setRecheckRequested] = useState(false)
 
-  if (overlay && (snapshot.status !== 'update-available' || latestVersion === undefined || snapshot.dismissedVersion === latestVersion)) return null
+  const compatibility = snapshot.compatibility
+  const compatibilityWarning = compatibility?.status === 'plugin-update-required' || compatibility?.status === 'not-yet-compatible'
+  const noticeKey = latestVersion === undefined
+    ? undefined
+    : `${latestVersion}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}`
+  if (overlay && ((!compatibilityWarning && snapshot.status !== 'update-available') || noticeKey === undefined || snapshot.dismissedNotice === noticeKey)) return null
   const available = snapshot.status === 'update-available'
   const technicalDetails = available && technicalDetailsOpen
   const highlights = snapshot.highlights ?? []
@@ -183,13 +218,31 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
   return (
     <div style={overlay ? { ...panelStyle, ...overlayStyle } : panelStyle} role={overlay ? 'status' : 'region'} aria-label={t('updateHeading')}>
       <div style={rowStyle}>
-        <strong style={titleStyle}>{available ? t('newVersionAvailable', { version: snapshot.latestVersion }) : t('updateHeading')}</strong>
-        {overlay && available ? (
-          <button type="button" style={buttonStyle} aria-label={t('dismissUpdate')} onClick={() => { if (latestVersion !== undefined) updater.dismiss(latestVersion) }}>
+        <strong style={titleStyle}>{compatibilityWarning
+          ? t('updateHeading')
+          : available ? t('newVersionAvailable', { version: snapshot.latestVersion }) : t('updateHeading')}</strong>
+        {overlay ? (
+          <button type="button" style={buttonStyle} aria-label={t('dismissUpdate')} onClick={() => { if (noticeKey !== undefined) updater.dismiss(noticeKey) }}>
             {t('dismissUpdate')}
           </button>
         ) : null}
       </div>
+      {compatibility === undefined ? null : (
+        <div style={compatibilityStyle} data-compatibility-status={compatibility.status}>
+          <strong style={titleStyle}>{compatibilityIcons[compatibility.status]} {t(compatibilityTitleKeys[compatibility.status])}</strong>
+          {compatibility.latestDshVersion === undefined
+            ? null
+            : <p style={bodyStyle}>{t('compatibilityLatestDsh', { version: compatibility.latestDshVersion })}</p>}
+          <p style={bodyStyle}>{t('compatibilityCurrentPlugin', { version: snapshot.currentVersion })}</p>
+          <p style={bodyStyle}>{t('compatibilityLatestPlugin', { version: compatibility.latestPluginVersion })}</p>
+          <p style={bodyStyle}>{t(compatibilityBodyKeys[compatibility.status])}</p>
+          {compatibility.status === 'not-yet-compatible' && compatibility.latestDshVersion !== undefined ? (
+            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, compatibility.latestDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+              {t('compatibilityReport')}
+            </a>
+          ) : null}
+        </div>
+      )}
       {snapshot.status === 'idle' || snapshot.status === 'checking'
         ? <p style={bodyStyle}>{t('checkingForUpdates')}</p>
         : snapshot.status === 'up-to-date'
