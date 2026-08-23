@@ -19,7 +19,10 @@ const catalog = {
 describe('Codex Connect verified DSH compatibility', () => {
   it('keeps the committed public catalog valid', async () => {
     const contents = await readFile(new URL('../verified-compatibility.json', import.meta.url), 'utf8')
-    expect(parseOpenAICodexVerifiedCompatibility(JSON.parse(contents) as unknown)).toBeDefined()
+    expect(parseOpenAICodexVerifiedCompatibility(JSON.parse(contents) as unknown)).toMatchObject({
+      latestDshVersion: '0.1.1-rc.2',
+      pluginVersions: catalog.pluginVersions,
+    })
   })
 
   it('parses exact plugin-to-DSH verification records', () => {
@@ -35,13 +38,13 @@ describe('Codex Connect verified DSH compatibility', () => {
     })).toBeUndefined()
   })
 
-  it('returns green only for the exact installed plugin and latest DSH pair', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.15', '0.1.0-alpha.4.15', catalog)).toEqual({
+  it('returns green for exact current plugin and DSH pairs, including a historical DSH release', () => {
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.16', '0.1.0-rc.7', catalog)).toEqual({
       status: 'compatible',
-      latestPluginVersion: '0.1.0-alpha.4.15',
+      latestPluginVersion: '0.1.0-alpha.4.16',
       latestDshVersion: '0.1.1-rc.2',
     })
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', '0.1.1-rc.2', catalog)).toEqual({
       status: 'compatible',
       latestPluginVersion: '0.1.0-alpha.4.16',
       latestDshVersion: '0.1.1-rc.2',
@@ -49,20 +52,41 @@ describe('Codex Connect verified DSH compatibility', () => {
   })
 
   it('returns yellow when only the latest plugin has been verified', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.15', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.15', '0.1.1-rc.2', catalog)).toEqual({
       status: 'plugin-update-required',
       latestPluginVersion: '0.1.0-alpha.4.15',
       latestDshVersion: '0.1.1-rc.2',
     })
   })
 
-  it('returns red when no published plugin is verified and gray when the record is unavailable', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.14', '0.1.0-alpha.4.17', catalog)).toEqual({
+  it('returns red only for a known DSH version with no current or latest plugin match', () => {
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.13', '0.1.0-alpha.4.17', '0.1.0-rc.7', catalog)).toEqual({
       status: 'not-yet-compatible',
       latestPluginVersion: '0.1.0-alpha.4.17',
       latestDshVersion: '0.1.1-rc.2',
     })
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.15', '0.1.0-alpha.4.15')).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.17', '0.1.1-rc.2', {
+      ...catalog,
+      pluginVersions: [],
+    })).toEqual({
+      status: 'not-yet-compatible',
+      latestPluginVersion: '0.1.0-alpha.4.17',
+      latestDshVersion: '0.1.1-rc.2',
+    })
+  })
+
+  it('returns gray for an unknown DSH version, missing local detection, or an unavailable catalog', () => {
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', '0.1.1-rc.3', catalog)).toEqual({
+      status: 'unverified',
+      latestPluginVersion: '0.1.0-alpha.4.16',
+      latestDshVersion: '0.1.1-rc.2',
+    })
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.16', undefined, catalog)).toEqual({
+      status: 'unverified',
+      latestPluginVersion: '0.1.0-alpha.4.16',
+      latestDshVersion: '0.1.1-rc.2',
+    })
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.15', '0.1.0-alpha.4.15', '0.1.1-rc.2')).toEqual({
       status: 'unverified',
       latestPluginVersion: '0.1.0-alpha.4.15',
     })

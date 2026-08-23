@@ -519,6 +519,7 @@ interface ParsedVersion {
 }
 interface UpdateCheckOptions {
   currentVersion: string;
+  currentDshVersion?: string;
   fetchImpl?: FetchImpl;
   timeoutMs?: number;
 }

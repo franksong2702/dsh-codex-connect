@@ -42,6 +42,10 @@
       "highlights": ["oauth-history"]
     },
     {
+      "version": "0.1.0-alpha.4.15",
+      "highlights": ["runtime-compatibility"]
+    },
+    {
       "version": "0.1.0-alpha.4.16",
       "highlights": ["runtime-compatibility", "image-generation"]
     }

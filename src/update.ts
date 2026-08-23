@@ -133,6 +133,7 @@ interface ParsedVersion {
 
 interface UpdateCheckOptions {
   currentVersion: string
+  currentDshVersion?: string
   fetchImpl?: FetchImpl
   timeoutMs?: number
 }
@@ -233,11 +234,15 @@ export function parseOpenAICodexVerifiedCompatibility(value: unknown): OpenAICod
 export function evaluateOpenAICodexDshCompatibility(
   currentVersion: string,
   latestPluginVersion: string,
+  currentDshVersion?: string,
   catalog?: OpenAICodexVerifiedCompatibilityCatalog,
 ): OpenAICodexDshCompatibilityAdvice {
   if (catalog === undefined) return { status: 'unverified', latestPluginVersion }
+  if (currentDshVersion === undefined) {
+    return { status: 'unverified', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
+  }
   const verified = (version: string): boolean => catalog.pluginVersions.some(plugin => (
-    plugin.version === version && plugin.verifiedDshVersions.includes(catalog.latestDshVersion)
+    plugin.version === version && plugin.verifiedDshVersions.includes(currentDshVersion)
   ))
   if (verified(currentVersion)) {
     return { status: 'compatible', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
@@ -245,7 +250,13 @@ export function evaluateOpenAICodexDshCompatibility(
   if (latestPluginVersion !== currentVersion && verified(latestPluginVersion)) {
     return { status: 'plugin-update-required', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
   }
-  return { status: 'not-yet-compatible', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
+  const dshVersionIsKnown = currentDshVersion === catalog.latestDshVersion
+    || catalog.pluginVersions.some(plugin => plugin.verifiedDshVersions.includes(currentDshVersion))
+  return {
+    status: dshVersionIsKnown ? 'not-yet-compatible' : 'unverified',
+    latestPluginVersion,
+    latestDshVersion: catalog.latestDshVersion,
+  }
 }
 
 function boundedText(value: string, maxBytes: number): string {
@@ -395,6 +406,7 @@ async function releaseDetails(
 async function dshCompatibilityAdvice(
   currentVersion: string,
   latestPluginVersion: string,
+  currentDshVersion: string | undefined,
   fetchImpl: FetchImpl,
   timeoutMs: number,
 ): Promise<OpenAICodexDshCompatibilityAdvice> {
@@ -406,22 +418,24 @@ async function dshCompatibilityAdvice(
       timeoutMs,
       { accept: 'application/json' },
     )
-    if (!response.ok) return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion)
+    if (!response.ok) return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion)
     return evaluateOpenAICodexDshCompatibility(
       currentVersion,
       latestPluginVersion,
+      currentDshVersion,
       parseOpenAICodexVerifiedCompatibility(JSON.parse(text) as unknown),
     )
   } catch {
-    return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion)
+    return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion)
   }
 }
 
 /** Check npm's public dist-tags and enrich an available update with public release notes. */
 export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Promise<OpenAICodexUpdateResult> {
-  const { currentVersion } = options
+  const { currentVersion, currentDshVersion } = options
+  const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
   if (parseOpenAICodexVersion(currentVersion) === undefined) {
-    return { status: 'unavailable', currentVersion, reason: 'invalid-current-version' }
+    return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'invalid-current-version' }
   }
   const fetchImpl = options.fetchImpl ?? fetch
   const timeoutMs = options.timeoutMs ?? OPENAI_CODEX_UPDATE_TIMEOUT_MS
@@ -434,30 +448,32 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
       timeoutMs,
       { accept: 'application/json' },
     )
-    if (!response.ok) return { status: 'unavailable', currentVersion, reason: 'registry-unavailable' }
+    if (!response.ok) return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'registry-unavailable' }
     metadata = JSON.parse(text) as unknown
   } catch (error: unknown) {
     return {
       status: 'unavailable',
       currentVersion,
+      ...currentDsh,
       reason: error instanceof SyntaxError || error instanceof RangeError ? 'invalid-registry-response' : 'registry-unavailable',
     }
   }
   const candidates = registryCandidates(metadata)
-  if (candidates.length === 0) return { status: 'unavailable', currentVersion, reason: 'invalid-registry-response' }
+  if (candidates.length === 0) return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'invalid-registry-response' }
   const latestVersion = candidates.reduce((best, candidate) => compareOpenAICodexVersions(candidate, best) > 0 ? candidate : best)
   if (compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) {
-    const compatibility = await dshCompatibilityAdvice(currentVersion, currentVersion, fetchImpl, timeoutMs)
-    return { status: 'up-to-date', currentVersion, latestVersion: currentVersion, compatibility }
+    const compatibility = await dshCompatibilityAdvice(currentVersion, currentVersion, currentDshVersion, fetchImpl, timeoutMs)
+    return { status: 'up-to-date', currentVersion, ...currentDsh, latestVersion: currentVersion, compatibility }
   }
   const [highlightResult, details, compatibility] = await Promise.all([
     releaseHighlights(currentVersion, latestVersion, fetchImpl, timeoutMs),
     releaseDetails(latestVersion, fetchImpl, timeoutMs),
-    dshCompatibilityAdvice(currentVersion, latestVersion, fetchImpl, timeoutMs),
+    dshCompatibilityAdvice(currentVersion, latestVersion, currentDshVersion, fetchImpl, timeoutMs),
   ])
   return {
     status: 'update-available',
     currentVersion,
+    ...currentDsh,
     latestVersion,
     releaseUrl: releaseUrl(latestVersion),
     highlights: highlightResult.highlights,
@@ -491,6 +507,7 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   if (typeof latestVersion !== 'string' || parseOpenAICodexVersion(latestVersion) === undefined) return undefined
   const compatibility = parseOpenAICodexDshCompatibilityAdvice(record['compatibility'], latestVersion)
   if (compatibility === undefined) return undefined
+  if (currentDshVersion === undefined && compatibility.status !== 'unverified') return undefined
   if (record['status'] === 'up-to-date') {
     return { status: 'up-to-date', currentVersion, ...currentDsh, latestVersion, compatibility }
   }
@@ -550,7 +567,9 @@ function parseOpenAICodexDshCompatibilityAdvice(
   if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
   const latestDshVersion = record['latestDshVersion']
   if (status === 'unverified') {
-    return latestDshVersion === undefined ? { status, latestPluginVersion } : undefined
+    if (latestDshVersion === undefined) return { status, latestPluginVersion }
+    if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
+    return { status, latestPluginVersion, latestDshVersion }
   }
   if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
   return { status, latestPluginVersion, latestDshVersion }

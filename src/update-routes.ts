@@ -76,6 +76,7 @@ export function registerOpenAICodexUpdateRoutes(
         try {
           result = await checkForOpenAICodexUpdate({
             currentVersion: options.currentVersion,
+            ...currentDshVersion === undefined ? {} : { currentDshVersion },
             ...options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl },
             timeoutMs: options.timeoutMs ?? OPENAI_CODEX_UPDATE_TIMEOUT_MS,
           })
@@ -83,13 +84,11 @@ export function registerOpenAICodexUpdateRoutes(
           result = {
             status: 'unavailable',
             currentVersion: options.currentVersion,
+            ...currentDshVersion === undefined ? {} : { currentDshVersion },
             reason: 'registry-unavailable',
           }
         }
-        return json(res, 200, {
-          ...result,
-          ...currentDshVersion === undefined ? {} : { currentDshVersion },
-        })
+        return json(res, 200, result)
       },
     })
     return () => {

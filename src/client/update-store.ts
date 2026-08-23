@@ -112,8 +112,7 @@ export class OpenAICodexUpdateStore {
   private writeCached(result: OpenAICodexUpdateResult): void {
     if (result.status === 'unavailable') return
     try {
-      const { currentDshVersion: _runtimeVersion, ...remoteResult } = result
-      storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result: remoteResult }))
+      storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result }))
     } catch {
       // A blocked or full browser storage should not disable the reminder.
     }
@@ -124,6 +123,7 @@ export class OpenAICodexUpdateStore {
     if (this.disposed || this.request !== undefined) return
     const controller = new AbortController()
     this.request = controller
+    let currentDshVersion: string | undefined
     this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedNotice === undefined ? {} : { dismissedNotice: this.snapshot.dismissedNotice } })
     try {
       const runtimeResponse = await fetch(OPENAI_CODEX_RUNTIME_PATH, {
@@ -137,7 +137,7 @@ export class OpenAICodexUpdateStore {
         ? runtimeValue as Record<string, unknown>
         : undefined
       const rawCurrentDshVersion = runtimeRecord?.['currentDshVersion']
-      const currentDshVersion = runtimeResponse.ok
+      currentDshVersion = runtimeResponse.ok
         && typeof rawCurrentDshVersion === 'string'
         && parseOpenAICodexVersion(rawCurrentDshVersion) !== undefined
         ? rawCurrentDshVersion
@@ -145,8 +145,10 @@ export class OpenAICodexUpdateStore {
       const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
       if (!force) {
         const cached = this.readCached()
-        if (cached !== undefined) {
-          this.setSnapshot(resultSnapshot({ ...cached, ...currentDsh }, this.dismissedNotice()))
+        if (cached !== undefined
+          && cached.currentVersion === this.currentVersion
+          && cached.currentDshVersion === currentDshVersion) {
+          this.setSnapshot(resultSnapshot(cached, this.dismissedNotice()))
           return
         }
       }
@@ -161,15 +163,17 @@ export class OpenAICodexUpdateStore {
       const safeResult = result ?? {
         status: 'unavailable' as const,
         currentVersion: this.currentVersion,
+        ...currentDsh,
         reason: 'registry-unavailable' as const,
       }
       this.writeCached(safeResult)
-      this.setSnapshot(resultSnapshot({ ...safeResult, ...currentDsh }, this.dismissedNotice()))
+      this.setSnapshot(resultSnapshot(safeResult, this.dismissedNotice()))
     } catch {
       if (!controller.signal.aborted && !this.disposed) {
         const unavailable: OpenAICodexUpdateResult = {
           status: 'unavailable',
           currentVersion: this.currentVersion,
+          ...currentDshVersion === undefined ? {} : { currentDshVersion },
           reason: 'registry-unavailable',
         }
         this.writeCached(unavailable)

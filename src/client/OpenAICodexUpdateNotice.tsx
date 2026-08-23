@@ -108,10 +108,10 @@ function pluginVersionSummary(current: string, latest: string | undefined, t: Op
     : t('compatibilityPluginDifferent', { current, latest })
 }
 
-function compatibilityIssueUrl(currentVersion: string, latestPluginVersion: string, latestDshVersion: string): string {
+function compatibilityIssueUrl(currentVersion: string, latestPluginVersion: string, currentDshVersion: string): string {
   const params = new URLSearchParams({
-    title: `Verify Codex Connect compatibility with DSH ${latestDshVersion}`,
-    body: `The compatibility card reports that Codex Connect ${currentVersion} is not verified with DSH ${latestDshVersion}. The latest published plugin version shown is ${latestPluginVersion}. Please verify or update the public compatibility record.`,
+    title: `Verify Codex Connect compatibility with DSH ${currentDshVersion}`,
+    body: `The compatibility card reports that Codex Connect ${currentVersion} is not verified with DSH ${currentDshVersion}. The latest published plugin version shown is ${latestPluginVersion}. Please verify or update the public compatibility record.`,
   })
   return `${OPENAI_CODEX_REPOSITORY_URL}/issues/new?${params.toString()}`
 }
@@ -218,30 +218,25 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
   const [recheckRequested, setRecheckRequested] = useState(false)
 
   const compatibility = snapshot.compatibility
-  let displayedCompatibilityStatus = compatibility?.status
   let compatibilityTitleKey = compatibility === undefined ? undefined : compatibilityTitleKeys[compatibility.status]
   let compatibilityBodyKey = compatibility === undefined ? undefined : compatibilityBodyKeys[compatibility.status]
   if (compatibility?.status === 'compatible') {
-    if (snapshot.currentDshVersion === undefined || compatibility.latestDshVersion === undefined) {
-      displayedCompatibilityStatus = 'unverified'
-      compatibilityTitleKey = 'compatibilityCurrentDshUnknownTitle'
-      compatibilityBodyKey = 'compatibilityCurrentDshUnknownBody'
-    } else {
-      const comparison = compareOpenAICodexVersions(snapshot.currentDshVersion, compatibility.latestDshVersion)
-      if (comparison === 0) {
-        compatibilityTitleKey = 'compatibilityCurrentTitle'
-        compatibilityBodyKey = 'compatibilityCurrentBody'
-      } else if (comparison > 0) {
-        displayedCompatibilityStatus = 'unverified'
-        compatibilityTitleKey = 'compatibilityCurrentDshNewerTitle'
-        compatibilityBodyKey = 'compatibilityCurrentDshNewerBody'
-      }
-    }
+    compatibilityTitleKey = 'compatibilityCurrentTitle'
+    compatibilityBodyKey = 'compatibilityCurrentBody'
+  } else if (compatibility?.status === 'unverified' && snapshot.currentDshVersion === undefined) {
+    compatibilityTitleKey = 'compatibilityCurrentDshUnknownTitle'
+    compatibilityBodyKey = 'compatibilityCurrentDshUnknownBody'
+  } else if (compatibility?.status === 'unverified'
+    && compatibility.latestDshVersion !== undefined
+    && snapshot.currentDshVersion !== undefined
+    && compareOpenAICodexVersions(snapshot.currentDshVersion, compatibility.latestDshVersion) > 0) {
+    compatibilityTitleKey = 'compatibilityCurrentDshNewerTitle'
+    compatibilityBodyKey = 'compatibilityCurrentDshNewerBody'
   }
   const compatibilityWarning = compatibility?.status === 'plugin-update-required' || compatibility?.status === 'not-yet-compatible'
   const noticeKey = latestVersion === undefined
     ? undefined
-    : `${latestVersion}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}`
+    : `${snapshot.currentVersion}:${latestVersion}:${snapshot.currentDshVersion ?? 'unknown'}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}`
   if (overlay && ((!compatibilityWarning && snapshot.status !== 'update-available') || noticeKey === undefined || snapshot.dismissedNotice === noticeKey)) return null
   const available = snapshot.status === 'update-available'
   const technicalDetails = available && technicalDetailsOpen
@@ -267,13 +262,13 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
         ) : null}
       </div>
       {compatibility === undefined ? null : (
-        <div style={compatibilityStyle} data-compatibility-status={displayedCompatibilityStatus}>
-          <strong style={titleStyle}>{compatibilityIcons[displayedCompatibilityStatus ?? compatibility.status]} {t(compatibilityTitleKey ?? compatibilityTitleKeys[compatibility.status])}</strong>
+        <div style={compatibilityStyle} data-compatibility-status={compatibility.status}>
+          <strong style={titleStyle}>{compatibilityIcons[compatibility.status]} {t(compatibilityTitleKey ?? compatibilityTitleKeys[compatibility.status])}</strong>
           <p style={bodyStyle}>{dshVersionSummary(snapshot.currentDshVersion, compatibility.latestDshVersion, t)}</p>
           <p style={bodyStyle}>{pluginVersionSummary(snapshot.currentVersion, compatibility.latestPluginVersion, t)}</p>
           <p style={bodyStyle}>{t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
-          {compatibility.status === 'not-yet-compatible' && compatibility.latestDshVersion !== undefined ? (
-            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, compatibility.latestDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+          {compatibility.status === 'not-yet-compatible' && snapshot.currentDshVersion !== undefined ? (
+            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
               {t('compatibilityReport')}
             </a>
           ) : null}
