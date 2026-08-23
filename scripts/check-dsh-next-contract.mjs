@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { runBoundedCommand } from './bounded-command.mjs'
+import { resolveCommandInvocation, runBoundedCommand } from './bounded-command.mjs'
 
 import {
   classifyCandidateCheckStatus,
@@ -212,25 +212,64 @@ assertContract(
     && infrastructureFixture.report.classification === 'infrastructure',
 )
 
+const windowsInvocation = resolveCommandInvocation('C:\\tools\\check.cmd', ['argument with spaces'], 'win32')
+assertContract(
+  'Windows command scripts are invoked through cmd.exe with arguments retained',
+  /cmd\.exe$/iu.test(windowsInvocation.command)
+    && windowsInvocation.args.join('\0') === ['/d', '/s', '/c', 'C:\\tools\\check.cmd', 'argument with spaces'].join('\0'),
+)
+
+if (process.platform === 'win32') {
+  const commandRoot = await mkdtemp(join(tmpdir(), 'dsh-command-contract-'))
+  try {
+    const commandDirectory = join(commandRoot, 'command & space')
+    const commandScript = join(commandDirectory, 'fixture.cmd')
+    await mkdir(commandDirectory)
+    await writeFile(commandScript, [
+      '@echo off',
+      'if not "%~1"=="space & metachar" exit /b 9',
+      'echo cmd-script-ok',
+    ].join('\r\n'), 'utf8')
+    const commandResult = await runBoundedCommand(
+      commandScript,
+      ['space & metachar'],
+      { timeoutMs: 10_000 },
+    )
+    assertContract(
+      'Windows command scripts execute with path and argument metacharacters preserved',
+      commandResult.status === 0 && commandResult.stdout.includes('cmd-script-ok'),
+    )
+  } finally {
+    await rm(commandRoot, { recursive: true, force: true })
+  }
+}
+
 const processTreeRoot = await mkdtemp(join(tmpdir(), 'dsh-process-tree-contract-'))
 try {
+  const readyMarker = join(processTreeRoot, 'descendant-ready')
   const marker = join(processTreeRoot, 'descendant-survived')
   const descendant = [
     "import { writeFileSync } from 'node:fs'",
-    `setTimeout(() => writeFileSync(${JSON.stringify(marker)}, 'survived'), 700)`,
-    'setTimeout(() => {}, 5_000)',
+    `writeFileSync(${JSON.stringify(readyMarker)}, 'ready')`,
+    `setTimeout(() => writeFileSync(${JSON.stringify(marker)}, 'survived'), 4_500)`,
+    'setTimeout(() => {}, 30_000)',
   ].join('\n')
   const parent = [
     "import { spawn } from 'node:child_process'",
     `spawn(process.execPath, ['--input-type=module', '-e', ${JSON.stringify(descendant)}], { stdio: 'ignore' })`,
-    'setTimeout(() => {}, 5_000)',
+    'setTimeout(() => {}, 30_000)',
   ].join('\n')
   const timedOut = await runBoundedCommand(
     process.execPath,
     ['--input-type=module', '-e', parent],
-    { timeoutMs: 150 },
+    { timeoutMs: 3_000 },
   )
-  await new Promise(resolveDelay => setTimeout(resolveDelay, 900))
+  await new Promise(resolveDelay => setTimeout(resolveDelay, 2_000))
+  let descendantReady = false
+  try {
+    await access(readyMarker)
+    descendantReady = true
+  } catch {}
   let descendantSurvived = true
   try {
     await access(marker)
@@ -241,6 +280,7 @@ try {
     'timeout terminates the descendant process tree before retry',
     timedOut.error?.code === 'ETIMEDOUT'
       && timedOut.cleanupError === undefined
+      && descendantReady
       && !descendantSurvived,
   )
 } finally {

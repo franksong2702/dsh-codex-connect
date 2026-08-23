@@ -4,11 +4,13 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/upstream-dsh-canary.yml', import.meta.url))
+const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
 const packagePath = fileURLToPath(new URL('../package.json', import.meta.url))
 const installCheckPath = fileURLToPath(new URL('./check-dsh-install.mjs', import.meta.url))
 const nextCheckPath = fileURLToPath(new URL('./check-dsh-next.mjs', import.meta.url))
 const canaryEnvironmentPath = fileURLToPath(new URL('./canary-environment.mjs', import.meta.url))
 const workflow = readFileSync(workflowPath, 'utf8')
+const ciWorkflow = readFileSync(ciWorkflowPath, 'utf8')
 const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'))
 const installCheck = readFileSync(installCheckPath, 'utf8')
 const nextCheck = readFileSync(nextCheckPath, 'utf8')
@@ -75,6 +77,10 @@ assertContract(
 )
 assertContract('package exposes the workflow contract check', packageJson.scripts?.['check:canary-workflow'] === 'node scripts/check-canary-workflow.mjs && node scripts/check-dsh-next-contract.mjs')
 assertContract('full check includes the canary workflow contract', /(?:^|&&)\s*pnpm run check:canary-workflow(?:\s|$)/.test(packageJson.scripts?.check ?? ''))
+assertContract(
+  'CI executes Windows command-script and process-tree contracts',
+  /^  windows-canary-contract:\s*$[\s\S]*?runs-on:\s*windows-latest[\s\S]*?node scripts\/check-dsh-next-contract\.mjs/mu.test(ciWorkflow),
+)
 
 if (failures.length > 0) {
   console.error(`canary workflow contract failed (${failures.length}/${assertionCount}):`)

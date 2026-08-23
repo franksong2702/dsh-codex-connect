@@ -6,6 +6,16 @@ function cleanupFailure(value) {
   return value instanceof Error ? value : new Error(String(value))
 }
 
+export function resolveCommandInvocation(command, args, platform = process.platform) {
+  if (platform === 'win32' && /\.(?:bat|cmd)$/iu.test(command)) {
+    return {
+      command: process.env.ComSpec ?? process.env.COMSPEC ?? 'cmd.exe',
+      args: ['/d', '/s', '/c', command, ...args],
+    }
+  }
+  return { command, args }
+}
+
 function terminateProcessTree(child) {
   if (!Number.isInteger(child.pid) || child.pid <= 0) return undefined
   if (process.platform === 'win32') {
@@ -41,7 +51,8 @@ function terminateProcessTree(child) {
 export function runBoundedCommand(command, args, options = {}) {
   return new Promise(resolve => {
     const maxBuffer = options.maxBuffer ?? DEFAULT_MAX_BUFFER
-    const child = spawn(command, args, {
+    const invocation = resolveCommandInvocation(command, args)
+    const child = spawn(invocation.command, invocation.args, {
       cwd: options.cwd,
       env: options.env,
       detached: process.platform !== 'win32',
