@@ -20,6 +20,7 @@ export type OpenAICodexUpdateHighlightKind =
   | 'search-stability'
   | 'image-generation'
   | 'oauth-history'
+  | 'model-visibility'
 
 export interface OpenAICodexUpdateHighlight {
   version: string
@@ -68,6 +69,7 @@ const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'search-stability',
   'image-generation',
   'oauth-history',
+  'model-visibility',
 ]
 
 function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {

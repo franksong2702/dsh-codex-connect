@@ -67,6 +67,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'search-stability': 'updateHighlightSearchStability',
   'image-generation': 'updateHighlightImageGeneration',
   'oauth-history': 'updateHighlightOauthHistory',
+  'model-visibility': 'updateHighlightModelVisibility',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
