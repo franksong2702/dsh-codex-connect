@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
+import {
+  decodeOpenAICodexModelCatalog,
+  OPENAI_CODEX_MODEL_CATALOG_PATH,
+} from '../model-contract.ts'
+import type { OpenAICodexModelCatalogEntry } from '../model-contract.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
 export interface OpenAICodexConfigurationProps {
@@ -15,6 +20,9 @@ const sectionStyle: CSSProperties = { display: 'flex', flexDirection: 'column', 
 const headingStyle: CSSProperties = { margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }
 const bodyStyle: CSSProperties = { margin: 0, fontSize: 13, lineHeight: '20px', color: 'var(--dsw-alias-label-secondary)' }
 const fieldsetStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 13, margin: 0, padding: 0, border: 0 }
+const modelListStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }
+const modelRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 9, minHeight: 30, fontSize: 13, color: 'var(--dsw-alias-label-primary)', cursor: 'pointer' }
+const modelIdStyle: CSSProperties = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }
 const toggleRowStyle: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }
 const toggleCopyStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2 }
 const labelStyle: CSSProperties = { fontSize: 13, lineHeight: '20px', fontWeight: 500, color: 'var(--dsw-alias-label-primary)' }
@@ -39,6 +47,7 @@ const UNAVAILABLE_SNAPSHOT = {
 }
 
 const CONFIG_FIELDS = [
+  'models',
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
@@ -48,12 +57,24 @@ const CONFIG_FIELDS = [
   'searchMaxOutputTokens',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
 
+function sameField(
+  field: keyof OpenAICodexSettingsConfig,
+  left: OpenAICodexSettingsConfig[keyof OpenAICodexSettingsConfig],
+  right: OpenAICodexSettingsConfig[keyof OpenAICodexSettingsConfig],
+): boolean {
+  if (field !== 'models') return left === right
+  if (left === undefined || right === undefined) return left === right
+  return Array.isArray(left) && Array.isArray(right)
+    && left.length === right.length
+    && left.every((model, index) => model === right[index])
+}
+
 function sameConfig(
   left: OpenAICodexSettingsConfig | undefined,
   right: OpenAICodexSettingsConfig | undefined,
 ): boolean {
   return left !== undefined && right !== undefined
-    && CONFIG_FIELDS.every(field => left[field] === right[field])
+    && CONFIG_FIELDS.every(field => sameField(field, left[field], right[field]))
 }
 
 /** Edit the Host-owned llm-openai-codex settings section with Save/Discard staging. */
@@ -69,6 +90,28 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [modelCatalog, setModelCatalog] = useState<OpenAICodexModelCatalogEntry[] | undefined>()
+  const [modelCatalogError, setModelCatalogError] = useState(false)
+
+  useEffect(() => {
+    if (scope === undefined) return
+    const controller = new AbortController()
+    void fetch(OPENAI_CODEX_MODEL_CATALOG_PATH, {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+    }).then(async response => {
+      if (!response.ok) throw new Error(`model catalog request failed: ${String(response.status)}`)
+      const catalog = decodeOpenAICodexModelCatalog(await response.json())
+      if (catalog === undefined) throw new Error('model catalog response was invalid')
+      setModelCatalog(catalog)
+      setModelCatalogError(false)
+    }).catch(() => {
+      if (!controller.signal.aborted) setModelCatalogError(true)
+    })
+    return () => { controller.abort() }
+  }, [scope])
 
   useEffect(() => {
     if (!dirty && !busy) setDraft(snapshot.value)
@@ -103,9 +146,10 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     try {
       for (const field of CONFIG_FIELDS) {
         const accepted = scope.getSnapshot().value
-        if (accepted?.[field] === desired[field]) continue
+        if (accepted !== undefined && sameField(field, accepted[field], desired[field])) continue
         await scope.set(field, desired[field])
-        if (scope.getSnapshot().value?.[field] !== desired[field]) {
+        const committed = scope.getSnapshot().value
+        if (committed === undefined || !sameField(field, committed[field], desired[field])) {
           throw new Error(`Host refused ${field}`)
         }
       }
@@ -128,16 +172,47 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const searchDisabled = !editable || draft?.enableSearch !== true
 
   return (
-    <section style={sectionStyle} aria-labelledby="openai-codex-capabilities-title">
-      <div>
-        <h3 id="openai-codex-capabilities-title" style={headingStyle}>{t('capabilitiesHeading')}</h3>
-        <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
-      </div>
+    <section style={sectionStyle} aria-label={t('configurationHeading')}>
       {loading ? <p style={bodyStyle} role="status">{t('settingsLoading')}</p> : null}
       {snapshot.status === 'unavailable' ? <p style={errorStyle} role="alert">{t('settingsUnavailable')}</p> : null}
       {snapshot.status === 'ready' && !snapshot.writable ? <p style={errorStyle} role="alert">{t('settingsReadOnly')}</p> : null}
       {draft === undefined ? null : (
         <fieldset style={fieldsetStyle} disabled={!editable}>
+          <div>
+            <h3 style={headingStyle}>{t('modelCatalog')}</h3>
+            <p style={{ ...bodyStyle, marginTop: 4 }}>{t('modelCatalogIntro')}</p>
+          </div>
+          {modelCatalog === undefined && !modelCatalogError ? <p style={bodyStyle} role="status">{t('modelCatalogLoading')}</p> : null}
+          {modelCatalogError ? <p style={errorStyle} role="alert">{t('modelCatalogFailed')}</p> : null}
+          {modelCatalog === undefined ? null : (
+            <div style={modelListStyle} role="group" aria-label={t('modelCatalog')}>
+              {modelCatalog.map(model => {
+                const selected = draft.models === undefined || draft.models.includes(model.id)
+                return (
+                  <label key={model.id} style={modelRowStyle}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={event => {
+                        const visible = new Set(draft.models ?? modelCatalog.map(entry => entry.id))
+                        if (event.currentTarget.checked) visible.add(model.id)
+                        else visible.delete(model.id)
+                        update('models', modelCatalog.filter(entry => visible.has(entry.id)).map(entry => entry.id))
+                      }}
+                    />
+                    <span>
+                      <span>{model.name}</span>
+                      {model.name === model.id ? null : <span style={modelIdStyle}> ({model.id})</span>}
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+          <div style={{ paddingTop: 4 }}>
+            <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
+            <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
+          </div>
           <label style={toggleRowStyle}>
             <input
               type="checkbox"

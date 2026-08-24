@@ -16,10 +16,11 @@ import type {} from '@deepseek-ai/dsh-web'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { createOpenAICodexAdapter } from './adapter.ts'
+import { createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { registerOpenAICodexUpdateRoutes } from './update-routes.ts'
+import { registerOpenAICodexModelCatalogRoute } from './model-routes.ts'
 import {
   checkForOpenAICodexUpdate,
   compareOpenAICodexVersions,
@@ -189,6 +190,8 @@ export const OPENAI_CODEX_SETTINGS_NS = settingsNamespace(OPENAI_CODEX_SETTINGS_
 
 /** Composite model and standalone-search configuration. */
 export interface Config {
+  /** Model ids advertised in selectors; omitted to advertise the full catalog. */
+  models?: string[] | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -206,6 +209,7 @@ export interface Config {
 }
 
 export const Config: z<Config> = z.object({
+  models: z.union([z.const(undefined), z.array(z.string())]),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
@@ -233,11 +237,17 @@ export function apply(ctx: Context, config: Config): void {
   new OpenAICodexTransport(ctx, credentials)
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
-    createOpenAICodexAdapter(credentials, () => ctx.get('attachments'), fastMode),
+    createOpenAICodexAdapter(
+      credentials,
+      () => ctx.get('attachments'),
+      fastMode,
+      () => resolveOpenAICodexSettings(current()).models,
+    ),
   )
   ctx.inject(['webServer'], webCtx => {
     registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
+    registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
   })
 
   let stopped = false

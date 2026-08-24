@@ -13,6 +13,7 @@ import {
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from '../src/auth-paths.ts'
+import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
 
 function t(key: OpenAICodexSettingsKey, params: Record<string, unknown> = {}): string {
   return Object.entries(params).reduce(
@@ -298,7 +299,9 @@ describe('OpenAI Codex Plugin configuration card', () => {
   })
 
   it('stages, discards, and saves optional capability settings in the same card', async () => {
-    const fetchMock = vi.fn(async (): Promise<Response> => json({ status: 'signed-out' }))
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
+      ? json([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }, { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }])
+      : json({ status: 'signed-out' }))
     const { scope, set } = settingsScopeFixture()
     vi.stubGlobal('fetch', fetchMock)
 
@@ -333,6 +336,36 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
     expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
+  })
+
+  it('stages model visibility in provider order and saves it with the other plugin settings', async () => {
+    const availableModels = [
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' },
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' },
+    ]
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
+      ? json(availableModels)
+      : json({ status: 'signed-out' }))
+    const { scope, set } = settingsScopeFixture()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    const luna = await screen.findByRole<HTMLInputElement>('checkbox', { name: /GPT-5\.6 Luna/u })
+    const sol = screen.getByRole<HTMLInputElement>('checkbox', { name: /GPT-5\.6 Sol/u })
+    const terra = screen.getByRole<HTMLInputElement>('checkbox', { name: /GPT-5\.6 Terra/u })
+    expect([luna.checked, sol.checked, terra.checked]).toEqual([true, true, true])
+
+    fireEvent.click(sol)
+    fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(sol.checked).toBe(true)
+
+    fireEvent.click(sol)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(set).toHaveBeenCalledWith('models', ['gpt-5.6-luna', 'gpt-5.6-terra'])
+    expect(fetchMock.mock.calls.some(([input]) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH)).toBe(true)
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {

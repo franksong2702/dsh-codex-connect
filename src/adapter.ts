@@ -10,6 +10,12 @@ import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
+import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
+
+/** Return a detached copy of the complete pi-ai Codex model catalog. */
+export function openAICodexModelCatalog(): readonly OpenAICodexModelCatalogEntry[] {
+  return openaiCodexProvider().getModels().map(model => ({ id: model.id, name: model.name }))
+}
 
 /** Provider idle ceiling used by the composite route. */
 export const OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS = 300_000
@@ -108,12 +114,22 @@ export function createOpenAICodexAdapter(
   credentials: OpenAICodexCredentialStore,
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
+  visibleModelIds?: () => readonly string[] | undefined,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENAI_CODEX_PROVIDER, createOpenAICodexProfile(provider, fastMode)]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)
-  return new PiAiAdapter({
+  class OpenAICodexAdapter extends PiAiAdapter {
+    override async listModels(providerId: string) {
+      const catalog = await super.listModels(providerId)
+      const configured = visibleModelIds?.()
+      if (configured === undefined) return catalog
+      const visible = new Set(configured)
+      return catalog.filter(model => visible.has(model.id))
+    }
+  }
+  return new OpenAICodexAdapter({
     profiles: () => profiles,
     resolveApiKey: async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey,
     auth: { credentials, authContext: defaultProviderAuthContext() },

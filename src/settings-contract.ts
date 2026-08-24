@@ -20,6 +20,8 @@ export const DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS = 10_000
 
 /** Fully resolved user-editable section presented by Plugin configuration. */
 export interface OpenAICodexSettingsConfig {
+  /** Model ids advertised in selectors; undefined advertises the full catalog. */
+  models: string[] | undefined
   enableSearch: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
@@ -30,6 +32,7 @@ export interface OpenAICodexSettingsConfig {
 }
 
 export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> = Object.freeze({
+  models: undefined,
   enableSearch: false,
   enableImageTool: false,
   enableImageGeneration: false,
@@ -53,6 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Narrow the redacted settings wire payload before it enters React state. */
 export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsConfig | undefined {
   if (!isRecord(value)) return undefined
+  const models = value['models']
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
@@ -60,6 +64,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const searchMode = value['searchMode']
   const searchContextSize = value['searchContextSize']
   const searchMaxOutputTokens = value['searchMaxOutputTokens']
+  if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -68,6 +73,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (searchContextSize !== 'low' && searchContextSize !== 'medium' && searchContextSize !== 'high') return undefined
   if (typeof searchMaxOutputTokens !== 'number' || !Number.isInteger(searchMaxOutputTokens) || searchMaxOutputTokens < 1) return undefined
   return {
+    models: models === undefined ? undefined : [...new Set(models)],
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,

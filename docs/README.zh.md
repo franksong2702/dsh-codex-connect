@@ -84,6 +84,21 @@ dsh web
 
 选择器会把可用项归在 **OpenAI Codex** 下。`GPT-5.6 Luna` 一类模型标识是规范名称，因此会保留原样，不翻译。
 
+如需缩短这个列表，打开 **设置 → 插件 → 插件配置 → Codex Connect**，取消勾选不想显示的模型，然后点击 **保存更改**。这个设置只控制模型发现：已有会话中保存的隐藏模型，或通过精确模型 ID 指定的隐藏模型，仍可继续使用。全新安装默认显示完整目录。
+
+也可以在 profile 中通过 `models` 设置初始显示子集；无论这里如何排列，选择器仍保持提供方的原始顺序：
+
+```yaml
+- id: llm-openai-codex
+  config:
+    models:
+      - gpt-5.6-luna
+      - gpt-5.6-sol
+      - gpt-5.6-terra
+```
+
+省略 `models` 时显示完整目录；空列表会在选择器中隐藏全部 Codex 模型，但不会禁用精确模型 ID 路由。
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/model-selector.jpg" alt="中文 DeepSeek Harness 模型选择器中的 OpenAI Codex 模型分组" width="360">
 </p>
@@ -194,6 +209,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 | 字段 | 默认值 | 可选值 |
 |---|---:|---|
+| `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

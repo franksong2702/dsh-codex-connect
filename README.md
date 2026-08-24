@@ -84,6 +84,21 @@ Open Harness's normal model picker and select an `openai-codex` model for the ag
 
 The picker groups the available entries under **OpenAI Codex**. Model identifiers such as `GPT-5.6 Luna` are canonical names, so they intentionally remain un-translated.
 
+To shorten that list, open **Settings → Plugins → Plugin configuration → Codex Connect**, uncheck the models you do not want to see, and select **Save changes**. This controls discovery only: a hidden model already stored in an existing conversation or supplied by its exact id remains usable. A fresh installation shows the complete catalog.
+
+Profiles may also seed the visible subset with `models`; provider order is preserved regardless of the order written here:
+
+```yaml
+- id: llm-openai-codex
+  config:
+    models:
+      - gpt-5.6-luna
+      - gpt-5.6-sol
+      - gpt-5.6-terra
+```
+
+Omit `models` to show the full catalog. An empty list hides every Codex model from selectors without disabling exact-id routing.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/model-selector.jpg" alt="OpenAI Codex model group in the English-localized DeepSeek Harness model picker" width="360">
 </p>
@@ -194,6 +209,7 @@ Selecting Codex as the profile's global search route is another explicit change:
 
 | Field | Default | Values |
 |---|---:|---|
+| `models` | full catalog | Codex model id array; empty hides all entries |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

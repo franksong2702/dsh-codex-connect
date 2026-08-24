@@ -65,11 +65,14 @@ describe('OpenAI Codex Host settings integration', () => {
     })
     const descriptor = ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)
     expect(descriptor?.value).toEqual(OpenAICodex.DEFAULT_OPENAI_CODEX_SETTINGS)
+    const fullCatalog = await ctx.llm.listModels(OpenAICodex.OPENAI_CODEX_PROVIDER)
+    expect(fullCatalog.length).toBeGreaterThan(2)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
     expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
     await expect(ctx.web.search({ query: 'disabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
 
     await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, {
+      models: [fullCatalog[1]!.id, fullCatalog[0]!.id, fullCatalog[1]!.id],
       enableSearch: true,
       enableImageTool: true,
       enableImageGeneration: true,
@@ -83,6 +86,13 @@ describe('OpenAI Codex Host settings integration', () => {
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeDefined()
     })
     await expect(ctx.web.search({ query: 'enabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
+    await expect(ctx.llm.listModels(OpenAICodex.OPENAI_CODEX_PROVIDER)).resolves.toEqual([
+      fullCatalog[0],
+      fullCatalog[1],
+    ])
+    await expect(ctx.llm.resolveModelInfo(OpenAICodex.OPENAI_CODEX_PROVIDER, fullCatalog[2]!.id)).resolves.toMatchObject({
+      id: fullCatalog[2]!.id,
+    })
 
     await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, {
       enableSearch: false,

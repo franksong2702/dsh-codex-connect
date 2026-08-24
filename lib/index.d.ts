@@ -311,6 +311,8 @@ declare const DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE: OpenAICodexSearchContext
 declare const DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS = 10000;
 /** Fully resolved user-editable section presented by Plugin configuration. */
 interface OpenAICodexSettingsConfig {
+  /** Model ids advertised in selectors; undefined advertises the full catalog. */
+  models: string[] | undefined;
   enableSearch: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
@@ -583,6 +585,8 @@ declare const inject: string[];
 declare const OPENAI_CODEX_SETTINGS_NS: import("@deepseek-ai/dsh-settings").SettingsNamespace;
 /** Composite model and standalone-search configuration. */
 interface Config {
+  /** Model ids advertised in selectors; omitted to advertise the full catalog. */
+  models?: string[] | undefined;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
   /** Register the optional image-loading tool. */
