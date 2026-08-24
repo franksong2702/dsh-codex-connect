@@ -52,6 +52,10 @@
     {
       "version": "0.1.0-alpha.4.17",
       "highlights": ["runtime-compatibility", "image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.18",
+      "highlights": []
     }
   ]
 }
