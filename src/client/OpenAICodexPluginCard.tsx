@@ -19,7 +19,6 @@ const cardStyle: CSSProperties = {
   overflow: 'hidden',
   border: '1px solid var(--dsw-alias-border-l2)',
   borderRadius: 10,
-  background: 'var(--dsw-alias-bg-module-platform)',
 }
 const headerStyle: CSSProperties = {
   boxSizing: 'border-box',
@@ -62,7 +61,7 @@ export function OpenAICodexPluginCard({ t, configScope, updater }: OpenAICodexPl
   const [open, setOpen] = useState(false)
   const title = t('title')
   return (
-    <li style={cardStyle}>
+    <li style={{ ...cardStyle, background: `var(--dsw-alias-bg-layer-${open ? '2' : '3'})` }}>
       <button
         type="button"
         style={headerStyle}

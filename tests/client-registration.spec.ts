@@ -55,7 +55,7 @@ describe('OpenAI Codex browser contribution', () => {
       readFile(new URL('../src/client/locales.ts', import.meta.url), 'utf8'),
       readFile(new URL('../src/adapter.ts', import.meta.url), 'utf8'),
     ])
-    expect(clientCard).toContain('<li style={cardStyle}>')
+    expect(clientCard).toContain('<li style={{ ...cardStyle, background:')
     expect(clientCard).toContain('aria-expanded={open}')
     expect(locales.match(/title: 'Codex Connect'/gu)).toHaveLength(2)
     expect(adapter).toContain("displayName: 'OpenAI Codex'")
