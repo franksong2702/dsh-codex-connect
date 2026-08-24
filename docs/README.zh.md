@@ -241,7 +241,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 - 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.18 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。
 - 升级时请将 DSH 插件 API packages 与 `@earendil-works/pi-ai` 作为一组升级，再运行 `dsh-codex-connect doctor --json` 和兼容性检查。本契约不对未来版本作判断。
-- 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认 provider 可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。
+- 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认提供方可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。
 - ChatGPT 套餐资格、模型权限、额度和后端行为由 OpenAI 控制，可能变化。
 - Codex 端点不会强制普通 Responses 的 `max_output_tokens` 字段。Harness 压缩仍可工作，但这个摘要上限不能由服务端在该路由上强制。
 - shell、文件系统、skills、MCP、subagents、审批、权限、附件、会话持久化、压缩与恢复继续由当前 Harness profile 提供。
