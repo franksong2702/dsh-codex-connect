@@ -70,6 +70,10 @@ assertContract('registry and candidate subprocesses have explicit timeouts', /RE
 assertContract('candidate subprocesses receive a scrubbed environment', /scrubCanaryEnvironment\(process\.env\)/.test(nextCheck) && /allowUndeclaredCanaryVersion[\s\S]*?scrubCanaryEnvironment\(process\.env\)/.test(installCheck))
 assertContract('credential-bearing environment names are filtered', /AUTH\|BEARER\|COOKIE\|CREDENTIAL\|JWT\|KEY\|PASS\|SECRET\|SESSION\|TOKEN/.test(canaryEnvironment))
 assertContract('undeclared candidates install the packed artifact', /allowUndeclaredCanaryVersion[\s\S]*?npm[\s\S]*?'pack'[\s\S]*?pluginSpec = `file:/.test(installCheck))
+assertContract(
+  'candidate checks boot the installed model runtime',
+  /check-installed-runtime/.test(installCheck) && /installed runtime contract/.test(installCheck),
+)
 assertContract('publishing and deployment commands are absent', !/npm publish|gh release create|\bdeploy\b|3080|3081/iu.test(workflow))
 assertContract(
   'credential-bearing secrets are not requested',

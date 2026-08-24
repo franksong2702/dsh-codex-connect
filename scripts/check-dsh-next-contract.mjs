@@ -23,6 +23,7 @@ import {
   commandFailureClassification,
   installCheckExitCode,
 } from './check-dsh-install.mjs'
+import { validateRuntimeProjection } from './check-installed-runtime.mjs'
 
 const failures = []
 let assertionCount = 0
@@ -169,6 +170,31 @@ assertContract(
     stdout: 'fetch failed: ECONNRESET',
   }, 'compatibility') === 'infrastructure',
 )
+
+const runtimeProjection = validateRuntimeProjection(
+  [{ id: 'openai-codex', name: 'OpenAI Codex' }],
+  [{
+    provider: 'openai-codex',
+    id: 'gpt-contract-fixture',
+    name: 'GPT contract fixture',
+    reasoning: { efforts: [{ id: 'medium', name: 'Medium' }] },
+  }],
+)
+assertContract(
+  'installed runtime projection accepts a model with reasoning metadata',
+  runtimeProjection.modelCount === 1 && runtimeProjection.reasoningModelCount === 1,
+)
+assertContract('installed runtime projection rejects missing reasoning metadata', (() => {
+  try {
+    validateRuntimeProjection(
+      [{ id: 'openai-codex', name: 'OpenAI Codex' }],
+      [{ provider: 'openai-codex', id: 'gpt-contract-fixture', name: 'GPT contract fixture' }],
+    )
+    return false
+  } catch {
+    return true
+  }
+})())
 
 async function runCandidateFixture(exitCode) {
   const root = await mkdtemp(join(tmpdir(), 'dsh-next-contract-'))

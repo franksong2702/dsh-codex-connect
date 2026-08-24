@@ -12,6 +12,7 @@ const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
 const COMMAND_TIMEOUT_MS = 20 * 60 * 1000
 
 export class InfrastructureCheckError extends Error {}
@@ -233,6 +234,21 @@ async function main() {
     const doctorReport = parseOneLineJson(doctor.stdout, 'plugin doctor')
     assertDoctorJson(doctorReport, dshHome, REPO_ROOT)
 
+    const runtime = await runCommand(process.execPath, [
+      RUNTIME_CHECK,
+      join(dshHome, 'profiles', 'web', 'package.json'),
+    ], { cwd: workspace, env })
+    requireSuccess('installed runtime contract', runtime, 'compatibility')
+    const runtimeReport = parseOneLineJson(runtime.stdout, 'installed runtime contract')
+    if (runtimeReport?.['schemaVersion'] !== JSON_SCHEMA_VERSION
+      || runtimeReport?.['provider'] !== 'openai-codex'
+      || typeof runtimeReport?.['modelCount'] !== 'number'
+      || runtimeReport['modelCount'] < 1
+      || runtimeReport?.['reasoningModelCount'] !== runtimeReport['modelCount']
+      || runtimeReport?.['disposalVerified'] !== true) {
+      throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
+    }
+
     process.stdout.write(`${JSON.stringify({
       schemaVersion: JSON_SCHEMA_VERSION,
       dshVersion: actualDshVersion,
@@ -244,6 +260,7 @@ async function main() {
         enableImageTool: false,
         enableImageGeneration: false,
       },
+      runtime: runtimeReport,
     })}\n`)
   } finally {
     await rm(tempRoot, { recursive: true, force: true })
