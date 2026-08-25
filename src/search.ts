@@ -15,6 +15,7 @@ import type {
 } from '@deepseek-ai/dsh-web'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
+import { withOpenAICodexProxy } from './provider-proxy.ts'
 import {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -81,6 +82,8 @@ export interface OpenAICodexSearchProviderOptions {
   readonly maxOutputTokens: number
   /** Resolve the request identity, normally the initiating session id. */
   readonly resolveRequestId: () => string
+  /** Resolve the currently active provider proxy for each request. */
+  readonly resolveProxyUrl?: () => string | undefined
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
 }
@@ -245,7 +248,10 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
     throwIfSearchAborted(signal)
     let auth
     try {
-      auth = await abortable(this.models.getAuth(OPENAI_CODEX_PROVIDER), signal)
+      auth = await abortable(withOpenAICodexProxy(
+        this.options.resolveProxyUrl?.(),
+        () => this.models.getAuth(OPENAI_CODEX_PROVIDER),
+      ), signal)
     } catch (error: unknown) {
       throwIfSearchAborted(signal)
       if (isAbortError(error)) throw searchAborted(signal, error)
@@ -279,7 +285,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
 
     let response: Response
     try {
-      response = await fetch(OPENAI_CODEX_SEARCH_URL, {
+      response = await withOpenAICodexProxy(this.options.resolveProxyUrl?.(), () => fetch(OPENAI_CODEX_SEARCH_URL, {
         method: 'POST',
         redirect: 'error',
         headers: {
@@ -291,7 +297,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
         },
         body: JSON.stringify(body),
         ...signal === undefined ? {} : { signal },
-      })
+      }))
     } catch (error: unknown) {
       throwIfSearchAborted(signal)
       if (isAbortError(error)) throw searchAborted(signal, error)

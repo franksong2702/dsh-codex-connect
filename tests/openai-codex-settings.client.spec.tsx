@@ -306,23 +306,31 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
-    const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
+    const enableProxy = await screen.findByRole('checkbox', { name: /Use proxy for Codex provider requests/u }) as HTMLInputElement
+    const proxyUrl = screen.getByRole('textbox', { name: en.proxyUrl }) as HTMLInputElement
+    const enableSearch = screen.getByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
+    expect(enableProxy.checked).toBe(true)
+    expect(proxyUrl.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
     expect(enableSearch.checked).toBe(false)
     expect(enableImageGeneration.checked).toBe(false)
     expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
     expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
     expect(zh.enableImageGenerationHelp).toBe('启用后，GPT 模型可以在对话中调用 GPT Image 生成图片。')
+    expect(zh.proxyUrl).toBe('代理地址')
     expect(model.disabled).toBe(true)
 
+    fireEvent.change(proxyUrl, { target: { value: 'http://127.0.0.1:8888' } })
     fireEvent.click(enableSearch)
     expect(model.disabled).toBe(false)
     fireEvent.change(model, { target: { value: 'temporary-model' } })
     fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(proxyUrl.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
     expect(enableSearch.checked).toBe(false)
     expect(model.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.searchModel)
 
+    fireEvent.change(proxyUrl, { target: { value: 'http://127.0.0.1:7891' } })
     fireEvent.click(enableSearch)
     fireEvent.change(model, { target: { value: 'gpt-search-custom' } })
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
@@ -331,6 +339,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.click(screen.getByRole('button', { name: en.save }))
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(set).toHaveBeenCalledWith('proxyUrl', 'http://127.0.0.1:7891')
     expect(set).toHaveBeenCalledWith('enableSearch', true)
     expect(set).toHaveBeenCalledWith('searchModel', 'gpt-search-custom')
     expect(set).toHaveBeenCalledWith('searchMode', 'live')

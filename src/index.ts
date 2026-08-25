@@ -19,6 +19,7 @@ import type {} from '@deepseek-ai/dsh-fs'
 import { createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
+import { closeOpenAICodexProxyAgents } from './provider-proxy.ts'
 import { registerOpenAICodexUpdateRoutes } from './update-routes.ts'
 import { registerOpenAICodexModelCatalogRoute } from './model-routes.ts'
 import {
@@ -92,14 +93,19 @@ import {
 import type { OpenAICodexSearchContextSize, OpenAICodexSearchMode } from './search.ts'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from './store.ts'
 import {
+  DEFAULT_OPENAI_CODEX_PROXY_URL,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
+  resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
 } from './settings-contract.ts'
 
 export {
   decodeOpenAICodexSettings,
+  DEFAULT_OPENAI_CODEX_PROXY_URL,
   DEFAULT_OPENAI_CODEX_SETTINGS,
+  isValidOpenAICodexProxyUrl,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
+  resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
 } from './settings-contract.ts'
 export type { OpenAICodexSettingsConfig } from './settings-contract.ts'
@@ -192,6 +198,10 @@ export const OPENAI_CODEX_SETTINGS_NS = settingsNamespace(OPENAI_CODEX_SETTINGS_
 export interface Config {
   /** Model ids advertised in selectors; omitted to advertise the full catalog. */
   models?: string[] | undefined
+  /** Route provider traffic through proxyUrl. */
+  enableProxy?: boolean
+  /** Credential-free HTTP(S) proxy origin. */
+  proxyUrl?: string
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -210,6 +220,8 @@ export interface Config {
 
 export const Config: z<Config> = z.object({
   models: z.union([z.const(undefined), z.array(z.string())]),
+  enableProxy: z.boolean().default(true),
+  proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
@@ -228,13 +240,16 @@ export const Config: z<Config> = z.object({
  */
 export function apply(ctx: Context, config: Config): void {
   let current = () => config
+  const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(current())
+  resolveProviderProxyUrl()
+  ctx.effect(() => () => closeOpenAICodexProxyAgents(), 'dsh-codex-connect: provider proxy agents')
   const credentials = new OpenAICodexCredentialStore()
   const trustedOrigins = new OpenAICodexTrustedOriginsStore(
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
-  new OpenAICodexTransport(ctx, credentials)
+  new OpenAICodexTransport(ctx, credentials, resolveProviderProxyUrl)
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
     createOpenAICodexAdapter(
@@ -242,10 +257,11 @@ export function apply(ctx: Context, config: Config): void {
       () => ctx.get('attachments'),
       fastMode,
       () => resolveOpenAICodexSettings(current()).models,
+      resolveProviderProxyUrl,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
-    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode)
+    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, resolveProviderProxyUrl)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
   })
@@ -283,6 +299,7 @@ export function apply(ctx: Context, config: Config): void {
       contextSize: nextRegistration.contextSize,
       maxOutputTokens: nextRegistration.maxOutputTokens,
       resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
+      resolveProxyUrl: resolveProviderProxyUrl,
     })))
     searchFiber = fiber
     searchRegistration = nextRegistration
@@ -368,6 +385,7 @@ export function apply(ctx: Context, config: Config): void {
   }, 'dsh-codex-connect: optional capability lifecycle')
 
   installSettingsSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
+    validate(value) { resolveOpenAICodexProxyUrl(value) },
     setSource(source) { current = source },
     onChange: scheduleCapabilities,
   })
