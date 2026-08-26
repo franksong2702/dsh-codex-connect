@@ -221,7 +221,8 @@ async function main() {
     }
 
     const pluginBlock = configBlock(afterDump.stdout, 'llm-openai-codex', 'compatibility')
-    if (!/^    enableSearch: false$/mu.test(pluginBlock)
+    if (!/^    enableProxy: false$/mu.test(pluginBlock)
+      || !/^    enableSearch: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
@@ -256,6 +257,7 @@ async function main() {
       plugin: 'dsh-codex-connect',
       defaultsUnchanged: true,
       capabilities: {
+        enableProxy: false,
         enableSearch: false,
         enableImageTool: false,
         enableImageGeneration: false,
