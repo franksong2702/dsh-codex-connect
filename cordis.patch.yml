@@ -4,6 +4,7 @@
     - id: llm-openai-codex
       name: dsh-codex-connect
       config:
+        enableProxy: false
         enableSearch: false
         enableImageTool: false
         enableImageGeneration: false

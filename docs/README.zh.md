@@ -139,12 +139,21 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 ```yaml
 - id: llm-openai-codex
   config:
+    enableProxy: false
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
 ```
 
 打开 **设置 → 插件 → 插件配置 → Codex Connect**，即可在同一张卡片中管理账户和这些选项。**保存更改**只影响本插件的能力配置并即时生效，绝不会选择默认模型或全局搜索路由。
+
+### 网络连接与代理检测
+
+Codex Connect 默认使用**直连**。代理是可选项，只作用于本插件的 Codex 请求：模型流式请求、OAuth 登录和 token 刷新、额度、独立搜索以及图片生成。其他提供方和未进入插件作用域的网络请求仍使用进程原来的 dispatcher。
+
+点击 **检测代理** 时，只会测试标准代理环境变量，以及文档列出的本机候选地址：`127.0.0.1:7890`、`127.0.0.1:7897` 和 `127.0.0.1:10809`。检测不调用模型、不消耗额度，也不会写入设置。规范 Codex 端点返回任何 HTTP 响应都表示网络可达；`401/403`、代理 `407`、DNS、连接被拒绝、超时、TLS 和 CONNECT 失败会分别显示为诊断类别。
+
+请先检查候选地址，再选择 **使用此代理**，最后点击 **保存更改**。**手动配置**可以先测试一个不带凭据的 HTTP(S) proxy origin，再启用它。**停用代理**始终可用。检测失败会保留原来的模式；代理已启用但请求失败时，界面会给出可操作的错误，绝不会静默改走直连。
 
 ### 只开启你准备使用的能力
 
@@ -210,6 +219,8 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | 字段 | 默认值 | 可选值 |
 |---|---:|---|
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
+| `enableProxy` | `false` | boolean；除非显式启用，否则使用直连 |
+| `proxyUrl` | `http://127.0.0.1:7890`（未启用的占位值） | 不带凭据的 HTTP(S) proxy origin |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

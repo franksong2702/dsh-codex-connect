@@ -139,12 +139,21 @@ The installed bundle is intentionally inert beyond model-provider registration:
 ```yaml
 - id: llm-openai-codex
   config:
+    enableProxy: false
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
 ```
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
+
+### Network connection and proxy detection
+
+Codex Connect uses a **Direct connection** by default. A proxy is optional and applies only to this plugin's Codex requests: model streaming, OAuth login and token refresh, usage, standalone search, and image generation. Other providers and unscoped network requests keep the process's original dispatcher.
+
+Select **Detect proxy** to test only the standard proxy environment variables and the documented loopback candidates `127.0.0.1:7890`, `127.0.0.1:7897`, and `127.0.0.1:10809`. Detection makes no model call, consumes no quota, and does not write settings. A response from the canonical Codex endpoint proves network reachability; `401/403`, proxy `407`, DNS, refused connection, timeout, TLS, and CONNECT failures remain separate diagnostics.
+
+Choose **Use this proxy** only after reviewing a candidate, then click **Save changes**. **Configure manually** lets you test a credential-free HTTP(S) proxy origin before activation. **Disable proxy** is always available. A failed probe leaves the previous mode unchanged, and an enabled proxy failure is shown as an actionable error; Codex Connect never silently retries the request through a direct connection.
 
 ### Enable only the capability you intend to use
 
@@ -210,6 +219,8 @@ Selecting Codex as the profile's global search route is another explicit change:
 | Field | Default | Values |
 |---|---:|---|
 | `models` | full catalog | Codex model id array; empty hides all entries |
+| `enableProxy` | `false` | boolean; direct connection unless explicitly enabled |
+| `proxyUrl` | `http://127.0.0.1:7890` (inactive placeholder) | Credential-free HTTP(S) proxy origin |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

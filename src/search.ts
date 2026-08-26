@@ -15,6 +15,7 @@ import type {
 } from '@deepseek-ai/dsh-web'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
+import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -81,6 +82,10 @@ export interface OpenAICodexSearchProviderOptions {
   readonly maxOutputTokens: number
   /** Resolve the request identity, normally the initiating session id. */
   readonly resolveRequestId: () => string
+  /** Owns the request-scoped dispatcher when a custom proxy is active. */
+  readonly proxyManager?: OpenAICodexProxyManager
+  /** Resolve the active proxy for each search request. */
+  readonly resolveProxyUrl?: () => string | undefined
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
 }
@@ -242,6 +247,11 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
 
   /** @inheritdoc */
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
+    const operation = () => this.searchWithoutProxy(request, signal)
+    return this.options.proxyManager?.run(this.options.resolveProxyUrl?.(), operation) ?? operation()
+  }
+
+  private async searchWithoutProxy(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
     throwIfSearchAborted(signal)
     let auth
     try {

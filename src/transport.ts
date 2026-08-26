@@ -11,6 +11,7 @@ import {
 } from './usage.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
+import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 
 /** Cordis service name owned by the core plugin fiber. */
 export const OPENAI_CODEX_TRANSPORT_SERVICE = 'openaiCodexTransport'
@@ -235,13 +236,26 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
   readonly apiVersion = OPENAI_CODEX_TRANSPORT_API_VERSION
   private readonly models: MutableModels
 
-  constructor(ctx: Context, private readonly credentials: OpenAICodexCredentialStore) {
+  constructor(
+    ctx: Context,
+    private readonly credentials: OpenAICodexCredentialStore,
+    private readonly proxyManager?: OpenAICodexProxyManager,
+    private readonly resolveProxyUrl: () => string | undefined = () => undefined,
+  ) {
     super(ctx, OPENAI_CODEX_TRANSPORT_SERVICE)
     this.models = createModels({ credentials })
     this.models.setProvider(openaiCodexProvider())
   }
 
   async generateImages(
+    input: ImageGenerationRequest,
+    context: ImageRequestContext,
+  ): Promise<ImageGenerationResponse> {
+    const operation = () => this.generateImagesWithoutProxy(input, context)
+    return this.proxyManager?.run(this.resolveProxyUrl(), operation) ?? operation()
+  }
+
+  private async generateImagesWithoutProxy(
     input: ImageGenerationRequest,
     context: ImageRequestContext,
   ): Promise<ImageGenerationResponse> {
