@@ -28,6 +28,13 @@ export const OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET = 2048 * 2048
 export const OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES = 1024 * 1024
 
 /**
+ * Use the finite SSE response path for Codex requests. The automatic
+ * WebSocket path keeps a session connection for prompt-cache reuse, which
+ * can leave one-shot Headless processes alive after their final answer.
+ */
+export const OPENAI_CODEX_TRANSPORT = 'sse' as const
+
+/**
  * Give the generic dsh adapter a request-scoped bearer-token entry without
  * changing the provider's user-facing OAuth flow. The resolver accepts only
  * the explicit override supplied by this plugin; it never discovers an API
@@ -94,6 +101,7 @@ export function createOpenAICodexProfile(
   return {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',
+    transport: OPENAI_CODEX_TRANSPORT,
     streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
     maxRequestImageBytes: OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
     requestImagePixelBudget: OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
