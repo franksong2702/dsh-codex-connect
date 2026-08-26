@@ -61,6 +61,7 @@ describe('Codex Connect global update reminder', () => {
         highlights: [
           { version: '0.1.0-alpha.4.12', kind: 'image-generation' },
           { version: '0.1.0-alpha.4.15', kind: 'model-visibility' },
+          { version: '0.1.0-alpha.4.20', kind: 'proxy-connection' },
         ],
         releaseName: 'Alpha 4.15',
         releaseNotes: '## What changed\n- Manual upgrade command\n\n**Full Changelog**: https://github.com/franksong2702/dsh-codex-connect/compare/v0.1.0-alpha.4.14...v0.1.0-alpha.4.15',
@@ -85,6 +86,7 @@ describe('Codex Connect global update reminder', () => {
     expect(screen.getByRole('status').textContent).toContain(en.whatMatters)
     expect(screen.getByRole('status').textContent).toContain(en.updateHighlightImageGeneration)
     expect(screen.getByRole('status').textContent).toContain(en.updateHighlightModelVisibility)
+    expect(screen.getByRole('status').textContent).toContain(en.updateHighlightProxyConnection)
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStepsHeading)
     expect(screen.getByRole('status').textContent).toContain(en.agentUpgradePrompt.replace('{repository}', OPENAI_CODEX_REPOSITORY_URL))
     expect(screen.getByRole('status').textContent).not.toContain('dsh plugin --profile')

@@ -68,6 +68,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'image-generation': 'updateHighlightImageGeneration',
   'oauth-history': 'updateHighlightOauthHistory',
   'model-visibility': 'updateHighlightModelVisibility',
+  'proxy-connection': 'updateHighlightProxyConnection',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
