@@ -13,6 +13,8 @@ import {
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { decodeImagePresentationMeta } from '../image-presentation.ts'
+import { openAICodexOriginalImageUrl } from '../image-assets-contract.ts'
+import type { OpenAICodexOriginalImageRef } from '../image-assets-contract.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { CodexImageGallery } from './CodexImageGallery.tsx'
 import type { CodexImageGalleryLabels } from './CodexImageGallery.tsx'
@@ -125,10 +127,22 @@ function ActionError({ visible, t }: { visible: boolean; t: Translate<OpenAICode
 
 type DownloadState = 'idle' | 'pending' | 'failed'
 
-function DownloadButton({ image, label, load, t }: {
-  image: ImageAttachmentRef
+function triggerDownload(url: string, name: string): void {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = name
+  anchor.rel = 'noopener'
+  document.body.append(anchor)
+  try {
+    anchor.click()
+  } finally {
+    anchor.remove()
+  }
+}
+
+function DownloadButton({ label, onDownload, t }: {
   label: string
-  load: (attachment: ImageAttachmentRef) => Promise<string>
+  onDownload: () => Promise<void>
   t: Translate<OpenAICodexSettingsKey>
 }) {
   const [state, setState] = useState<DownloadState>('idle')
@@ -139,17 +153,7 @@ function DownloadButton({ image, label, load, t }: {
     if (state === 'pending') return
     setState('pending')
     try {
-      const url = await load(image)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = image.name ?? t('image')
-      anchor.rel = 'noopener'
-      document.body.append(anchor)
-      try {
-        anchor.click()
-      } finally {
-        anchor.remove()
-      }
+      await onDownload()
       if (alive.current) setState('idle')
     } catch {
       if (alive.current) setState('failed')
@@ -171,6 +175,23 @@ function DownloadButton({ image, label, load, t }: {
     </button>
     {status === undefined ? null : <span role="status" aria-live="polite" style={visuallyHidden}>{status}</span>}
   </>
+}
+
+async function downloadOriginal(sessionId: string, original: OpenAICodexOriginalImageRef): Promise<void> {
+  const response = await fetch(openAICodexOriginalImageUrl(sessionId, original.assetId), {
+    method: 'GET',
+    headers: { accept: original.mediaType },
+    credentials: 'same-origin',
+  })
+  if (!response.ok) throw new Error('Original image download failed')
+  const blob = await response.blob()
+  if (blob.size !== original.bytes) throw new Error('Original image download was incomplete')
+  const url = URL.createObjectURL(blob)
+  try {
+    triggerDownload(url, original.name)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 function PromptPanel({ prompt, t }: { prompt: string; t: Translate<OpenAICodexSettingsKey> }) {
@@ -357,7 +378,7 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
 
   return <ResponsiveCard
     label={t('completed')}
-    visual={<><div style={header}><strong>{t('completed')}</strong></div><CodexImageGallery images={decoded.images.map(attachment => ({ attachment }))} load={load} align="start" labels={galleryLabels} /></>}
+    visual={<><div style={header}><strong>{t('completed')}</strong></div><CodexImageGallery images={decoded.images.map(image => ({ attachment: image.preview }))} load={load} align="start" labels={galleryLabels} /></>}
     side={<>
       <PromptPanel prompt={decoded.prompt} t={t} />
       <div style={actionRow}>
@@ -369,10 +390,36 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
         </button>
         <ActionError visible={sessionActions.failed} t={t} />
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.map((image, index) => <DownloadButton key={image.attachmentId as string} image={image} load={load} t={t} label={decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: image.name ?? String(index + 1) })} />)}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.flatMap((image, index) => {
+        const suffix = image.preview.name ?? String(index + 1)
+        const exactOriginal = image.original
+        const original = exactOriginal === undefined ? [] : [<DownloadButton
+          key={`${image.preview.attachmentId as string}:original`}
+          onDownload={() => downloadOriginal(sessionId, exactOriginal)}
+          t={t}
+          label={decoded.images.length === 1 ? t('downloadOriginal') : t('downloadOriginalNamed', { name: exactOriginal.name })}
+        />]
+        return [...original, <DownloadButton
+          key={`${image.preview.attachmentId as string}:preview`}
+          onDownload={async () => { triggerDownload(await load(image.preview), image.preview.name ?? t('image')) }}
+          t={t}
+          label={image.original === undefined
+            ? decoded.images.length === 1 ? t('download') : t('downloadNamed', { name: suffix })
+            : decoded.images.length === 1 ? t('downloadPreview') : t('downloadPreviewNamed', { name: suffix })}
+        />]
+      })}</div>
       <details>
         <summary style={{ cursor: 'pointer', color: 'var(--dsw-alias-label-secondary)', fontSize: 13 }}>{t('imageDetails')}</summary>
-        <div style={{ ...detail, display: 'grid', gap: 4, marginTop: 6 }}>{decoded.images.map((image, index) => <span key={image.attachmentId as string}>{t('imageDetail', { name: image.name ?? String(index + 1), format: formatMediaType(image.mediaType), width: image.width, height: image.height, size: formatBytes(image.bytes) })}</span>)}</div>
+        <div style={{ ...detail, display: 'grid', gap: 4, marginTop: 6 }}>{decoded.images.flatMap((image, index) => {
+          const preview = image.preview
+          const original = image.original
+          const name = preview.name ?? String(index + 1)
+          if (original === undefined) return [<span key={preview.attachmentId as string}>{t('imageDetail', { name, format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>]
+          return [
+            <span key={`${preview.attachmentId as string}:original`}>{t('originalImageDetail', { name: original.name, format: formatMediaType(original.mediaType), width: original.width, height: original.height, size: formatBytes(original.bytes) })}</span>,
+            <span key={`${preview.attachmentId as string}:preview`}>{t('previewImageDetail', { format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>,
+          ]
+        })}</div>
       </details>
     </>}
   />

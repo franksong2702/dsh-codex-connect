@@ -9,7 +9,9 @@ import type { OpenAICodexTransportV1 } from './transport.ts'
 import { decodeStrictBase64, estimateBase64Bytes } from './base64.ts'
 import { detectEncodedImage } from './image-format.ts'
 import type { CodexImageMediaType, DetectedImage } from './image-format.ts'
-import { IMAGE_PRESENTATION_KIND } from './image-presentation.ts'
+import type { OpenAICodexOriginalImageRef } from './image-assets-contract.ts'
+import type { OpenAICodexImageAssetStore } from './image-assets.ts'
+import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION } from './image-presentation.ts'
 
 /** Stable model-callable tool name. */
 export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
@@ -20,12 +22,15 @@ const CANCELED_REQUEST_NOTE = 'The request may still be processing.'
 
 interface ImageValue {
   images: Array<{
-    attachmentId: string
-    mediaType: CodexImageMediaType
-    width: number
-    height: number
-    bytes: number
-    name: string
+    original: OpenAICodexOriginalImageRef
+    preview: {
+      attachmentId: string
+      mediaType: CodexImageMediaType
+      width: number
+      height: number
+      bytes: number
+      name: string
+    }
   }>
 }
 
@@ -62,35 +67,58 @@ function extension(mediaType: CodexImageMediaType): string {
 }
 
 function outputContent(value: ImageValue): ToolContentBlock[] {
-  const lines = value.images.map((image, index) =>
-    `${String(index + 1)}. ${image.mediaType}, ${String(image.width)}x${String(image.height)} px, ${String(image.bytes)} bytes, attachment ${image.attachmentId}`)
+  const lines = value.images.map(({ original, preview }, index) =>
+    `${String(index + 1)}. original ${original.mediaType}, ${String(original.width)}x${String(original.height)} px, ${String(original.bytes)} bytes; preview ${String(preview.width)}x${String(preview.height)} px, attachment ${preview.attachmentId}`)
   return [
     { type: 'text', text: `Generated ${String(value.images.length)} image${value.images.length === 1 ? '' : 's'}:\n${lines.join('\n')}` },
-    ...value.images.map(image => ({
+    ...value.images.map(({ preview }) => ({
       type: 'image' as const,
       attachment: {
-        attachmentId: AttachmentId(image.attachmentId),
-        mediaType: image.mediaType,
-        width: image.width,
-        height: image.height,
-        bytes: image.bytes,
-        name: image.name,
+        attachmentId: AttachmentId(preview.attachmentId),
+        mediaType: preview.mediaType,
+        width: preview.width,
+        height: preview.height,
+        bytes: preview.bytes,
+        name: preview.name,
       },
     })),
   ]
 }
 
-function validateRef(ref: ImageAttachmentRef, parsed: DetectedImage, input: SaveImageAttachment, name: string): void {
-  if (typeof ref.attachmentId !== 'string' || ref.attachmentId.length === 0 || ref.mediaType !== parsed.mediaType
-    || ref.bytes !== input.data.byteLength || ref.width !== parsed.width || ref.height !== parsed.height
-    || ref.name !== name) failure('The attachment store returned inconsistent image metadata.')
+function positiveSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+}
+
+function previewValue(ref: ImageAttachmentRef, fallbackName: string): ImageValue['images'][number]['preview'] {
+  if (typeof ref.attachmentId !== 'string' || ref.attachmentId.length === 0
+    || (ref.mediaType !== 'image/png' && ref.mediaType !== 'image/jpeg' && ref.mediaType !== 'image/webp')
+    || !positiveSafeInteger(ref.bytes) || !positiveSafeInteger(ref.width) || !positiveSafeInteger(ref.height)) {
+    failure('The attachment store returned invalid preview metadata.')
+  }
+  const name = typeof ref.name === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(ref.name)
+    ? ref.name
+    : fallbackName
+  return {
+    attachmentId: ref.attachmentId,
+    mediaType: ref.mediaType,
+    width: ref.width,
+    height: ref.height,
+    bytes: ref.bytes,
+    name,
+  }
 }
 
 function executionKey(exec: ToolRunContext): string {
   return `${String(exec.agent?.id ?? '<no-agent>')}\u0000${String(exec.rootCallId)}\u0000${String(exec.callId)}`
 }
 
-async function generate(ctx: Context, transport: OpenAICodexTransportV1, prompt: string, exec: ToolRunContext): Promise<ImageValue> {
+async function generate(
+  ctx: Context,
+  transport: OpenAICodexTransportV1,
+  assets: OpenAICodexImageAssetStore,
+  prompt: string,
+  exec: ToolRunContext,
+): Promise<ImageValue> {
   let response: Awaited<ReturnType<OpenAICodexTransportV1['generateImages']>>
   try {
     response = await transport.generateImages({ prompt }, { signal: exec.signal })
@@ -136,30 +164,49 @@ async function generate(ctx: Context, transport: OpenAICodexTransportV1, prompt:
     inputs.push({ data, mediaType: parsed.mediaType, name })
   }
 
+  const sessionId = exec.agent?.id
+  if (sessionId === undefined) failure('Image generation requires a session-owned tool call.')
+  let originals: readonly OpenAICodexOriginalImageRef[]
+  try {
+    originals = await assets.saveImages(String(sessionId), inputs.map((input, index) => {
+      const parsed = parsedImages[index]
+      if (parsed === undefined || input.name === undefined) failure('The generated image batch is incomplete.')
+      return {
+        data: input.data,
+        mediaType: parsed.mediaType,
+        width: parsed.width,
+        height: parsed.height,
+        name: input.name,
+      }
+    }))
+  } catch {
+    failure('The generated original images could not be saved.')
+  }
+
   let refs: readonly ImageAttachmentRef[]
   try {
     refs = await ctx.attachments.saveImages(inputs)
   } catch {
+    await assets.removeImages(originals)
     failure('The generated images could not be saved; no attachment references were returned.')
   }
-  if (refs.length !== inputs.length) failure('The attachment store returned an incomplete image batch.')
+  if (refs.length !== inputs.length || originals.length !== inputs.length) {
+    await assets.removeImages(originals)
+    failure('The image stores returned an incomplete image batch.')
+  }
 
-  return {
-    images: refs.map((ref, index) => {
-      const parsed = parsedImages[index]
-      const input = inputs[index]
-      const name = input?.name
-      if (parsed === undefined || input === undefined || name === undefined) failure('The attachment store returned an incomplete image batch.')
-      validateRef(ref, parsed, input, name)
-      return {
-        attachmentId: ref.attachmentId,
-        mediaType: parsed.mediaType,
-        width: parsed.width,
-        height: parsed.height,
-        bytes: input.data.byteLength,
-        name,
-      }
-    }),
+  try {
+    return {
+      images: refs.map((ref, index) => {
+        const original = originals[index]
+        const name = inputs[index]?.name
+        if (original === undefined || name === undefined) failure('The image stores returned an incomplete image batch.')
+        return { original, preview: previewValue(ref, name) }
+      }),
+    }
+  } catch (error) {
+    await assets.removeImages(originals)
+    throw error
   }
 }
 
@@ -172,11 +219,11 @@ function appendAbortNote(result: Readonly<ToolExecutionResult>): ToolContentBloc
 }
 
 /** Build one fiber-owned image tool, including in-flight call deduplication. */
-export function imageGenerateTool(ctx: Context): ToolDefinition {
+export function imageGenerateTool(ctx: Context, assets: OpenAICodexImageAssetStore): ToolDefinition {
   const inFlight = new Map<string, Promise<ImageValue>>()
   return defineTool({
     name: IMAGE_GENERATE_TOOL_NAME,
-    description: 'Generate an image from a text prompt and save it as a durable DSH attachment. Supports one prompt only; output size and style are service defaults.',
+    description: 'Generate an image from a text prompt, preserve the exact original, and save a DSH conversation preview. Supports one prompt only; output size and style are service defaults.',
     parameters: {
       prompt: { type: 'string', required: true, description: 'A complete description of the image to generate.' },
     },
@@ -192,12 +239,33 @@ export function imageGenerateTool(ctx: Context): ToolDefinition {
               type: 'object',
               additionalProperties: false,
               properties: {
-                attachmentId: { type: 'string', required: true },
-                mediaType: { type: 'string', required: true, enum: ['image/png', 'image/jpeg', 'image/webp'] },
-                width: { type: 'integer', required: true },
-                height: { type: 'integer', required: true },
-                bytes: { type: 'integer', required: true },
-                name: { type: 'string', required: true },
+                original: {
+                  type: 'object',
+                  required: true,
+                  additionalProperties: false,
+                  properties: {
+                    assetId: { type: 'string', required: true },
+                    mediaType: { type: 'string', required: true, enum: ['image/png', 'image/jpeg', 'image/webp'] },
+                    width: { type: 'integer', required: true },
+                    height: { type: 'integer', required: true },
+                    bytes: { type: 'integer', required: true },
+                    name: { type: 'string', required: true },
+                    sha256: { type: 'string', required: true },
+                  },
+                },
+                preview: {
+                  type: 'object',
+                  required: true,
+                  additionalProperties: false,
+                  properties: {
+                    attachmentId: { type: 'string', required: true },
+                    mediaType: { type: 'string', required: true, enum: ['image/png', 'image/jpeg', 'image/webp'] },
+                    width: { type: 'integer', required: true },
+                    height: { type: 'integer', required: true },
+                    bytes: { type: 'integer', required: true },
+                    name: { type: 'string', required: true },
+                  },
+                },
               },
             },
           },
@@ -206,6 +274,7 @@ export function imageGenerateTool(ctx: Context): ToolDefinition {
       render: (_args, value) => outputContent(value),
       presentationMeta: (args, value) => ({
         kind: IMAGE_PRESENTATION_KIND,
+        schemaVersion: IMAGE_PRESENTATION_SCHEMA_VERSION,
         prompt: args.prompt.trim(),
         images: value.images,
       }),
@@ -223,7 +292,7 @@ export function imageGenerateTool(ctx: Context): ToolDefinition {
       const key = executionKey(exec)
       const current = inFlight.get(key)
       if (current !== undefined) return current
-      const pending = generate(ctx, transport, prompt, exec)
+      const pending = generate(ctx, transport, assets, prompt, exec)
         .catch(error => { if (error instanceof SafeToolError) throw error; failure(fixedTransportMessage(error)) })
         .finally(() => { inFlight.delete(key) })
       inFlight.set(key, pending)

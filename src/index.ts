@@ -22,6 +22,7 @@ import { registerOpenAICodexProxyRoutes } from './proxy-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { registerOpenAICodexUpdateRoutes } from './update-routes.ts'
 import { registerOpenAICodexModelCatalogRoute } from './model-routes.ts'
+import { registerOpenAICodexOriginalImageRoute } from './image-asset-routes.ts'
 import {
   checkForOpenAICodexUpdate,
   compareOpenAICodexVersions,
@@ -36,6 +37,7 @@ import { viewImageTool } from './view-image.ts'
 import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { OpenAICodexImageAssetStore } from './image-assets.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -264,6 +266,7 @@ export function apply(ctx: Context, config: Config): void {
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
   const credentials = new OpenAICodexCredentialStore()
+  const imageAssets = new OpenAICodexImageAssetStore()
   const trustedOrigins = new OpenAICodexTrustedOriginsStore(
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
@@ -286,6 +289,7 @@ export function apply(ctx: Context, config: Config): void {
     registerOpenAICodexProxyRoutes(webCtx, trustedOrigins, proxyManager)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
+    registerOpenAICodexOriginalImageRoute(webCtx, trustedOrigins, imageAssets)
   })
 
   let stopped = false
@@ -366,7 +370,7 @@ export function apply(ctx: Context, config: Config): void {
     if (stopped || !enabled) return
     const fiber = ctx.inject(
       ['tools', 'attachments'],
-      toolCtx => toolCtx.tools.register(imageGenerateTool(toolCtx)),
+      toolCtx => toolCtx.tools.register(imageGenerateTool(toolCtx, imageAssets)),
     )
     imageGenerationFiber = fiber
     void Promise.resolve(fiber).catch((error: unknown) => {
