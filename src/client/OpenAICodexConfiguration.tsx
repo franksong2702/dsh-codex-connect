@@ -4,18 +4,12 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
-import { isValidOpenAICodexProxyUrl } from '../settings-contract.ts'
 import {
   decodeOpenAICodexModelCatalog,
   OPENAI_CODEX_MODEL_CATALOG_PATH,
 } from '../model-contract.ts'
 import type { OpenAICodexModelCatalogEntry } from '../model-contract.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
-import {
-  OPENAI_CODEX_PROXY_DETECT_PATH,
-  OPENAI_CODEX_PROXY_TEST_PATH,
-} from '../proxy-paths.ts'
-import type { OpenAICodexProxyProbeResult } from '../provider-proxy.ts'
 
 export interface OpenAICodexConfigurationProps {
   scope?: SettingsScope<OpenAICodexSettingsConfig>
@@ -42,17 +36,6 @@ const primaryButtonStyle: CSSProperties = { ...buttonStyle, borderColor: 'var(--
 const errorStyle: CSSProperties = { ...bodyStyle, color: 'var(--dsw-alias-state-error-primary)' }
 const successStyle: CSSProperties = { ...bodyStyle, color: 'var(--dsw-alias-state-success-primary, #16825d)' }
 
-type ProxyDetectionState =
-  | { status: 'idle' }
-  | { status: 'detecting' }
-  | { status: 'candidate'; candidates: readonly OpenAICodexProxyProbeResult[] }
-  | { status: 'failed'; results: readonly OpenAICodexProxyProbeResult[] }
-
-type ProxyDetectionResponse = {
-  candidates: readonly OpenAICodexProxyProbeResult[]
-  results: readonly OpenAICodexProxyProbeResult[]
-}
-
 const UNAVAILABLE_SNAPSHOT = {
   status: 'unavailable' as const,
   value: undefined,
@@ -65,8 +48,6 @@ const UNAVAILABLE_SNAPSHOT = {
 
 const CONFIG_FIELDS = [
   'models',
-  'enableProxy',
-  'proxyUrl',
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
@@ -111,10 +92,6 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const [feedback, setFeedback] = useState<'idle' | 'saved' | 'error'>('idle')
   const [modelCatalog, setModelCatalog] = useState<OpenAICodexModelCatalogEntry[] | undefined>()
   const [modelCatalogError, setModelCatalogError] = useState(false)
-  const [proxyDetection, setProxyDetection] = useState<ProxyDetectionState>({ status: 'idle' })
-  const [manualProxy, setManualProxy] = useState(false)
-  const [manualProbe, setManualProbe] = useState<OpenAICodexProxyProbeResult | undefined>()
-  const [manualProbeBusy, setManualProbeBusy] = useState(false)
 
   useEffect(() => {
     if (scope === undefined) return
@@ -153,72 +130,20 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     setDraft(scope?.getSnapshot().value)
     setDirty(false)
     setFeedback('idle')
-    setProxyDetection({ status: 'idle' })
-    setManualProbe(undefined)
-  }
-
-  const detectProxy = async (): Promise<void> => {
-    setProxyDetection({ status: 'detecting' })
-    try {
-      const response = await fetch(OPENAI_CODEX_PROXY_DETECT_PATH, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { accept: 'application/json' },
-      })
-      if (!response.ok) throw new Error(`proxy detection failed: ${String(response.status)}`)
-      const value = await response.json() as ProxyDetectionResponse
-      if (!Array.isArray(value.candidates) || !Array.isArray(value.results)) throw new Error('proxy detection response was invalid')
-      setProxyDetection(value.candidates.length > 0
-        ? { status: 'candidate', candidates: value.candidates }
-        : { status: 'failed', results: value.results })
-    } catch {
-      setProxyDetection({ status: 'failed', results: [] })
-    }
-  }
-
-  const useProxy = (proxyUrl: string): void => {
-    if (draft === undefined || !isValidOpenAICodexProxyUrl(proxyUrl)) return
-    setDraft({ ...draft, proxyUrl, enableProxy: true })
-    setDirty(true)
-    setFeedback('idle')
-    setManualProxy(true)
-    setManualProbe(undefined)
-    setProxyDetection({ status: 'idle' })
-  }
-
-  const testManualProxy = async (): Promise<void> => {
-    if (draft === undefined || !isValidOpenAICodexProxyUrl(draft.proxyUrl)) return
-    setManualProbeBusy(true)
-    try {
-      const path = `${OPENAI_CODEX_PROXY_TEST_PATH}?proxyUrl=${encodeURIComponent(draft.proxyUrl)}`
-      const response = await fetch(path, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { accept: 'application/json' },
-      })
-      if (!response.ok) throw new Error(`proxy test failed: ${String(response.status)}`)
-      setManualProbe(await response.json() as OpenAICodexProxyProbeResult)
-    } catch {
-      setManualProbe({
-        proxyUrl: draft.proxyUrl,
-        reachable: false,
-        classification: 'connect-failure',
-      })
-    } finally {
-      setManualProbeBusy(false)
-    }
   }
 
   const validModel = draft !== undefined && draft.searchModel.trim().length > 0
   const validTokens = draft !== undefined
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
-  const validProxy = draft !== undefined && isValidOpenAICodexProxyUrl(draft.proxyUrl)
-  const valid = validModel && validTokens && validProxy
+  const valid = validModel && validTokens
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
-    const desired = { ...draft, searchModel: draft.searchModel.trim() }
+    const desired = {
+      ...draft,
+      searchModel: draft.searchModel.trim(),
+    }
     setBusy(true)
     setFeedback('idle')
     try {
@@ -287,75 +212,6 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
               })}
             </div>
           )}
-          <div style={{ paddingTop: 4 }}>
-            <h3 style={headingStyle}>{t('networkHeading')}</h3>
-            <p style={{ ...bodyStyle, marginTop: 4 }}>{t('networkIntro')}</p>
-          </div>
-          <p style={bodyStyle} role="status">
-            {draft.enableProxy ? t('customProxyActive', { proxyUrl: draft.proxyUrl }) : t('directConnection')}
-          </p>
-          <div style={buttonsStyle}>
-            {!draft.enableProxy ? (
-              <button type="button" style={buttonStyle} onClick={() => { void detectProxy() }} disabled={proxyDetection.status === 'detecting'}>
-                {proxyDetection.status === 'detecting' ? t('detectingProxy') : t('detectProxy')}
-              </button>
-            ) : null}
-            <button type="button" style={buttonStyle} onClick={() => { setManualProxy(true) }}>{t('configureProxyManually')}</button>
-            {draft.enableProxy ? (
-              <button type="button" style={buttonStyle} onClick={() => { update('enableProxy', false) }}>{t('disableProxy')}</button>
-            ) : null}
-          </div>
-          {proxyDetection.status === 'candidate' ? (
-            <div style={fieldsetStyle} role="status">
-              <p style={bodyStyle}>{t('proxyCandidatesFound')}</p>
-              {proxyDetection.candidates.map(candidate => (
-                <div key={candidate.proxyUrl} style={actionsStyle}>
-                  <code style={modelIdStyle}>{candidate.proxyUrl}</code>
-                  <button type="button" style={primaryButtonStyle} onClick={() => { useProxy(candidate.proxyUrl) }}>{t('useThisProxy')}</button>
-                </div>
-              ))}
-              <button type="button" style={buttonStyle} onClick={() => { setProxyDetection({ status: 'idle' }) }}>{t('keepDirectConnection')}</button>
-            </div>
-          ) : null}
-          {proxyDetection.status === 'failed' ? <p style={errorStyle} role="alert">{t('proxyDetectionFailed')}</p> : null}
-          {manualProxy ? (
-            <div style={fieldsetStyle}>
-              <label style={formFieldStyle}>
-                <span style={labelStyle}>{t('proxyAddress')}</span>
-                <input
-                  style={controlStyle}
-                  value={draft.proxyUrl}
-                  aria-invalid={!isValidOpenAICodexProxyUrl(draft.proxyUrl)}
-                  onChange={event => { update('proxyUrl', event.currentTarget.value) }}
-                />
-              </label>
-              <div style={buttonsStyle}>
-                <button
-                  type="button"
-                  style={buttonStyle}
-                  disabled={!isValidOpenAICodexProxyUrl(draft.proxyUrl) || manualProbeBusy}
-                  onClick={() => { void testManualProxy() }}
-                >
-                  {manualProbeBusy ? t('testingProxy') : t('testProxy')}
-                </button>
-                {!draft.enableProxy ? (
-                  <button
-                    type="button"
-                    style={primaryButtonStyle}
-                    disabled={!isValidOpenAICodexProxyUrl(draft.proxyUrl)}
-                    onClick={() => { useProxy(draft.proxyUrl) }}
-                  >
-                    {t('useThisProxy')}
-                  </button>
-                ) : null}
-              </div>
-              {manualProbe === undefined ? null : (
-                <p style={manualProbe.reachable ? successStyle : errorStyle} role="status">
-                  {manualProbe.reachable ? t('proxyTestSucceeded', { status: manualProbe.status ?? manualProbe.classification }) : t('proxyTestFailed', { reason: manualProbe.classification })}
-                </p>
-              )}
-            </div>
-          ) : null}
           <div style={{ paddingTop: 4 }}>
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
@@ -448,7 +304,6 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
       )}
       {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
       {!validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
-      {!validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}
       <p style={bodyStyle}>{t('routingNote')}</p>
       <div style={actionsStyle}>
         <span aria-live="polite">

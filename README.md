@@ -125,7 +125,7 @@ Expected result: `status --json` reports `signed-in` and exits `0`, while `docto
 The two small controls are shown only when the current conversation is using a GPT model from the `openai-codex` provider. They are session controls, not profile-wide settings:
 
 - **Fast Mode (lightning icon)** is off by default for each conversation. Click it to request the faster `1.5×` mode; click it again to return to Standard speed. The control is bound to that conversation and does not change the selected model or other conversations. Hover or focus the icon to see the current state and its quota-consumption warning.
-- **Weekly quota bar** is the short horizontal bar beside the model selector. Its color moves from green through yellow/orange to red as the remaining amount falls. Hover or focus it to see the exact remaining percentage and the server-provided reset time. It is hidden for non-GPT models or when usage data is unavailable.
+- **5-hour and weekly quota bars** are the two compact rows beside the model selector, labelled `5h` and `7d`. Each color moves from green through yellow/orange to red as its remaining amount falls. Hover or focus the control to see both exact remaining percentages and server-provided reset times. A row is omitted when that window is unavailable; the whole control is hidden for non-GPT models or when no usable quota data exists.
 - For the exact `gpt-5.3-codex-spark` model, the Composer reads the Spark weekly bucket. Other GPT Codex models read the standard Codex weekly bucket; these are separate limits.
 
 <p align="center">
@@ -147,13 +147,27 @@ The installed bundle is intentionally inert beyond model-provider registration:
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
 
-### Network connection and proxy detection
+<details>
+<summary><strong>Provider proxy (direct by default)</strong></summary>
 
-Codex Connect uses a **Direct connection** by default. A proxy is optional and applies only to this plugin's Codex requests: model streaming, OAuth login and token refresh, usage, standalone search, and image generation. Other providers and unscoped network requests keep the process's original dispatcher.
+The proxy applies only to network calls made by this `openai-codex` provider instance. It does not change Harness, other plugins, other providers, or the global search route. A fresh install uses direct connections (`enableProxy: false`); `proxyUrl` starts as `http://127.0.0.1:7890` only as an editable suggestion.
 
-Select **Detect proxy** to test only the standard proxy environment variables and the documented loopback candidates `127.0.0.1:7890`, `127.0.0.1:7897`, and `127.0.0.1:10809`. Detection makes no model call, consumes no quota, and does not write settings. A response from the canonical Codex endpoint proves network reachability; `401/403`, proxy `407`, DNS, refused connection, timeout, TLS, and CONNECT failures remain separate diagnostics.
+The Plugin configuration card deliberately separates discovery from activation:
 
-Choose **Use this proxy** only after reviewing a candidate, then click **Save changes**. **Configure manually** lets you test a credential-free HTTP(S) proxy origin before activation. **Disable proxy** is always available. A failed probe leaves the previous mode unchanged, and an enabled proxy failure is shown as an actionable error; Codex Connect never silently retries the request through a direct connection.
+1. **Detect** checks a bounded, environment-first candidate set: `HTTPS_PROXY`, `https_proxy`, `HTTP_PROXY`, `http_proxy`, `ALL_PROXY`, `all_proxy`, then local ports `7890`, `7897`, and `10809`. It probes only those candidates to find a reachable draft and reports its source, but does not save or enable it.
+2. **Test** sends a probe through the current draft URL. It does not save or enable the proxy.
+3. **Activate** becomes available only after that exact draft passes Test. Clicking it is the explicit confirmation that saves the URL and enables the proxy.
+
+The status rail on the right of the proxy section is green while active and red while direct. An `openai-codex` conversation also shows a connectivity ball in the upper-right session header. About every three seconds it checks `chatgpt.com`, `auth.openai.com`, and `api.openai.com` through the currently selected direct or proxy path; any HTTP response counts as reachable, while DNS, timeout, CONNECT, and TLS errors are shown in its hover/focus popover. The popover also provides a manual connection check and the same Detect, Test, Activate, and **Disable proxy** workflow as Plugin configuration. The process-global dispatcher bridge is installed only while a Codex operation is in flight and is restored after that operation settles. Switching a session to another adapter stops its monitor and leaves no persistent proxy registration, without disabling the saved proxy for other Codex sessions. Disabling the setting or uninstalling the plugin retires its proxy agents after in-flight requests finish. Multiple installed instances keep independent proxy controllers.
+
+```yaml
+- id: llm-openai-codex
+  config:
+    enableProxy: false
+    proxyUrl: http://127.0.0.1:7890
+```
+
+</details>
 
 ### Enable only the capability you intend to use
 
@@ -219,8 +233,8 @@ Selecting Codex as the profile's global search route is another explicit change:
 | Field | Default | Values |
 |---|---:|---|
 | `models` | full catalog | Codex model id array; empty hides all entries |
-| `enableProxy` | `false` | boolean; direct connection unless explicitly enabled |
-| `proxyUrl` | `http://127.0.0.1:7890` (inactive placeholder) | Credential-free HTTP(S) proxy origin |
+| `enableProxy` | `false` | boolean; affects only this Codex provider instance |
+| `proxyUrl` | `http://127.0.0.1:7890` | credential-free HTTP(S) proxy URL |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

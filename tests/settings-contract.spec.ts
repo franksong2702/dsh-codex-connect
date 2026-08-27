@@ -1,40 +1,48 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_OPENAI_CODEX_PROXY_URL,
-  DEFAULT_OPENAI_CODEX_SETTINGS,
   decodeOpenAICodexSettings,
+  DEFAULT_OPENAI_CODEX_PROXY_URL,
   resolveOpenAICodexProxyUrl,
 } from '../src/settings-contract.ts'
 
+const legacySettings = {
+  models: undefined,
+  enableSearch: false,
+  enableImageTool: false,
+  enableImageGeneration: false,
+  searchModel: 'gpt-5.6-sol',
+  searchMode: 'cached',
+  searchContextSize: 'medium',
+  searchMaxOutputTokens: 10_000,
+}
+
 describe('OpenAI Codex proxy settings contract', () => {
-  it('keeps fresh and legacy settings on direct connection', () => {
-    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
-    expect(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
-    const legacy = decodeOpenAICodexSettings({
-      enableSearch: false,
-      enableImageTool: false,
-      searchModel: 'gpt-5.6-sol',
-      searchMode: 'cached',
-      searchContextSize: 'medium',
-      searchMaxOutputTokens: 10_000,
+  it('upgrades older snapshots to the direct-connection default', () => {
+    expect(decodeOpenAICodexSettings(legacySettings)).toMatchObject({
+      enableProxy: false,
+      proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
     })
-    expect(legacy?.enableProxy).toBe(false)
-    expect(legacy?.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
-    expect(resolveOpenAICodexProxyUrl(legacy ?? {})).toBeUndefined()
   })
 
-  it('rejects unsafe active proxy values while preserving explicit activation semantics', () => {
+  it('accepts direct mode without requiring a populated proxy URL', () => {
+    const decoded = decodeOpenAICodexSettings({
+      ...legacySettings,
+      enableProxy: false,
+      proxyUrl: '',
+    })
+    expect(decoded).toMatchObject({ enableProxy: false, proxyUrl: '' })
+    expect(resolveOpenAICodexProxyUrl(decoded ?? {})).toBeUndefined()
+  })
+
+  it('rejects credentials and non-HTTP proxy schemes', () => {
     expect(decodeOpenAICodexSettings({
+      ...legacySettings,
       enableProxy: true,
-      proxyUrl: 'http://user:password@127.0.0.1:7890',
-      enableSearch: false,
-      enableImageTool: false,
-      searchModel: 'gpt-5.6-sol',
-      searchMode: 'cached',
-      searchContextSize: 'medium',
-      searchMaxOutputTokens: 10_000,
+      proxyUrl: 'http://user:secret@127.0.0.1:7890',
     })).toBeUndefined()
-    expect(resolveOpenAICodexProxyUrl({ enableProxy: true, proxyUrl: 'http://127.0.0.1:7890' }))
-      .toBe('http://127.0.0.1:7890')
+    expect(() => resolveOpenAICodexProxyUrl({
+      enableProxy: true,
+      proxyUrl: 'socks5://127.0.0.1:7890',
+    })).toThrow(/credential-free HTTP\(S\) origin/u)
   })
 })

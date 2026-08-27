@@ -1,17 +1,38 @@
-/** Same-origin proxy detection routes for the OpenAI Codex settings card. */
+/** Same-origin Detect/Test routes for the explicit Codex proxy workflow. */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
-import type { OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 import { trustedRequestDecision } from './auth-routes.ts'
+import type { OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import {
-  detectOpenAICodexProxies,
-  OpenAICodexProxyManager,
-} from './provider-proxy.ts'
+  detectOpenAICodexProxyEnvironment,
+  listOpenAICodexProxyCandidates,
+} from './proxy-env.ts'
 import {
+  OPENAI_CODEX_CONNECTIVITY_PATH,
   OPENAI_CODEX_PROXY_DETECT_PATH,
   OPENAI_CODEX_PROXY_TEST_PATH,
 } from './proxy-paths.ts'
+import { isValidOpenAICodexProxyUrl } from './settings-contract.ts'
+import {
+  OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS,
+  checkOpenAICodexConnectivity,
+  testOpenAICodexProxy,
+} from './provider-proxy.ts'
+import type { OpenAICodexConnectivityReport, OpenAICodexProxyRunner, OpenAICodexProxyTestResult } from './provider-proxy.ts'
+
+export { OPENAI_CODEX_CONNECTIVITY_PATH, OPENAI_CODEX_PROXY_DETECT_PATH, OPENAI_CODEX_PROXY_TEST_PATH } from './proxy-paths.ts'
+
+const BODY_LIMIT = 4_096
+const CONNECTIVITY_CACHE_MS = 2_500
+
+export interface OpenAICodexProxyRouteOptions {
+  environment?: Readonly<Record<string, string | undefined>>
+  testProxy?: (proxyUrl: string) => Promise<OpenAICodexProxyTestResult>
+  proxy?: OpenAICodexProxyRunner
+  checkConnectivity?: () => Promise<OpenAICodexConnectivityReport>
+}
 
 function json(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, {
@@ -22,24 +43,82 @@ function json(res: ServerResponse, status: number, value: unknown): void {
   res.end(JSON.stringify(value))
 }
 
-function proxyUrlFromQuery(req: IncomingMessage): string | undefined {
-  if (typeof req.url !== 'string') return undefined
+function header(req: IncomingMessage, name: string): string | undefined {
+  const value = req.headers[name]
+  return Array.isArray(value) ? value[0] : value
+}
+
+async function readJson(req: IncomingMessage): Promise<unknown> {
+  const declared = header(req, 'content-length')
+  if (declared !== undefined && (!/^\d+$/u.test(declared.trim()) || Number(declared) > BODY_LIMIT)) {
+    throw new RangeError('request body too large')
+  }
+  const chunks: Buffer[] = []
+  let total = 0
+  const iterable = req as unknown as AsyncIterable<Uint8Array | string>
+  if (typeof (req as unknown as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] === 'function') {
+    for await (const chunk of iterable) {
+      const bytes = Buffer.from(chunk)
+      total += bytes.byteLength
+      if (total > BODY_LIMIT) throw new RangeError('request body too large')
+      chunks.push(bytes)
+    }
+  } else {
+    const body = (req as IncomingMessage & { body?: unknown }).body
+    if (typeof body !== 'string' && !(body instanceof Uint8Array)) throw new TypeError('invalid body')
+    const bytes = Buffer.from(body)
+    if (bytes.byteLength > BODY_LIMIT) throw new RangeError('request body too large')
+    chunks.push(bytes)
+  }
   try {
-    const parsed = new URL(req.url, 'http://dsh.invalid')
-    const values = parsed.searchParams.getAll('proxyUrl')
-    return values.length === 1 && values[0]!.length <= 2_000 ? values[0] : undefined
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))) as unknown
   } catch {
-    return undefined
+    throw new TypeError('invalid body')
   }
 }
 
-/** Register bounded detection and draft-probe routes; neither route mutates settings. */
+function proxyUrlBody(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).length !== 1 || typeof record['proxyUrl'] !== 'string') return undefined
+  const proxyUrl = record['proxyUrl'].trim()
+  return isValidOpenAICodexProxyUrl(proxyUrl) ? proxyUrl : undefined
+}
+
+/** Register read-only Detect and draft-only Test routes. Activation uses SettingsScope. */
 export function registerOpenAICodexProxyRoutes(
   ctx: Context,
   trustedOrigins: OpenAICodexTrustedOriginsStore,
-  manager: OpenAICodexProxyManager,
+  options: OpenAICodexProxyRouteOptions = {},
 ): void {
+  const environment = options.environment ?? process.env
+  const testProxy = options.testProxy ?? testOpenAICodexProxy
+  const detectProxy = options.testProxy
+    ?? ((proxyUrl: string) => testOpenAICodexProxy(proxyUrl, OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS))
+  const checkConnectivity = options.checkConnectivity ?? (() => checkOpenAICodexConnectivity(options.proxy))
   ctx.effect(() => {
+    let cachedConnectivity: { proxyUrl: string | undefined; report: OpenAICodexConnectivityReport } | undefined
+    let connectivityInFlight: { proxyUrl: string | undefined; promise: Promise<OpenAICodexConnectivityReport> } | undefined
+    const connectivity = (): Promise<OpenAICodexConnectivityReport> => {
+      const proxyUrl = options.proxy?.activeUrl
+      if (cachedConnectivity !== undefined && cachedConnectivity.proxyUrl === proxyUrl
+        && Date.now() - cachedConnectivity.report.checkedAt < CONNECTIVITY_CACHE_MS) {
+        return Promise.resolve(cachedConnectivity.report)
+      }
+      if (connectivityInFlight !== undefined && connectivityInFlight.proxyUrl === proxyUrl) {
+        return connectivityInFlight.promise
+      }
+      const promise = checkConnectivity()
+        .then(report => {
+          cachedConnectivity = { proxyUrl, report }
+          return report
+        })
+        .finally(() => {
+          if (connectivityInFlight?.promise === promise) connectivityInFlight = undefined
+        })
+      connectivityInFlight = { proxyUrl, promise }
+      return promise
+    }
     const authorize = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
       const decision = await trustedRequestDecision(req, trustedOrigins)
       if (decision.trusted) return true
@@ -49,13 +128,31 @@ export function registerOpenAICodexProxyRoutes(
     const routes = [
       ctx.webServer.register({
         kind: 'exact',
+        path: OPENAI_CODEX_CONNECTIVITY_PATH,
+        handler: async (req, res) => {
+          if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
+          if (!await authorize(req, res)) return
+          try {
+            json(res, 200, await connectivity())
+          } catch {
+            json(res, 503, { error: 'connectivity check failed' })
+          }
+        },
+      }),
+      ctx.webServer.register({
+        kind: 'exact',
         path: OPENAI_CODEX_PROXY_DETECT_PATH,
         handler: async (req, res) => {
-          if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
+          if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
           if (!await authorize(req, res)) return
-          const results = await detectOpenAICodexProxies(manager)
-          return json(res, 200, {
-            candidates: results.filter(result => result.reachable),
+          const environmentCandidate = detectOpenAICodexProxyEnvironment(environment)
+          const results = await Promise.all(listOpenAICodexProxyCandidates(environment).map(async candidate => ({
+            ...candidate,
+            ...await detectProxy(candidate.proxyUrl),
+          })))
+          json(res, 200, {
+            environment: environmentCandidate,
+            candidates: results.filter(result => result.ok),
             results,
           })
         },
@@ -66,14 +163,22 @@ export function registerOpenAICodexProxyRoutes(
         handler: async (req, res) => {
           if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
           if (!await authorize(req, res)) return
-          const proxyUrl = proxyUrlFromQuery(req)
-          if (proxyUrl === undefined) return json(res, 400, { error: 'invalid proxy URL' })
-          return json(res, 200, await manager.probe(proxyUrl))
+          const type = header(req, 'content-type')
+          if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
+            return json(res, 415, { error: 'unsupported content type' })
+          }
+          try {
+            const proxyUrl = proxyUrlBody(await readJson(req))
+            if (proxyUrl === undefined) return json(res, 400, { error: 'invalid proxy URL' })
+            json(res, 200, await testProxy(proxyUrl))
+          } catch (error: unknown) {
+            json(res, error instanceof RangeError ? 413 : 400, {
+              error: error instanceof RangeError ? 'request body too large' : 'invalid input',
+            })
+          }
         },
       }),
     ]
     return () => { for (const dispose of routes) dispose() }
-  }, 'dsh-codex-connect: proxy detection routes')
+  }, 'dsh-codex-connect: proxy Detect/Test routes')
 }
-
-export { OPENAI_CODEX_PROXY_DETECT_PATH, OPENAI_CODEX_PROXY_TEST_PATH } from './proxy-paths.ts'

@@ -25,7 +25,7 @@ import {
 } from './trusted-origins.ts'
 import { FastModeRegistry, isFastModeSessionId } from './fast-mode.ts'
 import { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
-import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 export {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
@@ -54,10 +54,7 @@ interface LoginChallenge {
 /** Testable timing boundary; production uses the exported 30-second ceiling. */
 export interface OpenAICodexWebAuthOptions {
   challengeTimeoutMs?: number
-  /** Owns Codex-only proxy dispatch for login and quota refresh. */
-  proxyManager?: OpenAICodexProxyManager | undefined
-  /** Resolve the explicitly activated proxy for each operation. */
-  resolveProxyUrl?: (() => string | undefined) | undefined
+  proxy?: OpenAICodexProxyRunner
 }
 
 /** Redact provider diagnostics before they cross to the browser. */
@@ -87,16 +84,14 @@ export class OpenAICodexWebAuth {
   private challengeWaiters: Array<{ resolve(value: LoginChallenge): void; reject(error: unknown): void }> = []
   private challengeTimer: ReturnType<typeof setTimeout> | undefined
   private readonly challengeTimeoutMs: number
-  private readonly proxyManager: OpenAICodexProxyManager | undefined
-  private readonly resolveProxyUrl: () => string | undefined
+  private readonly proxy: OpenAICodexProxyRunner | undefined
 
   constructor(
     private readonly store: OpenAICodexCredentialStore,
     options: OpenAICodexWebAuthOptions = {},
   ) {
     this.challengeTimeoutMs = options.challengeTimeoutMs ?? OPENAI_CODEX_AUTH_URL_TIMEOUT_MS
-    this.proxyManager = options.proxyManager
-    this.resolveProxyUrl = options.resolveProxyUrl ?? (() => undefined)
+    this.proxy = options.proxy
     if (!Number.isFinite(this.challengeTimeoutMs) || this.challengeTimeoutMs <= 0) {
       throw new TypeError('OpenAI Codex auth URL timeout must be a positive finite number')
     }
@@ -142,14 +137,13 @@ export class OpenAICodexWebAuth {
       this.cancelSignIn(new Error(`OpenAI Codex did not provide an authorization URL within ${String(this.challengeTimeoutMs)}ms`))
     }, this.challengeTimeoutMs)
     this.challengeTimer.unref()
-    const login = () => loginOpenAICodex({
+    this.operation = loginOpenAICodex({
       signal: cancellation.signal,
       prompt: prompt => prompt.type === 'select'
         ? Promise.resolve('browser')
         : waitForPromptAbort(prompt),
       notify: event => { this.onEvent(event) },
-    }, this.store)
-    this.operation = (this.proxyManager?.run(this.resolveProxyUrl(), login) ?? login()).then(
+    }, this.store, this.proxy).then(
       async () => {
         if (this.challenge === undefined) {
           const error = new Error('OpenAI Codex sign-in finished without an authorization URL')
@@ -195,10 +189,9 @@ export class OpenAICodexWebAuth {
     const stored = await openAICodexAuthStatus(this.store)
     if (!stored.authenticated) return { status: 'signed-out' }
     try {
-      const readUsage = () => readOpenAICodexRateLimits(this.store)
       return {
         status: 'signed-in',
-        usage: await (this.proxyManager?.run(this.resolveProxyUrl(), readUsage) ?? readUsage()),
+        usage: await readOpenAICodexRateLimits(this.store, this.proxy),
       }
     } catch (error: unknown) {
       if (isOpenAICodexReauthRequiredError(error)) {
@@ -414,10 +407,11 @@ export function registerOpenAICodexAuthRoutes(
   store: OpenAICodexCredentialStore,
   trustedOriginsOverride?: OpenAICodexTrustedOriginsStore,
   fastModeOverride?: FastModeRegistry,
-  proxyManager?: OpenAICodexProxyManager,
-  resolveProxyUrl?: () => string | undefined,
+  proxy?: OpenAICodexProxyRunner,
 ): void {
-  const auth = new OpenAICodexWebAuth(store, { proxyManager, resolveProxyUrl })
+  const auth = new OpenAICodexWebAuth(store, {
+    ...proxy === undefined ? {} : { proxy },
+  })
   const storedFilename = (store as OpenAICodexCredentialStore & { filename?: unknown }).filename
   const fastMode = fastModeOverride ?? new FastModeRegistry()
   const trustedOrigins = trustedOriginsOverride ?? (typeof storedFilename === 'string'

@@ -1,6 +1,5 @@
-/** Node-free route constants shared by the Host and browser plugin halves. */
+/** Browser/Host route constants for the explicit proxy workflow. */
 
-/** Detect bounded local/environment proxy candidates without changing settings. */
-export const OPENAI_CODEX_PROXY_DETECT_PATH = '/plugins/dsh-openai-codex/proxy/detect'
-/** Test one manually entered proxy origin without changing settings. */
-export const OPENAI_CODEX_PROXY_TEST_PATH = '/plugins/dsh-openai-codex/proxy/test'
+export const OPENAI_CODEX_PROXY_DETECT_PATH = '/api/dsh-codex-connect/proxy/detect'
+export const OPENAI_CODEX_PROXY_TEST_PATH = '/api/dsh-codex-connect/proxy/test'
+export const OPENAI_CODEX_CONNECTIVITY_PATH = '/api/dsh-codex-connect/proxy/connectivity'

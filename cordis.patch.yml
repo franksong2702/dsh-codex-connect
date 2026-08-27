@@ -5,6 +5,7 @@
       name: dsh-codex-connect
       config:
         enableProxy: false
+        proxyUrl: http://127.0.0.1:7890
         enableSearch: false
         enableImageTool: false
         enableImageGeneration: false

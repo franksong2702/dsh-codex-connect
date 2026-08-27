@@ -12,6 +12,7 @@ import {
 } from '../auth-paths.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
+import { OpenAICodexProxyConfiguration } from './OpenAICodexProxyConfiguration.tsx'
 import { OpenAICodexUpdateSettings } from './OpenAICodexUpdateNotice.tsx'
 import type { OpenAICodexUpdateStore } from './update-store.ts'
 
@@ -395,6 +396,10 @@ export function OpenAICodexSettings({ t, configScope, updater, embedded = false 
               t={t}
             />
           : null}
+        <OpenAICodexProxyConfiguration
+          t={t}
+          {...configScope === undefined ? {} : { scope: configScope }}
+        />
         <OpenAICodexConfiguration
           t={t}
           {...configScope === undefined ? {} : { scope: configScope }}

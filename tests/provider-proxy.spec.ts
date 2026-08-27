@@ -1,116 +1,105 @@
 import { createServer } from 'node:http'
-import { connect } from 'node:net'
 import type { AddressInfo } from 'node:net'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  Dispatcher,
-  ProxyAgent,
-  getGlobalDispatcher,
-  setGlobalDispatcher,
-} from 'undici'
-import {
-  DEFAULT_OPENAI_CODEX_PROXY_URL,
-  OpenAICodexProxyManager,
-} from '../src/index.ts'
+import { connect } from 'node:net'
+import { describe, expect, it } from 'vitest'
+import { getGlobalDispatcher } from 'undici'
+import { OpenAICodexProxyController } from '../src/provider-proxy.ts'
 
-class RecordingDispatcher extends Dispatcher {
-  calls = 0
-
-  dispatch(
-    _options: Dispatcher.DispatchOptions,
-    _handler: Dispatcher.DispatchHandler,
-  ): boolean {
-    this.calls += 1
-    return true
-  }
+async function listen(server: ReturnType<typeof createServer>): Promise<number> {
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  return (server.address() as AddressInfo).port
 }
 
-const originalDispatcher = getGlobalDispatcher()
+async function close(server: ReturnType<typeof createServer>): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close(error => {
+      if (error === undefined) resolve()
+      else reject(error)
+    })
+  })
+}
 
-afterEach(async () => {
-  setGlobalDispatcher(originalDispatcher)
-  vi.restoreAllMocks()
-})
+async function proxyServer(): Promise<{
+  server: ReturnType<typeof createServer>
+  url: string
+  connects: () => number
+}> {
+  let count = 0
+  const server = createServer()
+  server.on('connect', (request, client, head) => {
+    count += 1
+    const targetUrl = new URL(`http://${request.url ?? ''}`)
+    const upstream = connect(Number(targetUrl.port), targetUrl.hostname, () => {
+      client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+      if (head.byteLength > 0) upstream.write(head)
+      upstream.pipe(client)
+      client.pipe(upstream)
+    })
+  })
+  const port = await listen(server)
+  return { server, url: `http://127.0.0.1:${String(port)}`, connects: () => count }
+}
 
-describe('OpenAI Codex proxy manager', () => {
-  it('scopes fetch through the proxy and leaves unrelated dispatch on the original dispatcher', async () => {
+describe('OpenAI Codex instance-scoped provider proxy', () => {
+  it('registers only during Codex operations, isolates instances, and restores after each request', async () => {
+    const fallback = getGlobalDispatcher()
     const target = createServer((_req, res) => {
-      res.writeHead(200, { 'content-type': 'text/plain' })
-      res.end('through-proxy')
+      res.setHeader('connection', 'close')
+      res.end('target')
     })
-    const proxy = createServer()
-    proxy.on('connect', (request, client, head) => {
-      const [host, portText] = (request.url ?? '').split(':')
-      const upstream = connect(Number(portText), host, () => {
-        client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
-        if (head.length > 0) upstream.write(head)
-        upstream.pipe(client)
-        client.pipe(upstream)
-      })
-      upstream.on('error', () => { client.destroy() })
-    })
-    await new Promise<void>(resolve => { target.listen(0, '127.0.0.1', resolve) })
-    await new Promise<void>(resolve => { proxy.listen(0, '127.0.0.1', resolve) })
+    const targetPort = await listen(target)
+    const aProxy = await proxyServer()
+    const bProxy = await proxyServer()
+    const a = new OpenAICodexProxyController()
+    const b = new OpenAICodexProxyController()
+    const load = () => fetch(`http://127.0.0.1:${String(targetPort)}`).then(response => response.text())
     try {
-      const targetAddress = target.address() as AddressInfo
-      const proxyAddress = proxy.address() as AddressInfo
-      const fallback = getGlobalDispatcher()
-      const manager = new OpenAICodexProxyManager()
-      const body = await manager.run(
-        `http://127.0.0.1:${String(proxyAddress.port)}`,
-        async () => (await fetch(`http://127.0.0.1:${String(targetAddress.port)}`)).text(),
-      )
-      expect(body).toBe('through-proxy')
-      await manager.dispose()
+      a.configure(aProxy.url)
+      b.configure(bProxy.url)
+      // An enabled proxy alone does not modify the process dispatcher. This
+      // is the state after a session switches to another adapter.
+      expect(getGlobalDispatcher()).toBe(fallback)
+      expect(a.run(() => 42)).toBe(42)
+      expect(getGlobalDispatcher()).toBe(fallback)
+
+      let releaseA = (): void => undefined
+      let releaseB = (): void => undefined
+      const pendingA = a.run(() => new Promise<void>(resolve => { releaseA = resolve }))
+      const pendingB = b.run(() => new Promise<void>(resolve => { releaseB = resolve }))
+      expect(getGlobalDispatcher()).not.toBe(fallback)
+      releaseA()
+      await pendingA
+      expect(getGlobalDispatcher()).not.toBe(fallback)
+      releaseB()
+      await pendingB
+      expect(getGlobalDispatcher()).toBe(fallback)
+
+      await expect(a.run(load)).resolves.toBe('target')
+      expect(getGlobalDispatcher()).toBe(fallback)
+      await expect(b.run(load)).resolves.toBe('target')
+      expect(getGlobalDispatcher()).toBe(fallback)
+      expect(aProxy.connects()).toBe(1)
+      expect(bProxy.connects()).toBe(1)
+
+      a.configure(undefined)
+      await expect(a.run(load)).resolves.toBe('target')
+      expect(aProxy.connects()).toBe(1)
+      await expect(b.run(load)).resolves.toBe('target')
+      expect(bProxy.connects()).toBe(2)
+      expect(getGlobalDispatcher()).toBe(fallback)
+
+      await a.dispose()
+      expect(getGlobalDispatcher()).toBe(fallback)
+      await b.dispose()
       expect(getGlobalDispatcher()).toBe(fallback)
     } finally {
-      await new Promise<void>(resolve => { proxy.close(() => resolve()) })
-      await new Promise<void>(resolve => { target.close(() => resolve()) })
+      await Promise.allSettled([a.dispose(), b.dispose()])
+      await close(aProxy.server)
+      await close(bProxy.server)
+      await close(target)
     }
-  })
-
-  it('restores the exact dispatcher only after the last independent owner disposes', async () => {
-    const fallback = new RecordingDispatcher()
-    setGlobalDispatcher(fallback)
-    const dispatch = vi.spyOn(ProxyAgent.prototype, 'dispatch').mockReturnValue(true)
-    const first = new OpenAICodexProxyManager()
-    const second = new OpenAICodexProxyManager()
-
-    first.run(DEFAULT_OPENAI_CODEX_PROXY_URL, () => {
-      getGlobalDispatcher().dispatch({ origin: 'https://chatgpt.com', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
-    })
-    expect(dispatch).toHaveBeenCalledOnce()
-    expect(getGlobalDispatcher()).not.toBe(fallback)
-
-    getGlobalDispatcher().dispatch({ origin: 'https://unrelated.example', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
-    expect(fallback.calls).toBe(1)
-
-    second.run('http://127.0.0.1:7897', () => {
-      getGlobalDispatcher().dispatch({ origin: 'https://chatgpt.com', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
-    })
-    await first.dispose()
-    expect(getGlobalDispatcher()).not.toBe(fallback)
-    expect(dispatch).toHaveBeenCalledTimes(2)
-    await second.dispose()
-    expect(getGlobalDispatcher()).toBe(fallback)
-  })
-
-  it('waits for an in-flight operation before closing agents and restoring process state', async () => {
-    const fallback = new RecordingDispatcher()
-    setGlobalDispatcher(fallback)
-    const manager = new OpenAICodexProxyManager()
-    let release!: () => void
-    const pending = new Promise<void>(resolve => { release = resolve })
-    const operation = manager.run(DEFAULT_OPENAI_CODEX_PROXY_URL, async () => pending)
-    const disposing = manager.dispose()
-    let completed = false
-    void disposing.then(() => { completed = true })
-    await Promise.resolve()
-    expect(completed).toBe(false)
-    release()
-    await operation
-    await disposing
-    expect(completed).toBe(true)
-    expect(getGlobalDispatcher()).toBe(fallback)
   })
 })

@@ -23,6 +23,8 @@ import { OpenAICodexQuotaIndicator } from './OpenAICodexQuotaIndicator.tsx'
 import type { OpenAICodexQuotaIndicatorInjected } from './OpenAICodexQuotaIndicator.tsx'
 import { OpenAICodexFastModeToggle } from './OpenAICodexFastModeToggle.tsx'
 import type { OpenAICodexFastModeToggleInjected } from './OpenAICodexFastModeToggle.tsx'
+import { OpenAICodexProxyIndicator } from './OpenAICodexProxyIndicator.tsx'
+import type { OpenAICodexProxyIndicatorInjected } from './OpenAICodexProxyIndicator.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { CodexImageToolView } from './CodexImageToolView.tsx'
@@ -79,6 +81,17 @@ export function apply(ctx: ClientContext): void {
   }, CodexImageToolView))
 
   ctx.inject(['slots', 'modelDirectories'], (scope: ClientContext) => {
+    scope.slots.inject('conversation.input.right', () => scope.slots.register({
+      name: 'conversation.input.right',
+      id: 'openai-codex-proxy',
+      order: 30,
+      locale: namespace,
+      inject: (sessionId): OpenAICodexProxyIndicatorInjected => ({
+        configScope,
+        directory: scope.modelDirectories.directoryFor(sessionId).store,
+        sessionKey: String(sessionId),
+      }),
+    }, OpenAICodexProxyIndicator))
     scope.slots.inject('conversation.input.right', () => scope.slots.register({
       name: 'conversation.input.right',
       id: 'openai-codex-fast-mode',

@@ -8,7 +8,6 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("name: 'settings.plugin.item'")
     expect(client).toContain('key: OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("id: 'openai-codex'")
-    expect(client).not.toContain('order: 30')
     expect(client).toContain('ctx.settingsScope.bind')
     expect(client).toContain('OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("ctx.slots.inject('settings.plugins.tab'")
@@ -35,6 +34,16 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("id: 'openai-codex-quota'")
     expect(client).toContain('order: 20')
     expect(client.indexOf("id: 'openai-codex-fast-mode'")).toBeLessThan(client.indexOf("id: 'openai-codex-quota'"))
+  })
+
+  it('registers the floating proxy indicator from the active session input slot', async () => {
+    const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+    expect(client).toContain("scope.slots.inject('conversation.input.right'")
+    expect(client).toContain("name: 'conversation.input.right'")
+    expect(client).toContain("id: 'openai-codex-proxy'")
+    expect(client).toContain('order: 30')
+    expect(client).toContain('OpenAICodexProxyIndicator')
+    expect(client).toContain("ctx.inject(['slots', 'modelDirectories']")
   })
 
   it('registers the version reminder in DSH’s frame-wide shell overlay', async () => {

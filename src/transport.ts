@@ -11,7 +11,8 @@ import {
 } from './usage.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
-import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { withOpenAICodexProxy } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 /** Cordis service name owned by the core plugin fiber. */
 export const OPENAI_CODEX_TRANSPORT_SERVICE = 'openaiCodexTransport'
@@ -239,8 +240,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
   constructor(
     ctx: Context,
     private readonly credentials: OpenAICodexCredentialStore,
-    private readonly proxyManager?: OpenAICodexProxyManager,
-    private readonly resolveProxyUrl: () => string | undefined = () => undefined,
+    private readonly proxy?: OpenAICodexProxyRunner,
   ) {
     super(ctx, OPENAI_CODEX_TRANSPORT_SERVICE)
     this.models = createModels({ credentials })
@@ -248,14 +248,6 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
   }
 
   async generateImages(
-    input: ImageGenerationRequest,
-    context: ImageRequestContext,
-  ): Promise<ImageGenerationResponse> {
-    const operation = () => this.generateImagesWithoutProxy(input, context)
-    return this.proxyManager?.run(this.resolveProxyUrl(), operation) ?? operation()
-  }
-
-  private async generateImagesWithoutProxy(
     input: ImageGenerationRequest,
     context: ImageRequestContext,
   ): Promise<ImageGenerationResponse> {
@@ -274,7 +266,10 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
 
     let auth: Awaited<ReturnType<MutableModels['getAuth']>>
     try {
-      auth = await this.models.getAuth(OPENAI_CODEX_PROVIDER)
+      auth = await withOpenAICodexProxy(
+        this.proxy,
+        () => this.models.getAuth(OPENAI_CODEX_PROVIDER),
+      )
     } catch {
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.reauthRequired)
     }
@@ -302,7 +297,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     }, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS)
 
     try {
-      const response = await fetch(OPENAI_CODEX_IMAGE_GENERATION_URL, {
+      const response = await withOpenAICodexProxy(this.proxy, () => fetch(OPENAI_CODEX_IMAGE_GENERATION_URL, {
         method: 'POST',
         redirect: 'manual',
         signal: controller.signal,
@@ -314,7 +309,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
           'user-agent': 'dsh-codex-connect',
         },
         body: JSON.stringify({ model: IMAGE_ROUTE_HINT_MODEL, prompt: input.prompt }),
-      })
+      }))
       if (!response.ok) {
         try {
           await readOpenAICodexBoundedBody(response, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES)

@@ -2,3 +2,4 @@ node_modules/
 *.tsbuildinfo
 .openai-codex-auth.json
 .playwright-cli/
+.idea/

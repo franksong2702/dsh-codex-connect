@@ -1,32 +1,204 @@
-/** Explicit Codex-only HTTP(S) proxying, probing, and lifecycle ownership. */
+/** Instance-scoped HTTP CONNECT proxying for OpenAI Codex provider traffic. */
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   Dispatcher,
   ProxyAgent,
   getGlobalDispatcher,
+  request,
   setGlobalDispatcher,
 } from 'undici'
-import {
-  isValidOpenAICodexProxyUrl,
-  normalizeOpenAICodexProxyUrl,
-} from './settings-contract.ts'
 
-/** Canonical first-party endpoint used for a no-auth, no-model reachability probe. */
-export const OPENAI_CODEX_PROXY_PROBE_URL = 'https://chatgpt.com/backend-api/codex'
-/** Upper bound for one candidate probe, including CONNECT and response headers. */
+/** Fixed first-party endpoint used only to prove that a draft proxy can connect. */
+export const OPENAI_CODEX_PROXY_TEST_URL = 'https://chatgpt.com/backend-api/codex'
+/** Bound the explicit user-triggered proxy probe. */
+export const OPENAI_CODEX_PROXY_TEST_TIMEOUT_MS = 10_000
+/** Shorter bound used while Detect checks its small candidate set. */
 export const OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS = 3_000
-/** Maximum number of candidates considered by automatic detection. */
-export const OPENAI_CODEX_PROXY_CANDIDATE_LIMIT = 8
+/** Per-target timeout for the lightweight session connectivity monitor. */
+export const OPENAI_CODEX_CONNECTIVITY_TIMEOUT_MS = 2_500
 
-/** Bounded local candidates documented by the settings UI. */
-export const OPENAI_CODEX_LOCAL_PROXY_CANDIDATES = [
-  'http://127.0.0.1:7890',
-  'http://127.0.0.1:7897',
-  'http://127.0.0.1:10809',
+export const OPENAI_CODEX_CONNECTIVITY_TARGETS = [
+  { id: 'codex-api', hostname: 'chatgpt.com', url: 'https://chatgpt.com/backend-api/codex' },
+  { id: 'oauth', hostname: 'auth.openai.com', url: 'https://auth.openai.com/' },
+  { id: 'openai-api', hostname: 'api.openai.com', url: 'https://api.openai.com/v1/models' },
 ] as const
 
-/** Stable probe classifications safe to display in the browser. */
+const dispatcherScope = new AsyncLocalStorage<Dispatcher>()
+const attachedControllers = new Map<OpenAICodexProxyController, number>()
+let installedDispatcher: ScopedProxyDispatcher | undefined
+
+/**
+ * The process-global hook contains no proxy configuration. It only forwards
+ * one async scope to the dispatcher owned by the plugin instance that opened
+ * that scope; unrelated fetches always use the captured fallback.
+ */
+class ScopedProxyDispatcher extends Dispatcher {
+  constructor(readonly fallback: Dispatcher) {
+    super()
+  }
+
+  override dispatch(
+    options: Dispatcher.DispatchOptions,
+    handler: Dispatcher.DispatchHandler,
+  ): boolean {
+    return (dispatcherScope.getStore() ?? this.fallback).dispatch(options, handler)
+  }
+}
+
+function attach(controller: OpenAICodexProxyController): void {
+  attachedControllers.set(controller, (attachedControllers.get(controller) ?? 0) + 1)
+  const current = getGlobalDispatcher()
+  if (current === installedDispatcher) return
+  installedDispatcher = new ScopedProxyDispatcher(current)
+  setGlobalDispatcher(installedDispatcher)
+}
+
+function detach(controller: OpenAICodexProxyController): void {
+  const count = attachedControllers.get(controller)
+  if (count === undefined) return
+  if (count > 1) attachedControllers.set(controller, count - 1)
+  else attachedControllers.delete(controller)
+  if (attachedControllers.size !== 0) return
+  const current = getGlobalDispatcher()
+  if (installedDispatcher !== undefined && current === installedDispatcher) {
+    setGlobalDispatcher(installedDispatcher.fallback)
+  }
+  installedDispatcher = undefined
+}
+
+interface ProxyAgentState {
+  readonly agent: ProxyAgent
+  uses: number
+  retired: boolean
+  closing: boolean
+  readonly closed: Promise<void>
+  readonly resolveClosed: () => void
+}
+
+function proxyAgentState(proxyUrl: string): ProxyAgentState {
+  let resolveClosed = (): void => undefined
+  const closed = new Promise<void>(resolve => { resolveClosed = resolve })
+  return {
+    agent: new ProxyAgent(proxyUrl),
+    uses: 0,
+    retired: false,
+    closing: false,
+    closed,
+    resolveClosed,
+  }
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function'
+    ? typeof (value as { then?: unknown }).then === 'function'
+    : false
+}
+
+/** Public read-only seam passed to every Codex network consumer. */
+export interface OpenAICodexProxyRunner {
+  /** Currently activated proxy URL, or undefined for direct transport. */
+  readonly activeUrl: string | undefined
+  /** Run one operation through this instance's current dispatcher. */
+  run<T>(operation: () => T): T
+}
+
+/**
+ * One proxy lifecycle per mounted Codex Connect plugin instance.
+ * Reconfiguration swaps the agent synchronously for future requests. The
+ * global bridge exists only while a proxied Codex operation is in flight, so
+ * selecting another adapter leaves no persistent dispatcher registration.
+ */
+export class OpenAICodexProxyController implements OpenAICodexProxyRunner {
+  private state: ProxyAgentState | undefined
+  private readonly states = new Set<ProxyAgentState>()
+  private url: string | undefined
+  private closeTail = Promise.resolve()
+  private disposed = false
+
+  get activeUrl(): string | undefined {
+    return this.url
+  }
+
+  /** Activate one tested URL or switch this instance back to direct transport. */
+  configure(proxyUrl: string | undefined): void {
+    if (this.disposed || proxyUrl === this.url) return
+    const previous = this.state
+    this.url = proxyUrl
+    this.state = proxyUrl === undefined ? undefined : proxyAgentState(proxyUrl)
+    if (this.state !== undefined) this.states.add(this.state)
+    if (previous !== undefined) this.retire(previous)
+  }
+
+  run<T>(operation: () => T): T {
+    const current = this.state
+    if (current === undefined || this.disposed) return operation()
+    current.uses += 1
+    attach(this)
+    const release = (): void => {
+      detach(this)
+      current.uses -= 1
+      this.closeIfRetired(current)
+    }
+    let result: T
+    try {
+      result = dispatcherScope.run(current.agent, operation)
+    } catch (error: unknown) {
+      release()
+      throw error
+    }
+    if (isPromiseLike(result)) {
+      return Promise.resolve(result).finally(release) as T
+    }
+    release()
+    return result
+  }
+
+  private retire(state: ProxyAgentState): void {
+    state.retired = true
+    this.closeIfRetired(state)
+  }
+
+  private closeIfRetired(state: ProxyAgentState): void {
+    if (!state.retired || state.uses !== 0 || state.closing) return
+    state.closing = true
+    this.closeTail = this.closeTail
+      .then(() => state.agent.close())
+      .then(() => undefined, () => undefined)
+      .finally(() => {
+        this.states.delete(state)
+        state.resolveClosed()
+      })
+  }
+
+  /** Disable this instance, close its pools, and release the global bridge. */
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    const states = [...this.states]
+    this.url = undefined
+    this.state = undefined
+    this.disposed = true
+    for (const state of states) this.retire(state)
+    await Promise.all(states.map(state => state.closed))
+    await this.closeTail
+  }
+}
+
+/** Run directly when no plugin-instance proxy runner was injected. */
+export function withOpenAICodexProxy<T>(
+  proxy: OpenAICodexProxyRunner | undefined,
+  operation: () => T,
+): T {
+  return proxy === undefined ? operation() : proxy.run(operation)
+}
+
+export interface OpenAICodexProxyTestResult {
+  ok: boolean
+  statusCode?: number
+  error?: string
+  classification?: OpenAICodexProxyProbeClassification
+}
+
 export type OpenAICodexProxyProbeClassification =
   | 'reachable'
   | 'upstream-authentication-required'
@@ -36,82 +208,15 @@ export type OpenAICodexProxyProbeClassification =
   | 'timeout'
   | 'tls-failure'
   | 'connect-failure'
-  | 'invalid'
 
-/** Result of testing one proxy origin. */
-export interface OpenAICodexProxyProbeResult {
-  /** Canonical proxy origin tested. */
-  proxyUrl: string
-  /** Whether the proxy returned any HTTP response from the probe origin. */
-  reachable: boolean
-  /** Bounded category for a UI troubleshooting message. */
-  classification: OpenAICodexProxyProbeClassification
-  /** Upstream or proxy status, when an HTTP response was received. */
-  status?: number
-}
-
-const proxyScope = new AsyncLocalStorage<ProxyAgent>()
-const activeOwners = new Set<OpenAICodexProxyManager>()
-
-class ScopedProxyDispatcher extends Dispatcher {
-  constructor(private fallback: Dispatcher) {
-    super()
-  }
-
-  setFallback(fallback: Dispatcher): void {
-    this.fallback = fallback
-  }
-
-  override dispatch(
-    options: Dispatcher.DispatchOptions,
-    handler: Dispatcher.DispatchHandler,
-  ): boolean {
-    return (proxyScope.getStore() ?? this.fallback).dispatch(options, handler)
-  }
-}
-
-let installedDispatcher: ScopedProxyDispatcher | undefined
-let previousDispatcher: Dispatcher | undefined
-
-function ensureInstalled(owner: OpenAICodexProxyManager): void {
-  if (activeOwners.has(owner)) return
-  const current = getGlobalDispatcher()
-  if (installedDispatcher === undefined) {
-    previousDispatcher = current
-    installedDispatcher = new ScopedProxyDispatcher(current)
-    setGlobalDispatcher(installedDispatcher)
-  } else if (current !== installedDispatcher) {
-    // Preserve a dispatcher installed by another library while this wrapper is live.
-    installedDispatcher.setFallback(current)
-    setGlobalDispatcher(installedDispatcher)
-  }
-  activeOwners.add(owner)
-}
-
-function removeOwner(owner: OpenAICodexProxyManager): void {
-  activeOwners.delete(owner)
-  if (activeOwners.size !== 0 || installedDispatcher === undefined) return
-  const installed = installedDispatcher
-  const previous = previousDispatcher
-  installedDispatcher = undefined
-  previousDispatcher = undefined
-  if (getGlobalDispatcher() === installed && previous !== undefined) setGlobalDispatcher(previous)
-}
-
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
-}
-
-function errorCode(error: unknown): string | undefined {
+function nestedErrorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) return undefined
   const record = error as Record<string, unknown>
-  return typeof record['code'] === 'string'
-    ? record['code']
-    : errorCode(record['cause'])
+  return typeof record['code'] === 'string' ? record['code'] : nestedErrorCode(record['cause'])
 }
 
-function classifyProbeError(error: unknown): OpenAICodexProxyProbeClassification {
-  const code = errorCode(error)
+function classifyProxyError(error: unknown): OpenAICodexProxyProbeClassification {
+  const code = nestedErrorCode(error)
   if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'dns-failure'
   if (code === 'ECONNREFUSED') return 'connection-refused'
   if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT' || code === 'ABORT_ERR') return 'timeout'
@@ -122,171 +227,116 @@ function classifyProbeError(error: unknown): OpenAICodexProxyProbeClassification
   return 'connect-failure'
 }
 
-function classifyResponse(status: number): OpenAICodexProxyProbeClassification {
-  if (status === 407) return 'proxy-authentication-required'
-  if (status === 401 || status === 403) return 'upstream-authentication-required'
+function classifyProxyResponse(statusCode: number): OpenAICodexProxyProbeClassification {
+  if (statusCode === 407) return 'proxy-authentication-required'
+  if (statusCode === 401 || statusCode === 403) return 'upstream-authentication-required'
   return 'reachable'
 }
 
-function candidateEnvironmentValues(): string[] {
-  const values = [
-    process.env['HTTPS_PROXY'],
-    process.env['https_proxy'],
-    process.env['HTTP_PROXY'],
-    process.env['http_proxy'],
-    process.env['ALL_PROXY'],
-    process.env['all_proxy'],
-  ]
-  return values.filter((value): value is string => value !== undefined)
+export interface OpenAICodexConnectivityTargetResult {
+  id: string
+  hostname: string
+  reachable: boolean
+  latencyMs: number
+  statusCode?: number
+  error?: string
 }
 
-/** Return a small, deterministic candidate set; this never scans LAN hosts or ports. */
-export function listOpenAICodexProxyCandidates(): readonly string[] {
-  const candidates: string[] = []
-  for (const value of [...candidateEnvironmentValues(), ...OPENAI_CODEX_LOCAL_PROXY_CANDIDATES]) {
-    const normalized = normalizeOpenAICodexProxyUrl(value)
-    if (normalized !== undefined && !candidates.includes(normalized)) candidates.push(normalized)
-    if (candidates.length >= OPENAI_CODEX_PROXY_CANDIDATE_LIMIT) break
-  }
-  return candidates
+export interface OpenAICodexConnectivityReport {
+  checkedAt: number
+  mode: 'direct' | 'proxy'
+  targets: OpenAICodexConnectivityTargetResult[]
 }
 
-/** One plugin instance owns its proxy agents and contributes one global wrapper owner. */
-export class OpenAICodexProxyManager {
-  private readonly agents = new Map<string, ProxyAgent>()
-  private activeOperations = 0
-  private idleWaiters: Array<() => void> = []
-  private disposed = false
-  private disposePromise: Promise<void> | undefined
+function safeConnectivityError(error: unknown): string {
+  const record = typeof error === 'object' && error !== null ? error as { code?: unknown } : undefined
+  const code = typeof record?.code === 'string' ? `${record.code}: ` : ''
+  return `${code}${error instanceof Error ? error.message : String(error)}`
+    .replace(/https?:\/\/[^\s/@]+:[^\s/@]+@/giu, '[redacted proxy]')
+    .slice(0, 300)
+}
 
-  private async waitForIdle(): Promise<void> {
-    if (this.activeOperations === 0) return
-    await new Promise<void>(resolve => { this.idleWaiters.push(resolve) })
-  }
-
-  private async closeAgents(): Promise<void> {
-    removeOwner(this)
-    const agents = [...this.agents.values()]
-    this.agents.clear()
-    await Promise.allSettled(agents.map(agent => agent.close()))
-  }
-
-  private agentFor(proxyUrl: string): ProxyAgent {
-    let agent = this.agents.get(proxyUrl)
-    if (agent !== undefined) return agent
-    agent = new ProxyAgent(proxyUrl)
-    this.agents.set(proxyUrl, agent)
-    return agent
-  }
-
-  private acquire(proxyUrl: string): { agent: ProxyAgent; release: () => void } {
-    if (this.disposed) throw new Error('OpenAI Codex proxy manager has been disposed')
-    ensureInstalled(this)
-    this.activeOperations += 1
-    let released = false
-    return {
-      agent: this.agentFor(proxyUrl),
-      release: () => {
-        if (released) return
-        released = true
-        this.activeOperations -= 1
-        if (this.activeOperations === 0) {
-          for (const resolve of this.idleWaiters.splice(0)) resolve()
-        }
-      },
-    }
-  }
-
-  /** Run a synchronous or asynchronous Codex operation in the selected proxy scope. */
-  run<T>(proxyUrl: string | undefined, operation: () => T): T {
-    if (proxyUrl === undefined) return operation()
-    const normalized = normalizeOpenAICodexProxyUrl(proxyUrl)
-    if (!isValidOpenAICodexProxyUrl(normalized)) {
-      throw new TypeError('OpenAI Codex proxy URL is invalid')
-    }
-    const lease = this.acquire(normalized)
+/** Check the small set of first-party domains used by Codex Connect. */
+export async function checkOpenAICodexConnectivity(
+  proxy?: OpenAICodexProxyRunner,
+  timeoutMs = OPENAI_CODEX_CONNECTIVITY_TIMEOUT_MS,
+): Promise<OpenAICodexConnectivityReport> {
+  const targets = await Promise.all(OPENAI_CODEX_CONNECTIVITY_TARGETS.map(async target => {
+    const startedAt = performance.now()
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      controller.abort(new Error(`connection timed out after ${String(timeoutMs)}ms`))
+    }, timeoutMs)
+    timer.unref()
     try {
-      const value = proxyScope.run(lease.agent, operation)
-      if (isPromiseLike(value)) {
-        return Promise.resolve(value).finally(lease.release) as T
-      }
-      lease.release()
-      return value
-    } catch (error: unknown) {
-      lease.release()
-      throw error
-    }
-  }
-
-  /** Run a streaming operation and keep the proxy lease until its final event. */
-  runStream<T extends { result(): Promise<unknown> }>(proxyUrl: string | undefined, operation: () => T): T {
-    if (proxyUrl === undefined) return operation()
-    const normalized = normalizeOpenAICodexProxyUrl(proxyUrl)
-    if (!isValidOpenAICodexProxyUrl(normalized)) {
-      throw new TypeError('OpenAI Codex proxy URL is invalid')
-    }
-    const lease = this.acquire(normalized)
-    try {
-      const stream = proxyScope.run(lease.agent, operation)
-      void Promise.resolve(stream.result()).finally(lease.release)
-      return stream
-    } catch (error: unknown) {
-      lease.release()
-      throw error
-    }
-  }
-
-  /** Probe one proxy without credentials, model calls, quota calls, or settings writes. */
-  async probe(proxyUrl: string): Promise<OpenAICodexProxyProbeResult> {
-    const normalized = normalizeOpenAICodexProxyUrl(proxyUrl)
-    if (normalized === undefined) {
-      return { proxyUrl, reachable: false, classification: 'invalid' }
-    }
-    try {
-      const response = await this.run(normalized, () => fetch(OPENAI_CODEX_PROXY_PROBE_URL, {
-        method: 'GET',
-        redirect: 'manual',
-        headers: { accept: 'application/json' },
-        signal: AbortSignal.timeout(OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS),
+      const response = await withOpenAICodexProxy(proxy, () => request(target.url, {
+        method: 'HEAD',
+        signal: controller.signal,
       }))
-      await response.body?.cancel()
+      await response.body.dump()
       return {
-        proxyUrl: normalized,
+        id: target.id,
+        hostname: target.hostname,
         reachable: true,
-        classification: classifyResponse(response.status),
-        status: response.status,
+        latencyMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        statusCode: response.statusCode,
       }
     } catch (error: unknown) {
       return {
-        proxyUrl: normalized,
+        id: target.id,
+        hostname: target.hostname,
         reachable: false,
-        classification: classifyProbeError(error),
+        latencyMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        error: safeConnectivityError(error),
       }
+    } finally {
+      clearTimeout(timer)
     }
-  }
-
-  /** Close owned pools only after all scoped operations have become quiescent. */
-  async dispose(): Promise<void> {
-    if (this.disposePromise !== undefined) return this.disposePromise
-    this.disposed = true
-    this.disposePromise = (async () => {
-      await this.waitForIdle()
-      await this.closeAgents()
-    })()
-    return this.disposePromise
-  }
-
-  /** Release the process wrapper and pools after the user disables the proxy. */
-  async deactivate(): Promise<void> {
-    if (this.disposed) return
-    await this.waitForIdle()
-    await this.closeAgents()
+  }))
+  return {
+    checkedAt: Date.now(),
+    mode: proxy?.activeUrl === undefined ? 'direct' : 'proxy',
+    targets,
   }
 }
 
-/** Probe the bounded automatic candidate set in parallel. */
-export async function detectOpenAICodexProxies(
-  manager: OpenAICodexProxyManager,
-): Promise<readonly OpenAICodexProxyProbeResult[]> {
-  return Promise.all(listOpenAICodexProxyCandidates().map(candidate => manager.probe(candidate)))
+/**
+ * Probe a draft address through a temporary agent. This never touches an
+ * instance controller, the settings document, or the global dispatcher.
+ */
+export async function testOpenAICodexProxy(
+  proxyUrl: string,
+  timeoutMs = OPENAI_CODEX_PROXY_TEST_TIMEOUT_MS,
+): Promise<OpenAICodexProxyTestResult> {
+  const agent = new ProxyAgent(proxyUrl)
+  const controller = new AbortController()
+  const timer = setTimeout(() => {
+    controller.abort(new Error('proxy test timed out'))
+  }, timeoutMs)
+  timer.unref()
+  try {
+    const response = await request(OPENAI_CODEX_PROXY_TEST_URL, {
+      method: 'HEAD',
+      dispatcher: agent,
+      signal: controller.signal,
+    })
+    // Undici treats destroy() before end-of-stream as an aborted request and
+    // emits UND_ERR_ABORTED asynchronously. dump() installs the required
+    // stream handlers and consumes the (normally empty) HEAD response safely.
+    await response.body.dump()
+    return {
+      ok: response.statusCode !== 407,
+      statusCode: response.statusCode,
+      classification: classifyProxyResponse(response.statusCode),
+      ...(response.statusCode === 407 ? { error: 'proxy authentication required' } : {}),
+    }
+  } catch (error: unknown) {
+    const message = (error instanceof Error ? error.message : String(error))
+      .replace(/https?:\/\/[^\s/@]+:[^\s/@]+@/giu, '[redacted proxy]')
+      .slice(0, 300)
+    return { ok: false, error: message, classification: classifyProxyError(error) }
+  } finally {
+    clearTimeout(timer)
+    await agent.close().catch(() => undefined)
+  }
 }

@@ -14,10 +14,7 @@ import {
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from '../src/auth-paths.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
-import {
-  OPENAI_CODEX_PROXY_DETECT_PATH,
-  OPENAI_CODEX_PROXY_TEST_PATH,
-} from '../src/proxy-paths.ts'
+import { OPENAI_CODEX_PROXY_DETECT_PATH, OPENAI_CODEX_PROXY_TEST_PATH } from '../src/proxy-paths.ts'
 
 function t(key: OpenAICodexSettingsKey, params: Record<string, unknown> = {}): string {
   return Object.entries(params).reduce(
@@ -171,7 +168,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     render(<OpenAICodexSettings t={t} embedded />)
     expect(await screen.findByText(reauthMessage)).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toContain(en.reauthRequired)
+    expect(screen.getAllByRole('status').some(status => status.textContent?.includes(en.reauthRequired))).toBe(true)
     expect(screen.getByRole('button', { name: en.loginAgain })).toBeTruthy()
     expect(screen.queryByRole('button', { name: en.logout })).toBeNull()
     expect(zh.reauthRequired).toBe('需要重新登录')
@@ -342,6 +339,58 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
   })
 
+  it('keeps Detect and Test draft-only, then activates and disables explicitly', async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      const path = requestPath(input)
+      if (path === OPENAI_CODEX_PROXY_DETECT_PATH) {
+        return json({
+          environment: { detected: true, source: 'HTTPS_PROXY', valid: true, proxyUrl: 'http://127.0.0.1:9000' },
+          candidates: [{
+            source: 'HTTPS_PROXY',
+            proxyUrl: 'http://127.0.0.1:9000',
+            ok: true,
+            statusCode: 401,
+            classification: 'upstream-authentication-required',
+          }],
+          results: [],
+        })
+      }
+      if (path === OPENAI_CODEX_PROXY_TEST_PATH) return json({ ok: true, statusCode: 404 })
+      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json([])
+      return json({ status: 'signed-out' })
+    })
+    const { scope, set } = settingsScopeFixture()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    expect(await screen.findByText(en.proxyStatusDirect)).toBeTruthy()
+    expect(document.querySelector('[data-openai-codex-proxy-rail="direct"]')).toBeTruthy()
+    const draft = screen.getByRole('textbox', { name: en.proxyUrl }) as HTMLInputElement
+    expect(draft.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyDetect }))
+    expect(await screen.findByText(en.proxyEnvironmentDetected
+      .replace('{source}', 'HTTPS_PROXY')
+      .replace('{url}', 'http://127.0.0.1:9000'))).toBeTruthy()
+    expect(draft.value).toBe('http://127.0.0.1:9000')
+    expect(set).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyTest }))
+    expect(await screen.findByText(en.proxyTestSucceeded)).toBeTruthy()
+    expect(set).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyActivate }))
+    expect(await screen.findByText(en.proxyActivated)).toBeTruthy()
+    expect(set).toHaveBeenNthCalledWith(1, 'proxyUrl', 'http://127.0.0.1:9000')
+    expect(set).toHaveBeenNthCalledWith(2, 'enableProxy', true)
+    expect(document.querySelector('[data-openai-codex-proxy-rail="active"]')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyDisable }))
+    expect(await screen.findByText(en.proxyDisabled)).toBeTruthy()
+    expect(set).toHaveBeenLastCalledWith('enableProxy', false)
+    expect(document.querySelector('[data-openai-codex-proxy-rail="direct"]')).toBeTruthy()
+  })
+
   it('stages model visibility in provider order and saves it with the other plugin settings', async () => {
     const availableModels = [
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },
@@ -370,41 +419,6 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
     expect(set).toHaveBeenCalledWith('models', ['gpt-5.6-luna', 'gpt-5.6-terra'])
     expect(fetchMock.mock.calls.some(([input]) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH)).toBe(true)
-  })
-
-  it('keeps direct mode until explicit proxy confirmation and save', async () => {
-    const candidate = 'http://127.0.0.1:7897'
-    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-      const path = requestPath(input)
-      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }])
-      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) return json({ status: 'signed-out' })
-      expect(path).toBe(OPENAI_CODEX_PROXY_DETECT_PATH)
-      expect(init?.method).toBe('POST')
-      return json({
-        candidates: [{ proxyUrl: candidate, reachable: true, classification: 'reachable', status: 401 }],
-        results: [{ proxyUrl: candidate, reachable: true, classification: 'reachable', status: 401 }],
-      })
-    })
-    const { scope, set } = settingsScopeFixture()
-    vi.stubGlobal('fetch', fetchMock)
-
-    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
-    expect(await screen.findByText(en.directConnection)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: en.detectProxy }))
-    expect(await screen.findByText(candidate)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: en.useThisProxy }))
-    expect(screen.getByText(en.customProxyActive.replace('{proxyUrl}', candidate))).toBeTruthy()
-    expect(set).not.toHaveBeenCalledWith('enableProxy', true)
-
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
-    expect(set).toHaveBeenCalledWith('proxyUrl', candidate)
-    expect(set).toHaveBeenCalledWith('enableProxy', true)
-    expect(fetchMock.mock.calls.some(([input]) => requestPath(input) === OPENAI_CODEX_PROXY_TEST_PATH)).toBe(false)
-
-    fireEvent.click(screen.getByRole('button', { name: en.disableProxy }))
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-    await waitFor(() => { expect(set).toHaveBeenCalledWith('enableProxy', false) })
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {

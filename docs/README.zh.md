@@ -125,7 +125,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 只有当前对话选择了 `openai-codex` 提供方的 GPT 模型时，Composer 才会显示下面两个小控件。它们都是当前对话级别的控制，不是 profile 全局设置：
 
 - **Fast Mode（闪电图标）**：每个对话默认关闭。点击后请求更快的 `1.5 倍` 模式，再点一次恢复标准速度。它只绑定当前对话，不会改变模型选择，也不会影响其他对话。鼠标悬停或键盘聚焦闪电图标，可以看到当前状态和额度消耗提示。
-- **周额度进度条**：位于模型选择器旁边的短横条。剩余额度越低，颜色会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会显示精确剩余百分比和服务端提供的重置时间。非 GPT 模型或额度暂时不可用时不会显示。
+- **5 小时与周额度进度条**：位于模型选择器旁边，分别标记为 `5h` 和 `7d`。每条额度越低，颜色都会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会同时显示两个窗口的精确剩余百分比和服务端重置时间。某个窗口不可用时只隐藏对应行；非 GPT 模型或没有任何可用额度时隐藏整个控件。
 - 对于精确模型 `gpt-5.3-codex-spark`，Composer 读取 Spark 的每周额度；其他 GPT Codex 模型读取标准 Codex 周额度，两者是分开的额度桶。
 
 <p align="center">
@@ -147,13 +147,27 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 打开 **设置 → 插件 → 插件配置 → Codex Connect**，即可在同一张卡片中管理账户和这些选项。**保存更改**只影响本插件的能力配置并即时生效，绝不会选择默认模型或全局搜索路由。
 
-### 网络连接与代理检测
+<details>
+<summary><strong>Provider 代理（默认直连）</strong></summary>
 
-Codex Connect 默认使用**直连**。代理是可选项，只作用于本插件的 Codex 请求：模型流式请求、OAuth 登录和 token 刷新、额度、独立搜索以及图片生成。其他提供方和未进入插件作用域的网络请求仍使用进程原来的 dispatcher。
+代理只作用于当前这个 `openai-codex` provider 插件实例发出的网络请求，不会修改 Harness、其他插件、其他 provider 或全局搜索路由。全新安装默认直连（`enableProxy: false`）；`proxyUrl` 的初始值 `http://127.0.0.1:7890` 只是可编辑的建议地址，不代表已经启用。
 
-点击 **检测代理** 时，只会测试标准代理环境变量，以及文档列出的本机候选地址：`127.0.0.1:7890`、`127.0.0.1:7897` 和 `127.0.0.1:10809`。检测不调用模型、不消耗额度，也不会写入设置。规范 Codex 端点返回任何 HTTP 响应都表示网络可达；`401/403`、代理 `407`、DNS、连接被拒绝、超时、TLS 和 CONNECT 失败会分别显示为诊断类别。
+插件配置卡片会严格区分发现、测试与启用：
 
-请先检查候选地址，再选择 **使用此代理**，最后点击 **保存更改**。**手动配置**可以先测试一个不带凭据的 HTTP(S) proxy origin，再启用它。**停用代理**始终可用。检测失败会保留原来的模式；代理已启用但请求失败时，界面会给出可操作的错误，绝不会静默改走直连。
+1. **Detect（检测）**按环境变量优先的固定范围检查 `HTTPS_PROXY`、`https_proxy`、`HTTP_PROXY`、`http_proxy`、`ALL_PROXY`、`all_proxy`，随后检查本机端口 `7890`、`7897`、`10809`。它只探测这些有限候选以找到可达草稿并提示来源，不保存，也不启用。
+2. **Test（测试）**只用当前草稿地址发送探测请求，不保存、不启用。
+3. **Activate（启用）**只有在同一草稿通过 Test 后才可点击。用户点击即表示明确确认，此时才保存地址并启用代理。
+
+代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话右上角还会显示连接状态悬浮球，大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`；收到任意 HTTP 响应都算可达，DNS、超时、CONNECT 和 TLS 错误会显示在鼠标悬停/键盘聚焦弹窗中。弹窗同时提供手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
+
+```yaml
+- id: llm-openai-codex
+  config:
+    enableProxy: false
+    proxyUrl: http://127.0.0.1:7890
+```
+
+</details>
 
 ### 只开启你准备使用的能力
 
@@ -219,8 +233,8 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 | 字段 | 默认值 | 可选值 |
 |---|---:|---|
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
-| `enableProxy` | `false` | boolean；除非显式启用，否则使用直连 |
-| `proxyUrl` | `http://127.0.0.1:7890`（未启用的占位值） | 不带凭据的 HTTP(S) proxy origin |
+| `enableProxy` | `false` | boolean；只影响当前 Codex provider 实例 |
+| `proxyUrl` | `http://127.0.0.1:7890` | 不含凭据的 HTTP(S) 代理地址 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |
