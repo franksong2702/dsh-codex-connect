@@ -125,7 +125,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 只有当前对话选择了 `openai-codex` 提供方的 GPT 模型时，Composer 才会显示下面两个小控件。它们都是当前对话级别的控制，不是 profile 全局设置：
 
 - **Fast Mode（闪电图标）**：每个对话默认关闭。点击后请求更快的 `1.5 倍` 模式，再点一次恢复标准速度。它只绑定当前对话，不会改变模型选择，也不会影响其他对话。鼠标悬停或键盘聚焦闪电图标，可以看到当前状态和额度消耗提示。
-- **周额度进度条**：位于模型选择器旁边的短横条。剩余额度越低，颜色会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会显示精确剩余百分比和服务端提供的重置时间。非 GPT 模型或额度暂时不可用时不会显示。
+- **5 小时与周额度进度条**：位于模型选择器旁边，分别标记为 `5h` 和 `7d`。每条额度越低，颜色都会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会同时显示两个窗口的精确剩余百分比和服务端重置时间。某个窗口不可用时只隐藏对应行；非 GPT 模型或没有任何可用额度时隐藏整个控件。
 - 对于精确模型 `gpt-5.3-codex-spark`，Composer 读取 Spark 的每周额度；其他 GPT Codex 模型读取标准 Codex 周额度，两者是分开的额度桶。
 
 <p align="center">
@@ -139,12 +139,35 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 ```yaml
 - id: llm-openai-codex
   config:
+    enableProxy: false
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
 ```
 
 打开 **设置 → 插件 → 插件配置 → Codex Connect**，即可在同一张卡片中管理账户和这些选项。**保存更改**只影响本插件的能力配置并即时生效，绝不会选择默认模型或全局搜索路由。
+
+<details>
+<summary><strong>Provider 代理（默认直连）</strong></summary>
+
+代理只作用于当前这个 `openai-codex` provider 插件实例发出的网络请求，不会修改 Harness、其他插件、其他 provider 或全局搜索路由。全新安装默认直连（`enableProxy: false`）；`proxyUrl` 的初始值 `http://127.0.0.1:7890` 只是可编辑的建议地址，不代表已经启用。
+
+插件配置卡片会严格区分发现、测试与启用：
+
+1. **Detect（检测）**依次寻找 `HTTPS_PROXY`、`https_proxy`、`HTTP_PROXY`、`http_proxy`、`ALL_PROXY`、`all_proxy`。找到无凭据的有效 HTTP(S) 地址后，只把候选写入草稿并提示来源，不测试、不保存，也不启用。
+2. **Test（测试）**只用当前草稿地址发送探测请求，不保存、不启用。
+3. **Activate（启用）**只有在同一草稿通过 Test 后才可点击。用户点击即表示明确确认，此时才保存地址并启用代理。
+
+代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话右上角还会显示连接状态悬浮球，大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`；收到任意 HTTP 响应都算可达，DNS、超时、CONNECT 和 TLS 错误会显示在鼠标悬停/键盘聚焦弹窗中。弹窗同时提供手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
+
+```yaml
+- id: llm-openai-codex
+  config:
+    enableProxy: false
+    proxyUrl: http://127.0.0.1:7890
+```
+
+</details>
 
 ### 只开启你准备使用的能力
 
@@ -210,6 +233,8 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | 字段 | 默认值 | 可选值 |
 |---|---:|---|
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
+| `enableProxy` | `false` | boolean；只影响当前 Codex provider 实例 |
+| `proxyUrl` | `http://127.0.0.1:7890` | 不含凭据的 HTTP(S) 代理地址 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |

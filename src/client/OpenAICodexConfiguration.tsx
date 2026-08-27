@@ -3,10 +3,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
-import {
-  DEFAULT_OPENAI_CODEX_PROXY_URL,
-  isValidOpenAICodexProxyUrl,
-} from '../settings-contract.ts'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
 import {
   decodeOpenAICodexModelCatalog,
@@ -52,8 +48,6 @@ const UNAVAILABLE_SNAPSHOT = {
 
 const CONFIG_FIELDS = [
   'models',
-  'enableProxy',
-  'proxyUrl',
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
@@ -142,15 +136,12 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const validTokens = draft !== undefined
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
-  const validProxy = draft !== undefined
-    && (!draft.enableProxy || isValidOpenAICodexProxyUrl(draft.proxyUrl.trim()))
-  const valid = validModel && validTokens && validProxy
+  const valid = validModel && validTokens
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
     const desired = {
       ...draft,
-      proxyUrl: draft.proxyUrl.trim(),
       searchModel: draft.searchModel.trim(),
     }
     setBusy(true)
@@ -221,36 +212,6 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
               })}
             </div>
           )}
-          <div style={{ paddingTop: 4 }}>
-            <h3 style={headingStyle}>{t('proxyHeading')}</h3>
-            <p style={{ ...bodyStyle, marginTop: 4 }}>{t('proxyIntro')}</p>
-          </div>
-          <label style={toggleRowStyle}>
-            <input
-              type="checkbox"
-              checked={draft.enableProxy}
-              onChange={event => { update('enableProxy', event.currentTarget.checked) }}
-            />
-            <span style={toggleCopyStyle}>
-              <span style={labelStyle}>{t('enableProxy')}</span>
-              <span style={bodyStyle}>{t('enableProxyHelp')}</span>
-            </span>
-          </label>
-          <label style={formFieldStyle}>
-            <span style={labelStyle}>{t('proxyUrl')}</span>
-            <input
-              style={controlStyle}
-              type="url"
-              value={draft.proxyUrl}
-              placeholder={DEFAULT_OPENAI_CODEX_PROXY_URL}
-              disabled={!editable || !draft.enableProxy}
-              aria-label={t('proxyUrl')}
-              aria-invalid={!validProxy}
-              spellCheck={false}
-              onChange={event => { update('proxyUrl', event.currentTarget.value) }}
-            />
-            <span style={bodyStyle}>{t('proxyUrlHelp')}</span>
-          </label>
           <div style={{ paddingTop: 4 }}>
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
@@ -343,7 +304,6 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
       )}
       {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
       {!validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
-      {!validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}
       <p style={bodyStyle}>{t('routingNote')}</p>
       <div style={actionsStyle}>
         <span aria-live="polite">

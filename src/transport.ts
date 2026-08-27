@@ -12,6 +12,7 @@ import {
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import { withOpenAICodexProxy } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 /** Cordis service name owned by the core plugin fiber. */
 export const OPENAI_CODEX_TRANSPORT_SERVICE = 'openaiCodexTransport'
@@ -239,7 +240,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
   constructor(
     ctx: Context,
     private readonly credentials: OpenAICodexCredentialStore,
-    private readonly resolveProxyUrl: () => string | undefined = () => undefined,
+    private readonly proxy?: OpenAICodexProxyRunner,
   ) {
     super(ctx, OPENAI_CODEX_TRANSPORT_SERVICE)
     this.models = createModels({ credentials })
@@ -266,7 +267,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     let auth: Awaited<ReturnType<MutableModels['getAuth']>>
     try {
       auth = await withOpenAICodexProxy(
-        this.resolveProxyUrl(),
+        this.proxy,
         () => this.models.getAuth(OPENAI_CODEX_PROVIDER),
       )
     } catch {
@@ -296,7 +297,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     }, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS)
 
     try {
-      const response = await withOpenAICodexProxy(this.resolveProxyUrl(), () => fetch(OPENAI_CODEX_IMAGE_GENERATION_URL, {
+      const response = await withOpenAICodexProxy(this.proxy, () => fetch(OPENAI_CODEX_IMAGE_GENERATION_URL, {
         method: 'POST',
         redirect: 'manual',
         signal: controller.signal,

@@ -55,7 +55,7 @@ export interface OpenAICodexSettingsConfig {
 
 export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> = Object.freeze({
   models: undefined,
-  enableProxy: true,
+  enableProxy: false,
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
   enableSearch: false,
   enableImageTool: false,
@@ -104,10 +104,10 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const searchContextSize = value['searchContextSize']
   const searchMaxOutputTokens = value['searchMaxOutputTokens']
   if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
-  // Older Host snapshots predate provider proxy settings; absence maps to the new defaults.
+  // Older Host snapshots predate proxy settings; absence keeps direct transport.
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && typeof proxyUrl !== 'string') return undefined
-  if ((enableProxy ?? true) && proxyUrl !== undefined && !isValidOpenAICodexProxyUrl(proxyUrl)) return undefined
+  if ((enableProxy ?? false) && proxyUrl !== undefined && !isValidOpenAICodexProxyUrl(proxyUrl)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -117,7 +117,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (typeof searchMaxOutputTokens !== 'number' || !Number.isInteger(searchMaxOutputTokens) || searchMaxOutputTokens < 1) return undefined
   return {
     models: models === undefined ? undefined : [...new Set(models)],
-    enableProxy: enableProxy ?? true,
+    enableProxy: enableProxy ?? false,
     proxyUrl: proxyUrl ?? DEFAULT_OPENAI_CODEX_PROXY_URL,
     enableSearch,
     enableImageTool,

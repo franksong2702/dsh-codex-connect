@@ -25,6 +25,7 @@ import {
 } from './trusted-origins.ts'
 import { FastModeRegistry, isFastModeSessionId } from './fast-mode.ts'
 import { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 export {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
@@ -53,7 +54,7 @@ interface LoginChallenge {
 /** Testable timing boundary; production uses the exported 30-second ceiling. */
 export interface OpenAICodexWebAuthOptions {
   challengeTimeoutMs?: number
-  resolveProxyUrl?: () => string | undefined
+  proxy?: OpenAICodexProxyRunner
 }
 
 /** Redact provider diagnostics before they cross to the browser. */
@@ -83,14 +84,14 @@ export class OpenAICodexWebAuth {
   private challengeWaiters: Array<{ resolve(value: LoginChallenge): void; reject(error: unknown): void }> = []
   private challengeTimer: ReturnType<typeof setTimeout> | undefined
   private readonly challengeTimeoutMs: number
-  private readonly resolveProxyUrl: () => string | undefined
+  private readonly proxy: OpenAICodexProxyRunner | undefined
 
   constructor(
     private readonly store: OpenAICodexCredentialStore,
     options: OpenAICodexWebAuthOptions = {},
   ) {
     this.challengeTimeoutMs = options.challengeTimeoutMs ?? OPENAI_CODEX_AUTH_URL_TIMEOUT_MS
-    this.resolveProxyUrl = options.resolveProxyUrl ?? (() => undefined)
+    this.proxy = options.proxy
     if (!Number.isFinite(this.challengeTimeoutMs) || this.challengeTimeoutMs <= 0) {
       throw new TypeError('OpenAI Codex auth URL timeout must be a positive finite number')
     }
@@ -142,7 +143,7 @@ export class OpenAICodexWebAuth {
         ? Promise.resolve('browser')
         : waitForPromptAbort(prompt),
       notify: event => { this.onEvent(event) },
-    }, this.store, this.resolveProxyUrl()).then(
+    }, this.store, this.proxy).then(
       async () => {
         if (this.challenge === undefined) {
           const error = new Error('OpenAI Codex sign-in finished without an authorization URL')
@@ -190,7 +191,7 @@ export class OpenAICodexWebAuth {
     try {
       return {
         status: 'signed-in',
-        usage: await readOpenAICodexRateLimits(this.store, this.resolveProxyUrl()),
+        usage: await readOpenAICodexRateLimits(this.store, this.proxy),
       }
     } catch (error: unknown) {
       if (isOpenAICodexReauthRequiredError(error)) {
@@ -406,10 +407,10 @@ export function registerOpenAICodexAuthRoutes(
   store: OpenAICodexCredentialStore,
   trustedOriginsOverride?: OpenAICodexTrustedOriginsStore,
   fastModeOverride?: FastModeRegistry,
-  resolveProxyUrl?: () => string | undefined,
+  proxy?: OpenAICodexProxyRunner,
 ): void {
   const auth = new OpenAICodexWebAuth(store, {
-    ...resolveProxyUrl === undefined ? {} : { resolveProxyUrl },
+    ...proxy === undefined ? {} : { proxy },
   })
   const storedFilename = (store as OpenAICodexCredentialStore & { filename?: unknown }).filename
   const fastMode = fastModeOverride ?? new FastModeRegistry()

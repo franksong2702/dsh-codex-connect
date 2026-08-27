@@ -12,6 +12,7 @@ import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { withOpenAICodexProxy } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 /** Return a detached copy of the complete pi-ai Codex model catalog. */
 export function openAICodexModelCatalog(): readonly OpenAICodexModelCatalogEntry[] {
@@ -27,6 +28,14 @@ export const OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
 export const OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET = 2048 * 2048
 /** rc.2 default raw encoded-byte cap for one deterministic inline image version. */
 export const OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES = 1024 * 1024
+
+/**
+ * Use the finite SSE response path for Codex requests. The automatic
+ * WebSocket path keeps a session connection for prompt-cache reuse, which
+ * can leave one-shot Headless processes alive after their final answer.
+ */
+export const OPENAI_CODEX_TRANSPORT = 'sse' as const
+
 
 /**
  * Give the generic dsh adapter a request-scoped bearer-token entry without
@@ -72,15 +81,15 @@ export function withOpenAICodexFastMode(
 function requestProvider(
   provider: Provider,
   fastMode?: FastModeRegistry,
-  resolveProxyUrl?: () => string | undefined,
+  proxy?: OpenAICodexProxyRunner,
 ): Provider {
   const configured = withOpenAICodexFastMode(provider, fastMode)
   const streamSimple = configured.streamSimple
   return {
     ...configured,
     streamSimple(model, context: PiContext, options?: SimpleStreamOptions) {
-      const proxyUrl = resolveProxyUrl?.()
-      return withOpenAICodexProxy(proxyUrl, () => streamSimple.call(
+      const proxyUrl = proxy?.activeUrl
+      return withOpenAICodexProxy(proxy, () => streamSimple.call(
         configured,
         model,
         context,
@@ -106,18 +115,19 @@ function requestProvider(
 export function createOpenAICodexProfile(
   provider: Provider,
   fastMode?: FastModeRegistry,
-  resolveProxyUrl?: () => string | undefined,
+  proxy?: OpenAICodexProxyRunner,
 ): ResolvedPiAiProviderProfile {
   return {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',
+    transport: OPENAI_CODEX_TRANSPORT,
     streamIdleTimeoutMs: OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
     maxRequestImageBytes: OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
     requestImagePixelBudget: OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
     requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
-    piProvider: requestProvider(provider, fastMode, resolveProxyUrl),
+    piProvider: requestProvider(provider, fastMode, proxy),
   }
 }
 
@@ -132,12 +142,12 @@ export function createOpenAICodexAdapter(
   resolveAttachments: () => AttachmentStore | undefined,
   fastMode?: FastModeRegistry,
   visibleModelIds?: () => readonly string[] | undefined,
-  resolveProxyUrl?: () => string | undefined,
+  proxy?: OpenAICodexProxyRunner,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[
     OPENAI_CODEX_PROVIDER,
-    createOpenAICodexProfile(provider, fastMode, resolveProxyUrl),
+    createOpenAICodexProfile(provider, fastMode, proxy),
   ]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)
@@ -153,7 +163,7 @@ export function createOpenAICodexAdapter(
   return new OpenAICodexAdapter({
     profiles: () => profiles,
     resolveApiKey: async () => withOpenAICodexProxy(
-      resolveProxyUrl?.(),
+      proxy,
       async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey,
     ),
     auth: { credentials, authContext: defaultProviderAuthContext() },

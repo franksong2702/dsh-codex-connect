@@ -1,4 +1,4 @@
-/** Compact weekly Codex quota indicator for the Composer tool row. */
+/** Compact 5-hour and weekly Codex quota indicator for the Composer tool row. */
 
 import { useEffect, useId, useSyncExternalStore, useState } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -9,6 +9,7 @@ import { formatOpenAICodexResetAt } from './OpenAICodexSettings.tsx'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
 const WEEK_SECONDS = 7 * 24 * 60 * 60
+const FIVE_HOUR_SECONDS = 5 * 60 * 60
 const USAGE_POLL_INTERVAL_MS = 60_000
 const CODEX_PROVIDER = 'openai-codex'
 const SPARK_MODEL = 'gpt-5.3-codex-spark'
@@ -60,11 +61,11 @@ function usageFromStatus(value: unknown): OpenAICodexUsage | undefined {
   return usage as unknown as OpenAICodexUsage
 }
 
-function weeklyQuotaOf(usage: OpenAICodexUsage, model: string | undefined): OpenAICodexRateLimitWindow | undefined {
+function quotaOf(usage: OpenAICodexUsage, model: string | undefined, windowSeconds: number): OpenAICodexRateLimitWindow | undefined {
   const quotaId = model === SPARK_MODEL ? SPARK_QUOTA_ID : 'codex'
   return usage.rateLimits
     .find(limit => limit.id === quotaId)
-    ?.windows.find(window => window.windowSeconds === WEEK_SECONDS)
+    ?.windows.find(window => window.windowSeconds === windowSeconds)
 }
 
 function isGptModel(state: ModelDirectoryState): boolean {
@@ -109,7 +110,7 @@ function subscribeDirectory(directory: SnapshotStore<ModelDirectoryState>, liste
   return directory.subscribe(listener)
 }
 
-/** Render nothing until an eligible GPT Codex session has a usable weekly quota. */
+/** Render nothing until an eligible GPT Codex session has a usable quota window. */
 export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndicatorInjected & { t: Translate }) {
   const directoryState = useSyncExternalStore(
     listener => subscribeDirectory(directory, listener),
@@ -165,19 +166,44 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   }, [eligible])
 
   if (!eligible || request.status !== 'ready' || request.usage === undefined) return null
-  const weekly = weeklyQuotaOf(request.usage, directoryState.current?.model)
-  if (weekly === undefined) return null
+  const fiveHour = quotaOf(request.usage, directoryState.current?.model, FIVE_HOUR_SECONDS)
+  const weekly = quotaOf(request.usage, directoryState.current?.model, WEEK_SECONDS)
+  const quotas: Array<{
+    kind: 'five-hour' | 'weekly'
+    shortLabel: string
+    summary: string
+    window: OpenAICodexRateLimitWindow
+  }> = []
+  if (fiveHour !== undefined) {
+    quotas.push({
+      kind: 'five-hour',
+      shortLabel: t('composerFiveHourShort'),
+      summary: t('composerFiveHourQuotaSummary', {
+        percent: formatPercent(fiveHour.remainingPercent),
+        time: formatOpenAICodexResetAt(fiveHour.resetAt) ?? t('resetUnavailable'),
+      }),
+      window: fiveHour,
+    })
+  }
+  if (weekly !== undefined) {
+    quotas.push({
+      kind: 'weekly',
+      shortLabel: t('composerWeeklyShort'),
+      summary: t('composerWeeklyQuotaSummary', {
+        percent: formatPercent(weekly.remainingPercent),
+        time: formatOpenAICodexResetAt(weekly.resetAt) ?? t('resetUnavailable'),
+      }),
+      window: weekly,
+    })
+  }
+  if (quotas.length === 0) return null
 
-  const percent = formatPercent(weekly.remainingPercent)
-  const fullResetTime = formatOpenAICodexResetAt(weekly.resetAt) ?? t('resetUnavailable')
-  const summary = t('composerWeeklyQuotaSummary', { percent, time: fullResetTime })
-  const boundedPercent = boundedQuotaPercent(weekly.remainingPercent)
-  const progressColor = quotaProgressColor(weekly.remainingPercent)
+  const summary = quotas.map(quota => quota.summary).join('; ')
   const tooltipVisible = isHovered || isFocused
   return (
     <span
       role="status"
-      data-openai-codex-quota="weekly"
+      data-openai-codex-quota={quotas.map(quota => quota.kind).join(',')}
       aria-label={summary}
       aria-describedby={tooltipVisible ? tooltipId : undefined}
       tabIndex={0}
@@ -187,43 +213,52 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
       onBlur={() => { setIsFocused(false) }}
       style={{
         display: 'inline-flex',
-        width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
-        height: '28px',
+        width: `${QUOTA_PROGRESS_WIDTH_PX + 22}px`,
+        minHeight: '30px',
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '3px',
       }}
     >
-      <span
-        aria-hidden="true"
-        data-openai-codex-quota-track="weekly"
-        style={{
-          display: 'block',
-          width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
-          height: `${QUOTA_PROGRESS_TRACK_HEIGHT_PX}px`,
-          borderRadius: '999px',
-          backgroundColor: 'var(--dsw-alias-border-l2)',
-          overflow: 'hidden',
-        }}
-      >
-        <span
-          aria-hidden="true"
-          data-openai-codex-quota-progress="weekly"
-          data-openai-codex-quota-color={progressColor.name}
-          style={{
-            display: 'block',
-            width: `${boundedPercent}%`,
-            height: '100%',
-            borderRadius: 'inherit',
-            backgroundColor: progressColor.value,
-          }}
-        />
-      </span>
+      {quotas.map(quota => {
+        const boundedPercent = boundedQuotaPercent(quota.window.remainingPercent)
+        const progressColor = quotaProgressColor(quota.window.remainingPercent)
+        return (
+          <span key={quota.kind} aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 18, color: 'var(--dsw-alias-label-tertiary)', fontSize: 9, lineHeight: '10px', textAlign: 'right' }}>{quota.shortLabel}</span>
+            <span
+              data-openai-codex-quota-track={quota.kind}
+              style={{
+                display: 'block',
+                width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
+                height: `${QUOTA_PROGRESS_TRACK_HEIGHT_PX}px`,
+                borderRadius: '999px',
+                backgroundColor: 'var(--dsw-alias-border-l2)',
+                overflow: 'hidden',
+              }}
+            >
+              <span
+                data-openai-codex-quota-progress={quota.kind}
+                data-openai-codex-quota-color={progressColor.name}
+                style={{
+                  display: 'block',
+                  width: `${boundedPercent}%`,
+                  height: '100%',
+                  borderRadius: 'inherit',
+                  backgroundColor: progressColor.value,
+                }}
+              />
+            </span>
+          </span>
+        )
+      })}
       {tooltipVisible ? (
         <span
           id={tooltipId}
           role="tooltip"
-          data-openai-codex-quota-tooltip="weekly"
+          data-openai-codex-quota-tooltip="five-hour-weekly"
           style={{
             position: 'absolute',
             bottom: 'calc(100% + 6px)',
@@ -240,7 +275,9 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
             fontSize: '12px',
             lineHeight: '18px',
           }}
-        >{summary}</span>
+        >
+          {quotas.map(quota => <span key={quota.kind} style={{ display: 'block' }}>{quota.summary}</span>)}
+        </span>
       ) : null}
     </span>
   )

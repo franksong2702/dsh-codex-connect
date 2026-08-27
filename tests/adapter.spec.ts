@@ -7,6 +7,7 @@ import {
   OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
   OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
   OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
+  OPENAI_CODEX_TRANSPORT,
 } from '../src/adapter.ts'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { OPENAI_CODEX_PROVIDER } from '../src/store.ts'
@@ -27,6 +28,13 @@ describe('OpenAI Codex rc.2 adapter profile', () => {
     expect(profile.maxRequestImageBytes).toBe(20 * 1024 * 1024)
     expect(profile.requestImagePixelBudget).toBe(2048 * 2048)
     expect(profile.requestImageMaxBytes).toBe(1024 * 1024)
+  })
+
+  it('uses the finite SSE transport for completed one-shot requests', () => {
+    const profile = createOpenAICodexProfile(openaiCodexProvider())
+
+    expect(profile.transport).toBe(OPENAI_CODEX_TRANSPORT)
+    expect(profile.transport).toBe('sse')
   })
 
   it('filters discovery while keeping a hidden model resolvable', async () => {

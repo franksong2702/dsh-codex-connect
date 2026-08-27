@@ -14,6 +14,7 @@ import {
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from '../src/auth-paths.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
+import { OPENAI_CODEX_PROXY_DETECT_PATH, OPENAI_CODEX_PROXY_TEST_PATH } from '../src/proxy-paths.ts'
 
 function t(key: OpenAICodexSettingsKey, params: Record<string, unknown> = {}): string {
   return Object.entries(params).reduce(
@@ -167,7 +168,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
     render(<OpenAICodexSettings t={t} embedded />)
     expect(await screen.findByText(reauthMessage)).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toContain(en.reauthRequired)
+    expect(screen.getAllByRole('status').some(status => status.textContent?.includes(en.reauthRequired))).toBe(true)
     expect(screen.getByRole('button', { name: en.loginAgain })).toBeTruthy()
     expect(screen.queryByRole('button', { name: en.logout })).toBeNull()
     expect(zh.reauthRequired).toBe('需要重新登录')
@@ -306,31 +307,23 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
-    const enableProxy = await screen.findByRole('checkbox', { name: /Use proxy for Codex provider requests/u }) as HTMLInputElement
-    const proxyUrl = screen.getByRole('textbox', { name: en.proxyUrl }) as HTMLInputElement
-    const enableSearch = screen.getByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
+    const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
-    expect(enableProxy.checked).toBe(true)
-    expect(proxyUrl.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
     expect(enableSearch.checked).toBe(false)
     expect(enableImageGeneration.checked).toBe(false)
     expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
     expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
     expect(zh.enableImageGenerationHelp).toBe('启用后，GPT 模型可以在对话中调用 GPT Image 生成图片。')
-    expect(zh.proxyUrl).toBe('代理地址')
     expect(model.disabled).toBe(true)
 
-    fireEvent.change(proxyUrl, { target: { value: 'http://127.0.0.1:8888' } })
     fireEvent.click(enableSearch)
     expect(model.disabled).toBe(false)
     fireEvent.change(model, { target: { value: 'temporary-model' } })
     fireEvent.click(screen.getByRole('button', { name: en.discard }))
-    expect(proxyUrl.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
     expect(enableSearch.checked).toBe(false)
     expect(model.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.searchModel)
 
-    fireEvent.change(proxyUrl, { target: { value: 'http://127.0.0.1:7891' } })
     fireEvent.click(enableSearch)
     fireEvent.change(model, { target: { value: 'gpt-search-custom' } })
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
@@ -339,12 +332,53 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.click(screen.getByRole('button', { name: en.save }))
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
-    expect(set).toHaveBeenCalledWith('proxyUrl', 'http://127.0.0.1:7891')
     expect(set).toHaveBeenCalledWith('enableSearch', true)
     expect(set).toHaveBeenCalledWith('searchModel', 'gpt-search-custom')
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
     expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
+  })
+
+  it('keeps Detect and Test draft-only, then activates and disables explicitly', async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      const path = requestPath(input)
+      if (path === OPENAI_CODEX_PROXY_DETECT_PATH) {
+        return json({ detected: true, source: 'HTTPS_PROXY', valid: true, proxyUrl: 'http://127.0.0.1:9000' })
+      }
+      if (path === OPENAI_CODEX_PROXY_TEST_PATH) return json({ ok: true, statusCode: 404 })
+      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json([])
+      return json({ status: 'signed-out' })
+    })
+    const { scope, set } = settingsScopeFixture()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    expect(await screen.findByText(en.proxyStatusDirect)).toBeTruthy()
+    expect(document.querySelector('[data-openai-codex-proxy-rail="direct"]')).toBeTruthy()
+    const draft = screen.getByRole('textbox', { name: en.proxyUrl }) as HTMLInputElement
+    expect(draft.value).toBe(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl)
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyDetect }))
+    expect(await screen.findByText(en.proxyEnvironmentDetected
+      .replace('{source}', 'HTTPS_PROXY')
+      .replace('{url}', 'http://127.0.0.1:9000'))).toBeTruthy()
+    expect(draft.value).toBe('http://127.0.0.1:9000')
+    expect(set).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyTest }))
+    expect(await screen.findByText(en.proxyTestSucceeded)).toBeTruthy()
+    expect(set).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyActivate }))
+    expect(await screen.findByText(en.proxyActivated)).toBeTruthy()
+    expect(set).toHaveBeenNthCalledWith(1, 'proxyUrl', 'http://127.0.0.1:9000')
+    expect(set).toHaveBeenNthCalledWith(2, 'enableProxy', true)
+    expect(document.querySelector('[data-openai-codex-proxy-rail="active"]')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: en.proxyDisable }))
+    expect(await screen.findByText(en.proxyDisabled)).toBeTruthy()
+    expect(set).toHaveBeenLastCalledWith('enableProxy', false)
+    expect(document.querySelector('[data-openai-codex-proxy-rail="direct"]')).toBeTruthy()
   })
 
   it('stages model visibility in provider order and saves it with the other plugin settings', async () => {

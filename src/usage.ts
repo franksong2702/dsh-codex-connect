@@ -3,6 +3,7 @@
 import { createModels } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { withOpenAICodexProxy } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 
@@ -225,9 +226,9 @@ export function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage {
  */
 export async function readOpenAICodexRateLimits(
   store: OpenAICodexCredentialStore,
-  proxyUrl?: string,
+  proxy?: OpenAICodexProxyRunner,
 ): Promise<OpenAICodexUsage> {
-  return withOpenAICodexProxy(proxyUrl, async () => {
+  return withOpenAICodexProxy(proxy, async () => {
     const models = createModels({ credentials: store })
     models.setProvider(openaiCodexProvider())
     const auth = await models.getAuth(OPENAI_CODEX_PROVIDER)

@@ -34,6 +34,81 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
   delete(providerId: string): Promise<void>;
 }
 //#endregion
+//#region src/provider-proxy.d.ts
+/** Instance-scoped HTTP CONNECT proxying for OpenAI Codex provider traffic. */
+/** Fixed first-party endpoint used only to prove that a draft proxy can connect. */
+declare const OPENAI_CODEX_PROXY_TEST_URL = "https://chatgpt.com/backend-api/codex";
+/** Bound the explicit user-triggered proxy probe. */
+declare const OPENAI_CODEX_PROXY_TEST_TIMEOUT_MS = 10000;
+/** Per-target timeout for the lightweight session connectivity monitor. */
+declare const OPENAI_CODEX_CONNECTIVITY_TIMEOUT_MS = 2500;
+declare const OPENAI_CODEX_CONNECTIVITY_TARGETS: readonly [{
+  readonly id: "codex-api";
+  readonly hostname: "chatgpt.com";
+  readonly url: "https://chatgpt.com/backend-api/codex";
+}, {
+  readonly id: "oauth";
+  readonly hostname: "auth.openai.com";
+  readonly url: "https://auth.openai.com/";
+}, {
+  readonly id: "openai-api";
+  readonly hostname: "api.openai.com";
+  readonly url: "https://api.openai.com/v1/models";
+}];
+/** Public read-only seam passed to every Codex network consumer. */
+interface OpenAICodexProxyRunner {
+  /** Currently activated proxy URL, or undefined for direct transport. */
+  readonly activeUrl: string | undefined;
+  /** Run one operation through this instance's current dispatcher. */
+  run<T>(operation: () => T): T;
+}
+/**
+ * One proxy lifecycle per mounted Codex Connect plugin instance.
+ * Reconfiguration swaps the agent synchronously for future requests. The
+ * global bridge exists only while a proxied Codex operation is in flight, so
+ * selecting another adapter leaves no persistent dispatcher registration.
+ */
+declare class OpenAICodexProxyController implements OpenAICodexProxyRunner {
+  private state;
+  private readonly states;
+  private url;
+  private closeTail;
+  private disposed;
+  get activeUrl(): string | undefined;
+  /** Activate one tested URL or switch this instance back to direct transport. */
+  configure(proxyUrl: string | undefined): void;
+  run<T>(operation: () => T): T;
+  private retire;
+  private closeIfRetired;
+  /** Disable this instance, close its pools, and release the global bridge. */
+  dispose(): Promise<void>;
+}
+interface OpenAICodexProxyTestResult {
+  ok: boolean;
+  statusCode?: number;
+  error?: string;
+}
+interface OpenAICodexConnectivityTargetResult {
+  id: string;
+  hostname: string;
+  reachable: boolean;
+  latencyMs: number;
+  statusCode?: number;
+  error?: string;
+}
+interface OpenAICodexConnectivityReport {
+  checkedAt: number;
+  mode: 'direct' | 'proxy';
+  targets: OpenAICodexConnectivityTargetResult[];
+}
+/** Check the small set of first-party domains used by Codex Connect. */
+declare function checkOpenAICodexConnectivity(proxy?: OpenAICodexProxyRunner, timeoutMs?: number): Promise<OpenAICodexConnectivityReport>;
+/**
+ * Probe a draft address through a temporary agent. This never touches an
+ * instance controller, the settings document, or the global dispatcher.
+ */
+declare function testOpenAICodexProxy(proxyUrl: string, timeoutMs?: number): Promise<OpenAICodexProxyTestResult>;
+//#endregion
 //#region src/transport.d.ts
 /** Cordis service name owned by the core plugin fiber. */
 declare const OPENAI_CODEX_TRANSPORT_SERVICE = "openaiCodexTransport";
@@ -108,10 +183,10 @@ interface OpenAICodexTransportV1 {
 /** Core-owned Cordis service for the optional image package. */
 declare class OpenAICodexTransport extends Service implements OpenAICodexTransportV1 {
   private readonly credentials;
-  private readonly resolveProxyUrl;
+  private readonly proxy?;
   readonly apiVersion: 1;
   private readonly models;
-  constructor(ctx: Context, credentials: OpenAICodexCredentialStore, resolveProxyUrl?: () => string | undefined);
+  constructor(ctx: Context, credentials: OpenAICodexCredentialStore, proxy?: OpenAICodexProxyRunner | undefined);
   generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
 }
 //#endregion
@@ -292,7 +367,7 @@ declare function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage;
  * @param store - plugin-owned OAuth credential store.
  * @returns current rate-limit buckets safe to expose to the local browser page.
  */
-declare function readOpenAICodexRateLimits(store: OpenAICodexCredentialStore, proxyUrl?: string): Promise<OpenAICodexUsage>;
+declare function readOpenAICodexRateLimits(store: OpenAICodexCredentialStore, proxy?: OpenAICodexProxyRunner): Promise<OpenAICodexUsage>;
 //#endregion
 //#region src/settings-contract.d.ts
 /** Node-free settings contract shared by the Host plugin and browser card. */
@@ -389,8 +464,8 @@ interface OpenAICodexSearchProviderOptions {
   readonly maxOutputTokens: number;
   /** Resolve the request identity, normally the initiating session id. */
   readonly resolveRequestId: () => string;
-  /** Resolve the currently active provider proxy for each request. */
-  readonly resolveProxyUrl?: () => string | undefined;
+  /** Plugin-instance proxy controller used only for Codex requests. */
+  readonly proxy?: OpenAICodexProxyRunner;
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void;
 }
@@ -417,6 +492,32 @@ declare class OpenAICodexSearchProvider implements WebSearchProvider {
   search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;
 }
 //#endregion
+//#region src/proxy-env.d.ts
+/** Environment proxy discovery shared by the Host route and tests. */
+/** HTTPS candidates win because every first-party Codex endpoint is HTTPS. */
+declare const OPENAI_CODEX_PROXY_ENV_KEYS: readonly ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"];
+type OpenAICodexProxyEnvironmentCandidate = {
+  detected: false;
+} | {
+  detected: true;
+  source: string;
+  valid: true;
+  proxyUrl: string;
+} | {
+  detected: true;
+  source: string;
+  valid: false;
+  reason: 'invalid-or-credentialed';
+};
+/** Find the first non-empty standard proxy variable without activating it. */
+declare function detectOpenAICodexProxyEnvironment(environment?: Readonly<Record<string, string | undefined>>): OpenAICodexProxyEnvironmentCandidate;
+//#endregion
+//#region src/proxy-paths.d.ts
+/** Browser/Host route constants for the explicit proxy workflow. */
+declare const OPENAI_CODEX_PROXY_DETECT_PATH = "/api/dsh-codex-connect/proxy/detect";
+declare const OPENAI_CODEX_PROXY_TEST_PATH = "/api/dsh-codex-connect/proxy/test";
+declare const OPENAI_CODEX_CONNECTIVITY_PATH = "/api/dsh-codex-connect/proxy/connectivity";
+//#endregion
 //#region src/auth.d.ts
 /** Non-secret login state shown by the launcher. */
 interface OpenAICodexAuthStatus {
@@ -430,7 +531,7 @@ interface OpenAICodexAuthStatus {
  * @param interaction - terminal or UI callbacks for the provider flow.
  * @param store - credential store, defaulting under `$DSH_HOME`.
  */
-declare function loginOpenAICodex(interaction: AuthInteraction, store?: OpenAICodexCredentialStore, proxyUrl?: string): Promise<void>;
+declare function loginOpenAICodex(interaction: AuthInteraction, store?: OpenAICodexCredentialStore, proxy?: OpenAICodexProxyRunner): Promise<void>;
 /**
  * Remove the stored OpenAI Codex credential.
  * @param store - credential store, defaulting under `$DSH_HOME`.
@@ -629,4 +730,4 @@ declare const Config: z<Config>;
  */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_PROXY_URL, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, IMAGE_GENERATE_TOOL_NAME, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_HISTORY_BACKUP_SUFFIX, OPENAI_CODEX_IMAGE_GENERATION_URL, OPENAI_CODEX_IMAGE_MAX_COUNT, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES, OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES, OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_TRANSPORT_API_VERSION, OPENAI_CODEX_TRANSPORT_ERROR_CODES, OPENAI_CODEX_TRANSPORT_SERVICE, OPENAI_CODEX_UPDATE_PATH, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexHistoryMigrationFile, type OpenAICodexHistoryMigrationOptions, type OpenAICodexHistoryMigrationResult, type OpenAICodexIndividualLimit, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, OpenAICodexTransport, OpenAICodexTransportError, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUpdateResult, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, checkForOpenAICodexUpdate, compareOpenAICodexVersions, decodeOpenAICodexSettings, detectCompatibility, diagnoseOpenAICodex, evaluateCompatibility, inject, isFastModeSessionId, isOpenAICodexTransportError, isValidOpenAICodexProxyUrl, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, migrateOpenAICodexSearchHistory, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUpdateResult, parseOpenAICodexUsage, parseOpenAICodexVersion, readOpenAICodexRateLimits, resolveOpenAICodexProxyUrl, resolveOpenAICodexSettings };
+export { COMPATIBILITY_CONTRACT, COMPATIBILITY_PACKAGES, COMPATIBILITY_SCHEMA_VERSION, type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, Config, DEFAULT_OPENAI_CODEX_PROXY_URL, DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE, DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS, DEFAULT_OPENAI_CODEX_SEARCH_MODE, DEFAULT_OPENAI_CODEX_SEARCH_MODEL, DEFAULT_OPENAI_CODEX_SETTINGS, DSH_PLUGIN_API_PACKAGES, FastModeRegistry, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, IMAGE_GENERATE_TOOL_NAME, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, OPENAI_CODEX_AUTH_FILENAME, OPENAI_CODEX_BASE_URL, OPENAI_CODEX_CONNECTIVITY_PATH, OPENAI_CODEX_CONNECTIVITY_TARGETS, OPENAI_CODEX_CONNECTIVITY_TIMEOUT_MS, OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, OPENAI_CODEX_FAST_MODE_MAX_SESSION_ID_LENGTH, OPENAI_CODEX_FAST_MODE_PATH, OPENAI_CODEX_HISTORY_BACKUP_SUFFIX, OPENAI_CODEX_IMAGE_GENERATION_URL, OPENAI_CODEX_IMAGE_MAX_COUNT, OPENAI_CODEX_IMAGE_MAX_ERROR_BYTES, OPENAI_CODEX_IMAGE_MAX_RESPONSE_BYTES, OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS, OPENAI_CODEX_PROVIDER, OPENAI_CODEX_PROXY_DETECT_PATH, OPENAI_CODEX_PROXY_ENV_KEYS, OPENAI_CODEX_PROXY_TEST_PATH, OPENAI_CODEX_PROXY_TEST_TIMEOUT_MS, OPENAI_CODEX_PROXY_TEST_URL, OPENAI_CODEX_SEARCH_MODEL_REQUEST_EVENT, OPENAI_CODEX_SEARCH_PROVIDER, OPENAI_CODEX_SEARCH_URL, OPENAI_CODEX_SETTINGS_NAMESPACE, OPENAI_CODEX_SETTINGS_NS, OPENAI_CODEX_TRANSPORT_API_VERSION, OPENAI_CODEX_TRANSPORT_ERROR_CODES, OPENAI_CODEX_TRANSPORT_SERVICE, OPENAI_CODEX_UPDATE_PATH, OPENAI_CODEX_USAGE_URL, type OpenAICodexAuthStatus, type OpenAICodexConnectivityReport, type OpenAICodexConnectivityTargetResult, OpenAICodexCredentialStore, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexHistoryMigrationFile, type OpenAICodexHistoryMigrationOptions, type OpenAICodexHistoryMigrationResult, type OpenAICodexIndividualLimit, OpenAICodexProxyController, type OpenAICodexProxyEnvironmentCandidate, type OpenAICodexProxyRunner, type OpenAICodexProxyTestResult, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, OpenAICodexSearchProvider, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, OpenAICodexTransport, OpenAICodexTransportError, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUpdateResult, type OpenAICodexUsage, PI_AI_PACKAGE, SUPPORTED_DSH_PLUGIN_API_VERSION, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_VERSION, VIEW_IMAGE_TOOL_NAME, apply, assertNoOpenAICodexProviderConflict, assessCompatibility, checkForOpenAICodexUpdate, checkOpenAICodexConnectivity, compareOpenAICodexVersions, decodeOpenAICodexSettings, detectCompatibility, detectOpenAICodexProxyEnvironment, diagnoseOpenAICodex, evaluateCompatibility, inject, isFastModeSessionId, isOpenAICodexTransportError, isValidOpenAICodexProxyUrl, loginOpenAICodex, logoutOpenAICodex, mapOpenAICodexSearchResponse, migrateOpenAICodexSearchHistory, name, openAICodexAuthPath, openAICodexAuthStatus, openAICodexConflictMessage, parseOpenAICodexUpdateResult, parseOpenAICodexUsage, parseOpenAICodexVersion, readOpenAICodexRateLimits, resolveOpenAICodexProxyUrl, resolveOpenAICodexSettings, testOpenAICodexProxy };

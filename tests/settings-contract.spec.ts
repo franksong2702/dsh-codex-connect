@@ -17,9 +17,9 @@ const legacySettings = {
 }
 
 describe('OpenAI Codex proxy settings contract', () => {
-  it('upgrades older snapshots to the enabled local proxy default', () => {
+  it('upgrades older snapshots to the direct-connection default', () => {
     expect(decodeOpenAICodexSettings(legacySettings)).toMatchObject({
-      enableProxy: true,
+      enableProxy: false,
       proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
     })
   })

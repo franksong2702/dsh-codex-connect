@@ -1,12 +1,15 @@
 import { spawnSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
-const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
-  cwd: new URL('..', import.meta.url),
-  encoding: 'utf8',
-})
+const options = { cwd: new URL('..', import.meta.url), encoding: 'utf8' }
+// Node 24 requires a shell to launch the npm.cmd shim on Windows. The command
+// is a fixed literal and accepts no user input.
+const result = process.platform === 'win32'
+  ? spawnSync('npm pack --dry-run --json --ignore-scripts', { ...options, shell: true })
+  : spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], options)
+if (result.error !== undefined) throw result.error
 if (result.status !== 0) {
-  process.stderr.write(result.stderr)
+  if (result.stderr !== undefined) process.stderr.write(result.stderr)
   process.exit(result.status ?? 1)
 }
 

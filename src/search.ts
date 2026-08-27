@@ -16,6 +16,7 @@ import type {
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import { withOpenAICodexProxy } from './provider-proxy.ts'
+import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 import {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -82,8 +83,8 @@ export interface OpenAICodexSearchProviderOptions {
   readonly maxOutputTokens: number
   /** Resolve the request identity, normally the initiating session id. */
   readonly resolveRequestId: () => string
-  /** Resolve the currently active provider proxy for each request. */
-  readonly resolveProxyUrl?: () => string | undefined
+  /** Plugin-instance proxy controller used only for Codex requests. */
+  readonly proxy?: OpenAICodexProxyRunner
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
 }
@@ -249,7 +250,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
     let auth
     try {
       auth = await abortable(withOpenAICodexProxy(
-        this.options.resolveProxyUrl?.(),
+        this.options.proxy,
         () => this.models.getAuth(OPENAI_CODEX_PROVIDER),
       ), signal)
     } catch (error: unknown) {
@@ -285,7 +286,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
 
     let response: Response
     try {
-      response = await withOpenAICodexProxy(this.options.resolveProxyUrl?.(), () => fetch(OPENAI_CODEX_SEARCH_URL, {
+      response = await withOpenAICodexProxy(this.options.proxy, () => fetch(OPENAI_CODEX_SEARCH_URL, {
         method: 'POST',
         redirect: 'error',
         headers: {
