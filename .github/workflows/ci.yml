@@ -35,6 +35,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
+      - name: Validate release workflow contract
+        run: pnpm run check:release-workflow
+      - name: Validate canary workflow contract
+        run: pnpm run check:canary-workflow
       - name: Lint package and source hygiene
         run: pnpm run lint
       - name: Typecheck host and browser entries
