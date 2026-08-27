@@ -4,6 +4,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import type { ImageAttachmentLimits, SaveImageAttachment } from '@deepseek-ai/dsh-attachment'
 import { imageGenerateTool, IMAGE_GENERATE_TOOL_NAME } from '../src/image-tool.ts'
+import type { OpenAICodexImageAssetStore, SaveOpenAICodexOriginalImage } from '../src/image-assets.ts'
 
 const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64')
 const signal = new AbortController().signal
@@ -26,6 +27,7 @@ async function setup(options: {
   generateImages?: (input: { prompt: string }, request: { signal?: AbortSignal }) => Promise<unknown>
   limits?: Partial<ImageAttachmentLimits>
   saveImages?: (inputs: readonly SaveImageAttachment[]) => Promise<readonly unknown[]>
+  saveOriginals?: (sessionId: string, inputs: readonly SaveOpenAICodexOriginalImage[]) => Promise<readonly unknown[]>
 } = {}) {
   const ctx = new Context()
   context = ctx
@@ -61,9 +63,25 @@ async function setup(options: {
     responseBytes: PNG_1X1.byteLength,
     images: [{ b64Json: b64(PNG_1X1) }],
   })))
+  const removeImages = vi.fn(async () => undefined)
+  const assets = {
+    async saveImages(sessionId: string, inputs: readonly SaveOpenAICodexOriginalImage[]) {
+      if (options.saveOriginals !== undefined) return options.saveOriginals(sessionId, inputs)
+      return inputs.map((input, index) => ({
+        assetId: `img_${String(index + 1).padStart(32, '0')}`,
+        mediaType: input.mediaType,
+        width: input.width,
+        height: input.height,
+        bytes: input.data.byteLength,
+        name: input.name,
+        sha256: 'a'.repeat(64),
+      }))
+    },
+    removeImages,
+  } as unknown as OpenAICodexImageAssetStore
   ctx.provide('openaiCodexTransport', { apiVersion: 1, generateImages })
-  ctx.tools.register(imageGenerateTool(ctx))
-  return { ctx, generateImages, saved }
+  ctx.tools.register(imageGenerateTool(ctx, assets))
+  return { ctx, generateImages, saved, removeImages }
 }
 
 async function execute(ctx: Context, args: unknown, signalOverride: AbortSignal = signal) {
@@ -114,7 +132,10 @@ describe('Codex image generation tool', () => {
     if (result.isError) throw new Error('expected image generation to succeed')
     expect(generateImages).toHaveBeenCalledWith({ prompt: 'draw a pixel' }, { signal })
     expect(saved).toHaveLength(1)
-    expect(result.value).toMatchObject({ images: [{ mediaType: 'image/png', name: 'codex-image-1.png' }] })
+    expect(result.value).toMatchObject({ images: [{
+      original: { mediaType: 'image/png', name: 'codex-image-1.png', width: 1, height: 1 },
+      preview: { mediaType: 'image/png', name: 'codex-image-1.png', width: 1, height: 1 },
+    }] })
     expect(result.content).toEqual([
       expect.objectContaining({ type: 'text' }),
       {
@@ -128,8 +149,12 @@ describe('Codex image generation tool', () => {
     ])
     expect(result.meta).toEqual({
       kind: 'codex-connect-images',
+      schemaVersion: 1,
       prompt: 'draw a pixel',
-      images: [expect.objectContaining({ mediaType: 'image/png', name: 'codex-image-1.png' })],
+      images: [expect.objectContaining({
+        original: expect.objectContaining({ mediaType: 'image/png', name: 'codex-image-1.png' }),
+        preview: expect.objectContaining({ mediaType: 'image/png', name: 'codex-image-1.png' }),
+      })],
     })
 
     await ctx.fiber.dispose()
@@ -146,5 +171,31 @@ describe('Codex image generation tool', () => {
     const { ctx, saved } = await setup({ limits: { maxImageBytes: PNG_1X1.byteLength - 1 } })
     expect((await execute(ctx, { prompt: 'draw' })).isError).toBe(true)
     expect(saved).toHaveLength(0)
+  })
+
+  it('accepts the attachment store canonical preview metadata after normalization', async () => {
+    const { ctx } = await setup({
+      saveImages: async inputs => inputs.map((input, index) => ({
+        attachmentId: `sha256:normalized-${String(index)}`,
+        mediaType: 'image/webp',
+        bytes: 42,
+        width: 1,
+        height: 1,
+        name: input.name?.replace('.png', '.webp'),
+      })),
+    })
+    const result = await execute(ctx, { prompt: 'normalize this' })
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected normalized preview to succeed')
+    expect(result.value).toMatchObject({ images: [{
+      original: { mediaType: 'image/png', bytes: PNG_1X1.byteLength },
+      preview: { mediaType: 'image/webp', bytes: 42 },
+    }] })
+  })
+
+  it('removes exact originals when preview persistence fails', async () => {
+    const { ctx, removeImages } = await setup({ saveImages: async () => { throw new Error('preview failed') } })
+    expect((await execute(ctx, { prompt: 'rollback this' })).isError).toBe(true)
+    expect(removeImages).toHaveBeenCalledOnce()
   })
 })
