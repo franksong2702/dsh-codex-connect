@@ -44,12 +44,13 @@
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.client.json",
     "check:compatibility": "node scripts/check-compatibility.mjs",
+    "check:capability-cli": "node scripts/check-capability-cli.mjs",
     "check:canary-workflow": "node scripts/check-canary-workflow.mjs && node scripts/check-dsh-next-contract.mjs",
     "pack:check": "node scripts/check-pack.mjs",
     "check:dsh-install": "node scripts/check-dsh-install.mjs",
     "check:dsh-next": "node scripts/check-dsh-next.mjs",
     "check:release-workflow": "node scripts/check-release-workflow.mjs",
-    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:capability-cli && pnpm --silent run check:compatibility && pnpm run pack:check",
     "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
   },
   "exports": {

@@ -248,6 +248,21 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 - 启动报告 `openai-codex` 冲突时，旧 `dsh-codex` bundle 或手动 provider 配置可能已占用该 adapter。先检查有效配置，只移除已确认的冲突所有者。不要删除认证文件或无关 provider。
 - 移除包不会删除 OAuth 状态；只有确实需要删除凭据时才运行 `logout`。
 
+### 按需能力报告
+
+请从目标插件安装位置运行独立的 `capabilities` 命令。不传 `--probe` 时，它只读取本地主机包版本与认证文件元数据，不打开认证文件内容，也不发送网络请求。现有 `doctor` 行为和设置页兼容性卡不变。
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
+```
+
+`--probe` 显式向普通 Codex Responses 路由发送一条固定短请求，可能消耗额度。它读取尚未过期的已存凭据，但不刷新或写入凭据。除非传入 `--proxy <http(s)-origin>`，否则命令使用直连，不读取正在运行的 profile 代理设置或环境代理变量。默认期限为 30000 ms，可通过 `--timeout-ms <1..60000>` 调整。命令不跟随重定向、不重试，响应上限为 64 KiB，并在返回前销毁自有连接。达到期限或大小上限不保证服务端生成已经停止。可复用诊断实例仅将完整响应和明确请求拒绝在内存中缓存至多 60 秒，按凭据、模型、版本与网络策略隔离。不同 CLI 调用之间不共享缓存证据。
+
+报告为每项检查标注 `supported`（可用）、`rejected`（拒绝）或 `unknown`（未验证），并提供原因与修复动作。运行时可用仅表示声明的主机包版本匹配，不代表 Web profile 或某个 Node 补丁版本经过集成验证。模型目录条目或私有认证文件只能令模型权限与 OAuth 有效性保持 `unknown`。只有 HTTP 200 有限 SSE 响应包含所选模型完整、非空的助手输出，才能确认独立路由；重定向、超时、限流和不完整流仍为 `unknown`。HTTP 400/404 拒绝的是本次请求，并非所有模型或可选功能；HTTP 401/403 还表示本次请求的授权被拒绝。报告省略 token、账号 ID、路径、代理 origin、响应 ID、headers 和生成文本。
+
+本报告仅涵盖独立路由，不验证活动 profile 路由、搜索/图片工具、浏览器兼容性、provider 重试行为或会话恢复。本插件没有实现自动 provider 故障切换，因此该项为 `rejected`，需要用户明确选择其他 provider。有限 SSE 默认路径不会触发 WebSocket 到 SSE 的回退。`contextManagement` 和续接仍为 `unknown`；原生 compaction 和 WebSocket reuse 在当前集成策略下为 `rejected`。诊断结果不会启用这些能力，也不会更改 Harness 历史。退出码只覆盖运行时、OAuth、所选模型、Responses 和 SSE：`0` 表示五项均可用，`1` 表示至少一项被拒绝，`2` 表示证据未知、选项无效或检查失败。被拒绝的可选能力不影响该退出码。
+
 ## 兼容性与安全边界
 
 - 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.20 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。

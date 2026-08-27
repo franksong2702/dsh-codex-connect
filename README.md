@@ -248,6 +248,21 @@ Selecting Codex as the profile's global search route is another explicit change:
 - If startup reports an `openai-codex` collision, an old `dsh-codex` bundle or manual provider row may already own the adapter. Inspect the effective configuration and remove only the confirmed conflicting owner. Do not delete auth files or unrelated providers.
 - Removing the package does not delete OAuth state. Run `logout` only when credential removal is intended.
 
+### On-demand capability report
+
+Run the separate `capabilities` command from the intended plugin installation. Without `--probe`, it reads local host package versions and credential-file metadata only; it does not open the credential document or send network requests. Existing `doctor` behavior and the settings compatibility card are unchanged.
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
+```
+
+`--probe` explicitly sends one fixed short request to the ordinary Codex Responses route and may consume quota. It reads an unexpired stored credential without refreshing or writing it. The command uses a direct connection unless you pass `--proxy <http(s)-origin>`; it does not load the active profile's proxy settings or environment proxy variables. The default deadline is 30000 ms; `--timeout-ms <1..60000>` overrides it. There are no redirects or retries, the response is capped at 64 KiB, and owned connections are destroyed before return. A deadline or size limit does not guarantee that server-side generation stopped. The reusable diagnostic instance caches only completed responses and explicit request rejections for at most 60 seconds in memory, scoped to credential, model, versions, and network policy. Separate CLI invocations do not share cached evidence.
+
+The report labels each check `supported`, `rejected`, or `unknown`, with a reason and corrective action. Runtime support means the declared host package versions match, not that the Web profile or an exact Node patch was integration-tested. A catalog entry or private credential file leaves model access and OAuth validity `unknown`. Only an HTTP 200 finite SSE response with a complete, nonempty assistant output for the selected model confirms the standalone route; redirects, timeouts, rate limits, and incomplete streams remain `unknown`. HTTP 400/404 reject the particular request, not every model or optional feature; HTTP 401/403 also reject authorization for that request. Reports omit tokens, account ids, paths, proxy origins, response ids, headers, and generated text.
+
+This report covers only the standalone route, not active profile routing, search/image tools, browser compatibility, provider retry behavior, or session recovery. Automatic provider failover is `rejected` because this plugin does not implement it; select an alternative provider explicitly. WebSocket-to-SSE fallback is inactive with the finite SSE default. `contextManagement` and continuation remain `unknown`; native compaction and WebSocket reuse are `rejected` by the current integration policy. No diagnostic result enables these capabilities or changes Harness history. Exit codes cover runtime, OAuth, selected model, Responses, and SSE only: `0` means all five were supported, `1` means at least one was rejected, and `2` means unknown evidence, invalid options, or an inspection failure. Rejected optional capabilities do not change that exit code.
+
 ## Compatibility and security boundary
 
 - The only verified compatibility combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json). Alpha 4.20 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade to the rc.2 API packages.
