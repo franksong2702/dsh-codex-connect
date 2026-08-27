@@ -172,8 +172,18 @@ export class OpenAICodexImageAssetStore {
     }))
   }
 
-  /** Read and verify an exact original only when the durable owner session matches. */
-  async read(sessionId: string, assetId: string): Promise<StoredOpenAICodexOriginalImage | undefined> {
+  /**
+   * Read verified bytes for the owner or a server-authorized inherited reference.
+   * @param sessionId - requesting session.
+   * @param assetId - opaque original identifier.
+   * @param inherited - reference resolved from the session's immutable fork prefix, never request data.
+   * @returns the exact original, or undefined for denied access or invalid files.
+   */
+  async read(
+    sessionId: string,
+    assetId: string,
+    inherited?: OpenAICodexOriginalImageRef,
+  ): Promise<StoredOpenAICodexOriginalImage | undefined> {
     if (!validSessionId(sessionId) || !OPENAI_CODEX_IMAGE_ASSET_ID_PATTERN.test(assetId)) return undefined
     const directory = this.directory(assetId)
     const metadataPath = join(directory, METADATA_FILENAME)
@@ -181,7 +191,12 @@ export class OpenAICodexImageAssetStore {
     try {
       await Promise.all([assertOwnerFile(metadataPath), assertOwnerFile(originalPath)])
       const document = parseDocument(await readFile(metadataPath, 'utf8'))
-      if (document === undefined || document.sessionId !== sessionId || document.image.assetId !== assetId) return undefined
+      if (document === undefined || document.image.assetId !== assetId) return undefined
+      if (document.sessionId !== sessionId && (inherited === undefined
+        || inherited.assetId !== document.image.assetId || inherited.sha256 !== document.image.sha256
+        || inherited.mediaType !== document.image.mediaType || inherited.width !== document.image.width
+        || inherited.height !== document.image.height || inherited.bytes !== document.image.bytes
+        || inherited.name !== document.image.name)) return undefined
       const data = new Uint8Array(await readFile(originalPath))
       const detected = detectEncodedImage(data)
       if (data.byteLength !== document.image.bytes || digest(data) !== document.image.sha256
