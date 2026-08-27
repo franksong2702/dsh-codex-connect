@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`assembled capability CLI > snapshots the actual offline command with unread credential contents 1`] = `
-"Codex Connect 0.1.0-alpha.4.20: standalone route diagnostics
+"Codex Connect 0.1.0-alpha.4.21: standalone route diagnostics
 Scope: local host versions and the selected standalone route; not the active Harness profile.
 Model: gpt-5.6-sol; network: direct; probe: not-requested
 runtime: supported (declared-host-versions-match)

@@ -28,7 +28,13 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.20`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.20'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+
+### Alpha 4.21 更新内容
+
+- 将生成图片的精确原文件与对话预览分开保存和下载，恢复会话及继承了图片结果的 fork 会话同样可用。
+- 使用可选的 `capabilities` 命令检查运行环境与 Responses/SSE 的支持证据。网络探测必须显式传入 `--probe`；不会启用未支持的功能或修改路由。
+- 提供更清晰的精确版本安装指引，并扩展发布与 canary 的 CI 检查。支持的 DSH 版本仍为 `0.1.1-rc.2`。
 
 ### 版本更新提醒
 
@@ -176,6 +182,8 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 
 此能力使用你当前 GPT 订阅计划提供的图片生成权限，不需要 OpenAI Platform API Key；具体可用性仍取决于当前对话所选的 GPT 套餐和模型。
 
+输出尺寸由订阅服务决定。工具只接受提示词，不提供尺寸设置，也不保证生成 4K 图片。要求“4K 级细节”不代表文件具有 4K 像素尺寸，请以结果卡片显示的尺寸为准。下载原文件会保留服务实际返回的图片，不会将其放大。
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="Codex Connect 中文 GPT Image 结果卡片，包含图片预览、可复制提示词、下载操作和图片详情" width="780">
 </p>
@@ -265,7 +273,7 @@ dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol
 
 ## 兼容性与安全边界
 
-- 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.20 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。
+- 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.21 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。
 - 升级时请将 DSH 插件 API packages 与 `@earendil-works/pi-ai` 作为一组升级，再运行 `dsh-codex-connect doctor --json` 和兼容性检查。本契约不对未来版本作判断。
 - 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认提供方可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。
 - ChatGPT 套餐资格、模型权限、额度和后端行为由 OpenAI 控制，可能变化。

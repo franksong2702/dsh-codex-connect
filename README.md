@@ -28,7 +28,13 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.20`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.20'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+
+### What's new in Alpha 4.21
+
+- Preserve and download the exact generated image separately from the conversation preview, including from restored sessions and forks that inherited the image result.
+- Inspect runtime and Responses/SSE evidence with the opt-in `capabilities` command. Network probing requires explicit `--probe`; it does not enable unsupported features or alter routing.
+- Use clearer exact-version installation guidance and expanded release/canary CI checks. The supported DSH version remains `0.1.1-rc.2`.
 
 ### Version updates
 
@@ -176,6 +182,8 @@ The screenshot below is an example after someone has explicitly enabled capabili
 
 This capability uses the image generation access included with your current GPT subscription; it does not require an OpenAI Platform API key. Availability remains subject to the GPT plan and model selected for the conversation.
 
+Output dimensions are selected by the subscription service. The tool accepts a prompt only and does not offer a size setting or guarantee 4K output. Asking for "4K detail" does not establish the file's pixel dimensions; use the dimensions shown on the result card. Downloading the original preserves what the service returned, without upscaling it.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="English-localized Codex Connect GPT Image result with preview, copyable prompt, download action, and image details" width="780">
 </p>
@@ -265,7 +273,7 @@ This report covers only the standalone route, not active profile routing, search
 
 ## Compatibility and security boundary
 
-- The only verified compatibility combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json). Alpha 4.20 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade to the rc.2 API packages.
+- The only verified compatibility combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json). Alpha 4.21 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade to the rc.2 API packages.
 - Upgrade the DSH plugin API packages and `@earendil-works/pi-ai` as one group, then run `dsh-codex-connect doctor --json` and the compatibility check again. This contract does not make claims about future versions.
 - When the daily upstream check finds a new `latest` or `next` DSH candidate, it installs Codex Connect into an isolated profile, boots the installed model runtime without OAuth credentials, verifies model and reasoning-effort discovery, and confirms provider disposal. Live sign-in, quota, and model requests still require manual validation in the test profile.
 - ChatGPT plan eligibility, model access, quotas, and backend behavior are controlled by OpenAI and may change.
