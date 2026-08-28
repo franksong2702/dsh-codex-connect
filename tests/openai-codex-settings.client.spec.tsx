@@ -129,7 +129,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     render(<OpenAICodexSettings t={t} embedded />)
     fireEvent.click(await screen.findByRole('button', { name: en.login }))
 
-    expect(await screen.findByText(en.popupBlockedFallback)).toBeTruthy()
+    expect(await screen.findByText(en.authorizationHelp)).toBeTruthy()
     const link = screen.getByRole('link', { name: en.openLoginInBrowser }) as HTMLAnchorElement
     expect(link.href).toBe('https://auth.openai.com/authorize')
     expect(link.target).toBe('_blank')

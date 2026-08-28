@@ -10,6 +10,7 @@ import {
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OpenAICodexWebAuth,
   OPENAI_CODEX_AUTH_STATUS_PATH,
+  OPENAI_CODEX_AUTH_CANCEL_PATH,
   REMOTE_WEB_ORIGIN_NOT_TRUSTED,
   registerOpenAICodexAuthRoutes,
   trustedRequestDecision,
@@ -132,6 +133,24 @@ afterEach(async () => {
 })
 
 describe('OpenAI Codex Web OAuth boundary', () => {
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])('rejects invalid authorization timeout %s', authorizationTimeoutMs => {
+    expect(() => new OpenAICodexWebAuth(store, { authorizationTimeoutMs })).toThrow(/authorization timeout/u)
+  })
+
+  it('requires POST and trusted same-origin access for cancellation', async () => {
+    const route = captureRoutes().find(candidate => candidate.path === OPENAI_CODEX_AUTH_CANCEL_PATH)!
+    const get = response()
+    await route.handler(request({ method: 'GET' }), get)
+    expect(get.observed.status).toBe(405)
+    const crossSite = response()
+    await route.handler(request({ method: 'POST', origin: 'https://untrusted.invalid', fetchSite: 'cross-site' }), crossSite)
+    expect(crossSite.observed.status).toBe(403)
+    const valid = response()
+    await route.handler(request({ method: 'POST', origin: 'http://127.0.0.1:3081', fetchSite: 'same-origin' }), valid)
+    expect(valid.observed.status).toBe(200)
+    expect(JSON.parse(valid.observed.body!)).toEqual({ status: 'signed-out' })
+    expect(mocked.logout).not.toHaveBeenCalled()
+  })
   it('returns a stable remote-origin error until the exact effective origin is trusted', async () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-auth-routes-'))
     const origins = new OpenAICodexTrustedOriginsStore(join(root, '.openai-codex-trusted-origins.json'))
@@ -166,6 +185,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     ['status', OPENAI_CODEX_AUTH_STATUS_PATH, 'GET'],
     ['login', OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'],
     ['logout', OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST'],
+    ['cancel', OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST'],
   ] as const)('applies the remote-origin boundary to %s', async (_label, path, method) => {
     const route = captureRoutes().find(candidate => candidate.path === path)
     if (route === undefined) throw new Error(`${path} route was not registered`)
@@ -327,6 +347,81 @@ describe('OpenAI Codex Web OAuth boundary', () => {
 
     await expect(auth.signIn()).rejects.toThrow(/did not provide an authorization URL/u)
     expect(observedSignal?.aborted).toBe(true)
+    await auth.dispose()
+  })
+
+  it('cancels the provider manual-code wait after auth_url without deleting credentials, then retries', async () => {
+    let closed = 0
+    mocked.login.mockImplementation(async (interaction: AuthInteraction) => {
+      const manualAbort = new AbortController()
+      const callback = deferred<void>()
+      if (interaction.signal === undefined) throw new Error('Cancellation signal required')
+      interaction.signal.addEventListener('abort', () => { callback.resolve() }, { once: true })
+      interaction.notify({ type: 'auth_url', url: 'https://auth.openai.com/authorize' })
+      // pi-ai waits for manual input after callback cancellation, before its finally aborts manual input.
+      const manual = interaction.prompt({ type: 'manual_code', message: 'Continue', signal: manualAbort.signal })
+      const outcome = manual.then(() => undefined, error => error)
+      try {
+        await callback.promise
+        const error = await outcome
+        if (error !== undefined) throw error
+      } finally {
+        manualAbort.abort()
+        closed++
+      }
+    })
+    const auth = new OpenAICodexWebAuth(store)
+    await auth.signIn()
+    await auth.cancel()
+    expect(closed).toBe(1)
+    expect(mocked.logout).not.toHaveBeenCalled()
+    await expect(auth.status()).resolves.toEqual({ status: 'signed-out' })
+    await auth.signIn()
+    expect(mocked.login).toHaveBeenCalledTimes(2)
+    await auth.dispose()
+    expect(closed).toBe(2)
+  }, 1_000)
+
+  it('expires abandoned authorization after receiving the URL and permits retry', async () => {
+    mocked.login.mockImplementation((interaction: AuthInteraction) => {
+      const pending = abortableLogin(interaction)
+      interaction.notify({ type: 'auth_url', url: 'https://auth.openai.com/authorize' })
+      return pending
+    })
+    const auth = new OpenAICodexWebAuth(store, { authorizationTimeoutMs: 20 })
+    try {
+      await auth.signIn()
+      await vi.waitFor(async () => {
+        expect(await auth.status()).toMatchObject({ status: 'error', message: expect.stringContaining('expired') })
+      }, { timeout: 500, interval: 5 })
+      expect(mocked.logout).not.toHaveBeenCalled()
+      await auth.signIn()
+      expect(mocked.login).toHaveBeenCalledTimes(2)
+    } finally {
+      await auth.dispose()
+    }
+  })
+
+  it('keeps an existing account when cancelling and serializes retry behind provider cleanup', async () => {
+    const cleanup = deferred<void>()
+    mocked.login.mockImplementation(async (interaction: AuthInteraction) => {
+      const pending = abortableLogin(interaction)
+      interaction.notify({ type: 'auth_url', url: 'https://auth.openai.com/authorize' })
+      try { await pending } finally { await cleanup.promise }
+    })
+    mocked.status.mockResolvedValue({ authenticated: true })
+    const auth = new OpenAICodexWebAuth(store)
+    await auth.signIn()
+    const cancel = auth.cancel()
+    const retry = auth.signIn()
+    expect(mocked.login).toHaveBeenCalledOnce()
+    cleanup.resolve()
+    await cancel
+    await retry
+    expect(mocked.login).toHaveBeenCalledTimes(2)
+    expect(mocked.logout).not.toHaveBeenCalled()
+    await auth.cancel()
+    await expect(auth.status()).resolves.toMatchObject({ status: 'signed-in' })
     await auth.dispose()
   })
 

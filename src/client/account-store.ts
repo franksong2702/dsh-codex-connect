@@ -1,6 +1,6 @@
 /** Shared, in-memory OAuth UI state. No token or browser storage is used here. */
 import type { OpenAICodexUsage } from '../usage.ts'
-import { OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../auth-paths.ts'
+import { OPENAI_CODEX_AUTH_CANCEL_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../auth-paths.ts'
 
 export type AccountStatus =
   | { status: 'loading' }
@@ -103,9 +103,9 @@ export class OpenAICodexAccountStore {
     }
   }
 
-  /** Called synchronously from a user click so popup permission is retained. */
+  /** Start or reopen the server-owned authorization from a user click, retaining popup permission. */
   async signIn(): Promise<void> {
-    if (this.disposed || this.snapshot.busy || this.snapshot.status.status === 'signing-in') return
+    if (this.disposed || this.snapshot.busy) return
     this.stopPolling()
     const popup = window.open('about:blank', '_blank')
     this.popup = popup
@@ -115,12 +115,27 @@ export class OpenAICodexAccountStore {
       const challenge = await request<{ url: string }>(OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST')
       if (this.disposed) { popup?.close(); return }
       if (popup !== null) popup.location.replace(challenge.url)
-      this.publish({ status: { status: 'signing-in' }, busy: false, ...popup === null ? { loginUrl: challenge.url } : {} })
+      this.publish({ status: { status: 'signing-in' }, busy: false, loginUrl: challenge.url })
     } catch (error: unknown) {
       popup?.close()
       this.publish({ status: this.failure(error), busy: false })
     } finally {
       this.popup = null
+      this.schedule()
+    }
+  }
+
+  /** Cancel only the pending authorization, preserving an already signed-in account. */
+  async cancel(): Promise<void> {
+    if (this.disposed || this.snapshot.busy) return
+    this.stopPolling()
+    this.publish({ status: this.snapshot.status, busy: true })
+    try {
+      const status = await request<AccountStatus>(OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST')
+      this.publish({ status, busy: false })
+    } catch (error: unknown) {
+      this.publish({ status: this.failure(error), busy: false })
+    } finally {
       this.schedule()
     }
   }

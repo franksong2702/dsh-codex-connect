@@ -58,6 +58,8 @@ These choices reflect the repository's existing verification record, not a new i
 
    The unreleased DSH 0.1.2 branch additionally offers the same account actions in **Settings → Models → Codex Connect**. Advanced configuration remains under Plugins; neither entry automatically starts login or changes model/search defaults.
 
+   Click **Manage** to expand the Models account row. If authorization is abandoned, use **Reopen authorization** or **Cancel sign-in** and retry; cancellation does not delete an existing account. Pending authorization expires after 10 minutes by default (`oauthTimeoutMs` in plugin configuration, applied on load).
+
 ### Remote browser access
 
 The default Web OAuth boundary is loopback-only. When DSH runs on one device and you open it from another device on a trusted network through an IP address or domain, run the following on the device that runs DSH with the exact origin from the browser address bar:

@@ -161,7 +161,8 @@ function UsageLimits({ usage, quotaError, t }: {
   )
 }
 
-function dotStyle(status: AccountStatus['status']): CSSProperties {
+/** Account indicator colors shared by the compact row and expanded controls. */
+export function dotStyle(status: AccountStatus['status']): CSSProperties {
   const color = status === 'signed-in'
     ? 'var(--dsw-alias-state-success-primary, #22a06b)'
     : status === 'error' || status === 'reauth-required' || status === 'remote-web-origin-not-trusted'
@@ -170,6 +171,16 @@ function dotStyle(status: AccountStatus['status']): CSSProperties {
         ? 'var(--dsw-alias-brand-primary, #1677ff)'
         : 'var(--dsw-alias-label-dimmed, #9aa0a6)'
   return { width: 9, height: 9, borderRadius: '50%', flex: '0 0 auto', background: color }
+}
+
+/** Non-sensitive account state label for either settings presentation. */
+export function accountStatusLabel(status: AccountStatus['status'], t: OpenAICodexSettingsInjected['t']): string {
+  const keys = {
+    'signed-in': 'signedIn', loading: 'loadingAccount', 'signing-in': 'signingIn',
+    'reauth-required': 'reauthRequired', 'remote-web-origin-not-trusted': 'remoteOriginTitle',
+    error: 'requestFailed', 'signed-out': 'signedOut',
+  } as const
+  return t(keys[status])
 }
 
 /** OpenAI Codex account status and OAuth actions. */
@@ -194,19 +205,7 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
     }
   }
 
-  const label = status.status === 'signed-in'
-    ? t('signedIn')
-    : status.status === 'loading'
-      ? t('loadingAccount')
-      : status.status === 'signing-in'
-      ? t('signingIn')
-      : status.status === 'reauth-required'
-        ? t('reauthRequired')
-      : status.status === 'remote-web-origin-not-trusted'
-        ? t('remoteOriginTitle')
-      : status.status === 'error'
-        ? t('requestFailed')
-        : t('signedOut')
+  const label = accountStatusLabel(status.status, t)
 
   return (
     <section
@@ -231,13 +230,16 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
             ? null
             : status.status === 'signed-in'
             ? <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signOut() }}>{busy ? t('working') : t('logout')}</button>
-            : status.status === 'signing-in' && loginUrl !== undefined
-            ? null
-            : <button type="button" style={primaryButtonStyle} disabled={busy || status.status === 'signing-in'} onClick={() => { void store.signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
+            : status.status === 'signing-in'
+            ? <div style={rowStyle}>
+              <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signIn() }}>{busy ? t('working') : t('reopenAuthorization')}</button>
+              <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.cancel() }}>{t('cancelSignIn')}</button>
+            </div>
+            : <button type="button" style={primaryButtonStyle} disabled={busy} onClick={() => { void store.signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
         </div>
         {loginUrl === undefined ? null : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-            <p style={bodyStyle}>{t('popupBlockedFallback')}</p>
+            <p style={bodyStyle}>{t('authorizationHelp')}</p>
             <a
               href={loginUrl}
               target="_blank"

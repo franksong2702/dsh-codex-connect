@@ -12,6 +12,37 @@ const json = (value: unknown) => new Response(JSON.stringify(value), { status: 2
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('shared Models and Plugin account state', () => {
+  it('renders a compact provider row and expands account controls only on demand', async () => {
+    vi.stubGlobal('fetch', async () => json({ status: 'signed-out' }))
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexModelsCard t={t} account={account} />)
+    await screen.findByText(en.signedOut)
+    expect(screen.queryByText(en.intro)).toBeNull()
+    expect(screen.queryByRole('button', { name: en.login })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Manage' }))
+    expect(screen.getByRole('button', { name: en.login })).toBeTruthy()
+    account.dispose()
+  })
+
+  it('recovers an abandoned login discovered in another browser with reopen and cancel controls', async () => {
+    let pending = true
+    const fetchMock = vi.fn(async (path: string) => {
+      if (path.endsWith('/cancel')) { pending = false; return json({ status: 'signed-out' }) }
+      if (path === OPENAI_CODEX_AUTH_LOGIN_PATH) return json({ url: 'https://auth.openai.com/authorize' })
+      return json({ status: pending ? 'signing-in' : 'signed-out' })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexSettings t={t} account={account} embedded />)
+    await screen.findByText(en.signingIn)
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen authorization' }))
+    expect(await screen.findByRole('link', { name: en.openLoginInBrowser })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel sign-in' }))
+    expect(await screen.findByRole('button', { name: en.login })).toBeTruthy()
+    expect(fetchMock.mock.calls.some(([path]) => path === OPENAI_CODEX_AUTH_LOGOUT_PATH)).toBe(false)
+    account.dispose()
+  })
   it('shares one status read, synchronizes logout, and keeps advanced options off Models', async () => {
     const fetchMock = vi.fn(async (path: string) => path === OPENAI_CODEX_AUTH_LOGOUT_PATH
       ? json({ ok: true }) : json({ status: 'signed-in', usage: { rateLimits: [] } }))
@@ -24,6 +55,7 @@ describe('shared Models and Plugin account state', () => {
     await waitFor(() => { expect(screen.getAllByText(en.signedIn)).toHaveLength(2) })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const models = within(screen.getByTestId('models'))
+    fireEvent.click(models.getByRole('button', { name: en.manageAccount }))
     expect(models.getByText(en.modelsAccountHelp)).toBeTruthy()
     expect(models.queryByRole('checkbox')).toBeNull()
     fireEvent.click(models.getByRole('button', { name: en.logout }))
@@ -42,6 +74,7 @@ describe('shared Models and Plugin account state', () => {
     vi.spyOn(window, 'open').mockReturnValue(null)
     const account = new OpenAICodexAccountStore()
     const view = render(<OpenAICodexModelsCard t={t} account={account} />)
+    fireEvent.click(screen.getByRole('button', { name: en.manageAccount }))
     fireEvent.click(await screen.findByRole('button', { name: en.login }))
     view.rerender(<OpenAICodexSettings t={t} account={account} embedded />)
     expect((screen.getByRole('button', { name: en.working }) as HTMLButtonElement).disabled).toBe(true)

@@ -70,6 +70,8 @@ Open **Settings → Plugins → Plugin configuration → Codex Connect**.
 
 On this unreleased DSH `0.1.2-alpha.1` branch, **Settings → Models** also includes a Codex Connect account card for ChatGPT sign-in, reauthorization, sign-out and quota. Both pages share one in-memory account state and polling owner; proxy, model visibility, search and image configuration remain under Plugins. The Models footer is optional: profiles without that settings section retain the existing Plugin entry. This is not a new compatibility claim for the published Alpha 4.21 package.
 
+The Models entry is a compact provider-style row; click **Manage** to expand account controls. If browser authorization is interrupted, use **Reopen authorization** to resume the pending login, or **Cancel sign-in** and retry from either settings page or another trusted browser. Cancellation preserves an existing signed-in account. An abandoned authorization expires after 10 minutes by default; the plugin's `oauthTimeoutMs` configuration accepts 1,000–1,800,000 milliseconds and applies when the plugin loads. The separate 30-second wait for the initial authorization URL remains bounded. Neither cancellation nor expiry restarts DSH.
+
 Expected result: a fresh installation shows **Not signed in** and a **Sign in with ChatGPT** button. The card is where you later manage optional capabilities too.
 
 <p align="center">

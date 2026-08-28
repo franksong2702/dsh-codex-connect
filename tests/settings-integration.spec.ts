@@ -54,7 +54,7 @@ describe('OpenAI Codex Host settings integration', () => {
     await ctx.plugin(LocalFileSystem, { cwd: workspace })
     await ctx.plugin(LocalAttachmentStore, { dshHome: root })
     await ctx.plugin(MemorySettings)
-    const plugin = await ctx.plugin(OpenAICodex, {})
+    const plugin = await ctx.plugin(OpenAICodex, { oauthTimeoutMs: 120_000 })
 
     expect(ctx.llm.listConfigurableProviders()).toContainEqual({
       provider: 'openai-codex',
@@ -64,7 +64,7 @@ describe('OpenAI Codex Host settings integration', () => {
       declared: false,
     })
     const descriptor = ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)
-    expect(descriptor?.value).toEqual(OpenAICodex.DEFAULT_OPENAI_CODEX_SETTINGS)
+    expect(descriptor?.value).toEqual({ ...OpenAICodex.DEFAULT_OPENAI_CODEX_SETTINGS, oauthTimeoutMs: 120_000 })
     const fullCatalog = await ctx.llm.listModels(OpenAICodex.OPENAI_CODEX_PROVIDER)
     expect(fullCatalog.length).toBeGreaterThan(2)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
@@ -104,6 +104,8 @@ describe('OpenAI Codex Host settings integration', () => {
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
     })
     await expect(ctx.web.search({ query: 'disabled again' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
+    expect(ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value)
+      .toMatchObject({ oauthTimeoutMs: 120_000 })
 
     await plugin.dispose()
     expect(ctx.llm.listConfigurableProviders()).toContainEqual({
