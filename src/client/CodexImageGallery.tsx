@@ -1,6 +1,6 @@
 /** Self-contained result-image gallery for the tool-call view.
  *
- * DSH 0.1.1-rc.2 keeps the attachment package's React atoms behind its
+ * DSH keeps the attachment package's React atoms behind its
  * conversation slots. A tool-call view cannot render those slots, so this
  * gallery owns only the durable-image presentation it needs and receives all
  * stateful work through props.
@@ -122,7 +122,7 @@ function CodexImageLightbox({ src, alt, labels, opener, onClose }: {
     if (event.currentTarget.hasPointerCapture?.(event.pointerId) === true) event.currentTarget.releasePointerCapture(event.pointerId)
     setDragging(false)
   }
-  return <Modal open onClose={onClose} title={labels.dialog} closeLabel={labels.close} headless>
+  return <Modal open onClose={onClose} title={labels.dialog} headless>
     <div ref={lightbox} style={lightboxStyle}>
       <div style={lightboxControlsStyle}>
         <button type="button" aria-label={labels.zoomOut} title={labels.zoomOut} style={lightboxButtonStyle} disabled={zoom === MIN_ZOOM} onClick={() => { setZoom(value => Math.max(MIN_ZOOM, value - ZOOM_STEP)) }}>−</button>

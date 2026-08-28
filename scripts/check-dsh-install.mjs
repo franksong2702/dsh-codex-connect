@@ -9,7 +9,7 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 
 const JSON_SCHEMA_VERSION = 1
-const DEFAULT_DSH_VERSION = '0.1.1-rc.2'
+const DEFAULT_DSH_VERSION = '0.1.2-alpha.1'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
@@ -119,7 +119,7 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   }
   for (const name of expectedPackages) {
     const entry = compatibility?.['packages']?.[name]
-    const supported = name === '@earendil-works/pi-ai' ? '0.82.1' : DEFAULT_DSH_VERSION
+    const supported = name === '@earendil-works/pi-ai' ? '0.84.2' : DEFAULT_DSH_VERSION
     if (entry?.['supported'] !== supported || entry?.['installed'] !== supported || entry?.['status'] !== 'compatible') {
       throw new CompatibilityCheckError(`doctor JSON did not report compatible ${name}`)
     }

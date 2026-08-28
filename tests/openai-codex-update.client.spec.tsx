@@ -75,7 +75,7 @@ describe('Codex Connect global update reminder', () => {
     const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.14')
     await act(async () => { await updater.refresh(true) })
 
-    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
+    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} useSessionPendingInteraction={vi.fn() as never} />)
     expect(document.querySelector('[data-compatibility-status="plugin-update-required"]')).toBeTruthy()
     const initialStatusText = screen.getByRole('status').textContent ?? ''
     expect(initialStatusText).toContain(en.compatibilityPluginUpdateTitle)
@@ -167,7 +167,7 @@ describe('Codex Connect global update reminder', () => {
     const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.15')
     await act(async () => { await updater.refresh(true) })
 
-    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} />)
+    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} useSessionPendingInteraction={vi.fn() as never} />)
     expect(document.querySelector('[data-compatibility-status="not-yet-compatible"]')).toBeTruthy()
     expect(screen.getByRole('status').textContent).toContain(en.compatibilityNotReadyBody)
     const reminder = screen.getByRole('link', { name: en.compatibilityReport }) as HTMLAnchorElement

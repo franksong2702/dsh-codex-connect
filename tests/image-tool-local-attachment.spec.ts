@@ -8,6 +8,7 @@ import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { OpenAICodexImageAssetStore } from '../src/image-assets.ts'
+import { detectEncodedImage } from '../src/image-format.ts'
 import { imageGenerateTool, IMAGE_GENERATE_TOOL_NAME } from '../src/image-tool.ts'
 
 function crc32(input: Uint8Array): number {
@@ -90,10 +91,22 @@ describe('Codex image generation with DSH attachment normalization', () => {
     if (result.isError) throw new Error('expected image generation to succeed')
     expect(result.value).toMatchObject({ images: [{
       original: { mediaType: 'image/png', width: 4096, height: 2160, bytes: PNG_4K.byteLength },
-      preview: { mediaType: 'image/png', width: 2048, height: 1080 },
+      preview: { mediaType: 'image/jpeg' },
     }] })
     const value = result.value as { images: Array<{ original: { assetId: string } }> }
     const stored = await assets.read('session-normalized', value.images[0]!.original.assetId)
     expect(stored?.data).toEqual(PNG_4K)
+    const previewBlock = result.content.find(block => block.type === 'image')
+    if (previewBlock?.type !== 'image') throw new Error('expected a durable preview attachment')
+    const preview = previewBlock.attachment
+    expect(preview.width).toBeGreaterThan(0)
+    expect(preview.width).toBeLessThanOrEqual(2048)
+    expect(preview.height).toBeGreaterThan(0)
+    expect(preview.height).toBeLessThan(2160)
+    expect(preview.width / preview.height).toBeCloseTo(4096 / 2160, 2)
+    const normalized = await ctx.attachments.readImage(preview)
+    expect(detectEncodedImage(normalized.data)).toMatchObject({
+      mediaType: preview.mediaType, width: preview.width, height: preview.height,
+    })
   })
 })

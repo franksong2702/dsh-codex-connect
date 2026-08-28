@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import {
   BlockAssembler,
-  CallId,
+  ToolCallId,
   createAssistantMessage,
   createToolResultMessage,
   createUserMessage,
@@ -99,7 +99,7 @@ describe('OpenAI Codex compaction request', () => {
       })
     })
 
-    const callId = CallId('call_1|fc_1')
+    const callId = ToolCallId('call_1|fc_1')
     const reasoningItem = {
       type: 'reasoning',
       id: 'rs_1',

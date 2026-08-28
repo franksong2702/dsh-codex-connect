@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
@@ -42,6 +42,7 @@ function settingsScopeFixture(): {
         return () => { listeners.delete(listener) }
       },
       set,
+      mutate: vi.fn(async () => { throw new Error('This fixture supports single-field settings writes only.') }),
       unset: vi.fn(async () => undefined),
     },
   }
