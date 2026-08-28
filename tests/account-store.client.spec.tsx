@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { OpenAICodexAccountStore } from '../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
-import { en } from '../src/client/locales.ts'
+import { en, zh } from '../src/client/locales.ts'
 import { OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH } from '../src/auth-paths.ts'
 
 const t = (key: keyof typeof en) => en[key]
@@ -12,15 +12,18 @@ const json = (value: unknown) => new Response(JSON.stringify(value), { status: 2
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('shared Models and Plugin account state', () => {
-  it('renders a compact provider row and expands account controls only on demand', async () => {
+  it.each([['en', en], ['zh', zh]] as const)('renders a compact provider row with plugin attribution in %s and expands account controls only on demand', async (_locale, messages) => {
     vi.stubGlobal('fetch', async () => json({ status: 'signed-out' }))
     const account = new OpenAICodexAccountStore()
-    render(<OpenAICodexModelsCard t={t} account={account} />)
-    await screen.findByText(en.signedOut)
-    expect(screen.queryByText(en.intro)).toBeNull()
-    expect(screen.queryByRole('button', { name: en.login })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Manage' }))
-    expect(screen.getByRole('button', { name: en.login })).toBeTruthy()
+    render(<OpenAICodexModelsCard t={key => messages[key]} account={account} />)
+    await screen.findByText(messages.signedOut)
+    expect(screen.getByText('Openai-Codex', { exact: true })).toBeTruthy()
+    expect(screen.getByText(messages.modelsProviderSupport, { exact: true })).toBeTruthy()
+    expect(screen.queryByText(messages.title, { exact: true })).toBeNull()
+    expect(screen.queryByText(messages.intro)).toBeNull()
+    expect(screen.queryByRole('button', { name: messages.login })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: messages.manageAccount }))
+    expect(screen.getByRole('button', { name: messages.login })).toBeTruthy()
     account.dispose()
   })
 

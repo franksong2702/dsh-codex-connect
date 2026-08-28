@@ -12,7 +12,7 @@ export function OpenAICodexModelsCard({ t, account }: OpenAICodexModelsCardInjec
   const label = accountStatusLabel(status.status, t)
   return <div style={{ border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 12, padding: '12px 14px', color: 'var(--dsw-alias-label-primary)' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 14, lineHeight: '22px', fontWeight: 500 }}>{t('title')}</span>
+      <span style={{ fontSize: 14, lineHeight: '22px', fontWeight: 500 }}>{t('modelsProviderName')}</span>
       <span role="img" aria-label={label} style={{ ...dotStyle(status.status), width: 8, height: 8 }} />
       {!expanded && <span role="status" style={{ fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)', flex: 1 }}>{label}</span>}
       <button type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={() => { setExpanded(!expanded) }}
@@ -20,6 +20,7 @@ export function OpenAICodexModelsCard({ t, account }: OpenAICodexModelsCardInjec
         {expanded ? t('collapse') : t('manageAccount')}
       </button>
     </div>
+    <div style={{ marginTop: 4, fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)' }}>{t('modelsProviderSupport')}</div>
     {expanded && <div id={detailsId} style={{ borderTop: '1px solid var(--dsw-alias-border-l2)', marginTop: 12, paddingTop: 12 }}>
       <OpenAICodexSettings t={t} account={account} accountOnly embedded />
     </div>}

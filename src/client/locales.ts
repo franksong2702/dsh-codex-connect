@@ -1,6 +1,8 @@
 /** English copy for the OpenAI Codex Plugin configuration card. */
 export const en = {
   title: 'Codex Connect',
+  modelsProviderName: 'Openai-Codex',
+  modelsProviderSupport: 'Powered by the Codex Connect plugin.',
   intro: 'Use your ChatGPT subscription in dsh, with optional GPT Image generation and no API key.',
   accountHeading: 'ChatGPT account',
   manageAccount: 'Manage',
@@ -228,6 +230,8 @@ export type OpenAICodexSettingsKey = keyof typeof en
 /** Chinese copy for the OpenAI Codex Plugin configuration card. */
 export const zh: { [Key in OpenAICodexSettingsKey]: string } = {
   title: 'Codex Connect',
+  modelsProviderName: 'Openai-Codex',
+  modelsProviderSupport: '由 Codex Connect 插件提供支持。',
   intro: '使用 ChatGPT 订阅在 dsh 中调用模型，并可使用 GPT Image 生成图片，无需 API Key。',
   accountHeading: 'ChatGPT 账户',
   manageAccount: '管理',

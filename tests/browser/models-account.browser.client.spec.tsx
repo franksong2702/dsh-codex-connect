@@ -78,6 +78,8 @@ describe('Models account navigation', () => {
     document.body.append(host)
     root = createRoot(host)
     root.render(createElement(Pages))
+    await expect.element(page.getByText('Openai-Codex', { exact: true })).toBeVisible()
+    await expect.element(page.getByText(en.modelsProviderSupport, { exact: true })).toBeVisible()
     await page.getByRole('button', { name: en.manageAccount, exact: true }).click()
     await expect.element(page.getByText(en.modelsAccountHelp)).toBeVisible()
     await expect.element(page.getByText(en.signedIn, { exact: true })).toBeVisible()
