@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
 import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
-import { CallId, LlmRuntime } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, LlmRuntime } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import WebRuntime from '@deepseek-ai/dsh-web'
@@ -59,7 +59,7 @@ function agentOn(model: string): object {
 async function view(context: Context, source: string, model = 'gpt-5.6-sol') {
   return context.tools.execute({
     signal,
-    callId: CallId(`view-image-${++callCounter}`),
+    callId: ToolCallId(`view-image-${++callCounter}`),
     name: OpenAICodex.VIEW_IMAGE_TOOL_NAME,
     arguments: { source },
     agent: agentOn(model) as never,

@@ -107,7 +107,7 @@ function requestProvider(
   }
 }
 
-/** Build the immutable profile consumed by the rc.2 pi-ai adapter. */
+/** Build the immutable profile consumed by the DSH pi-ai adapter. */
 export function createOpenAICodexProfile(
   provider: Provider,
   fastMode?: FastModeRegistry,
