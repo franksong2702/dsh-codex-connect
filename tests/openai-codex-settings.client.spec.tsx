@@ -14,6 +14,7 @@ import {
   OPENAI_CODEX_AUTH_STATUS_PATH,
 } from '../src/auth-paths.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
+import { modelCatalogFixture } from './model-catalog-fixture.ts'
 import {
   OPENAI_CODEX_PROXY_DETECT_PATH,
   OPENAI_CODEX_PROXY_TEST_PATH,
@@ -305,7 +306,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
 
   it('stages, discards, and saves optional capability settings in the same card', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
-      ? json([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }, { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }])
+      ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }, { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))
       : json({ status: 'signed-out' }))
     const { scope, set } = settingsScopeFixture()
     vi.stubGlobal('fetch', fetchMock)
@@ -350,7 +351,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
       { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' },
     ]
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
-      ? json(availableModels)
+      ? json(modelCatalogFixture(availableModels))
       : json({ status: 'signed-out' }))
     const { scope, set } = settingsScopeFixture()
     vi.stubGlobal('fetch', fetchMock)
@@ -377,7 +378,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     const candidate = 'http://127.0.0.1:7897'
     const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
       const path = requestPath(input)
-      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }])
+      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))
       if (path === OPENAI_CODEX_AUTH_STATUS_PATH) return json({ status: 'signed-out' })
       expect(path).toBe(OPENAI_CODEX_PROXY_DETECT_PATH)
       expect(init?.method).toBe('POST')

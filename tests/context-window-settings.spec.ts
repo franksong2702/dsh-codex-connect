@@ -52,6 +52,29 @@ afterEach(async () => {
 })
 
 describe('context windows through the real Host settings and LLM registry', () => {
+  it('rejects composition budgets above the configuration ceiling before adapter registration', async () => {
+    await expect(boot({ contextWindowOverrides: { [model]: 872_001 } }, false))
+      .rejects.toThrow('integer from 1 to 872000')
+    expect(ctx!.llm.listProviders().map(entry => entry.id)).not.toContain(provider)
+  })
+
+  it('rejects an over-limit persisted budget instead of silently changing it', async () => {
+    initial = { contextWindowOverrides: { [model]: 872_001 } }
+    const runtime = await boot()
+    expect(runtime.settings.describe().find(entry => entry.ns === ns)).toBeUndefined()
+    const results = await Promise.allSettled(createdFibers.map(fiber => fiber.await()))
+    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason as Error)
+    expect(errors).toHaveLength(1)
+    expect(errors[0]?.message).toContain('integer from 1 to 872000')
+  })
+
+  it('accepts the inclusive ceiling through settings and passes it to DSH without changing output limits', async () => {
+    const runtime = await boot()
+    const baseline = await runtime.llm.resolveModelInfo(provider, model)
+    await runtime.settings.update(ns, { contextWindowOverrides: { [model]: 872_000 } })
+    const resolved = await runtime.llm.resolveModelInfo(provider, model)
+    expect(resolved).toEqual({ ...baseline, context: { ...baseline.context, contextWindow: 872_000 } })
+  })
   it('rejects an unknown composition model before registering the Codex adapter', async () => {
     await expect(boot({ contextWindowOverrides: { 'misspelled-model': 300_000 } }, false))
       .rejects.toThrow('unknown model id "misspelled-model"')
@@ -133,7 +156,7 @@ describe('context windows through the real Host settings and LLM registry', () =
   it('rejects invalid or unknown-model writes before persistence and retains the last effective budget', async () => {
     initial = { contextWindowOverrides: { [model]: 300_000 } }
     const runtime = await boot()
-    for (const overrides of [{ [model]: 0 }, { [model]: 1.5 }, { 'openai-codex/gpt-5.6-sol': 350_000 }]) {
+    for (const overrides of [{ [model]: 0 }, { [model]: 1.5 }, { [model]: 872_001 }, { 'gpt-5.5': 272_001 }, { 'gpt-5.3-codex-spark': 128_001 }, { 'openai-codex/gpt-5.6-sol': 350_000 }]) {
       await expect(runtime.settings.update(ns, { contextWindowOverrides: overrides })).rejects.toThrow()
       expect((await runtime.llm.resolveModelInfo(provider, model)).context?.contextWindow).toBe(300_000)
       expect(runtime.settings.describe().find(entry => entry.ns === ns)?.value)

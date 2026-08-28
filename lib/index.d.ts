@@ -363,7 +363,8 @@ type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high';
 /**
  * Whether a value is a bounded per-model context-window override map. Keys
  * are nonempty, unpadded model ids; values are positive safe integers or null
- * to restore that model's catalog default. The Host checks catalog membership.
+ * to restore that model's catalog default. The Host also checks catalog
+ * membership and the model-specific configuration ceiling.
  */
 declare function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number | null>>;
 /** Default model used by the standalone search endpoint. */

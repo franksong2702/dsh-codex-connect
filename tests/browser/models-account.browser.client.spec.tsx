@@ -2,6 +2,7 @@ import { createElement, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
+import { modelCatalogFixture } from '../model-catalog-fixture.ts'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { DEFAULT_OPENAI_CODEX_SETTINGS, resolveOpenAICodexSettings, type OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
@@ -34,7 +35,7 @@ describe('Models account navigation', () => {
       set, unset: vi.fn(), mutate: vi.fn(),
     }
     vi.stubGlobal('fetch', async (path: string) => Response.json(path === OPENAI_CODEX_MODEL_CATALOG_PATH
-      ? [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]
+      ? modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])
       : { status: 'signed-out' }))
     account = new OpenAICodexAccountStore()
     host = document.createElement('div')
@@ -97,7 +98,7 @@ describe('Models account navigation', () => {
       await vi.waitFor(() => { expect(snapshot.value?.contextWindowOverrides).toEqual({}) })
       await more.click()
       await modalModel.getByRole('button', { name: en.contextAdjust, exact: true }).click()
-      await expect.element(modalModel.getByRole('spinbutton', { name: en.contextTokens })).toHaveValue(null)
+      await expect.element(modalModel.getByRole('spinbutton', { name: en.contextTokens })).toHaveValue(272_000)
       expect(set).toHaveBeenCalledTimes(4)
       await dialog.getByRole('button', { name: en.closeSettings, exact: true }).click()
     } finally {

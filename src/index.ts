@@ -16,7 +16,7 @@ import type {} from '@deepseek-ai/dsh-web'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { assertOpenAICodexContextWindowModelIds, createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
+import { assertOpenAICodexContextWindowOverrides, createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS, registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { registerOpenAICodexProxyRoutes } from './proxy-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
@@ -281,7 +281,7 @@ export function apply(ctx: Context, config: Config): void {
   const catalog = openAICodexModelCatalog()
   const validateSettings = (value: Config): void => {
     resolveOpenAICodexSettings(value)
-    assertOpenAICodexContextWindowModelIds(value.contextWindowOverrides ?? undefined, catalog)
+    assertOpenAICodexContextWindowOverrides(value.contextWindowOverrides ?? undefined, catalog)
   }
   validateSettings(config)
   let current = () => config

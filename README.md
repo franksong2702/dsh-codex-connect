@@ -246,7 +246,9 @@ Selecting Codex as the profile's global search route is another explicit change:
 
 Use `contextWindowOverrides` to opt into a per-model client context budget when you have evidence that the bundled catalog does not fit your deployment. It cannot enlarge the OpenAI backend's context capacity. Overrides default off; this feature does not verify the community-reported larger windows.
 
-In Plugin configuration, each model row keeps its visibility checkbox and adds **Context → Adjust**. Enter a positive whole-number token budget, or choose **Restore default** to use the catalog value even if composition supplies an override. Hiding a model preserves its budget. **Save** applies the staged visibility and budget edits; **Discard** abandons them. An empty input is not a reset: use **Restore default** explicitly.
+In Plugin configuration and **Models → More settings**, each model row shows its numeric context budget and keeps its visibility checkbox. **Context → Adjust** opens a synchronized slider and integer input, with the installed catalog default and a configuration ceiling. **Restore default** uses the catalog value even if composition supplies an override. Hiding a model preserves its budget. **Save** applies staged edits; **Discard** abandons them. An empty input is invalid, not a reset.
+
+Configuration ceilings follow the [official Codex catalog snapshot](https://github.com/openai/codex/blob/7625343977154efed8c0dadba956374992a1580b/codex-rs/models-manager/models.json), checked on 2026-08-28: GPT-5.6 Sol/Terra/Luna allow up to 872,000 tokens, GPT-5.4 up to 1,000,000, and GPT-5.5/GPT-5.4 mini up to 272,000. Models without a recorded ceiling, including Spark, are capped at their installed provider default. A provider default newer than and larger than the recorded ceiling also becomes the cap. The UI identifies the source; these values are not fetched from the user's account and are not measured server capacities. Defaults remain unchanged. Going above the default displays a quota and request-failure warning; account and route limits may differ.
 
 ```yaml
 - id: llm-openai-codex
@@ -256,7 +258,7 @@ In Plugin configuration, each model row keeps its visibility checkbox and adds *
       gpt-5.6-sol: 350000
 ```
 
-Keys must exactly match models in the installed Codex catalog; unknown ids reject the configuration or settings write with an explicit error. Maps accept at most 256 entries and positive safe-integer token counts. Other models keep their catalog metadata. Output-token limits, transport (SSE), and DSH's compaction policy are unchanged. Leave room for output and protocol overhead below your independently verified server limit. For a deployment configured to compact at 80%, a client window of `350000` gives a nominal threshold of `280000`; this arithmetic is not evidence that the server accepts that input size.
+Keys must exactly match models in the installed Codex catalog. Maps accept at most 256 entries and positive safe-integer token counts within each model's configuration ceiling. Unknown ids and out-of-range values reject configuration or settings registration/writes with an explicit error; existing out-of-range overrides must be reduced or reset with `null`, not silently clamped. Other models keep their catalog metadata. Output-token limits, transport (SSE), and DSH's compaction policy are unchanged. Leave room for output and protocol overhead below your independently verified server limit. For a deployment configured to compact at 80%, a client window of `350000` gives a nominal threshold of `280000`; this arithmetic is not evidence that the server accepts that input size.
 
 Persisted Host settings are applied on plugin load, and changes affect the next model resolution or prepared request. Already prepared requests retain their captured budget. The original catalog is never mutated.
 

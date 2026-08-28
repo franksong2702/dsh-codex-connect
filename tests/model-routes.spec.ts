@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { describe, expect, it, vi } from 'vitest'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
+import type { OpenAICodexModelCatalogEntry } from '../src/model-contract.ts'
 import { registerOpenAICodexModelCatalogRoute } from '../src/model-routes.ts'
 import type { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
 
@@ -10,7 +11,7 @@ interface CapturedRoute {
   handler(req: IncomingMessage, res: ServerResponse): Promise<void> | void
 }
 
-function capture(resolveCatalog: () => readonly { id: string; name: string }[]): CapturedRoute {
+function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[]): CapturedRoute {
   let captured: CapturedRoute | undefined
   const ctx = {
     webServer: {
@@ -57,7 +58,7 @@ function response(): ServerResponse & { observed: { status?: number; body?: stri
 
 describe('Codex Connect model catalog route', () => {
   it('serves the detached provider catalog to a trusted loopback GET', async () => {
-    const catalog = [{ id: 'gpt-test', name: 'GPT Test' }]
+    const catalog: OpenAICodexModelCatalogEntry[] = [{ id: 'gpt-test', name: 'GPT Test', contextWindow: 128_000, maxContextWindow: 128_000, contextLimitSource: 'catalog-default' }]
     const resolveCatalog = vi.fn(() => catalog)
     const res = response()
 

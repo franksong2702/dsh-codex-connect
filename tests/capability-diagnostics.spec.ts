@@ -4,6 +4,7 @@ import type { CapabilityDiagnosticDependencies, CapabilityRequest } from '../src
 import { evaluateCompatibility } from '../src/compatibility.ts'
 import type { OpenAICodexDiagnosticReport } from '../src/doctor.ts'
 import type { ResponsesProbeEvidence } from '../src/capability-probe.ts'
+import { modelCatalogFixture } from './model-catalog-fixture.ts'
 
 const model = 'gpt-5.6-sol'
 const secrets = ['private-access', 'private-account', 'private-refresh', '/private/credential.json']
@@ -24,7 +25,7 @@ function fixture() {
   const read = vi.fn(async () => credential)
   const readVersion = vi.fn(async (_name: string): Promise<string | undefined> => '0.1.2-alpha.1')
   const deps: CapabilityDiagnosticDependencies = {
-    diagnose: async () => local, readVersion, catalog: () => [{ id: model, name: model }],
+    diagnose: async () => local, readVersion, catalog: () => modelCatalogFixture([{ id: model, name: model }]),
     credentials: { read }, probe, now: () => now,
   }
   const request: CapabilityRequest = { model, probe: true, proxyUrl: undefined, timeoutMs: 1000 }
@@ -158,7 +159,7 @@ describe('capability evidence', () => {
 
   it('does not reuse evidence for another model, account, or incompatible installation', async () => {
     const f = fixture()
-    f.deps.catalog = () => [{ id: model, name: model }, { id: 'gpt-5.6-terra', name: 'Terra' }]
+    f.deps.catalog = () => modelCatalogFixture([{ id: model, name: model }, { id: 'gpt-5.6-terra', name: 'Terra' }])
     await f.diagnostics.inspect(f.request)
     expect((await f.diagnostics.inspect({ ...f.request, model: 'gpt-5.6-terra' })).probe.state).toBe('fresh')
     f.credential.accountId = 'another-private-account'

@@ -12,11 +12,15 @@ import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
+import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './model-contract.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 
 /** Return a detached copy of the complete pi-ai Codex model catalog. */
 export function openAICodexModelCatalog(): readonly OpenAICodexModelCatalogEntry[] {
-  return openaiCodexProvider().getModels().map(model => ({ id: model.id, name: model.name }))
+  return openaiCodexProvider().getModels().map(model => ({
+    id: model.id, name: model.name, contextWindow: model.contextWindow,
+    ...openAICodexContextLimit(model.id, model.contextWindow),
+  }))
 }
 
 /** Provider idle ceiling used by the composite route. */
@@ -143,7 +147,7 @@ export function withOpenAICodexContextWindowOverrides(
   overrides: Readonly<Record<string, number>>,
 ): Provider {
   const baselineModels = provider.getModels()
-  assertOpenAICodexContextWindowModelIds(overrides, baselineModels)
+  assertOpenAICodexContextWindowOverrides(overrides, baselineModels)
   const replaced = baselineModels.map(model => {
     const contextWindow = overrides[model.id]
     return contextWindow === undefined ? model : { ...model, contextWindow }
@@ -151,14 +155,19 @@ export function withOpenAICodexContextWindowOverrides(
   return { ...provider, getModels: () => replaced }
 }
 
-/** Reject misspelled or unavailable catalog ids before accepting settings. */
-export function assertOpenAICodexContextWindowModelIds(
+/** Reject unknown ids and out-of-range budgets before accepting settings or requests. */
+export function assertOpenAICodexContextWindowOverrides(
   overrides: Readonly<Record<string, number | null>> | undefined,
-  catalog: readonly OpenAICodexModelCatalogEntry[],
+  catalog: readonly Pick<OpenAICodexModelCatalogEntry, 'id' | 'contextWindow'>[],
 ): void {
-  const ids = new Set(catalog.map(model => model.id))
-  for (const id of Object.keys(overrides ?? {})) {
-    if (!ids.has(id)) throw new TypeError(`OpenAI Codex contextWindowOverrides contains unknown model id "${id}"`)
+  const models = new Map(catalog.map(model => [model.id, model]))
+  for (const [id, budget] of Object.entries(overrides ?? {})) {
+    const model = models.get(id)
+    if (model === undefined) throw new TypeError(`OpenAI Codex contextWindowOverrides contains unknown model id "${id}"`)
+    const { maxContextWindow } = openAICodexContextLimit(id, model.contextWindow)
+    if (budget !== null && !isValidOpenAICodexContextBudget(budget, maxContextWindow)) {
+      throw new TypeError(`OpenAI Codex contextWindowOverrides for "${id}" must be an integer from 1 to ${maxContextWindow} tokens; use null to restore the catalog default`)
+    }
   }
 }
 
