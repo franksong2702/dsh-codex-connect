@@ -107,6 +107,7 @@ export {
   decodeOpenAICodexSettings,
   DEFAULT_OPENAI_CODEX_PROXY_URL,
   DEFAULT_OPENAI_CODEX_SETTINGS,
+  isValidOpenAICodexContextWindowOverrides,
   isValidOpenAICodexProxyUrl,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
   resolveOpenAICodexProxyUrl,
@@ -224,6 +225,13 @@ export interface Config {
   enableProxy?: boolean
   /** Credential-free HTTP(S) proxy origin. */
   proxyUrl?: string
+  /**
+   * Per-model context-window overrides keyed by catalog model id. Each value
+   * replaces the advertised `contextWindow` for that model inside the adapter
+   * profile, so Harness compaction and context budgets follow the value the
+   * Codex backend actually accepts rather than a stale catalog snapshot.
+   */
+  contextWindowOverrides?: Record<string, number> | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -244,6 +252,7 @@ export const Config: z<Config> = z.object({
   models: z.union([z.const(undefined), z.array(z.string())]),
   enableProxy: z.boolean().default(false),
   proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
+  contextWindowOverrides: z.union([z.const(undefined), z.dict(z.number().step(1).min(1))]),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
@@ -282,6 +291,7 @@ export function apply(ctx: Context, config: Config): void {
       () => resolveOpenAICodexSettings(current()).models,
       proxyManager,
       resolveProviderProxyUrl,
+      () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
     ),
   )
   ctx.inject(['webServer'], webCtx => {

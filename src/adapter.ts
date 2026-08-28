@@ -112,7 +112,11 @@ export function createOpenAICodexProfile(
   fastMode?: FastModeRegistry,
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
+  contextWindowOverrides?: Readonly<Record<string, number>> | undefined,
 ): ResolvedPiAiProviderProfile {
+  const effectiveProvider = contextWindowOverrides === undefined
+    ? provider
+    : withOpenAICodexContextWindowOverrides(provider, contextWindowOverrides)
   return {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',
@@ -123,8 +127,26 @@ export function createOpenAICodexProfile(
     requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
-    piProvider: requestProvider(provider, fastMode, proxyManager, resolveProxyUrl),
+    piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl),
   }
+}
+
+/**
+ * Detach one provider and replace the advertised context window for the
+ * configured model ids. Request streaming itself is unaffected: pi-ai streams
+ * the caller-supplied model, so only the metadata Harness reads for context
+ * budgeting and compaction changes.
+ */
+export function withOpenAICodexContextWindowOverrides(
+  provider: Provider,
+  overrides: Readonly<Record<string, number>>,
+): Provider {
+  const baselineModels = provider.getModels()
+  const replaced = baselineModels.map(model => {
+    const contextWindow = overrides[model.id]
+    return contextWindow === undefined ? model : { ...model, contextWindow }
+  })
+  return { ...provider, getModels: () => replaced }
 }
 
 /**
@@ -140,11 +162,18 @@ export function createOpenAICodexAdapter(
   visibleModelIds?: () => readonly string[] | undefined,
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
+  contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
   const profiles = new Map<string, ResolvedPiAiProviderProfile>([[
     OPENAI_CODEX_PROVIDER,
-    createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl),
+    createOpenAICodexProfile(
+      provider,
+      fastMode,
+      proxyManager,
+      resolveProxyUrl,
+      contextWindowOverrides?.(),
+    ),
   ]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)

@@ -229,6 +229,7 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
 | `enableProxy` | `false` | boolean；除非显式启用，否则使用直连 |
 | `proxyUrl` | `http://127.0.0.1:7890`（未启用的占位值） | 不带凭据的 HTTP(S) proxy origin |
+| `contextWindowOverrides` | 无 | 按模型覆盖 contextWindow 的映射；见下文 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |
@@ -236,6 +237,21 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 | `searchMode` | `cached` | `cached`、`indexed`、`live` |
 | `searchContextSize` | `medium` | `low`、`medium`、`high` |
 | `searchMaxOutputTokens` | `10000` | 正整数 |
+
+### 上下文窗口覆盖
+
+捆绑的 pi-ai 目录中广告的模型 `contextWindow` 可能滞后于 Codex 后端对 OAuth 账号实际接受的值。要把 Harness 的上下文预算与自动压缩对齐到服务端真实值，可按目录中的精确 model id 映射到 token 数：
+
+```yaml
+- id: llm-openai-codex
+  config:
+    contextWindowOverrides:
+      gpt-5.6-sol: 350000
+      gpt-5.6-terra: 350000
+      gpt-5.6-luna: 350000
+```
+
+每个值都会替换该模型在适配器 profile 内的 `contextWindow`。压缩在解析值的 80% 处触发，因此 `350000` 会在约 `280000` token 处压缩，而不是目录默认值对应的约 `217600`。覆盖是按模型的、可叠加的：未配置的模型保留目录广告值。该值是客户端预算，不是服务端保证——发送超过后端接受范围的输入会被提供商拒绝，所以请选择低于文档服务端上限的值，并保持 `maxTokens` 不变。空映射与省略映射都表示不覆盖。
 
 ## 重新登录、诊断与冲突
 

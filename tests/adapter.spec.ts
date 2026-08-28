@@ -8,6 +8,7 @@ import {
   OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
   OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
   OPENAI_CODEX_TRANSPORT,
+  withOpenAICodexContextWindowOverrides,
 } from '../src/adapter.ts'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { OPENAI_CODEX_PROVIDER } from '../src/store.ts'
@@ -61,5 +62,45 @@ describe('OpenAI Codex rc.2 adapter profile', () => {
       () => undefined,
     )
     await expect(adapter.listModels(OPENAI_CODEX_PROVIDER)).resolves.toHaveLength(openAICodexModelCatalog().length)
+  })
+})
+
+describe('context-window overrides', () => {
+  it('keeps the advertised catalog when no overrides are configured', () => {
+    const baseline = openaiCodexProvider().getModels()
+    const profile = createOpenAICodexProfile(openaiCodexProvider())
+
+    const listed = profile.piProvider.getModels()
+    expect(listed).toHaveLength(baseline.length)
+    for (const model of listed) {
+      expect(model.contextWindow).toBe(baseline.find(entry => entry.id === model.id)?.contextWindow)
+    }
+  })
+
+  it('replaces only the configured model context windows', () => {
+    const baseline = openaiCodexProvider().getModels()
+    const target = baseline.find(model => model.id.includes('gpt-5.6')) ?? baseline[0]!
+    const other = baseline.find(model => model.id !== target.id)!
+    const overrides = { [target.id]: 1_050_000 }
+    const profile = createOpenAICodexProfile(openaiCodexProvider(), undefined, undefined, undefined, overrides)
+
+    const listed = profile.piProvider.getModels()
+    expect(listed.find(model => model.id === target.id)?.contextWindow).toBe(1_050_000)
+    expect(listed.find(model => model.id === other.id)?.contextWindow).toBe(other.contextWindow)
+  })
+
+  it('accepts a contextWindowOverrides config section', () => {
+    expect(Config({ contextWindowOverrides: { 'gpt-5.6-sol': 1_050_000 } }).contextWindowOverrides)
+      .toEqual({ 'gpt-5.6-sol': 1_050_000 })
+    expect(Config({}).contextWindowOverrides).toBeUndefined()
+  })
+
+  it('withOpenAICodexContextWindowOverrides does not mutate the baseline provider', () => {
+    const provider = openaiCodexProvider()
+    const baseline = provider.getModels()
+    const overridden = withOpenAICodexContextWindowOverrides(provider, { [baseline[0]!.id]: 999_999 })
+
+    expect(overridden.getModels()[0]!.contextWindow).toBe(999_999)
+    expect(provider.getModels()[0]!.contextWindow).toBe(baseline[0]!.contextWindow)
   })
 })

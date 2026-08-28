@@ -37,6 +37,18 @@ export type OpenAICodexSearchMode = 'cached' | 'indexed' | 'live'
 /** Search-context sizes accepted by the Codex standalone search endpoint. */
 export type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high'
 
+/**
+ * Whether a value is a bounded per-model context-window override map. Keys
+ * are exact catalog model ids; values are positive integers.
+ */
+export function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number>> {
+  if (!isRecord(value)) return false
+  const entries = Object.entries(value)
+  if (entries.length === 0 || entries.length > 256) return false
+  return entries.every(([modelId, window]) => typeof modelId === 'string' && modelId.length > 0
+    && typeof window === 'number' && Number.isSafeInteger(window) && window > 0)
+}
+
 /** Default model used by the standalone search endpoint. */
 export const DEFAULT_OPENAI_CODEX_SEARCH_MODEL = 'gpt-5.6-sol'
 /** Default search mode, matching the official local Codex client. */
@@ -54,6 +66,13 @@ export interface OpenAICodexSettingsConfig {
   enableProxy: boolean
   /** Credential-free HTTP(S) proxy origin; inactive while enableProxy is false. */
   proxyUrl: string
+  /**
+   * Per-model context-window overrides keyed by catalog model id. Each value
+   * replaces the advertised `contextWindow` for that model inside the adapter
+   * profile, so Harness compaction and context budgets follow the value the
+   * Codex backend actually accepts rather than a stale catalog snapshot.
+   */
+  contextWindowOverrides: Readonly<Record<string, number>> | undefined
   enableSearch: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
@@ -67,6 +86,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   models: undefined,
   enableProxy: false,
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
+  contextWindowOverrides: undefined,
   enableSearch: false,
   enableImageTool: false,
   enableImageGeneration: false,
@@ -105,6 +125,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const models = value['models']
   const enableProxy = value['enableProxy']
   const proxyUrl = value['proxyUrl']
+  const contextWindowOverrides = value['contextWindowOverrides']
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
@@ -115,6 +136,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && (typeof proxyUrl !== 'string' || !isValidOpenAICodexProxyUrl(proxyUrl))) return undefined
+  if (contextWindowOverrides !== undefined && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -126,6 +148,9 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     models: models === undefined ? undefined : [...new Set(models)],
     enableProxy: enableProxy ?? false,
     proxyUrl: proxyUrl === undefined ? DEFAULT_OPENAI_CODEX_PROXY_URL : normalizeOpenAICodexProxyUrl(proxyUrl)!,
+    contextWindowOverrides: contextWindowOverrides === undefined
+      ? undefined
+      : Object.freeze({ ...contextWindowOverrides as Record<string, number> }),
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,

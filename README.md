@@ -229,6 +229,7 @@ Selecting Codex as the profile's global search route is another explicit change:
 | `models` | full catalog | Codex model id array; empty hides all entries |
 | `enableProxy` | `false` | boolean; direct connection unless explicitly enabled |
 | `proxyUrl` | `http://127.0.0.1:7890` (inactive placeholder) | Credential-free HTTP(S) proxy origin |
+| `contextWindowOverrides` | none | Per-model context-window override map; see below |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |
@@ -236,6 +237,21 @@ Selecting Codex as the profile's global search route is another explicit change:
 | `searchMode` | `cached` | `cached`, `indexed`, `live` |
 | `searchContextSize` | `medium` | `low`, `medium`, `high` |
 | `searchMaxOutputTokens` | `10000` | positive integer |
+
+### Context-window overrides
+
+The advertised model `contextWindow` in the bundled pi-ai catalog may lag what the Codex backend actually accepts for an OAuth account. To align Harness context budgeting and automatic compaction with the live server value, map exact catalog model ids to token counts:
+
+```yaml
+- id: llm-openai-codex
+  config:
+    contextWindowOverrides:
+      gpt-5.6-sol: 350000
+      gpt-5.6-terra: 350000
+      gpt-5.6-luna: 350000
+```
+
+Each value replaces that model's `contextWindow` inside the adapter profile. Compaction triggers at 80% of the resolved value, so `350000` compacts at roughly `280000` tokens instead of the catalog default's `~217600`. Overrides are per-model and additive: models without an entry keep the advertised catalog value. The value is a client-side budget, not a server guarantee — sending more input than the backend accepts is rejected by the provider, so prefer a value below the documented server ceiling and keep `maxTokens` unchanged. An empty map and an omitted map both mean no override.
 
 ## Reauthentication, diagnostics, and conflicts
 
