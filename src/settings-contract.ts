@@ -39,24 +39,31 @@ export type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high'
 
 /**
  * Whether a value is a bounded per-model context-window override map. Keys
- * are nonempty, unpadded model ids; values are positive safe integers.
- * An empty resolved map contains no overrides. The Host checks catalog membership.
+ * are nonempty, unpadded model ids; values are positive safe integers or null
+ * to restore that model's catalog default. The Host checks catalog membership.
  */
-export function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number>> {
+export function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number | null>> {
   if (!isRecord(value)) return false
   const entries = Object.entries(value)
   if (entries.length > 256) return false
   return entries.every(([modelId, window]) => modelId.length > 0 && modelId.trim() === modelId
-    && typeof window === 'number' && Number.isSafeInteger(window) && window > 0)
+    && (window === null || (typeof window === 'number' && Number.isSafeInteger(window) && window > 0)))
 }
 
-/** Validate and detach overrides; null explicitly masks inherited composition overrides. */
-export function resolveOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number>> | undefined {
+/** Preserve per-model null masks until the Host has merged its settings layers. */
+export function parseOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number | null>> | undefined {
   if (value === undefined || value === null) return undefined
   if (!isValidOpenAICodexContextWindowOverrides(value)) {
-    throw new TypeError('OpenAI Codex contextWindowOverrides must contain at most 256 nonempty model ids with positive safe-integer token budgets')
+    throw new TypeError('OpenAI Codex contextWindowOverrides must contain at most 256 nonempty model ids with positive safe-integer token budgets or null resets')
   }
   return { ...value }
+}
+
+/** Resolve merged settings; whole-map or per-model null masks use catalog defaults. */
+export function resolveOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number>> | undefined {
+  const overrides = parseOpenAICodexContextWindowOverrides(value)
+  if (overrides === undefined) return undefined
+  return Object.fromEntries(Object.entries(overrides).filter((entry): entry is [string, number] => entry[1] !== null))
 }
 
 /** Default model used by the standalone search endpoint. */
@@ -108,7 +115,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
 
 /** Input settings allow null to disable overrides inherited from a lower settings layer. */
 export interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
-  contextWindowOverrides?: Readonly<Record<string, number>> | null | undefined
+  contextWindowOverrides?: Readonly<Record<string, number | null>> | null | undefined
 }
 
 /** Fill the schema defaults even when called without Cordis validation. */

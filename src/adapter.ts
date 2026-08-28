@@ -153,7 +153,7 @@ export function withOpenAICodexContextWindowOverrides(
 
 /** Reject misspelled or unavailable catalog ids before accepting settings. */
 export function assertOpenAICodexContextWindowModelIds(
-  overrides: Readonly<Record<string, number>> | undefined,
+  overrides: Readonly<Record<string, number | null>> | undefined,
   catalog: readonly OpenAICodexModelCatalogEntry[],
 ): void {
   const ids = new Set(catalog.map(model => model.id))

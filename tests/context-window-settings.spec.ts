@@ -107,6 +107,29 @@ describe('context windows through the real Host settings and LLM registry', () =
     expect((await runtime.llm.resolveModelInfo(provider, other)).context?.contextWindow).toBe(baseline.contextWindow)
   })
 
+  it('resets one model to catalog despite composition overrides while preserving another model and hidden state', async () => {
+    initial = { contextWindowOverrides: { [model]: 350_000 }, models: [other] }
+    const runtime = await boot({ contextWindowOverrides: { [model]: 300_000, [other]: 340_000 } })
+    const input = { [model]: null, [other]: 340_000 }
+    expect(plugin.Config({ contextWindowOverrides: input }).contextWindowOverrides).toEqual(input)
+    await runtime.settings.mutate(ns, [{ op: 'set', path: ['contextWindowOverrides'], value: input }])
+    expect((await runtime.llm.resolveModelInfo(provider, model)).context?.contextWindow).toBe(catalogWindow)
+    expect((await runtime.llm.resolveModelInfo(provider, other)).context?.contextWindow).toBe(340_000)
+    expect((await runtime.llm.listModels(provider)).map(entry => entry.id)).toEqual([other])
+    expect(plugin.decodeOpenAICodexSettings(runtime.settings.describe().find(entry => entry.ns === ns)?.value)?.contextWindowOverrides)
+      .toEqual({ [other]: 340_000 })
+    await expect(runtime.settings.update(ns, { contextWindowOverrides: { 'unknown-model': null } })).rejects.toThrow('unknown model id')
+    await runtime.settings.update(ns, { contextWindowOverrides: { [model]: 320_000 } })
+    expect((await runtime.llm.resolveModelInfo(provider, model)).context?.contextWindow).toBe(320_000)
+  })
+
+  it('retains persisted per-model default masks when starting with composition overrides', async () => {
+    initial = { contextWindowOverrides: { [model]: null, [other]: 340_000 } }
+    const runtime = await boot({ contextWindowOverrides: { [model]: 300_000 } })
+    expect((await runtime.llm.resolveModelInfo(provider, model)).context?.contextWindow).toBe(catalogWindow)
+    expect((await runtime.llm.resolveModelInfo(provider, other)).context?.contextWindow).toBe(340_000)
+  })
+
   it('rejects invalid or unknown-model writes before persistence and retains the last effective budget', async () => {
     initial = { contextWindowOverrides: { [model]: 300_000 } }
     const runtime = await boot()

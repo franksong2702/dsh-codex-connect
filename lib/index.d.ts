@@ -362,10 +362,10 @@ type OpenAICodexSearchMode = 'cached' | 'indexed' | 'live';
 type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high';
 /**
  * Whether a value is a bounded per-model context-window override map. Keys
- * are nonempty, unpadded model ids; values are positive safe integers.
- * An empty resolved map contains no overrides. The Host checks catalog membership.
+ * are nonempty, unpadded model ids; values are positive safe integers or null
+ * to restore that model's catalog default. The Host checks catalog membership.
  */
-declare function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number>>;
+declare function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number | null>>;
 /** Default model used by the standalone search endpoint. */
 declare const DEFAULT_OPENAI_CODEX_SEARCH_MODEL = "gpt-5.6-sol";
 /** Default search mode, matching the official local Codex client. */
@@ -400,7 +400,7 @@ interface OpenAICodexSettingsConfig {
 declare const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig>;
 /** Input settings allow null to disable overrides inherited from a lower settings layer. */
 interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
-  contextWindowOverrides?: Readonly<Record<string, number>> | null | undefined;
+  contextWindowOverrides?: Readonly<Record<string, number | null>> | null | undefined;
 }
 /** Fill the schema defaults even when called without Cordis validation. */
 declare function resolveOpenAICodexSettings(value: OpenAICodexSettingsInput): OpenAICodexSettingsConfig;
@@ -690,9 +690,9 @@ interface Config {
    * replaces the advertised `contextWindow` for that model inside the adapter
    * profile for client budgeting. It does not change or verify server capacity,
    * output-token limits, or the deployment's compaction policy.
-   * Null disables inherited overrides; an omitted field inherits lower layers.
+   * Whole-map or per-model null disables inherited overrides; omitted keys inherit lower layers.
    */
-  contextWindowOverrides?: Record<string, number> | null | undefined;
+  contextWindowOverrides?: Record<string, number | null> | null | undefined;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
   /** Register the optional image-loading tool. */

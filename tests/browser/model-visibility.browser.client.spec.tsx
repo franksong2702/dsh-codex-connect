@@ -6,31 +6,31 @@ import { page } from 'vitest/browser'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
 import { en } from '../../src/client/locales.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
-import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../../src/settings-contract.ts'
+import { DEFAULT_OPENAI_CODEX_SETTINGS, resolveOpenAICodexSettings } from '../../src/settings-contract.ts'
 import type { OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
 
 function t(key: keyof typeof en): string {
   return en[key]
 }
 
-function settingsScopeFixture(): {
+function settingsScopeFixture(initial: Partial<OpenAICodexSettingsConfig> = {}, writable = true): {
   scope: SettingsScope<OpenAICodexSettingsConfig>
   set: ReturnType<typeof vi.fn>
 } {
   let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready',
-    value: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
-    base: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
+    value: { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...initial },
+    base: { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...initial },
     user: undefined,
     revision: 0,
-    writable: true,
+    writable,
     mode: 'host',
   }
   const listeners = new Set<() => void>()
   const set = vi.fn(async (field: string, value: unknown) => {
     const current = snapshot.value
     if (current === undefined) throw new Error('settings unavailable')
-    snapshot = { ...snapshot, value: { ...current, [field]: value }, revision: (snapshot.revision ?? 0) + 1 }
+    snapshot = { ...snapshot, value: resolveOpenAICodexSettings({ ...current, [field]: value }), revision: (snapshot.revision ?? 0) + 1 }
     for (const listener of listeners) listener()
   })
   return {
@@ -66,6 +66,66 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it('stages per-model budgets, preserves hidden models, discards edits and resets without changing other budgets', async () => {
+    const models = [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' }]
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(models))))
+    const { scope, set } = settingsScopeFixture({ contextWindowOverrides: { 'gpt-5.6-sol': 300_000, 'gpt-5.6-terra': 340_000 } })
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    const sol = page.getByRole('group', { name: 'GPT-5.6 Sol', exact: true })
+    await sol.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+    const input = sol.getByRole('spinbutton', { name: en.contextTokens })
+    await input.fill('350000')
+    expect(set).not.toHaveBeenCalled()
+    await page.getByRole('button', { name: en.discard, exact: true }).click()
+    await vi.waitFor(() => { expect((input.element() as HTMLInputElement).value).toBe('300000') })
+    await input.fill('350000')
+    await sol.getByRole('checkbox').click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await vi.waitFor(() => {
+      expect(scope.getSnapshot().value).toMatchObject({ models: ['gpt-5.6-terra'], contextWindowOverrides: { 'gpt-5.6-sol': 350_000, 'gpt-5.6-terra': 340_000 } })
+    })
+    await sol.getByRole('button', { name: en.contextReset, exact: true }).click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await vi.waitFor(() => {
+      expect(set).toHaveBeenCalledWith('contextWindowOverrides', { 'gpt-5.6-sol': null, 'gpt-5.6-terra': 340_000 })
+      expect(scope.getSnapshot().value?.contextWindowOverrides).toEqual({ 'gpt-5.6-terra': 340_000 })
+      expect((input.element() as HTMLInputElement).value).toBe('')
+    })
+    await page.viewport(360, 800)
+    host.style.width = '100%'
+    await vi.waitFor(() => { expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth) })
+  })
+
+  it('blocks empty, fractional, nonpositive and unsafe budgets, and leaves restoring defaults explicit', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, set } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await page.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+    const input = page.getByRole('spinbutton', { name: en.contextTokens })
+    for (const value of ['0', '-1', '1.5', '9007199254740992', '']) {
+      await input.fill('1000')
+      await input.fill(value)
+      await vi.waitFor(() => {
+        expect((page.getByRole('button', { name: en.save, exact: true }).element() as HTMLButtonElement).disabled).toBe(true)
+        expect(input.element().getAttribute('aria-invalid')).toBe('true')
+      })
+    }
+    expect(set).not.toHaveBeenCalled()
+    await page.getByRole('button', { name: en.contextReset, exact: true }).click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    expect(scope.getSnapshot().value?.contextWindowOverrides).toBeUndefined()
+  })
+
+  it('does not allow editing budgets in a read-only scope', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, set } = settingsScopeFixture({}, false)
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await vi.waitFor(() => {
+      expect(page.getByRole('button', { name: en.contextAdjust, exact: true }).element().matches(':disabled')).toBe(true)
+    })
+    expect(set).not.toHaveBeenCalled()
+  })
+
   it('shows the full catalog, saves a subset, and stays inside a narrow viewport', async () => {
     const models = [
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },

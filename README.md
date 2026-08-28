@@ -242,6 +242,8 @@ Selecting Codex as the profile's global search route is another explicit change:
 
 Use `contextWindowOverrides` to opt into a per-model client context budget when you have evidence that the bundled catalog does not fit your deployment. It cannot enlarge the OpenAI backend's context capacity. Overrides default off; this feature does not verify the community-reported larger windows.
 
+In Plugin configuration, each model row keeps its visibility checkbox and adds **Context → Adjust**. Enter a positive whole-number token budget, or choose **Restore default** to use the catalog value even if composition supplies an override. Hiding a model preserves its budget. **Save** applies the staged visibility and budget edits; **Discard** abandons them. An empty input is not a reset: use **Restore default** explicitly.
+
 ```yaml
 - id: llm-openai-codex
   config:
@@ -259,6 +261,7 @@ To restore defaults, distinguish the settings layers:
 - A resolved empty map `{}` or no override uses catalog windows.
 - DSH recursively merges settings maps. Updating an existing map with `{}` is therefore not a clear operation.
 - Set `contextWindowOverrides: null` to explicitly disable all overrides, including values inherited from composition.
+- Set a model entry to `null` to restore only that model's catalog default while preserving other overrides. The UI saves explicit per-model masks so restored defaults do not re-inherit composition values.
 - Removing the stored field re-inherits composition settings; with no composition override, it restores catalog windows. Removing one stored model entry similarly restores that model's composition or catalog value.
 
 ## Reauthentication, diagnostics, and conflicts

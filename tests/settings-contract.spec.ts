@@ -115,4 +115,15 @@ describe('OpenAI Codex proxy settings contract', () => {
     expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, contextWindowOverrides: null })?.contextWindowOverrides).toBeUndefined()
     expect(resolveOpenAICodexSettings({ contextWindowOverrides: null }).contextWindowOverrides).toBeUndefined()
   })
+
+  it('preserves per-model null masks on Host and removes them only in resolved settings', () => {
+    const input = { 'gpt-5.6-sol': null, 'gpt-5.6-terra': 300_000 }
+    const host = Config({ contextWindowOverrides: input })
+    expect(host.contextWindowOverrides).toEqual(input)
+    expect(host.contextWindowOverrides).not.toBe(input)
+    expect(resolveOpenAICodexSettings(host).contextWindowOverrides).toEqual({ 'gpt-5.6-terra': 300_000 })
+    expect(decodeOpenAICodexSettings(host)?.contextWindowOverrides).toEqual({ 'gpt-5.6-terra': 300_000 })
+    expect(isValidOpenAICodexContextWindowOverrides({ '': null })).toBe(false)
+    expect(isValidOpenAICodexContextWindowOverrides(Object.fromEntries(Array.from({ length: 257 }, (_, i) => [`model-${i}`, null])))).toBe(false)
+  })
 })

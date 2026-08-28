@@ -101,7 +101,7 @@ import {
   isValidOpenAICodexProxyUrl,
   resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
-  resolveOpenAICodexContextWindowOverrides,
+  parseOpenAICodexContextWindowOverrides,
 } from './settings-contract.ts'
 
 export {
@@ -231,9 +231,9 @@ export interface Config {
    * replaces the advertised `contextWindow` for that model inside the adapter
    * profile for client budgeting. It does not change or verify server capacity,
    * output-token limits, or the deployment's compaction policy.
-   * Null disables inherited overrides; an omitted field inherits lower layers.
+   * Whole-map or per-model null disables inherited overrides; omitted keys inherit lower layers.
    */
-  contextWindowOverrides?: Record<string, number> | null | undefined
+  contextWindowOverrides?: Record<string, number | null> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -255,8 +255,8 @@ export const Config: z<Config> = z.object({
   enableProxy: z.boolean().default(false),
   proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
   contextWindowOverrides: z.transform(
-    z.union([z.const(undefined), z.dict(z.number())]),
-    resolveOpenAICodexContextWindowOverrides,
+    z.union([z.const(undefined), z.dict(z.union([z.const(null), z.number()]))]),
+    parseOpenAICodexContextWindowOverrides,
   ),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
@@ -277,8 +277,8 @@ export const Config: z<Config> = z.object({
 export function apply(ctx: Context, config: Config): void {
   const catalog = openAICodexModelCatalog()
   const validateSettings = (value: Config): void => {
-    const resolved = resolveOpenAICodexSettings(value)
-    assertOpenAICodexContextWindowModelIds(resolved.contextWindowOverrides, catalog)
+    resolveOpenAICodexSettings(value)
+    assertOpenAICodexContextWindowModelIds(value.contextWindowOverrides ?? undefined, catalog)
   }
   validateSettings(config)
   let current = () => config
