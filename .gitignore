@@ -3,3 +3,4 @@ node_modules/
 .openai-codex-auth.json
 .playwright-cli/
 .idea/
+.ai

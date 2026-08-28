@@ -7,7 +7,7 @@ import {
 
 const catalog = {
   schemaVersion: 1 as const,
-  checkedAt: '2026-08-24',
+  checkedAt: '2026-08-27',
   latestDshVersion: '0.1.1-rc.2',
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
@@ -16,6 +16,8 @@ const catalog = {
     { version: '0.1.0-alpha.4.17', verifiedDshVersions: ['0.1.1-rc.2'] },
     { version: '0.1.0-alpha.4.18', verifiedDshVersions: ['0.1.1-rc.2'] },
     { version: '0.1.0-alpha.4.19', verifiedDshVersions: ['0.1.1-rc.2'] },
+    { version: '0.1.0-alpha.4.20', verifiedDshVersions: ['0.1.1-rc.2'] },
+    { version: '0.1.0-alpha.4.21', verifiedDshVersions: ['0.1.1-rc.2'] },
   ],
 }
 
@@ -47,9 +49,9 @@ describe('Codex Connect verified DSH compatibility', () => {
       latestPluginVersion: '0.1.0-alpha.4.16',
       latestDshVersion: '0.1.1-rc.2',
     })
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.19', '0.1.0-alpha.4.19', '0.1.1-rc.2', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.20', '0.1.0-alpha.4.20', '0.1.1-rc.2', catalog)).toEqual({
       status: 'compatible',
-      latestPluginVersion: '0.1.0-alpha.4.19',
+      latestPluginVersion: '0.1.0-alpha.4.20',
       latestDshVersion: '0.1.1-rc.2',
     })
   })

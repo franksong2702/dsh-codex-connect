@@ -28,7 +28,13 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.19`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.19'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+To reproduce this release exactly, use `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21`. If npm is unavailable after the matching GitHub prerelease exists, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'`. A local checkout can be installed as `link:/absolute/path/to/dsh-codex-connect`.
+
+### What's new in Alpha 4.21
+
+- Preserve and download the exact generated image separately from the conversation preview, including from restored sessions and forks that inherited the image result.
+- Inspect runtime and Responses/SSE evidence with the opt-in `capabilities` command. Network probing requires explicit `--probe`; it does not enable unsupported features or alter routing.
+- Use clearer exact-version installation guidance and expanded release/canary CI checks. The supported DSH version remains `0.1.1-rc.2`.
 
 ### Version updates
 
@@ -158,7 +164,7 @@ The Plugin configuration card deliberately separates discovery from activation:
 2. **Test** sends a probe through the current draft URL. It does not save or enable the proxy.
 3. **Activate** becomes available only after that exact draft passes Test. Clicking it is the explicit confirmation that saves the URL and enables the proxy.
 
-The status rail on the right of the proxy section is green while active and red while direct. An `openai-codex` conversation also shows a connectivity ball in the upper-right session header. About every three seconds it checks `chatgpt.com`, `auth.openai.com`, and `api.openai.com` through the currently selected direct or proxy path; any HTTP response counts as reachable, while DNS, timeout, CONNECT, and TLS errors are shown in its hover/focus popover. The popover also provides a manual connection check and the same Detect, Test, Activate, and **Disable proxy** workflow as Plugin configuration. The process-global dispatcher bridge is installed only while a Codex operation is in flight and is restored after that operation settles. Switching a session to another adapter stops its monitor and leaves no persistent proxy registration, without disabling the saved proxy for other Codex sessions. Disabling the setting or uninstalling the plugin retires its proxy agents after in-flight requests finish. Multiple installed instances keep independent proxy controllers.
+The status rail on the right of the proxy section is green while active and red while direct. An `openai-codex` conversation also shows a neutral blue, water-flow proxy ball with three flowing lights beneath it, one for each monitored domain. About every three seconds it checks `chatgpt.com`, `auth.openai.com`, and `api.openai.com` through the currently selected direct or proxy path. A light is green after any HTTP response, regardless of status code, red only for reachability failures such as DNS, timeout, CONNECT, or TLS errors, and yellow while no result is available. Failure details appear only in the ball's hover/focus popover. The popover also provides a manual connection check and the same Detect, Test, Activate, and **Disable proxy** workflow as Plugin configuration. The process-global dispatcher bridge is installed only while a Codex operation is in flight and is restored after that operation settles. Switching a session to another adapter stops its monitor and leaves no persistent proxy registration, without disabling the saved proxy for other Codex sessions. Disabling the setting or uninstalling the plugin retires its proxy agents after in-flight requests finish. Multiple installed instances keep independent proxy controllers.
 
 ```yaml
 - id: llm-openai-codex
@@ -173,7 +179,7 @@ The status rail on the right of the proxy section is green while active and red 
 
 - `enableSearch: true` registers Codex as an available search provider. It does not select the profile's global search route.
 - `enableImageTool: true` enables `view_image` for approved local reads and public-network image fetches on vision-capable models.
-- `enableImageGeneration: true` enables the prompt-only image generation tool. Use the image generation capability included with your current GPT subscription. Generated images are saved as DSH attachments and shown in the Codex Connect result gallery.
+- `enableImageGeneration: true` enables the prompt-only image generation tool. Use the image generation capability included with your current GPT subscription. Codex Connect preserves the exact generated file in plugin-owned storage and saves a DSH attachment as the conversation preview.
 
 The screenshot below is an example after someone has explicitly enabled capabilities. It does not show the fresh-install default. This English guide uses the English-localized capture; the Chinese guide shows the matching Chinese-localized state.
 
@@ -186,15 +192,17 @@ The screenshot below is an example after someone has explicitly enabled capabili
 1. Turn on **Enable GPT Image generation** in the Codex Connect card and select **Save changes**.
 2. Choose an `openai-codex` GPT model for the conversation.
 3. Describe the image you want in ordinary language. The agent can expand that request into the prompt sent to GPT Image.
-4. The completed image is stored as a DSH attachment and rendered directly in the conversation. The result card lets you review and copy the full prompt, download the image, and inspect image details.
+4. The exact generated file is preserved separately from the DSH attachment used to render the conversation preview. The result card lets you review and copy the full prompt, download the exact original or the preview, and compare their dimensions and file sizes.
 
 This capability uses the image generation access included with your current GPT subscription; it does not require an OpenAI Platform API key. Availability remains subject to the GPT plan and model selected for the conversation.
+
+Output dimensions are selected by the subscription service. The tool accepts a prompt only and does not offer a size setting or guarantee 4K output. Asking for "4K detail" does not establish the file's pixel dimensions; use the dimensions shown on the result card. Downloading the original preserves what the service returned, without upscaling it.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="English-localized Codex Connect GPT Image result with preview, copyable prompt, download action, and image details" width="780">
 </p>
 
-The detailed image prompt is authored by the selected GPT model. Codex Connect does not silently add image parameters: it validates the prompt-only request, forwards it through the ChatGPT subscription capability, and stores the returned image as a DSH attachment. On the result card you can scroll through and copy the complete prompt. **Try again** and **Generate another** send that card's own prompt again, so an older card is not accidentally regenerated from a newer conversation message. **Modify this image** first asks what you want to change, then continues from that card's prompt.
+The detailed image prompt is authored by the selected GPT model. Codex Connect does not silently add image parameters: it validates the prompt-only request and forwards it through the ChatGPT subscription capability. The exact returned bytes are stored below `$DSH_HOME/dsh-codex-connect/images/v1`; an additional DSH attachment is the preview used by the conversation and may be resized or re-encoded by the active DSH attachment policy. The **Download original** action always uses the plugin-owned exact file, while **Download preview** returns that DSH representation. Originals are owner-only, integrity-checked before download, and available to the creating session and forks that inherited the image result, including after session restoration. Forks made before that result and unrelated sessions cannot download it. Disabling image generation or uninstalling the plugin does not automatically delete the files; downloading through the result card requires the plugin to remain installed. On the result card you can scroll through and copy the complete prompt. **Try again** and **Generate another** send that card's own prompt again, so an older card is not accidentally regenerated from a newer conversation message. **Modify this image** first asks what you want to change, then continues from that card's prompt.
 
 ### Usage limits in Plugin configuration
 
@@ -262,9 +270,24 @@ Selecting Codex as the profile's global search route is another explicit change:
 - If startup reports an `openai-codex` collision, an old `dsh-codex` bundle or manual provider row may already own the adapter. Inspect the effective configuration and remove only the confirmed conflicting owner. Do not delete auth files or unrelated providers.
 - Removing the package does not delete OAuth state. Run `logout` only when credential removal is intended.
 
+### On-demand capability report
+
+Run the separate `capabilities` command from the intended plugin installation. Without `--probe`, it reads local host package versions and credential-file metadata only; it does not open the credential document or send network requests. Existing `doctor` behavior and the settings compatibility card are unchanged.
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
+```
+
+`--probe` explicitly sends one fixed short request to the ordinary Codex Responses route and may consume quota. It reads an unexpired stored credential without refreshing or writing it. The command uses a direct connection unless you pass `--proxy <http(s)-origin>`; it does not load the active profile's proxy settings or environment proxy variables. The default deadline is 30000 ms; `--timeout-ms <1..60000>` overrides it. There are no redirects or retries, the response is capped at 64 KiB, and owned connections are destroyed before return. A deadline or size limit does not guarantee that server-side generation stopped. The reusable diagnostic instance caches only completed responses and explicit request rejections for at most 60 seconds in memory, scoped to credential, model, versions, and network policy. Separate CLI invocations do not share cached evidence.
+
+The report labels each check `supported`, `rejected`, or `unknown`, with a reason and corrective action. Runtime support means the declared host package versions match, not that the Web profile or an exact Node patch was integration-tested. A catalog entry or private credential file leaves model access and OAuth validity `unknown`. Only an HTTP 200 finite SSE response with a complete, nonempty assistant output for the selected model confirms the standalone route; redirects, timeouts, rate limits, and incomplete streams remain `unknown`. HTTP 400/404 reject the particular request, not every model or optional feature; HTTP 401/403 also reject authorization for that request. Reports omit tokens, account ids, paths, proxy origins, response ids, headers, and generated text.
+
+This report covers only the standalone route, not active profile routing, search/image tools, browser compatibility, provider retry behavior, or session recovery. Automatic provider failover is `rejected` because this plugin does not implement it; select an alternative provider explicitly. WebSocket-to-SSE fallback is inactive with the finite SSE default. `contextManagement` and continuation remain `unknown`; native compaction and WebSocket reuse are `rejected` by the current integration policy. No diagnostic result enables these capabilities or changes Harness history. Exit codes cover runtime, OAuth, selected model, Responses, and SSE only: `0` means all five were supported, `1` means at least one was rejected, and `2` means unknown evidence, invalid options, or an inspection failure. Rejected optional capabilities do not change that exit code.
+
 ## Compatibility and security boundary
 
-- The only verified compatibility combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json). Alpha 4.19 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade to the rc.2 API packages.
+- The only verified compatibility combination is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`; see [compatibility.json](compatibility.json). Alpha 4.21 uses the rc.2 keyed Plugin configuration slot; users of older DSH API packages should upgrade to the rc.2 API packages.
 - Upgrade the DSH plugin API packages and `@earendil-works/pi-ai` as one group, then run `dsh-codex-connect doctor --json` and the compatibility check again. This contract does not make claims about future versions.
 - When the daily upstream check finds a new `latest` or `next` DSH candidate, it installs Codex Connect into an isolated profile, boots the installed model runtime without OAuth credentials, verifies model and reasoning-effort discovery, and confirms provider disposal. Live sign-in, quota, and model requests still require manual validation in the test profile.
 - ChatGPT plan eligibility, model access, quotas, and backend behavior are controlled by OpenAI and may change.

@@ -56,7 +56,7 @@ if (!chineseReadme.includes('使用你当前 GPT 订阅计划提供的图片生�
 
 try {
   const manifest = JSON.parse(await readFile(new URL('../update-highlights.json', import.meta.url), 'utf8'))
-  const validKinds = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility'])
+  const validKinds = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection'])
   const versionPattern = /^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u
   if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest?.releases) || manifest.releases.length > 256) {
     failures.push('update-highlights.json must use schemaVersion 1 with at most 256 releases')

@@ -28,7 +28,13 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.19`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.19'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+如需精确复现这个版本，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21`。对应 GitHub prerelease 已创建但 npm 不可用时，可使用 `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'`。本地 checkout 可安装为 `link:/absolute/path/to/dsh-codex-connect`。
+
+### Alpha 4.21 更新内容
+
+- 将生成图片的精确原文件与对话预览分开保存和下载，恢复会话及继承了图片结果的 fork 会话同样可用。
+- 使用可选的 `capabilities` 命令检查运行环境与 Responses/SSE 的支持证据。网络探测必须显式传入 `--probe`；不会启用未支持的功能或修改路由。
+- 提供更清晰的精确版本安装指引，并扩展发布与 canary 的 CI 检查。支持的 DSH 版本仍为 `0.1.1-rc.2`。
 
 ### 版本更新提醒
 
@@ -158,7 +164,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 2. **Test（测试）**只用当前草稿地址发送探测请求，不保存、不启用。
 3. **Activate（启用）**只有在同一草稿通过 Test 后才可点击。用户点击即表示明确确认，此时才保存地址并启用代理。
 
-代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话右上角还会显示连接状态悬浮球，大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`；收到任意 HTTP 响应都算可达，DNS、超时、CONNECT 和 TLS 错误会显示在鼠标悬停/键盘聚焦弹窗中。弹窗同时提供手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
+代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话还会显示一个保持蓝色的水流流光 Proxy 悬浮球，球下三盏流光灯分别对应三个受监测域名。它大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`：收到任意 HTTP 响应时对应灯为绿色，不区分 401、302 等状态码；只有 DNS、超时、CONNECT、TLS 等无法建立访问的情况才显示红色，尚无结果时显示黄色。具体失败原因仅在鼠标悬停/键盘聚焦弹窗中显示。弹窗同时提供手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
 
 ```yaml
 - id: llm-openai-codex
@@ -173,7 +179,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 - `enableSearch: true` 会把 Codex 注册为可选择的搜索提供方，不会把它选为 profile 的全局搜索路由。
 - `enableImageTool: true` 会为具备视觉能力的模型启用 `view_image`，用于审批后的本地读取和公网图片获取。
-- `enableImageGeneration: true` 会启用只接受文字描述的图片生成工具。使用你当前 GPT 订阅计划提供的图片生成能力。生成结果会保存为 DSH 附件，并通过 Codex Connect 结果画廊展示。
+- `enableImageGeneration: true` 会启用只接受文字描述的图片生成工具。使用你当前 GPT 订阅计划提供的图片生成能力。Codex Connect 会把生成结果的精确原文件保存到插件自有存储，同时另存一份 DSH 附件作为对话预览。
 
 下图是有人显式开启能力之后的配置示例，不是新安装的默认状态。本中文指南使用中文本地化截图；English 版展示同一状态的英文截图。
 
@@ -186,15 +192,17 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 1. 在 Codex Connect 卡片中开启 **启用 GPT Image 图片生成**，然后点击 **保存更改**。
 2. 为当前对话选择一个 `openai-codex` GPT 模型。
 3. 用自然语言描述你想要的图片；Agent 可以在调用 GPT Image 前将这段描述扩展为更完整的提示词。
-4. 图片生成后会保存为 DSH 附件，并直接显示在对话中。你可以在结果卡片里查看和复制完整提示词、下载图片，以及展开图片详情。
+4. 图片生成后，精确原文件会与用于对话展示的 DSH 附件分开保存。你可以在结果卡片里查看和复制完整提示词、分别下载原文件或预览，并比较两者的尺寸与文件大小。
 
 此能力使用你当前 GPT 订阅计划提供的图片生成权限，不需要 OpenAI Platform API Key；具体可用性仍取决于当前对话所选的 GPT 套餐和模型。
+
+输出尺寸由订阅服务决定。工具只接受提示词，不提供尺寸设置，也不保证生成 4K 图片。要求“4K 级细节”不代表文件具有 4K 像素尺寸，请以结果卡片显示的尺寸为准。下载原文件会保留服务实际返回的图片，不会将其放大。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="Codex Connect 中文 GPT Image 结果卡片，包含图片预览、可复制提示词、下载操作和图片详情" width="780">
 </p>
 
-图片的详细提示词由当前选择的 GPT 模型生成。Codex Connect 不会偷偷添加图片参数：它只校验“提示词”请求，通过 ChatGPT 订阅提供的图片能力发送，并把返回图片保存为 DSH 附件。结果卡片里的提示词可以滚动查看和复制。点击 **再次尝试** 或 **再生成一张** 时，会重新发送这张卡片自己的提示词，不会因为后来出现了新的对话消息而误用最新上下文。点击 **基于此图修改** 时，模型会先询问你想改什么，再基于这张卡片的提示词继续处理。
+图片的详细提示词由当前选择的 GPT 模型生成。Codex Connect 不会偷偷添加图片参数：它只校验“提示词”请求，并通过 ChatGPT 订阅提供的图片能力发送。服务返回的精确字节保存在 `$DSH_HOME/dsh-codex-connect/images/v1`；对话中使用的是另一份 DSH 附件预览，可能按照当前 DSH 附件策略缩放或重新编码。点击 **下载原文件** 得到的一定是插件保存的精确文件，**下载预览** 得到的是 DSH 表示。原文件仅允许文件所有者访问，下载前会校验完整性；创建图片的会话以及继承了该图片结果的 fork 会话均可下载，恢复会话后仍然有效。在该结果之前创建的 fork 会话和无关会话不能下载。关闭图片生成或卸载插件不会自动删除这些文件；通过结果卡片下载仍需安装插件。结果卡片里的提示词可以滚动查看和复制。点击 **再次尝试** 或 **再生成一张** 时，会重新发送这张卡片自己的提示词，不会因为后来出现了新的对话消息而误用最新上下文。点击 **基于此图修改** 时，模型会先询问你想改什么，再基于这张卡片的提示词继续处理。
 
 ### 插件配置中的额度说明
 
@@ -262,9 +270,24 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - 启动报告 `openai-codex` 冲突时，旧 `dsh-codex` bundle 或手动 provider 配置可能已占用该 adapter。先检查有效配置，只移除已确认的冲突所有者。不要删除认证文件或无关 provider。
 - 移除包不会删除 OAuth 状态；只有确实需要删除凭据时才运行 `logout`。
 
+### 按需能力报告
+
+请从目标插件安装位置运行独立的 `capabilities` 命令。不传 `--probe` 时，它只读取本地主机包版本与认证文件元数据，不打开认证文件内容，也不发送网络请求。现有 `doctor` 行为和设置页兼容性卡不变。
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
+dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
+```
+
+`--probe` 显式向普通 Codex Responses 路由发送一条固定短请求，可能消耗额度。它读取尚未过期的已存凭据，但不刷新或写入凭据。除非传入 `--proxy <http(s)-origin>`，否则命令使用直连，不读取正在运行的 profile 代理设置或环境代理变量。默认期限为 30000 ms，可通过 `--timeout-ms <1..60000>` 调整。命令不跟随重定向、不重试，响应上限为 64 KiB，并在返回前销毁自有连接。达到期限或大小上限不保证服务端生成已经停止。可复用诊断实例仅将完整响应和明确请求拒绝在内存中缓存至多 60 秒，按凭据、模型、版本与网络策略隔离。不同 CLI 调用之间不共享缓存证据。
+
+报告为每项检查标注 `supported`（可用）、`rejected`（拒绝）或 `unknown`（未验证），并提供原因与修复动作。运行时可用仅表示声明的主机包版本匹配，不代表 Web profile 或某个 Node 补丁版本经过集成验证。模型目录条目或私有认证文件只能令模型权限与 OAuth 有效性保持 `unknown`。只有 HTTP 200 有限 SSE 响应包含所选模型完整、非空的助手输出，才能确认独立路由；重定向、超时、限流和不完整流仍为 `unknown`。HTTP 400/404 拒绝的是本次请求，并非所有模型或可选功能；HTTP 401/403 还表示本次请求的授权被拒绝。报告省略 token、账号 ID、路径、代理 origin、响应 ID、headers 和生成文本。
+
+本报告仅涵盖独立路由，不验证活动 profile 路由、搜索/图片工具、浏览器兼容性、provider 重试行为或会话恢复。本插件没有实现自动 provider 故障切换，因此该项为 `rejected`，需要用户明确选择其他 provider。有限 SSE 默认路径不会触发 WebSocket 到 SSE 的回退。`contextManagement` 和续接仍为 `unknown`；原生 compaction 和 WebSocket reuse 在当前集成策略下为 `rejected`。诊断结果不会启用这些能力，也不会更改 Harness 历史。退出码只覆盖运行时、OAuth、所选模型、Responses 和 SSE：`0` 表示五项均可用，`1` 表示至少一项被拒绝，`2` 表示证据未知、选项无效或检查失败。被拒绝的可选能力不影响该退出码。
+
 ## 兼容性与安全边界
 
-- 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.19 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。
+- 当前唯一已验证的兼容组合是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`；详见 [compatibility.json](../compatibility.json)。Alpha 4.21 使用 rc.2 的 keyed 插件配置 slot；旧版 DSH API packages 用户应升级到 rc.2 API packages。
 - 升级时请将 DSH 插件 API packages 与 `@earendil-works/pi-ai` 作为一组升级，再运行 `dsh-codex-connect doctor --json` 和兼容性检查。本契约不对未来版本作判断。
 - 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认提供方可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。
 - ChatGPT 套餐资格、模型权限、额度和后端行为由 OpenAI 控制，可能变化。

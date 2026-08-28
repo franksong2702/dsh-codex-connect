@@ -32,8 +32,16 @@ export const OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS = 3_000
 export const OPENAI_CODEX_PROXY_CLOSE_DELAY_MS = 1_000
 
 const BALL_SIZE = 54
+const FLOW_LIGHT_GAP = 6
+const FLOW_LIGHT_HEIGHT = 6
+const INDICATOR_HEIGHT = BALL_SIZE + FLOW_LIGHT_GAP + FLOW_LIGHT_HEIGHT
 const EDGE_GAP = 16
 const DRAG_THRESHOLD = 4
+const CONNECTIVITY_LIGHTS = [
+  { id: 'codex-api', hostname: 'chatgpt.com' },
+  { id: 'oauth', hostname: 'auth.openai.com' },
+  { id: 'openai-api', hostname: 'api.openai.com' },
+] as const
 
 export interface OpenAICodexProxyIndicatorInjected {
   readonly directory: SnapshotStore<ModelDirectoryState>
@@ -98,9 +106,7 @@ function connectivityReport(value: unknown): OpenAICodexConnectivityReport | und
 }
 
 function targetSignal(target: OpenAICodexConnectivityTargetResult): Signal {
-  if (!target.reachable) return 'red'
-  const status = target.statusCode
-  return status !== undefined && status >= 200 && status < 300 ? 'green' : 'yellow'
+  return target.reachable ? 'green' : 'red'
 }
 
 function overallSignal(
@@ -133,7 +139,7 @@ function rectOf(element: Element): Bounds {
 function clampPoint(point: Point, bounds: Bounds): Point {
   return {
     x: clamp(point.x, bounds.left + EDGE_GAP, bounds.right - BALL_SIZE - EDGE_GAP),
-    y: clamp(point.y, bounds.top + EDGE_GAP, bounds.bottom - BALL_SIZE - EDGE_GAP),
+    y: clamp(point.y, bounds.top + EDGE_GAP, bounds.bottom - INDICATOR_HEIGHT - EDGE_GAP),
   }
 }
 
@@ -158,7 +164,7 @@ function readRatio(sessionKey: string): Point {
 
 function pointFromRatio(ratio: Point, bounds: Bounds): Point {
   const width = Math.max(0, bounds.width - BALL_SIZE - EDGE_GAP * 2)
-  const height = Math.max(0, bounds.height - BALL_SIZE - EDGE_GAP * 2)
+  const height = Math.max(0, bounds.height - INDICATOR_HEIGHT - EDGE_GAP * 2)
   return clampPoint({
     x: bounds.left + EDGE_GAP + ratio.x * width,
     y: bounds.top + EDGE_GAP + ratio.y * height,
@@ -167,7 +173,7 @@ function pointFromRatio(ratio: Point, bounds: Bounds): Point {
 
 function ratioFromPoint(point: Point, bounds: Bounds): Point {
   const width = Math.max(1, bounds.width - BALL_SIZE - EDGE_GAP * 2)
-  const height = Math.max(1, bounds.height - BALL_SIZE - EDGE_GAP * 2)
+  const height = Math.max(1, bounds.height - INDICATOR_HEIGHT - EDGE_GAP * 2)
   return {
     x: clamp((point.x - bounds.left - EDGE_GAP) / width, 0, 1),
     y: clamp((point.y - bounds.top - EDGE_GAP) / height, 0, 1),
@@ -322,7 +328,7 @@ export function OpenAICodexProxyIndicator({
   const panelWidth = Math.max(220, Math.min(400, (bounds?.width ?? 432) - EDGE_GAP * 2))
   const panelHeight = Math.max(220, Math.min(600, (bounds?.height ?? 632) - EDGE_GAP * 2))
   const openRight = bounds === undefined || position.x + panelWidth <= bounds.right - EDGE_GAP
-  const openDown = bounds === undefined || position.y + BALL_SIZE + panelHeight <= bounds.bottom - EDGE_GAP
+  const openDown = bounds === undefined || position.y + INDICATOR_HEIGHT + panelHeight <= bounds.bottom - EDGE_GAP
 
   const openPanel = (): void => {
     if (closeTimer.current !== undefined) clearTimeout(closeTimer.current)
@@ -384,7 +390,7 @@ export function OpenAICodexProxyIndicator({
   const popupStyle: CSSProperties = {
     position: 'absolute',
     ...(openRight ? { left: 0 } : { right: 0 }),
-    ...(openDown ? { top: BALL_SIZE + 10 } : { bottom: BALL_SIZE + 10 }),
+    ...(openDown ? { top: INDICATOR_HEIGHT + 10 } : { bottom: INDICATOR_HEIGHT + 10 }),
     zIndex: 1,
     boxSizing: 'border-box',
     width: panelWidth,
@@ -411,7 +417,11 @@ export function OpenAICodexProxyIndicator({
       data-openai-codex-proxy-session={sessionKey}
       data-openai-codex-proxy-dragging={dragging || undefined}
       style={{
-        display: 'inline-flex',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: BALL_SIZE,
+        height: INDICATOR_HEIGHT,
         position: 'fixed',
         top: position.y,
         left: position.x,
@@ -429,12 +439,26 @@ export function OpenAICodexProxyIndicator({
           58% { opacity: 1; transform: scale(1.035); filter: blur(0); }
           100% { opacity: 1; transform: scale(1); filter: blur(0); }
         }
+        @keyframes openaiCodexProxyWaterFlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes openaiCodexProxyWaterCurrent {
+          0% { transform: translate3d(-7%, -2%, 0) rotate(0deg); }
+          50% { transform: translate3d(5%, 3%, 0) rotate(180deg); }
+          100% { transform: translate3d(-7%, -2%, 0) rotate(360deg); }
+        }
+        @keyframes openaiCodexProxyLampFlow {
+          0%, 100% { background-position: 0% 50%; opacity: .72; }
+          50% { background-position: 100% 50%; opacity: 1; }
+        }
       `}</style>
       <button
         type="button"
         aria-label={t('connectivityBallLabel', { summary: signalText })}
         aria-describedby={expanded ? popupId : undefined}
-        data-openai-codex-proxy-signal={signal}
+        data-openai-codex-proxy-flow="water"
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
@@ -448,9 +472,13 @@ export function OpenAICodexProxyIndicator({
           padding: 0,
           border: '2px solid color-mix(in srgb, white 72%, transparent)',
           borderRadius: '50%',
-          background: signalColors[signal],
-          color: signal === 'yellow' ? '#3b3200' : '#fff',
-          boxShadow: `0 3px 12px color-mix(in srgb, ${signalColors[signal]} 45%, transparent)`,
+          overflow: 'hidden',
+          position: 'relative',
+          background: 'linear-gradient(120deg, #075985 0%, #38bdf8 28%, #1d4ed8 55%, #67e8f9 78%, #075985 100%)',
+          backgroundSize: '260% 260%',
+          animation: 'openaiCodexProxyWaterFlow 3.6s ease-in-out infinite',
+          color: '#fff',
+          boxShadow: '0 4px 15px color-mix(in srgb, #0284c7 42%, transparent), inset 0 1px 4px rgb(255 255 255 / 38%)',
           font: 'inherit',
           fontSize: 10,
           fontWeight: 800,
@@ -460,8 +488,51 @@ export function OpenAICodexProxyIndicator({
           userSelect: 'none',
         }}
       >
-        PROXY
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: '-34%',
+            borderRadius: '44%',
+            background: 'repeating-radial-gradient(ellipse at 50% 78%, rgb(255 255 255 / 34%) 0 7%, transparent 8% 17%)',
+            animation: 'openaiCodexProxyWaterCurrent 4.8s linear infinite',
+          }}
+        />
+        <span style={{ position: 'relative', zIndex: 1, textShadow: '0 1px 3px rgb(0 36 76 / 65%)' }}>PROXY</span>
       </button>
+      <div
+        role="list"
+        aria-label={signalText}
+        data-openai-codex-flow-lights="three-domains"
+        style={{ display: 'flex', gap: 4, height: FLOW_LIGHT_HEIGHT, marginTop: FLOW_LIGHT_GAP }}
+      >
+        {CONNECTIVITY_LIGHTS.map((light, index) => {
+          const target = report?.targets.find(candidate => candidate.id === light.id)
+          const lightSignal: Signal = connectivityError !== undefined
+            ? 'red'
+            : target === undefined ? 'yellow' : targetSignal(target)
+          const color = signalColors[lightSignal]
+          return (
+            <span
+              key={light.id}
+              role="listitem"
+              aria-label={`${light.hostname}: ${lightSignal}`}
+              title={`${light.hostname}: ${lightSignal}`}
+              data-openai-codex-flow-light={light.hostname}
+              data-openai-codex-flow-light-signal={lightSignal}
+              style={{
+                width: 12,
+                height: FLOW_LIGHT_HEIGHT,
+                borderRadius: 999,
+                background: `linear-gradient(90deg, color-mix(in srgb, ${color} 55%, transparent), ${color}, white, ${color}, color-mix(in srgb, ${color} 55%, transparent))`,
+                backgroundSize: '260% 100%',
+                boxShadow: `0 0 8px color-mix(in srgb, ${color} 72%, transparent)`,
+                animation: `openaiCodexProxyLampFlow 1.35s ease-in-out ${String(index * 140)}ms infinite`,
+              }}
+            />
+          )
+        })}
+      </div>
       {expanded ? (
         <div id={popupId} role="dialog" aria-label={t('proxyHeaderPopup')} style={popupStyle}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -518,7 +589,7 @@ export function OpenAICodexProxyIndicator({
                       }}
                     >
                       {target.reachable
-                        ? t('connectivityReachable', { status: target.statusCode ?? '-', latency: target.latencyMs })
+                        ? t('connectivityReachable', { latency: target.latencyMs })
                         : target.error ?? t('connectivityUnreachable', { latency: target.latencyMs })}
                     </div>
                   ) : null}

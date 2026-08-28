@@ -60,6 +60,14 @@
     {
       "version": "0.1.0-alpha.4.19",
       "highlights": ["model-visibility"]
+    },
+    {
+      "version": "0.1.0-alpha.4.20",
+      "highlights": ["proxy-connection"]
+    },
+    {
+      "version": "0.1.0-alpha.4.21",
+      "highlights": ["image-generation"]
     }
   ]
 }

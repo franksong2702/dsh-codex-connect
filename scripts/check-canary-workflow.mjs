@@ -81,6 +81,16 @@ assertContract(
 )
 assertContract('package exposes the workflow contract check', packageJson.scripts?.['check:canary-workflow'] === 'node scripts/check-canary-workflow.mjs && node scripts/check-dsh-next-contract.mjs')
 assertContract('full check includes the canary workflow contract', /(?:^|&&)\s*pnpm run check:canary-workflow(?:\s|$)/.test(packageJson.scripts?.check ?? ''))
+// Match a dedicated, required step in validate, not a comment or another job.
+const ciValidateJob = ciWorkflow.match(/^  validate:\s*\n([\s\S]*?)(?=^  \S|(?![\s\S]))/m)?.[1] ?? ''
+const ciValidateSteps = [...ciValidateJob.matchAll(/^      - [\s\S]*?(?=^      - |(?![\s\S]))/gm)]
+assertContract(
+  'PR CI validate runs the canary workflow contract as a required step',
+  !/^    (?:if|continue-on-error):/m.test(ciValidateJob) && ciValidateSteps.some(([step]) =>
+    /^        run: pnpm run check:canary-workflow[ \t]*$/m.test(step) &&
+    !step.split('\n').some(line => /^(?:      - |        )(?:if|continue-on-error):/.test(line)),
+  ),
+)
 assertContract(
   'CI executes Windows command-script and process-tree contracts',
   /^  windows-canary-contract:\s*$[\s\S]*?runs-on:\s*windows-latest[\s\S]*?node scripts\/check-dsh-next-contract\.mjs/mu.test(ciWorkflow),

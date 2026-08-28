@@ -35,6 +35,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
+      - name: Validate release workflow contract
+        run: pnpm run check:release-workflow
+      - name: Validate canary workflow contract
+        run: pnpm run check:canary-workflow
       - name: Lint package and source hygiene
         run: pnpm run lint
       - name: Typecheck host and browser entries
@@ -43,6 +47,8 @@ jobs:
         run: pnpm run test
       - name: Build
         run: pnpm run build
+      - name: Verify built capability CLI and child exit
+        run: pnpm run check:capability-cli
       - name: Validate package contents
         run: pnpm run pack:check
       - name: Validate isolated DSH installation

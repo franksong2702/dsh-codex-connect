@@ -41,5 +41,9 @@ const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf
 if (!/codex_connect_image_generate/u.test(client)) {
   throw new Error('lib/client.js does not register the image generation result view')
 }
+const nodeBuiltin = client.match(/\bnode:[a-z0-9_/-]+/iu)?.[0]
+if (nodeBuiltin !== undefined) {
+  throw new Error(`lib/client.js contains Node-only builtin ${nodeBuiltin}`)
+}
 
 process.stdout.write(`validated ${names.length} packed files (${manifest.size} bytes, ${manifest.unpackedSize} unpacked bytes)\n`)

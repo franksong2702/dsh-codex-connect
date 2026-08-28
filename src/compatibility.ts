@@ -156,7 +156,12 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
 /** Alias for callers that prefer assessment terminology. */
 export const assessCompatibility = evaluateCompatibility
 
-async function readPackageVersionFromEntry(name: CompatibilityPackageName): Promise<string | undefined> {
+/**
+ * Resolve installed package metadata without returning a filesystem path.
+ * @param name - package to resolve from this plugin installation.
+ * @returns its version, or undefined when metadata cannot be read.
+ */
+export async function readInstalledPackageVersion(name: string): Promise<string | undefined> {
   let entry: string
   try {
     const resolved = import.meta.resolve(name)
@@ -184,7 +189,7 @@ async function readPackageVersionFromEntry(name: CompatibilityPackageName): Prom
 
 /** Read installed package metadata and return only versions and statuses. */
 export async function detectCompatibility(options: CompatibilityDetectionOptions = {}): Promise<CompatibilityReport> {
-  const readVersion = options.readPackageVersion ?? readPackageVersionFromEntry
+  const readVersion = options.readPackageVersion ?? readInstalledPackageVersion
   const packageVersions = options.packageVersions ?? options.packages ?? options.installed?.packages
   const resolvedPackages = packageVersions === undefined
     ? Object.fromEntries(await Promise.all(COMPATIBILITY_PACKAGES.map(async name => [name, await readVersion(name)] as const)))

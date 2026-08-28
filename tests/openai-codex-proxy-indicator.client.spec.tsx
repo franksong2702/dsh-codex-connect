@@ -114,7 +114,7 @@ describe('OpenAI Codex session proxy indicator', () => {
       targets: [
         { id: 'codex-api', hostname: 'chatgpt.com', reachable: true, latencyMs: 18, statusCode: 401 },
         { id: 'oauth', hostname: 'auth.openai.com', reachable: false, latencyMs: 2500, error: 'ECONNREFUSED: proxy tunnel failed' },
-        { id: 'openai-api', hostname: 'api.openai.com', reachable: true, latencyMs: 31, statusCode: 200 },
+        { id: 'openai-api', hostname: 'api.openai.com', reachable: true, latencyMs: 31, statusCode: 302 },
       ],
     }
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
@@ -135,6 +135,12 @@ describe('OpenAI Codex session proxy indicator', () => {
     expect(document.querySelector('[data-openai-codex-proxy-indicator="active"]')).toBeTruthy()
     expect(document.querySelector('[data-openai-codex-connectivity="red"]')).toBeTruthy()
     expect(trigger.textContent).toBe('PROXY')
+    expect(trigger.getAttribute('data-openai-codex-proxy-flow')).toBe('water')
+    expect(trigger.hasAttribute('data-openai-codex-proxy-signal')).toBe(false)
+    expect(document.querySelector('[data-openai-codex-flow-lights="three-domains"]')).toBeTruthy()
+    expect(document.querySelector('[data-openai-codex-flow-light="chatgpt.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('green')
+    expect(document.querySelector('[data-openai-codex-flow-light="auth.openai.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('red')
+    expect(document.querySelector('[data-openai-codex-flow-light="api.openai.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('green')
     expect(screen.queryByRole('dialog')).toBeNull()
 
     fireEvent.mouseEnter(trigger)
@@ -143,7 +149,7 @@ describe('OpenAI Codex session proxy indicator', () => {
     expect(popup.textContent).toContain('chatgpt.com')
     expect(popup.textContent).toContain('auth.openai.com')
     expect(popup.textContent).not.toContain('ECONNREFUSED: proxy tunnel failed')
-    expect(document.querySelector('[data-openai-codex-domain="chatgpt.com"]')?.getAttribute('data-openai-codex-domain-signal')).toBe('yellow')
+    expect(document.querySelector('[data-openai-codex-domain="chatgpt.com"]')?.getAttribute('data-openai-codex-domain-signal')).toBe('green')
     expect(document.querySelector('[data-openai-codex-domain="auth.openai.com"]')?.getAttribute('data-openai-codex-domain-signal')).toBe('red')
     expect(document.querySelector('[data-openai-codex-domain="api.openai.com"]')?.getAttribute('data-openai-codex-domain-signal')).toBe('green')
     fireEvent.mouseEnter(screen.getByText('auth.openai.com'))
@@ -246,7 +252,7 @@ describe('OpenAI Codex session proxy indicator', () => {
     fireEvent.pointerUp(trigger, { pointerId: 1, clientX: -500, clientY: 900 })
 
     expect(root.style.left).toBe('296px')
-    expect(root.style.top).toBe('370px')
+    expect(root.style.top).toBe('358px')
     expect(localStorage.getItem('dsh-codex-connect.proxy-ball.session-drag')).not.toBeNull()
   })
 

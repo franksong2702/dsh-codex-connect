@@ -71,7 +71,7 @@ jobs:
         run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --resolved-latest "${{ needs.resolve.outputs.latest }}" --resolved-next "${{ needs.resolve.outputs.next }}" --report .canary/second.json
       - name: Record a confirmed compatibility alert
         if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           FIRST_REPORT: .canary/first.json
           SECOND_REPORT: .canary/second.json

@@ -13,7 +13,7 @@
 - 设置页只显示一张 **Codex Connect** 卡片。
 - 图片生成默认关闭，由用户在这张卡片中显式开启。
 - 开启后立即注册图片生成工具；关闭后不再接受新的图片生成调用。
-- 关闭能力不影响已经保存在会话里的图片继续预览和下载。原图预览初始完整适配窗口，放大后可拖动或滚动查看任意区域，并可恢复适屏显示。
+- 关闭能力不影响已经保存在会话里的图片继续预览和下载。对话预览初始完整适配窗口，放大后可拖动或滚动查看任意区域，并可恢复适屏显示；精确原文件通过单独下载动作获取。
 
 不再发布、安装或维护 `dsh-codex-connect-images`、`llm-openai-codex-images`、独立设置卡、独立发布 workflow 或第二套版本号。
 
@@ -81,10 +81,12 @@
 4. 文件头只接受有效 PNG、JPEG 或 WebP，并从文件本身解析宽高。
 5. media type 必须在运行期 allowlist 中。
 6. 像素数不超过 `maxImagePixels`。
-7. 所有图片一次性传给 `saveImages`；返回引用数量和 metadata 必须与输入严格一致。
-8. `attachmentId` 必须是非空字符串，但继续视为不透明标识，不假定哈希格式。
+7. 校验完成后先把服务返回的精确字节写入插件自有的版本化目录 `$DSH_HOME/dsh-codex-connect/images/v1`，文件和 metadata 权限仅限 owner；资产使用随机不透明 id，并记录所属 session、SHA-256、格式、尺寸和字节数。
+8. 再把同一批输入交给 `ctx.attachments.saveImages` 生成对话预览。DSH 可以按运行期策略缩放或重新编码，插件必须把返回的引用和 metadata 视为权威预览结果，不能要求它与原文件相同。
+9. DSH 返回的 `attachmentId` 必须是非空字符串，但继续视为不透明标识，不假定哈希格式。
+10. DSH 预览保存失败、返回数量不完整或 metadata 非法时，回滚本次新建的精确原文件；任何一张图片失败时，不向模型返回部分成功结果。
 
-任何一张图片失败时，不向模型返回部分成功结果。
+插件不自动删除已发布的原文件：关闭能力后历史结果仍可下载；卸载插件会保留文件，但结果卡片下载需要安装插件。数据保留策略由设备所有者管理。
 
 ## 6. 稳定结果格式
 
@@ -94,13 +96,25 @@
 {
   kind: 'codex-connect-images',
   schemaVersion: 1,
-  images: ImageAttachmentRef[]
+  prompt: string,
+  images: Array<{
+    original: {
+      assetId: string,
+      mediaType: 'image/png' | 'image/jpeg' | 'image/webp',
+      bytes: number,
+      width: number,
+      height: number,
+      name: string,
+      sha256: string
+    },
+    preview: ImageAttachmentRef
+  }>
 }
 ```
 
-每张图片只包含 DSH 附件展示所需的 `attachmentId`、`mediaType`、`bytes`、`width`、`height` 和可选 `name`。解码器拒绝未知 kind/version、空数组、超过 4 张、非法 media type、非正整数尺寸与字节数、空 attachment id。
+解码器拒绝未知 kind/version、空数组、超过 4 张、非法 media type、非正整数尺寸与字节数、非法 asset id、文件名、SHA-256 或空 attachment id。为兼容已经落盘的早期会话，缺少 `schemaVersion` 且 `images` 仍为 `ImageAttachmentRef[]` 的旧 metadata 会被解码为仅含 preview 的结果；其他未知格式不做自由文本猜测。
 
-为兼容早期会话，可以只解析历史工具输出的固定英文摘要；不得解析任意自由文本。
+原文件二进制不写入 session JSON；session 只持久化上述有界引用。
 
 ## 7. 浏览器展示
 
@@ -113,7 +127,9 @@
 - 校验读回 attachment id 与请求 id 一致。
 - Blob URL 按 session 缓存，在 session 切换或组件卸载时 revoke。
 - 错误、取消、重新认证和未知旧结果使用固定本地化状态，不显示私密响应内容。
-- 下载动作使用同一条 session-bound 附件读取路径。
+- **下载预览**继续使用同一条 session-bound 附件读取路径。
+- **下载原文件**使用插件注册的同源 GET 路由。路由必须复用可信 origin 判定，同时校验不透明 asset id。请求会话必须是创建时的 owner，或在 DSH 持久化的 fork 前缀中继承了完整匹配的原图引用；仅有父子关系不授予读取父会话全部图片的权限。读取后复核文件权限、SHA-256、格式、尺寸和字节数；不接受路径或客户端提供的继承证明作为输入。
+- 原文件下载路由由主插件常驻注册，不受 `enableImageGeneration` 当前值影响，以保证关闭生成能力后历史结果仍可下载。
 
 `@deepseek-ai/dsh-client-ui-slots` 是 DSH Web 的静态平台模块，只作为构建期依赖并 externalize，不得写进 `dsh.client.inject`。工具结果不依赖 `@deepseek-ai/dsh-client-ui-attachment`；后者的 rc.2 React atoms 只服务它注册的对话 slots。
 
@@ -142,7 +158,9 @@ git diff --check
 2. `dump-config` 只有一个 `llm-openai-codex`，新字段默认为 `false`。
 3. 设置页只有一张 Codex Connect 卡片，并显示精确中英文说明。
 4. 关闭时工具不可用；保存为开启后工具出现；再次关闭后新调用不可用。
-5. 关闭状态下仍能回放一条历史图片结果，画廊、Lightbox 和下载工作正常。
-6. 测试环境验证不读取或输出 OAuth 文件内容，不触碰 3080。
+5. 关闭状态下仍能回放一条历史图片结果，画廊、Lightbox、原文件下载和预览下载工作正常。
+6. 使用真实 `LocalAttachmentStore` 的测试证明：DSH 把预览缩小后，插件保存并下载的原文件仍与服务返回字节完全一致。
+7. 下载路由允许继承图片结果的 fork 会话（包括嵌套 fork 和恢复后的会话），拒绝提前 fork、无关会话、篡改引用、非法 asset id、非 GET 方法和不可信远端请求；损坏文件不会作为原图返回。
+8. 测试环境验证不读取或输出 OAuth 文件内容，不触碰 3080。
 
 只有上述门禁全部有可复查证据后，重构 PR 才具备合并条件。
