@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { DEFAULT_OPENAI_CODEX_SETTINGS, type OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
+import { DEFAULT_OPENAI_CODEX_SETTINGS, resolveOpenAICodexSettings, type OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
 import { OpenAICodexAccountStore } from '../../src/client/account-store.ts'
@@ -26,7 +26,7 @@ describe('Models account navigation', () => {
     }
     const listeners = new Set<() => void>()
     const set = vi.fn(async (field: string, value: unknown) => {
-      snapshot = { ...snapshot, value: { ...snapshot.value!, [field]: value }, revision: (snapshot.revision ?? 0) + 1 }
+      snapshot = { ...snapshot, value: resolveOpenAICodexSettings({ ...snapshot.value!, [field]: value }), revision: (snapshot.revision ?? 0) + 1 }
       for (const listener of listeners) listener()
     })
     const scope: SettingsScope<OpenAICodexSettingsConfig> = {
@@ -83,6 +83,22 @@ describe('Models account navigation', () => {
       await more.click()
       await expect.element(sol).toBeChecked()
       expect(set).toHaveBeenCalledTimes(2)
+      const modalModel = dialog.getByRole('group', { name: 'GPT-5.6 Sol', exact: true })
+      await modalModel.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+      await modalModel.getByRole('spinbutton', { name: en.contextTokens }).fill('350000')
+      await dialog.getByRole('button', { name: en.save, exact: true }).click()
+      await vi.waitFor(() => { expect(snapshot.value?.contextWindowOverrides).toEqual({ 'gpt-5.6-sol': 350_000 }) })
+      await dialog.getByRole('button', { name: en.closeSettings, exact: true }).click()
+      const pluginModel = plugin.getByRole('group', { name: 'GPT-5.6 Sol', exact: true })
+      await pluginModel.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+      await expect.element(pluginModel.getByRole('spinbutton', { name: en.contextTokens })).toHaveValue(350_000)
+      await pluginModel.getByRole('button', { name: en.contextReset, exact: true }).click()
+      await plugin.getByRole('button', { name: en.save, exact: true }).click()
+      await vi.waitFor(() => { expect(snapshot.value?.contextWindowOverrides).toEqual({}) })
+      await more.click()
+      await modalModel.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+      await expect.element(modalModel.getByRole('spinbutton', { name: en.contextTokens })).toHaveValue(null)
+      expect(set).toHaveBeenCalledTimes(4)
       await dialog.getByRole('button', { name: en.closeSettings, exact: true }).click()
     } finally {
       document.removeEventListener('keydown', parentEscape)
