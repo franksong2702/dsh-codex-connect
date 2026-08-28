@@ -7,7 +7,7 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("ctx.slots.inject('settings.models.footer'")
     expect(client).toContain("id: 'dsh-codex-connect-account'")
     expect(client).toContain('({ t, configScope, updater, account })')
-    expect(client).toContain('inject: () => ({ t, account })')
+    expect(client).toContain('inject: () => ({ t, account, configScope })')
     expect(client).toContain('account.dispose()')
     expect(client.match(/new OpenAICodexAccountStore\(\)/g)).toHaveLength(1)
     expect(client).not.toContain("ctx.slots.inject('settings.models.provider-card'")

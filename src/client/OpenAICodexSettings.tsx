@@ -6,7 +6,7 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexUsage } from '../usage.ts'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
-import type { AccountStatus } from './account-store.ts'
+import type { AccountStatus, AccountSnapshot } from './account-store.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
 import { OpenAICodexUpdateSettings } from './OpenAICodexUpdateNotice.tsx'
@@ -112,7 +112,9 @@ function QuotaBar({
   )
 }
 
-function UsageLimits({ usage, quotaError, t }: {
+/** Quota rows shared by Models and Plugin settings. */
+export function UsageLimits({ usage, quotaError, t, heading = true }: {
+  heading?: boolean
   usage: OpenAICodexUsage
   quotaError?: string
   t: OpenAICodexSettingsInjected['t']
@@ -120,7 +122,7 @@ function UsageLimits({ usage, quotaError, t }: {
   const hasData = usage.rateLimits.length > 0 || usage.credits !== undefined || usage.individualLimit !== undefined
   return (
     <div style={quotaListStyle}>
-      <h3 style={quotaTitleStyle}>{t('usageLimits')}</h3>
+      {heading ? <h3 style={quotaTitleStyle}>{t('usageLimits')}</h3> : null}
       {usage.rateLimits.map(limit => (
         <div key={limit.id} style={quotaGroupStyle}>
           {limit.windows.map(window => (
@@ -183,15 +185,37 @@ export function accountStatusLabel(status: AccountStatus['status'], t: OpenAICod
   return t(keys[status])
 }
 
-/** OpenAI Codex account status and OAuth actions. */
-export function OpenAICodexSettings({ t, configScope, updater, account, embedded = false, accountOnly = false }: OpenAICodexSettingsProps) {
-  if (t === undefined) throw new Error('OpenAI Codex settings requires its translation function')
-  const [localAccount] = useState(() => new OpenAICodexAccountStore())
-  const store = account ?? localAccount
-  const { status, busy, loginUrl } = useSyncExternalStore(store.subscribe, store.getSnapshot)
+/** Shared OAuth actions; Models uses shorter, task-oriented labels. */
+export function AccountActions({ t, store, snapshot, compact = false }: {
+  t: OpenAICodexSettingsInjected['t']
+  store: OpenAICodexAccountStore
+  snapshot: AccountSnapshot
+  compact?: boolean
+}) {
+  const { status, busy } = snapshot
+  if (status.status === 'loading' || status.status === 'remote-web-origin-not-trusted') return null
+  if (status.status === 'signed-in') return <button type="button" style={buttonStyle} disabled={busy}
+    onClick={() => { void store.signOut() }}>{busy ? t('working') : t('logout')}</button>
+  if (status.status === 'signing-in') return <div style={rowStyle}>
+    <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signIn() }}>
+      {busy ? t('working') : t(compact ? 'continueAuthorization' : 'reopenAuthorization')}
+    </button>
+    <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.cancel() }}>{t('cancelSignIn')}</button>
+  </div>
+  const retry = status.status === 'error' || status.status === 'reauth-required'
+  const action = retry ? t(compact ? 'reauthorize' : 'loginAgain') : t(compact ? 'authorize' : 'login')
+  return <button type="button" style={primaryButtonStyle} disabled={busy}
+    onClick={() => { void store.signIn() }}>{busy ? t('working') : action}</button>
+}
+
+/** Recovery links, errors and trusted-origin guidance in either account entry. */
+export function AccountFeedback({ t, snapshot }: {
+  t: OpenAICodexSettingsInjected['t']
+  snapshot: AccountSnapshot
+}) {
+  const { status, loginUrl } = snapshot
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
-  const titleId = useId()
   const trustedOriginCommand = `dsh plugin --profile web exec dsh-codex-connect trust-origin ${window.location.origin}`
 
   const copyTrustedOriginCommand = async (): Promise<void> => {
@@ -204,6 +228,48 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
       setCopyFailed(true)
     }
   }
+
+  return <>
+    {loginUrl === undefined ? null : (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+        <p style={bodyStyle}>{t('authorizationHelp')}</p>
+        <a
+          href={loginUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...primaryButtonStyle, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+        >
+          {t('openLoginInBrowser')}
+        </a>
+      </div>
+    )}
+    {status.status === 'error' || status.status === 'reauth-required'
+      ? <p style={errorStyle}>{status.message}</p>
+      : null}
+    {status.status === 'remote-web-origin-not-trusted' ? (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <p style={errorStyle}>{t('remoteOriginDescription')}</p>
+        <p style={bodyStyle}>{t('remoteOriginCommandHelp')}</p>
+        <code style={commandStyle}>{trustedOriginCommand}</code>
+        <div style={rowStyle}>
+          <button type="button" style={buttonStyle} onClick={() => { void copyTrustedOriginCommand() }}>
+            {copied ? t('remoteOriginCopied') : t('remoteOriginCopy')}
+          </button>
+          {copyFailed ? <span style={errorStyle}>{t('remoteOriginCopyFailed')}</span> : null}
+        </div>
+      </div>
+    ) : null}
+  </>
+}
+
+/** OpenAI Codex account status and OAuth actions. */
+export function OpenAICodexSettings({ t, configScope, updater, account, embedded = false, accountOnly = false }: OpenAICodexSettingsProps) {
+  if (t === undefined) throw new Error('OpenAI Codex settings requires its translation function')
+  const [localAccount] = useState(() => new OpenAICodexAccountStore())
+  const store = account ?? localAccount
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const { status } = snapshot
+  const titleId = useId()
 
   const label = accountStatusLabel(status.status, t)
 
@@ -226,46 +292,9 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
             <span aria-hidden="true" style={dotStyle(status.status)} />
             <span>{label}</span>
           </div>
-          {status.status === 'loading' || status.status === 'remote-web-origin-not-trusted'
-            ? null
-            : status.status === 'signed-in'
-            ? <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signOut() }}>{busy ? t('working') : t('logout')}</button>
-            : status.status === 'signing-in'
-            ? <div style={rowStyle}>
-              <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signIn() }}>{busy ? t('working') : t('reopenAuthorization')}</button>
-              <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.cancel() }}>{t('cancelSignIn')}</button>
-            </div>
-            : <button type="button" style={primaryButtonStyle} disabled={busy} onClick={() => { void store.signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
+          <AccountActions t={t} store={store} snapshot={snapshot} />
         </div>
-        {loginUrl === undefined ? null : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-            <p style={bodyStyle}>{t('authorizationHelp')}</p>
-            <a
-              href={loginUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ ...primaryButtonStyle, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-            >
-              {t('openLoginInBrowser')}
-            </a>
-          </div>
-        )}
-        {status.status === 'error' || status.status === 'reauth-required'
-          ? <p style={errorStyle}>{status.message}</p>
-          : null}
-        {status.status === 'remote-web-origin-not-trusted' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <p style={errorStyle}>{t('remoteOriginDescription')}</p>
-            <p style={bodyStyle}>{t('remoteOriginCommandHelp')}</p>
-            <code style={commandStyle}>{trustedOriginCommand}</code>
-            <div style={rowStyle}>
-              <button type="button" style={buttonStyle} onClick={() => { void copyTrustedOriginCommand() }}>
-                {copied ? t('remoteOriginCopied') : t('remoteOriginCopy')}
-              </button>
-              {copyFailed ? <span style={errorStyle}>{t('remoteOriginCopyFailed')}</span> : null}
-            </div>
-          </div>
-        ) : null}
+        <AccountFeedback t={t} snapshot={snapshot} />
         {status.status === 'signed-in'
           ? <UsageLimits
               usage={status.usage}

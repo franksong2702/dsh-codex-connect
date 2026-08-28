@@ -73,7 +73,7 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.models.footer',
     id: 'dsh-codex-connect-account',
     order: 100,
-    inject: () => ({ t, account }),
+    inject: () => ({ t, account, configScope }),
   }, OpenAICodexModelsCard))
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({

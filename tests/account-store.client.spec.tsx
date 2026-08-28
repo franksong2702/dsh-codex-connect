@@ -12,7 +12,46 @@ const json = (value: unknown) => new Response(JSON.stringify(value), { status: 2
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('shared Models and Plugin account state', () => {
-  it.each([['en', en], ['zh', zh]] as const)('renders a compact provider row with plugin attribution in %s and expands account controls only on demand', async (_locale, messages) => {
+  it.each([
+    [{ status: 'signing-in' }, en.continueAuthorization],
+    [{ status: 'reauth-required', message: 'Authorization expired' }, en.reauthorize],
+    [{ status: 'error', message: 'Request failed' }, en.reauthorize],
+  ])('keeps recovery controls visible for %j without expanding quota', async (status, action) => {
+    vi.stubGlobal('fetch', async () => json(status))
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexModelsCard t={t} account={account} />)
+    expect(await screen.findByRole('button', { name: action as string })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.viewQuota })).toBeNull()
+    if ('message' in status) expect(screen.getByText(status.message as string)).toBeTruthy()
+    if (status.status === 'signing-in') expect(screen.getByRole('button', { name: en.cancelSignIn })).toBeTruthy()
+    account.dispose()
+  })
+
+  it('discloses only server quota rows, reset details and errors while preserving one account header', async () => {
+    vi.stubGlobal('fetch', async () => json({ status: 'signed-in', quotaError: 'Partial quota response', usage: {
+      rateLimits: [
+        { id: 'codex', name: 'Codex', windows: [{ windowSeconds: 604800, remainingPercent: 92, resetAt: 1790000000 }] },
+        { id: 'spark', name: 'Spark', windows: [{ windowSeconds: 18000, remainingPercent: 100, resetAt: 1790000000 }, { windowSeconds: 604800, remainingPercent: 99, resetAt: 1790000000 }] },
+        { id: 'gpt-reserve', windows: [{ windowSeconds: 604800, remainingPercent: 98, resetAt: 1790000000 }] },
+      ],
+    } }))
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexModelsCard t={t} account={account} />)
+    const view = await screen.findByRole('button', { name: en.viewQuota })
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    fireEvent.click(view)
+    expect(screen.getAllByRole('progressbar')).toHaveLength(4)
+    expect(screen.getByRole('progressbar', { name: 'Codex · Weekly limit' }).getAttribute('aria-valuenow')).toBe('92')
+    expect(screen.getAllByText(en.resetAt)).toHaveLength(4)
+    expect(screen.getByText(en.quotaUnavailable)).toBeTruthy()
+    expect(screen.getAllByText(en.signedIn)).toHaveLength(1)
+    expect(screen.queryByText(en.accountHeading)).toBeNull()
+    expect(screen.queryByText(en.usageLimits)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: en.hideQuota }))
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    account.dispose()
+  })
+  it.each([['en', en], ['zh', zh]] as const)('renders direct authorization and plugin attribution in %s without duplicate account headings', async (_locale, messages) => {
     vi.stubGlobal('fetch', async () => json({ status: 'signed-out' }))
     const account = new OpenAICodexAccountStore()
     render(<OpenAICodexModelsCard t={key => messages[key]} account={account} />)
@@ -22,8 +61,9 @@ describe('shared Models and Plugin account state', () => {
     expect(screen.queryByText(messages.title, { exact: true })).toBeNull()
     expect(screen.queryByText(messages.intro)).toBeNull()
     expect(screen.queryByRole('button', { name: messages.login })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: messages.manageAccount }))
-    expect(screen.getByRole('button', { name: messages.login })).toBeTruthy()
+    expect(screen.getByRole('button', { name: messages.authorize })).toBeTruthy()
+    expect(screen.queryByText(messages.accountHeading)).toBeNull()
+    expect(screen.queryByRole('button', { name: messages.viewQuota })).toBeNull()
     account.dispose()
   })
 
@@ -58,7 +98,12 @@ describe('shared Models and Plugin account state', () => {
     await waitFor(() => { expect(screen.getAllByText(en.signedIn)).toHaveLength(2) })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const models = within(screen.getByTestId('models'))
-    fireEvent.click(models.getByRole('button', { name: en.manageAccount }))
+    fireEvent.click(models.getByRole('button', { name: en.viewQuota }))
+    expect(models.queryByText(en.accountHeading)).toBeNull()
+    expect(models.queryByText(en.usageLimits)).toBeNull()
+    expect(models.getAllByRole('button', { name: en.logout })).toHaveLength(1)
+    expect(models.getAllByText(en.signedIn)).toHaveLength(1)
+    expect(models.getByText(en.quotaUnavailable)).toBeTruthy()
     expect(models.getByText(en.modelsAccountHelp)).toBeTruthy()
     expect(models.queryByRole('checkbox')).toBeNull()
     fireEvent.click(models.getByRole('button', { name: en.logout }))
@@ -77,8 +122,7 @@ describe('shared Models and Plugin account state', () => {
     vi.spyOn(window, 'open').mockReturnValue(null)
     const account = new OpenAICodexAccountStore()
     const view = render(<OpenAICodexModelsCard t={t} account={account} />)
-    fireEvent.click(screen.getByRole('button', { name: en.manageAccount }))
-    fireEvent.click(await screen.findByRole('button', { name: en.login }))
+    fireEvent.click(await screen.findByRole('button', { name: en.authorize }))
     view.rerender(<OpenAICodexSettings t={t} account={account} embedded />)
     expect((screen.getByRole('button', { name: en.working }) as HTMLButtonElement).disabled).toBe(true)
     await act(async () => { await account.signIn() })
