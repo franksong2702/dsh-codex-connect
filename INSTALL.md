@@ -56,6 +56,8 @@ These choices reflect the repository's existing verification record, not a new i
 
 6. If the user explicitly requests login, open **Settings → Plugins → Plugin configuration → Codex Connect**, or check `status` and then use `login` or `login --device-code`. OAuth approval belongs to the user.
 
+   The unreleased DSH 0.1.2 branch additionally offers the same account actions in **Settings → Models → Codex Connect**. Advanced configuration remains under Plugins; neither entry automatically starts login or changes model/search defaults.
+
 ### Remote browser access
 
 The default Web OAuth boundary is loopback-only. When DSH runs on one device and you open it from another device on a trusted network through an IP address or domain, run the following on the device that runs DSH with the exact origin from the browser address bar:

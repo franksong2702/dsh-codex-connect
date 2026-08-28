@@ -1,35 +1,16 @@
 /** Plugin-owned OpenAI Codex account controls used inside Plugin configuration. */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState, useSyncExternalStore, useId } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexUsage } from '../usage.ts'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
-import {
-  OPENAI_CODEX_AUTH_LOGIN_PATH,
-  OPENAI_CODEX_AUTH_LOGOUT_PATH,
-  OPENAI_CODEX_AUTH_STATUS_PATH,
-} from '../auth-paths.ts'
+import { OpenAICodexAccountStore } from './account-store.ts'
+import type { AccountStatus } from './account-store.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
 import { OpenAICodexUpdateSettings } from './OpenAICodexUpdateNotice.tsx'
 import type { OpenAICodexUpdateStore } from './update-store.ts'
-
-const POLL_INTERVAL_MS = 1_000
-const USAGE_POLL_INTERVAL_MS = 60_000
-
-type AccountStatus =
-  | { status: 'loading' }
-  | { status: 'signed-out' }
-  | { status: 'signing-in' }
-  | { status: 'reauth-required'; message: string }
-  | { status: 'signed-in'; usage: OpenAICodexUsage; quotaError?: string }
-  | { status: 'remote-web-origin-not-trusted' }
-  | { status: 'error'; message: string }
-
-interface LoginChallenge {
-  url: string
-}
 
 /** Dependencies injected by the browser plugin entry. */
 export interface OpenAICodexSettingsInjected {
@@ -39,12 +20,16 @@ export interface OpenAICodexSettingsInjected {
   configScope: SettingsScope<OpenAICodexSettingsConfig>
   /** Shared browser update state used by the global overlay and this card. */
   updater?: OpenAICodexUpdateStore
+  /** Shared across Models and Plugin settings by the browser-plugin owner. */
+  account?: OpenAICodexAccountStore
 }
 
 /** Props delivered by the settings slot renderer. */
 export type OpenAICodexSettingsProps = Partial<OpenAICodexSettingsInjected> & {
   /** Omit the page heading and outer card chrome inside Plugin configuration. */
   embedded?: boolean
+  /** Models exposes account controls only; advanced options remain under Plugins. */
+  accountOnly?: boolean
 }
 
 const pageStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 720 }
@@ -187,134 +172,25 @@ function dotStyle(status: AccountStatus['status']): CSSProperties {
   return { width: 9, height: 9, borderRadius: '50%', flex: '0 0 auto', background: color }
 }
 
-class AccountRequestError extends Error {
-  constructor(readonly code: string, message: string) {
-    super(message)
-    this.name = 'AccountRequestError'
-  }
-}
-
-async function jsonRequest<T>(path: string, method = 'GET', signal?: AbortSignal): Promise<T> {
-  const response = await fetch(path, {
-    method,
-    headers: { accept: 'application/json' },
-    credentials: 'same-origin',
-    ...signal === undefined ? {} : { signal },
-  })
-  const value: unknown = await response.json().catch(() => undefined)
-  if (!response.ok) {
-    const code = typeof value === 'object' && value !== null && 'error' in value && typeof value.error === 'string'
-      ? value.error
-      : `HTTP ${response.status}`
-    throw new AccountRequestError(code, code)
-  }
-  return value as T
-}
-
 /** OpenAI Codex account status and OAuth actions. */
-export function OpenAICodexSettings({ t, configScope, updater, embedded = false }: OpenAICodexSettingsProps) {
+export function OpenAICodexSettings({ t, configScope, updater, account, embedded = false, accountOnly = false }: OpenAICodexSettingsProps) {
   if (t === undefined) throw new Error('OpenAI Codex settings requires its translation function')
-  const [status, setStatus] = useState<AccountStatus>({ status: 'loading' })
-  const [busy, setBusy] = useState(false)
+  const [localAccount] = useState(() => new OpenAICodexAccountStore())
+  const store = account ?? localAccount
+  const { status, busy, loginUrl } = useSyncExternalStore(store.subscribe, store.getSnapshot)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
-  const [loginUrl, setLoginUrl] = useState<string>()
-  const mounted = useRef(true)
-
+  const titleId = useId()
   const trustedOriginCommand = `dsh plugin --profile web exec dsh-codex-connect trust-origin ${window.location.origin}`
-
-  useEffect(() => {
-    mounted.current = true
-    return () => { mounted.current = false }
-  }, [])
-
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const nextStatus = await jsonRequest<AccountStatus>(OPENAI_CODEX_AUTH_STATUS_PATH, 'GET', signal)
-      if (mounted.current && signal?.aborted !== true) setStatus(nextStatus)
-    } catch (error: unknown) {
-      if (mounted.current && signal?.aborted !== true) {
-        setStatus(error instanceof AccountRequestError && error.code === 'remote-web-origin-not-trusted'
-          ? { status: 'remote-web-origin-not-trusted' }
-          : { status: 'error', message: error instanceof Error ? error.message : t('requestFailed') })
-      }
-    }
-  }, [t])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    void refresh(controller.signal)
-    return () => { controller.abort() }
-  }, [refresh])
-  useEffect(() => {
-    const interval = status.status === 'signing-in'
-      ? POLL_INTERVAL_MS
-      : status.status === 'signed-in' ? USAGE_POLL_INTERVAL_MS : undefined
-    if (interval === undefined) return
-    const controller = new AbortController()
-    const timer = window.setInterval(() => { void refresh(controller.signal) }, interval)
-    return () => {
-      window.clearInterval(timer)
-      controller.abort()
-    }
-  }, [refresh, status.status])
-
-  useEffect(() => {
-    if (status.status !== 'signing-in') setLoginUrl(undefined)
-  }, [status.status])
-
-  const signIn = async (): Promise<void> => {
-    const popup = window.open('about:blank', '_blank')
-    if (popup !== null) popup.opener = null
-    setBusy(true)
-    setStatus({ status: 'signing-in' })
-    try {
-      const challenge = await jsonRequest<LoginChallenge>(OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST')
-      if (!mounted.current) {
-        popup?.close()
-        return
-      }
-      if (popup !== null) {
-        setLoginUrl(undefined)
-        popup.location.replace(challenge.url)
-      } else {
-        setLoginUrl(challenge.url)
-      }
-    } catch (error: unknown) {
-      popup?.close()
-      setLoginUrl(undefined)
-      if (mounted.current) {
-        setStatus(error instanceof AccountRequestError && error.code === 'remote-web-origin-not-trusted'
-          ? { status: 'remote-web-origin-not-trusted' }
-          : { status: 'error', message: error instanceof Error ? error.message : t('requestFailed') })
-      }
-    } finally {
-      if (mounted.current) setBusy(false)
-    }
-  }
 
   const copyTrustedOriginCommand = async (): Promise<void> => {
     setCopyFailed(false)
     try {
       if (navigator.clipboard?.writeText === undefined) throw new Error('clipboard unavailable')
       await navigator.clipboard.writeText(trustedOriginCommand)
-      if (mounted.current) setCopied(true)
+      setCopied(true)
     } catch {
-      if (mounted.current) setCopyFailed(true)
-    }
-  }
-
-  const signOut = async (): Promise<void> => {
-    setBusy(true)
-    try {
-      await jsonRequest<{ ok: true }>(OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST')
-      if (mounted.current) setStatus({ status: 'signed-out' })
-    } catch (error: unknown) {
-      if (mounted.current) {
-        setStatus({ status: 'error', message: error instanceof Error ? error.message : t('requestFailed') })
-      }
-    } finally {
-      if (mounted.current) setBusy(false)
+      setCopyFailed(true)
     }
   }
 
@@ -335,16 +211,16 @@ export function OpenAICodexSettings({ t, configScope, updater, embedded = false 
   return (
     <section
       style={embedded ? embeddedPageStyle : pageStyle}
-      {...embedded ? { 'aria-label': t('title') } : { 'aria-labelledby': 'openai-codex-settings-title' }}
+      {...embedded ? { 'aria-label': t('title') } : { 'aria-labelledby': titleId }}
     >
       {embedded ? null : (
         <div>
-          <h2 id="openai-codex-settings-title" style={titleStyle}>{t('title')}</h2>
+          <h2 id={titleId} style={titleStyle}>{t('title')}</h2>
           <p style={{ ...bodyStyle, marginTop: 6 }}>{t('intro')}</p>
         </div>
       )}
       <div style={embedded ? embeddedCardStyle : cardStyle}>
-        {updater === undefined ? null : <OpenAICodexUpdateSettings t={t} updater={updater} />}
+        {accountOnly || updater === undefined ? null : <OpenAICodexUpdateSettings t={t} updater={updater} />}
         <h3 style={quotaTitleStyle}>{t('accountHeading')}</h3>
         <div style={rowStyle}>
           <div style={statusStyle} role="status">
@@ -354,10 +230,10 @@ export function OpenAICodexSettings({ t, configScope, updater, embedded = false 
           {status.status === 'loading' || status.status === 'remote-web-origin-not-trusted'
             ? null
             : status.status === 'signed-in'
-            ? <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void signOut() }}>{busy ? t('working') : t('logout')}</button>
+            ? <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signOut() }}>{busy ? t('working') : t('logout')}</button>
             : status.status === 'signing-in' && loginUrl !== undefined
             ? null
-            : <button type="button" style={primaryButtonStyle} disabled={busy} onClick={() => { void signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
+            : <button type="button" style={primaryButtonStyle} disabled={busy || status.status === 'signing-in'} onClick={() => { void store.signIn() }}>{busy ? t('working') : status.status === 'error' || status.status === 'reauth-required' ? t('loginAgain') : t('login')}</button>}
         </div>
         {loginUrl === undefined ? null : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
@@ -395,10 +271,10 @@ export function OpenAICodexSettings({ t, configScope, updater, embedded = false 
               t={t}
             />
           : null}
-        <OpenAICodexConfiguration
+        {accountOnly ? <p style={bodyStyle}>{t('modelsAccountHelp')}</p> : <OpenAICodexConfiguration
           t={t}
           {...configScope === undefined ? {} : { scope: configScope }}
-        />
+        />}
       </div>
     </section>
   )

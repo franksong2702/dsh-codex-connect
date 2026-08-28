@@ -3,6 +3,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings-models/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
@@ -31,6 +32,8 @@ import type { CodexImageToolViewInjected } from './CodexImageToolView.tsx'
 import { OpenAICodexUpdateOverlay } from './OpenAICodexUpdateNotice.tsx'
 import { OpenAICodexUpdateStore } from './update-store.ts'
 import { CODEX_CONNECT_VERSION } from '../version.ts'
+import { OpenAICodexAccountStore } from './account-store.ts'
+import { OpenAICodexModelsCard } from './OpenAICodexModelsCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -48,6 +51,8 @@ export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope
 export function apply(ctx: ClientContext): void {
   const namespace = 'settings.openai-codex'
   const updater = new OpenAICodexUpdateStore(CODEX_CONNECT_VERSION)
+  const account = new OpenAICodexAccountStore()
+  ctx.effect(() => () => { account.dispose() }, 'dsh-codex-connect: account observation')
   ctx.effect(() => {
     void updater.refresh()
     return () => { updater.dispose() }
@@ -61,8 +66,15 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     key: OPENAI_CODEX_SETTINGS_NAMESPACE,
-    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater }),
+    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
   }, OpenAICodexPluginCard))
+
+  ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
+    name: 'settings.models.footer',
+    id: 'dsh-codex-connect-account',
+    order: 100,
+    inject: () => ({ t, account }),
+  }, OpenAICodexModelsCard))
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',

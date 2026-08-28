@@ -68,6 +68,8 @@ Expected result: the Harness web UI opens for the selected profile.
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect**.
 
+On this unreleased DSH `0.1.2-alpha.1` branch, **Settings → Models** also includes a Codex Connect account card for ChatGPT sign-in, reauthorization, sign-out and quota. Both pages share one in-memory account state and polling owner; proxy, model visibility, search and image configuration remain under Plugins. The Models footer is optional: profiles without that settings section retain the existing Plugin entry. This is not a new compatibility claim for the published Alpha 4.21 package.
+
 Expected result: a fresh installation shows **Not signed in** and a **Sign in with ChatGPT** button. The card is where you later manage optional capabilities too.
 
 <p align="center">
