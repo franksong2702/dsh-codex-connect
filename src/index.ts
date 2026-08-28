@@ -16,7 +16,7 @@ import type {} from '@deepseek-ai/dsh-web'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
+import { assertOpenAICodexContextWindowModelIds, createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { registerOpenAICodexProxyRoutes } from './proxy-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
@@ -101,6 +101,7 @@ import {
   isValidOpenAICodexProxyUrl,
   resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
+  resolveOpenAICodexContextWindowOverrides,
 } from './settings-contract.ts'
 
 export {
@@ -228,10 +229,11 @@ export interface Config {
   /**
    * Per-model context-window overrides keyed by catalog model id. Each value
    * replaces the advertised `contextWindow` for that model inside the adapter
-   * profile, so Harness compaction and context budgets follow the value the
-   * Codex backend actually accepts rather than a stale catalog snapshot.
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
+   * Null disables inherited overrides; an omitted field inherits lower layers.
    */
-  contextWindowOverrides?: Record<string, number> | undefined
+  contextWindowOverrides?: Record<string, number> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -252,7 +254,10 @@ export const Config: z<Config> = z.object({
   models: z.union([z.const(undefined), z.array(z.string())]),
   enableProxy: z.boolean().default(false),
   proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
-  contextWindowOverrides: z.union([z.const(undefined), z.dict(z.number().step(1).min(1))]),
+  contextWindowOverrides: z.transform(
+    z.union([z.const(undefined), z.dict(z.number())]),
+    resolveOpenAICodexContextWindowOverrides,
+  ),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
@@ -270,6 +275,12 @@ export const Config: z<Config> = z.object({
  * @param config - capability gates and standalone-search tuning.
  */
 export function apply(ctx: Context, config: Config): void {
+  const catalog = openAICodexModelCatalog()
+  const validateSettings = (value: Config): void => {
+    const resolved = resolveOpenAICodexSettings(value)
+    assertOpenAICodexContextWindowModelIds(resolved.contextWindowOverrides, catalog)
+  }
+  validateSettings(config)
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
@@ -424,7 +435,7 @@ export function apply(ctx: Context, config: Config): void {
 
   installSettingsSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
     validate(value) {
-      resolveOpenAICodexSettings(value)
+      validateSettings(value)
       if (value.enableProxy === true && !isValidOpenAICodexProxyUrl(value.proxyUrl)) {
         throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
       }

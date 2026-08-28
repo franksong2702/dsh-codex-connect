@@ -362,7 +362,8 @@ type OpenAICodexSearchMode = 'cached' | 'indexed' | 'live';
 type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high';
 /**
  * Whether a value is a bounded per-model context-window override map. Keys
- * are exact catalog model ids; values are positive integers.
+ * are nonempty, unpadded model ids; values are positive safe integers.
+ * An empty resolved map contains no overrides. The Host checks catalog membership.
  */
 declare function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number>>;
 /** Default model used by the standalone search endpoint. */
@@ -384,8 +385,8 @@ interface OpenAICodexSettingsConfig {
   /**
    * Per-model context-window overrides keyed by catalog model id. Each value
    * replaces the advertised `contextWindow` for that model inside the adapter
-   * profile, so Harness compaction and context budgets follow the value the
-   * Codex backend actually accepts rather than a stale catalog snapshot.
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined;
   enableSearch: boolean;
@@ -397,10 +398,14 @@ interface OpenAICodexSettingsConfig {
   searchMaxOutputTokens: number;
 }
 declare const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig>;
+/** Input settings allow null to disable overrides inherited from a lower settings layer. */
+interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
+  contextWindowOverrides?: Readonly<Record<string, number>> | null | undefined;
+}
 /** Fill the schema defaults even when called without Cordis validation. */
-declare function resolveOpenAICodexSettings(value: Partial<OpenAICodexSettingsConfig>): OpenAICodexSettingsConfig;
+declare function resolveOpenAICodexSettings(value: OpenAICodexSettingsInput): OpenAICodexSettingsConfig;
 /** Resolve the active proxy without treating a disabled value as a route. */
-declare function resolveOpenAICodexProxyUrl(value: Partial<OpenAICodexSettingsConfig>): string | undefined;
+declare function resolveOpenAICodexProxyUrl(value: OpenAICodexSettingsInput): string | undefined;
 /** Narrow the redacted settings wire payload before it enters React state. */
 declare function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsConfig | undefined;
 //#endregion
@@ -683,10 +688,11 @@ interface Config {
   /**
    * Per-model context-window overrides keyed by catalog model id. Each value
    * replaces the advertised `contextWindow` for that model inside the adapter
-   * profile, so Harness compaction and context budgets follow the value the
-   * Codex backend actually accepts rather than a stale catalog snapshot.
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
+   * Null disables inherited overrides; an omitted field inherits lower layers.
    */
-  contextWindowOverrides?: Record<string, number> | undefined;
+  contextWindowOverrides?: Record<string, number> | null | undefined;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
   /** Register the optional image-loading tool. */

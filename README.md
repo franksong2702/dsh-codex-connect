@@ -240,18 +240,26 @@ Selecting Codex as the profile's global search route is another explicit change:
 
 ### Context-window overrides
 
-The advertised model `contextWindow` in the bundled pi-ai catalog may lag what the Codex backend actually accepts for an OAuth account. To align Harness context budgeting and automatic compaction with the live server value, map exact catalog model ids to token counts:
+Use `contextWindowOverrides` to opt into a per-model client context budget when you have evidence that the bundled catalog does not fit your deployment. It cannot enlarge the OpenAI backend's context capacity. Overrides default off; this feature does not verify the community-reported larger windows.
 
 ```yaml
 - id: llm-openai-codex
   config:
     contextWindowOverrides:
+      # Illustration only: 350000 is not a verified or recommended server limit.
       gpt-5.6-sol: 350000
-      gpt-5.6-terra: 350000
-      gpt-5.6-luna: 350000
 ```
 
-Each value replaces that model's `contextWindow` inside the adapter profile. Compaction triggers at 80% of the resolved value, so `350000` compacts at roughly `280000` tokens instead of the catalog default's `~217600`. Overrides are per-model and additive: models without an entry keep the advertised catalog value. The value is a client-side budget, not a server guarantee — sending more input than the backend accepts is rejected by the provider, so prefer a value below the documented server ceiling and keep `maxTokens` unchanged. An empty map and an omitted map both mean no override.
+Keys must exactly match models in the installed Codex catalog; unknown ids reject the configuration or settings write with an explicit error. Maps accept at most 256 entries and positive safe-integer token counts. Other models keep their catalog metadata. Output-token limits, transport (SSE), and DSH's compaction policy are unchanged. Leave room for output and protocol overhead below your independently verified server limit. For a deployment configured to compact at 80%, a client window of `350000` gives a nominal threshold of `280000`; this arithmetic is not evidence that the server accepts that input size.
+
+Persisted Host settings are applied on plugin load, and changes affect the next model resolution or prepared request. Already prepared requests retain their captured budget. The original catalog is never mutated.
+
+To restore defaults, distinguish the settings layers:
+
+- A resolved empty map `{}` or no override uses catalog windows.
+- DSH recursively merges settings maps. Updating an existing map with `{}` is therefore not a clear operation.
+- Set `contextWindowOverrides: null` to explicitly disable all overrides, including values inherited from composition.
+- Removing the stored field re-inherits composition settings; with no composition override, it restores catalog windows. Removing one stored model entry similarly restores that model's composition or catalog value.
 
 ## Reauthentication, diagnostics, and conflicts
 

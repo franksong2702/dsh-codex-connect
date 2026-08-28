@@ -5,7 +5,9 @@ import {
   decodeOpenAICodexSettings,
   isValidOpenAICodexContextWindowOverrides,
   resolveOpenAICodexProxyUrl,
+  resolveOpenAICodexSettings,
 } from '../src/settings-contract.ts'
+import { Config } from '../src/index.ts'
 
 describe('OpenAI Codex proxy settings contract', () => {
   it('keeps fresh and legacy settings on direct connection', () => {
@@ -67,7 +69,7 @@ describe('OpenAI Codex proxy settings contract', () => {
   })
 
   it('rejects malformed context-window overrides', () => {
-    expect(isValidOpenAICodexContextWindowOverrides({})).toBe(false)
+    expect(isValidOpenAICodexContextWindowOverrides({})).toBe(true)
     expect(isValidOpenAICodexContextWindowOverrides({ 'gpt-5.6-sol': 0 })).toBe(false)
     expect(isValidOpenAICodexContextWindowOverrides({ 'gpt-5.6-sol': -1 })).toBe(false)
     expect(isValidOpenAICodexContextWindowOverrides({ 'gpt-5.6-sol': 1.5 })).toBe(false)
@@ -82,5 +84,35 @@ describe('OpenAI Codex proxy settings contract', () => {
       searchContextSize: 'medium',
       searchMaxOutputTokens: 10_000,
     })).toBeUndefined()
+  })
+
+  it.each([
+    {}, { 'gpt-5.6-sol': 1 }, { 'gpt-5.6-sol': Number.MAX_SAFE_INTEGER },
+    Object.fromEntries(Array.from({ length: 256 }, (_, index) => [`model-${index}`, 300_000])),
+  ])('accepts the same structural map on Host and browser: %j', overrides => {
+    expect(isValidOpenAICodexContextWindowOverrides(overrides)).toBe(true)
+    const config = Config({ contextWindowOverrides: overrides })
+    expect(decodeOpenAICodexSettings(config)?.contextWindowOverrides).toEqual(overrides)
+    expect(resolveOpenAICodexSettings(config).contextWindowOverrides).toEqual(overrides)
+  })
+
+  it.each([
+    [], '300000', { '': 1 }, { ' gpt-5.6-sol': 1 }, { 'gpt-5.6-sol': '300000' },
+    { 'gpt-5.6-sol': 0 }, { 'gpt-5.6-sol': -1 }, { 'gpt-5.6-sol': 1.5 },
+    { 'gpt-5.6-sol': Number.MAX_SAFE_INTEGER + 1 }, { 'gpt-5.6-sol': Infinity }, { 'gpt-5.6-sol': NaN },
+    Object.fromEntries(Array.from({ length: 257 }, (_, index) => [`model-${index}`, 300_000])),
+  ])('rejects the same malformed map on Host and browser: %j', overrides => {
+    expect(isValidOpenAICodexContextWindowOverrides(overrides)).toBe(false)
+    expect(() => Config({ contextWindowOverrides: overrides } as never)).toThrow()
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, contextWindowOverrides: overrides })).toBeUndefined()
+    expect(() => resolveOpenAICodexSettings({ contextWindowOverrides: overrides } as never)).toThrow()
+  })
+
+  it('preserves the Host null sentinel and resolves it as disabled in both consumers', () => {
+    const host = Config({ contextWindowOverrides: null })
+    expect(host.contextWindowOverrides).toBeNull()
+    expect(resolveOpenAICodexSettings(host).contextWindowOverrides).toBeUndefined()
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, contextWindowOverrides: null })?.contextWindowOverrides).toBeUndefined()
+    expect(resolveOpenAICodexSettings({ contextWindowOverrides: null }).contextWindowOverrides).toBeUndefined()
   })
 })

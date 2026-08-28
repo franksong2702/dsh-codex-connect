@@ -39,14 +39,24 @@ export type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high'
 
 /**
  * Whether a value is a bounded per-model context-window override map. Keys
- * are exact catalog model ids; values are positive integers.
+ * are nonempty, unpadded model ids; values are positive safe integers.
+ * An empty resolved map contains no overrides. The Host checks catalog membership.
  */
 export function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number>> {
   if (!isRecord(value)) return false
   const entries = Object.entries(value)
-  if (entries.length === 0 || entries.length > 256) return false
-  return entries.every(([modelId, window]) => typeof modelId === 'string' && modelId.length > 0
+  if (entries.length > 256) return false
+  return entries.every(([modelId, window]) => modelId.length > 0 && modelId.trim() === modelId
     && typeof window === 'number' && Number.isSafeInteger(window) && window > 0)
+}
+
+/** Validate and detach overrides; null explicitly masks inherited composition overrides. */
+export function resolveOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number>> | undefined {
+  if (value === undefined || value === null) return undefined
+  if (!isValidOpenAICodexContextWindowOverrides(value)) {
+    throw new TypeError('OpenAI Codex contextWindowOverrides must contain at most 256 nonempty model ids with positive safe-integer token budgets')
+  }
+  return { ...value }
 }
 
 /** Default model used by the standalone search endpoint. */
@@ -69,8 +79,8 @@ export interface OpenAICodexSettingsConfig {
   /**
    * Per-model context-window overrides keyed by catalog model id. Each value
    * replaces the advertised `contextWindow` for that model inside the adapter
-   * profile, so Harness compaction and context budgets follow the value the
-   * Codex backend actually accepts rather than a stale catalog snapshot.
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined
   enableSearch: boolean
@@ -96,20 +106,25 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   searchMaxOutputTokens: DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
 })
 
+/** Input settings allow null to disable overrides inherited from a lower settings layer. */
+export interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
+  contextWindowOverrides?: Readonly<Record<string, number>> | null | undefined
+}
+
 /** Fill the schema defaults even when called without Cordis validation. */
 export function resolveOpenAICodexSettings(
-  value: Partial<OpenAICodexSettingsConfig>,
+  value: OpenAICodexSettingsInput,
 ): OpenAICodexSettingsConfig {
   const resolved = { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
   if (!isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
   }
-  return resolved
+  return { ...resolved, contextWindowOverrides: resolveOpenAICodexContextWindowOverrides(resolved.contextWindowOverrides) }
 }
 
 /** Resolve the active proxy without treating a disabled value as a route. */
 export function resolveOpenAICodexProxyUrl(
-  value: Partial<OpenAICodexSettingsConfig>,
+  value: OpenAICodexSettingsInput,
 ): string | undefined {
   const resolved = resolveOpenAICodexSettings(value)
   return resolved.enableProxy ? normalizeOpenAICodexProxyUrl(resolved.proxyUrl) : undefined
@@ -136,7 +151,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && (typeof proxyUrl !== 'string' || !isValidOpenAICodexProxyUrl(proxyUrl))) return undefined
-  if (contextWindowOverrides !== undefined && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
+  if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -144,13 +159,12 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (searchMode !== 'cached' && searchMode !== 'indexed' && searchMode !== 'live') return undefined
   if (searchContextSize !== 'low' && searchContextSize !== 'medium' && searchContextSize !== 'high') return undefined
   if (typeof searchMaxOutputTokens !== 'number' || !Number.isInteger(searchMaxOutputTokens) || searchMaxOutputTokens < 1) return undefined
+  const overrides = resolveOpenAICodexContextWindowOverrides(contextWindowOverrides)
   return {
     models: models === undefined ? undefined : [...new Set(models)],
     enableProxy: enableProxy ?? false,
     proxyUrl: proxyUrl === undefined ? DEFAULT_OPENAI_CODEX_PROXY_URL : normalizeOpenAICodexProxyUrl(proxyUrl)!,
-    contextWindowOverrides: contextWindowOverrides === undefined
-      ? undefined
-      : Object.freeze({ ...contextWindowOverrides as Record<string, number> }),
+    contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,

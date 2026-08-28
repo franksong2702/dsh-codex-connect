@@ -103,4 +103,29 @@ describe('context-window overrides', () => {
     expect(overridden.getModels()[0]!.contextWindow).toBe(999_999)
     expect(provider.getModels()[0]!.contextWindow).toBe(baseline[0]!.contextWindow)
   })
+
+  it('refreshes resolved budgets without changing an already prepared call or output limits', async () => {
+    const target = 'gpt-5.6-sol'
+    let overrides: Record<string, number> | undefined = { [target]: 350_000 }
+    const adapter = createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined,
+      undefined, undefined, undefined, undefined, () => overrides)
+    const first = await adapter.prepareCall(OPENAI_CODEX_PROVIDER, target)
+    expect(first.model.context?.contextWindow).toBe(350_000)
+    overrides[target] = 300_000
+    const next = await adapter.prepareCall(OPENAI_CODEX_PROVIDER, target)
+    expect(next.model.context?.contextWindow).toBe(300_000)
+    expect(first.model.context?.contextWindow).toBe(350_000)
+    overrides = undefined
+    const baseline = openaiCodexProvider().getModels().find(model => model.id === target)!
+    expect((await adapter.resolveModel(OPENAI_CODEX_PROVIDER, target)).context?.contextWindow).toBe(baseline.contextWindow)
+    const profile = createOpenAICodexProfile(openaiCodexProvider(), undefined, undefined, undefined, { [target]: 350_000 })
+    expect(profile.piProvider.getModels().find(model => model.id === target)?.maxTokens).toBe(baseline.maxTokens)
+    expect(profile.configuredMaxTokens.size).toBe(0)
+    expect(profile.transport).toBe('sse')
+  })
+
+  it('reports unknown catalog ids instead of silently ignoring the override', () => {
+    expect(() => createOpenAICodexProfile(openaiCodexProvider(), undefined, undefined, undefined, { 'misspelled-model': 300_000 }))
+      .toThrow('unknown model id "misspelled-model"')
+  })
 })
