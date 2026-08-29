@@ -243,6 +243,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
 | `enableProxy` | `false` | boolean；只影响当前 Codex provider 实例 |
 | `proxyUrl` | `http://127.0.0.1:7890` | 不含凭据的 HTTP(S) 代理地址 |
+| `contextWindowOverrides` | 无 | 按模型覆盖 contextWindow 的映射；见下文 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
 | `enableImageGeneration` | `false` | boolean |
@@ -250,6 +251,32 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | `searchMode` | `cached` | `cached`、`indexed`、`live` |
 | `searchContextSize` | `medium` | `low`、`medium`、`high` |
 | `searchMaxOutputTokens` | `10000` | 正整数 |
+
+### 上下文窗口覆盖
+
+当你有证据表明内置目录不适合当前部署时，可通过 `contextWindowOverrides` 主动设置每个模型的客户端上下文预算。它不能扩大 OpenAI 后端的上下文容量。默认不启用；此功能并未验证社区报告的更大窗口。
+
+在插件配置中，每个模型行保留显示勾选框，并增加“上下文 → 调整”。输入正整数 token 预算，或点击“恢复默认”使用目录值，即使启动配置中有覆盖值也不例外。隐藏模型会保留其预算。“保存”提交暂存的显示和预算修改，“放弃”撤销修改。清空输入框不等于恢复默认，请明确点击“恢复默认”。
+
+```yaml
+- id: llm-openai-codex
+  config:
+    contextWindowOverrides:
+      # 仅为示例：350000 不是已验证或推荐的服务端上限。
+      gpt-5.6-sol: 350000
+```
+
+键必须与已安装 Codex 目录中的模型 ID 完全一致；未知 ID 会使配置或设置写入明确报错。映射最多包含 256 项，token 数必须是正的安全整数。其他模型保留目录元数据。输出 token 上限、SSE 传输和 DSH 的压缩策略不变。请在独立验证过的服务端上限内，为输出及协议开销预留空间。如果部署设置为在 80% 时压缩，客户端窗口 `350000` 对应的名义阈值是 `280000`；这个算式不证明服务端接受这么大的输入。
+
+插件加载时会应用持久化的 Host 设置，运行中修改会作用于下一次模型解析或请求准备。已经准备好的请求保留当时的预算快照。原始模型目录不会被修改。
+
+恢复默认值时，需要区分配置层：
+
+- 最终生效的映射为 `{}` 或没有覆盖时，使用目录窗口。
+- DSH 会递归合并设置映射，因此用 `{}` 更新已有映射不等于清空。
+- 设置 `contextWindowOverrides: null` 可明确关闭所有覆盖，包括从启动配置继承的值。
+- 将某个模型条目设为 `null`，可只恢复该模型的目录默认值，保留其他覆盖。界面保存时会为默认模型写入明确的空值标记，防止恢复默认后重新继承启动配置值。
+- 删除持久化字段会重新继承启动配置；启动配置没有覆盖时，恢复目录窗口。删除某个持久化模型条目，同样会恢复该模型的启动配置值或目录值。
 
 ## 重新登录、诊断与冲突
 

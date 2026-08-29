@@ -16,7 +16,7 @@ import type {} from '@deepseek-ai/dsh-web'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
-import { createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
+import { assertOpenAICodexContextWindowModelIds, createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { OpenAICodexProxyController } from './provider-proxy.ts'
@@ -100,12 +100,14 @@ import {
   OPENAI_CODEX_SETTINGS_NAMESPACE,
   resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
+  parseOpenAICodexContextWindowOverrides,
 } from './settings-contract.ts'
 
 export {
   decodeOpenAICodexSettings,
   DEFAULT_OPENAI_CODEX_PROXY_URL,
   DEFAULT_OPENAI_CODEX_SETTINGS,
+  isValidOpenAICodexContextWindowOverrides,
   isValidOpenAICodexProxyUrl,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
   resolveOpenAICodexProxyUrl,
@@ -237,6 +239,14 @@ export interface Config {
   enableProxy?: boolean
   /** Credential-free HTTP(S) proxy origin. */
   proxyUrl?: string
+  /**
+   * Per-model context-window overrides keyed by catalog model id. Each value
+   * replaces the advertised `contextWindow` for that model inside the adapter
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
+   * Whole-map or per-model null disables inherited overrides; omitted keys inherit lower layers.
+   */
+  contextWindowOverrides?: Record<string, number | null> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** Register the optional image-loading tool. */
@@ -257,6 +267,10 @@ export const Config: z<Config> = z.object({
   models: z.union([z.const(undefined), z.array(z.string())]),
   enableProxy: z.boolean().default(false),
   proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
+  contextWindowOverrides: z.transform(
+    z.union([z.const(undefined), z.dict(z.union([z.const(null), z.number()]))]),
+    parseOpenAICodexContextWindowOverrides,
+  ),
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
@@ -274,6 +288,12 @@ export const Config: z<Config> = z.object({
  * @param config - capability gates and standalone-search tuning.
  */
 export function apply(ctx: Context, config: Config): void {
+  const catalog = openAICodexModelCatalog()
+  const validateSettings = (value: Config): void => {
+    resolveOpenAICodexSettings(value)
+    assertOpenAICodexContextWindowModelIds(value.contextWindowOverrides ?? undefined, catalog)
+  }
+  validateSettings(config)
   let current = () => config
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(current())
   const proxy = new OpenAICodexProxyController()
@@ -295,6 +315,8 @@ export function apply(ctx: Context, config: Config): void {
       fastMode,
       () => resolveOpenAICodexSettings(current()).models,
       proxy,
+      undefined,
+      () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
@@ -424,7 +446,7 @@ export function apply(ctx: Context, config: Config): void {
   }, 'dsh-codex-connect: optional capability lifecycle')
 
   installSettingsSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
-    validate(value) { resolveOpenAICodexProxyUrl(value) },
+    validate: validateSettings,
     setSource(source) { current = source },
     onChange() {
       proxy.configure(resolveProviderProxyUrl())

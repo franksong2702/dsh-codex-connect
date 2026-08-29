@@ -3,11 +3,68 @@
 /** Stable Harness settings namespace owned by this plugin. */
 export const OPENAI_CODEX_SETTINGS_NAMESPACE = 'llm-openai-codex'
 
+/** Suggested local HTTP proxy shown by the settings UI; it is never enabled by default. */
+export const DEFAULT_OPENAI_CODEX_PROXY_URL = 'http://127.0.0.1:7890'
+
+/**
+ * Normalize the credential-free HTTP proxy URL accepted by Codex Connect.
+ * Paths, query strings, fragments, and embedded credentials are rejected so
+ * the value remains an origin rather than an opaque request target.
+ */
+export function normalizeOpenAICodexProxyUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined
+  try {
+    const parsed = new URL(value.trim())
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+    if (parsed.username !== '' || parsed.password !== '') return undefined
+    if (parsed.pathname !== '/' || parsed.search !== '' || parsed.hash !== '') return undefined
+    if (parsed.hostname.length === 0) return undefined
+    if (parsed.port !== '' && (!/^\d+$/u.test(parsed.port) || Number(parsed.port) < 1 || Number(parsed.port) > 65_535)) return undefined
+    return parsed.origin
+  } catch {
+    return undefined
+  }
+}
+
+/** Whether a value is a supported, canonical HTTP(S) proxy origin. */
+export function isValidOpenAICodexProxyUrl(value: unknown): value is string {
+  return normalizeOpenAICodexProxyUrl(value) !== undefined
+}
+
 /** Search modes accepted by the Codex standalone search endpoint. */
 export type OpenAICodexSearchMode = 'cached' | 'indexed' | 'live'
 
 /** Search-context sizes accepted by the Codex standalone search endpoint. */
 export type OpenAICodexSearchContextSize = 'low' | 'medium' | 'high'
+
+/**
+ * Whether a value is a bounded per-model context-window override map. Keys
+ * are nonempty, unpadded model ids; values are positive safe integers or null
+ * to restore that model's catalog default. The Host checks catalog membership.
+ */
+export function isValidOpenAICodexContextWindowOverrides(value: unknown): value is Readonly<Record<string, number | null>> {
+  if (!isRecord(value)) return false
+  const entries = Object.entries(value)
+  if (entries.length > 256) return false
+  return entries.every(([modelId, window]) => modelId.length > 0 && modelId.trim() === modelId
+    && (window === null || (typeof window === 'number' && Number.isSafeInteger(window) && window > 0)))
+}
+
+/** Preserve per-model null masks until the Host has merged its settings layers. */
+export function parseOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number | null>> | undefined {
+  if (value === undefined || value === null) return undefined
+  if (!isValidOpenAICodexContextWindowOverrides(value)) {
+    throw new TypeError('OpenAI Codex contextWindowOverrides must contain at most 256 nonempty model ids with positive safe-integer token budgets or null resets')
+  }
+  return { ...value }
+}
+
+/** Resolve merged settings; whole-map or per-model null masks use catalog defaults. */
+export function resolveOpenAICodexContextWindowOverrides(value: unknown): Readonly<Record<string, number>> | undefined {
+  const overrides = parseOpenAICodexContextWindowOverrides(value)
+  if (overrides === undefined) return undefined
+  return Object.fromEntries(Object.entries(overrides).filter((entry): entry is [string, number] => entry[1] !== null))
+}
 
 /** Default model used by the standalone search endpoint. */
 export const DEFAULT_OPENAI_CODEX_SEARCH_MODEL = 'gpt-5.6-sol'
@@ -18,32 +75,21 @@ export const DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE: OpenAICodexSearchContextS
 /** Default output budget for the standalone search response. */
 export const DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS = 10_000
 
-/** Default local HTTP CONNECT proxy used for OpenAI Codex provider traffic. */
-export const DEFAULT_OPENAI_CODEX_PROXY_URL = 'http://127.0.0.1:7890'
-
-/** Accept one credential-free HTTP(S) proxy origin. */
-export function isValidOpenAICodexProxyUrl(value: string): boolean {
-  try {
-    const url = new URL(value)
-    return (url.protocol === 'http:' || url.protocol === 'https:')
-      && url.username === ''
-      && url.password === ''
-      && url.pathname === '/'
-      && url.search === ''
-      && url.hash === ''
-  } catch {
-    return false
-  }
-}
-
 /** Fully resolved user-editable section presented by Plugin configuration. */
 export interface OpenAICodexSettingsConfig {
   /** Model ids advertised in selectors; undefined advertises the full catalog. */
   models: string[] | undefined
-  /** Route OpenAI Codex provider traffic through the configured proxy. */
+  /** Route Codex Connect requests through the explicitly configured proxy. */
   enableProxy: boolean
-  /** Credential-free HTTP(S) proxy origin. */
+  /** Credential-free HTTP(S) proxy origin; inactive while enableProxy is false. */
   proxyUrl: string
+  /**
+   * Per-model context-window overrides keyed by catalog model id. Each value
+   * replaces the advertised `contextWindow` for that model inside the adapter
+   * profile for client budgeting. It does not change or verify server capacity,
+   * output-token limits, or the deployment's compaction policy.
+   */
+  contextWindowOverrides: Readonly<Record<string, number>> | undefined
   enableSearch: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
@@ -57,6 +103,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   models: undefined,
   enableProxy: false,
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
+  contextWindowOverrides: undefined,
   enableSearch: false,
   enableImageTool: false,
   enableImageGeneration: false,
@@ -66,24 +113,32 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   searchMaxOutputTokens: DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
 })
 
-/** Fill the schema defaults even when called without Cordis validation. */
-export function resolveOpenAICodexSettings(
-  value: Partial<OpenAICodexSettingsConfig>,
-): OpenAICodexSettingsConfig {
-  return { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
+/** Input settings allow null to disable overrides inherited from a lower settings layer. */
+export interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
+  contextWindowOverrides?: Readonly<Record<string, number | null>> | null | undefined
 }
 
-/** Resolve the active proxy URL, or direct transport when proxying is disabled. */
-export function resolveOpenAICodexProxyUrl(
-  value: Partial<OpenAICodexSettingsConfig>,
-): string | undefined {
-  const settings = resolveOpenAICodexSettings(value)
-  if (!settings.enableProxy) return undefined
-  const proxyUrl = settings.proxyUrl.trim()
-  if (!isValidOpenAICodexProxyUrl(proxyUrl)) {
+/** Fill the schema defaults even when called without Cordis validation. */
+export function resolveOpenAICodexSettings(
+  value: OpenAICodexSettingsInput,
+): OpenAICodexSettingsConfig {
+  const resolved = { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
+  if (resolved.enableProxy && !isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxy URL must be a credential-free HTTP(S) origin')
   }
-  return proxyUrl
+  return {
+    ...resolved,
+    proxyUrl: resolved.enableProxy ? normalizeOpenAICodexProxyUrl(resolved.proxyUrl)! : resolved.proxyUrl,
+    contextWindowOverrides: resolveOpenAICodexContextWindowOverrides(resolved.contextWindowOverrides),
+  }
+}
+
+/** Resolve the active proxy without treating a disabled value as a route. */
+export function resolveOpenAICodexProxyUrl(
+  value: OpenAICodexSettingsInput,
+): string | undefined {
+  const resolved = resolveOpenAICodexSettings(value)
+  return resolved.enableProxy ? normalizeOpenAICodexProxyUrl(resolved.proxyUrl) : undefined
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,6 +151,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const models = value['models']
   const enableProxy = value['enableProxy']
   const proxyUrl = value['proxyUrl']
+  const contextWindowOverrides = value['contextWindowOverrides']
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
@@ -104,10 +160,10 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const searchContextSize = value['searchContextSize']
   const searchMaxOutputTokens = value['searchMaxOutputTokens']
   if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
-  // Older Host snapshots predate proxy settings; absence keeps direct transport.
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && typeof proxyUrl !== 'string') return undefined
   if ((enableProxy ?? false) && proxyUrl !== undefined && !isValidOpenAICodexProxyUrl(proxyUrl)) return undefined
+  if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -115,10 +171,14 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (searchMode !== 'cached' && searchMode !== 'indexed' && searchMode !== 'live') return undefined
   if (searchContextSize !== 'low' && searchContextSize !== 'medium' && searchContextSize !== 'high') return undefined
   if (typeof searchMaxOutputTokens !== 'number' || !Number.isInteger(searchMaxOutputTokens) || searchMaxOutputTokens < 1) return undefined
+  const overrides = resolveOpenAICodexContextWindowOverrides(contextWindowOverrides)
   return {
     models: models === undefined ? undefined : [...new Set(models)],
     enableProxy: enableProxy ?? false,
-    proxyUrl: proxyUrl ?? DEFAULT_OPENAI_CODEX_PROXY_URL,
+    proxyUrl: proxyUrl === undefined
+      ? DEFAULT_OPENAI_CODEX_PROXY_URL
+      : (enableProxy ?? false) ? normalizeOpenAICodexProxyUrl(proxyUrl)! : proxyUrl,
+    contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
+import { isValidOpenAICodexContextWindowOverrides } from '../settings-contract.ts'
 import {
   decodeOpenAICodexModelCatalog,
   OPENAI_CODEX_MODEL_CATALOG_PATH,
@@ -20,7 +21,7 @@ const sectionStyle: CSSProperties = { display: 'flex', flexDirection: 'column', 
 const headingStyle: CSSProperties = { margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }
 const bodyStyle: CSSProperties = { margin: 0, fontSize: 13, lineHeight: '20px', color: 'var(--dsw-alias-label-secondary)' }
 const fieldsetStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 13, margin: 0, padding: 0, border: 0 }
-const modelListStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }
+const modelListStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 10 }
 const modelRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 9, minHeight: 30, fontSize: 13, color: 'var(--dsw-alias-label-primary)', cursor: 'pointer' }
 const modelIdStyle: CSSProperties = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, color: 'var(--dsw-alias-label-secondary)' }
 const toggleRowStyle: CSSProperties = { display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }
@@ -48,6 +49,7 @@ const UNAVAILABLE_SNAPSHOT = {
 
 const CONFIG_FIELDS = [
   'models',
+  'contextWindowOverrides',
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
@@ -62,6 +64,12 @@ function sameField(
   left: OpenAICodexSettingsConfig[keyof OpenAICodexSettingsConfig],
   right: OpenAICodexSettingsConfig[keyof OpenAICodexSettingsConfig],
 ): boolean {
+  if (field === 'contextWindowOverrides') {
+    const leftMap = left as OpenAICodexSettingsConfig['contextWindowOverrides']
+    const rightMap = right as OpenAICodexSettingsConfig['contextWindowOverrides']
+    return Object.keys(leftMap ?? {}).length === Object.keys(rightMap ?? {}).length
+      && Object.entries(leftMap ?? {}).every(([id, value]) => rightMap?.[id] === value)
+  }
   if (field !== 'models') return left === right
   if (left === undefined || right === undefined) return left === right
   return Array.isArray(left) && Array.isArray(right)
@@ -92,6 +100,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const [feedback, setFeedback] = useState<'idle' | 'saved' | 'error'>('idle')
   const [modelCatalog, setModelCatalog] = useState<OpenAICodexModelCatalogEntry[] | undefined>()
   const [modelCatalogError, setModelCatalogError] = useState(false)
+  const [expandedModels, setExpandedModels] = useState<Readonly<Record<string, boolean>>>({})
 
   useEffect(() => {
     if (scope === undefined) return
@@ -136,7 +145,9 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const validTokens = draft !== undefined
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
-  const valid = validModel && validTokens
+  const validContexts = draft !== undefined
+    && isValidOpenAICodexContextWindowOverrides(draft.contextWindowOverrides ?? {})
+  const valid = validModel && validTokens && validContexts
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
@@ -150,7 +161,11 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
       for (const field of CONFIG_FIELDS) {
         const accepted = scope.getSnapshot().value
         if (accepted !== undefined && sameField(field, accepted[field], desired[field])) continue
-        await scope.set(field, desired[field])
+        // Null masks prevent a restored model from silently re-inheriting a composition override.
+        const value = field === 'contextWindowOverrides'
+          ? { ...Object.fromEntries((modelCatalog ?? []).map(model => [model.id, null])), ...desired.contextWindowOverrides }
+          : desired[field]
+        await scope.set(field, value)
         const committed = scope.getSnapshot().value
         if (committed === undefined || !sameField(field, committed[field], desired[field])) {
           throw new Error(`Host refused ${field}`)
@@ -191,27 +206,64 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
             <div style={modelListStyle} role="group" aria-label={t('modelCatalog')}>
               {modelCatalog.map(model => {
                 const selected = draft.models === undefined || draft.models.includes(model.id)
+                const budget = draft.contextWindowOverrides?.[model.id]
+                const invalidBudget = budget !== undefined && (!Number.isSafeInteger(budget) || budget <= 0)
                 return (
-                  <label key={model.id} style={modelRowStyle}>
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={event => {
-                        const visible = new Set(draft.models ?? modelCatalog.map(entry => entry.id))
-                        if (event.currentTarget.checked) visible.add(model.id)
-                        else visible.delete(model.id)
-                        update('models', modelCatalog.filter(entry => visible.has(entry.id)).map(entry => entry.id))
-                      }}
-                    />
-                    <span>
-                      <span>{model.name}</span>
-                      {model.name === model.id ? null : <span style={modelIdStyle}> ({model.id})</span>}
-                    </span>
-                  </label>
+                  <div key={model.id} role="group" aria-label={model.name} style={{ minWidth: 0, padding: '10px 0', borderBottom: '1px solid var(--dsw-alias-border-l2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <label style={{ ...modelRowStyle, minWidth: 0, overflowWrap: 'anywhere' }}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={event => {
+                            const visible = new Set(draft.models ?? modelCatalog.map(entry => entry.id))
+                            if (event.currentTarget.checked) visible.add(model.id)
+                            else visible.delete(model.id)
+                            update('models', modelCatalog.filter(entry => visible.has(entry.id)).map(entry => entry.id))
+                          }}
+                        />
+                        <span>
+                          <span>{model.name}</span>
+                          {model.name === model.id ? null : <span style={modelIdStyle}> ({model.id})</span>}
+                        </span>
+                      </label>
+                      <div style={{ ...buttonsStyle, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={bodyStyle}>{t('modelContext')}: {budget === undefined ? t('contextDefault') : invalidBudget ? t('contextCustom') : `${budget.toLocaleString()} tokens`}</span>
+                        <button type="button" style={buttonStyle} aria-expanded={expandedModels[model.id] === true} onClick={() => { setExpandedModels(current => ({ ...current, [model.id]: !current[model.id] })) }}>
+                          {expandedModels[model.id] === true ? t('contextHide') : t('contextAdjust')}
+                        </button>
+                      </div>
+                    </div>
+                    {expandedModels[model.id] === true ? (
+                      <div style={{ display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                        <label style={{ ...formFieldStyle, flex: '1 1 180px', minWidth: 0 }}>
+                          <span style={labelStyle}>{t('contextTokens')}</span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            max={Number.MAX_SAFE_INTEGER}
+                            style={controlStyle}
+                            value={Number.isNaN(budget) ? '' : budget ?? ''}
+                            placeholder={t('contextDefault')}
+                            aria-invalid={invalidBudget}
+                            onChange={event => { update('contextWindowOverrides', { ...draft.contextWindowOverrides, [model.id]: event.currentTarget.valueAsNumber }) }}
+                          />
+                        </label>
+                        <button type="button" style={buttonStyle} onClick={() => {
+                          const overrides = { ...draft.contextWindowOverrides }
+                          delete overrides[model.id]
+                          update('contextWindowOverrides', overrides)
+                        }}>{t('contextReset')}</button>
+                      </div>
+                    ) : null}
+                  </div>
                 )
               })}
             </div>
           )}
+          <p style={bodyStyle}>{t('contextWarning')}</p>
+          {!validContexts ? <p style={errorStyle} role="alert">{t('contextInvalid')}</p> : null}
           <div style={{ paddingTop: 4 }}>
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
