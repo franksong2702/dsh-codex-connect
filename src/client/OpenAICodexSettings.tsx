@@ -309,7 +309,7 @@ export function OpenAICodexSettings({ t, configScope, updater, embedded = false 
     setBusy(true)
     try {
       await jsonRequest<{ ok: true }>(OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST')
-      if (mounted.current) setStatus({ status: 'signed-out' })
+      if (mounted.current) await refresh()
     } catch (error: unknown) {
       if (mounted.current) {
         setStatus({ status: 'error', message: error instanceof Error ? error.message : t('requestFailed') })

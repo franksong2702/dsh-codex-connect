@@ -1,4 +1,4 @@
-/** Compact 5-hour and weekly Codex quota indicator for the Composer tool row. */
+/** Compact plan-aware Codex quota indicator for the Composer tool row. */
 
 import { useEffect, useId, useSyncExternalStore, useState } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
@@ -201,9 +201,37 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
   const summary = quotas.map(quota => quota.summary).join('; ')
   const tooltipVisible = isHovered || isFocused
   return (
+    <>
+    <style>{`
+      [data-openai-codex-quota-indicator] {
+        border-radius: 9px;
+        transition: background-color 180ms ease, box-shadow 180ms ease;
+      }
+      [data-openai-codex-quota-indicator]:hover {
+        background: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 72%, transparent);
+      }
+      [data-openai-codex-quota-indicator]:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 72%, white);
+        outline-offset: 2px;
+      }
+      [data-openai-codex-quota-progress] { transition: width 240ms ease; }
+      [data-openai-codex-quota-tooltip] {
+        animation: openaiCodexQuotaTooltipIn 180ms cubic-bezier(.2,.8,.2,1) both;
+      }
+      @keyframes openaiCodexQuotaTooltipIn {
+        from { opacity: 0; transform: translateY(4px) scale(.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        [data-openai-codex-quota-indicator],
+        [data-openai-codex-quota-progress],
+        [data-openai-codex-quota-tooltip] { animation: none !important; transition: none !important; }
+      }
+    `}</style>
     <span
       role="status"
       data-openai-codex-quota={quotas.map(quota => quota.kind).join(',')}
+      data-openai-codex-quota-indicator="composer"
       aria-label={summary}
       aria-describedby={tooltipVisible ? tooltipId : undefined}
       tabIndex={0}
@@ -235,8 +263,9 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
                 width: `${QUOTA_PROGRESS_WIDTH_PX}px`,
                 height: `${QUOTA_PROGRESS_TRACK_HEIGHT_PX}px`,
                 borderRadius: '999px',
-                backgroundColor: 'var(--dsw-alias-border-l2)',
+                backgroundColor: 'color-mix(in srgb, var(--dsw-alias-border-l2) 78%, transparent)',
                 overflow: 'hidden',
+                boxShadow: 'inset 0 1px 2px rgb(0 0 0 / 9%)',
               }}
             >
               <span
@@ -258,27 +287,40 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
         <span
           id={tooltipId}
           role="tooltip"
-          data-openai-codex-quota-tooltip="five-hour-weekly"
+          data-openai-codex-quota-tooltip={quotas.map(quota => quota.kind).join(',')}
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 6px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            right: -8,
+            bottom: 'calc(100% + 9px)',
             zIndex: 1000,
-            whiteSpace: 'nowrap',
+            boxSizing: 'border-box',
+            minWidth: 230,
+            maxWidth: 'min(320px, calc(100vw - 24px))',
             pointerEvents: 'none',
-            padding: '4px 8px',
-            borderRadius: '6px',
-            backgroundColor: 'var(--dsw-specific-tip, #1f2329)',
-            color: 'var(--dsw-alias-label-primary, #ffffff)',
-            boxShadow: 'var(--dsw-shadow-lv2, 0 4px 12px rgb(0 0 0 / 12%))',
-            fontSize: '12px',
-            lineHeight: '18px',
+            padding: 10,
+            border: '1px solid var(--dsw-alias-border-l2)',
+            borderRadius: 12,
+            backgroundColor: 'color-mix(in srgb, var(--dsw-alias-bg-layer-1, #fff) 96%, transparent)',
+            color: 'var(--dsw-alias-label-primary)',
+            boxShadow: '0 14px 34px rgb(0 0 0 / 20%), 0 2px 8px rgb(0 0 0 / 9%)',
+            fontSize: 11,
+            lineHeight: '16px',
+            textAlign: 'left',
           }}
         >
-          {quotas.map(quota => <span key={quota.kind} style={{ display: 'block' }}>{quota.summary}</span>)}
+          <span aria-hidden="true" style={{ position: 'absolute', right: 28, bottom: -5, width: 9, height: 9, borderRight: '1px solid var(--dsw-alias-border-l2)', borderBottom: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1, #fff)', transform: 'rotate(45deg)' }} />
+          {quotas.map((quota, index) => {
+            const progressColor = quotaProgressColor(quota.window.remainingPercent)
+            return (
+              <span key={quota.kind} style={{ display: 'grid', gridTemplateColumns: '8px minmax(0, 1fr)', gap: 8, alignItems: 'start', paddingTop: index === 0 ? 0 : 7, marginTop: index === 0 ? 0 : 7, borderTop: index === 0 ? undefined : '1px solid var(--dsw-alias-border-l2)' }}>
+                <span aria-hidden="true" style={{ width: 7, height: 7, marginTop: 4, borderRadius: '50%', background: progressColor.value, boxShadow: `0 0 0 3px color-mix(in srgb, ${progressColor.value} 13%, transparent)` }} />
+                <span>{quota.summary}</span>
+              </span>
+            )
+          })}
         </span>
       ) : null}
     </span>
+    </>
   )
 }

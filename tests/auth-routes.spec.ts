@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OpenAICodexWebAuth,
@@ -39,7 +40,10 @@ vi.mock('../src/usage.ts', async importOriginal => ({
   readOpenAICodexRateLimits: mocked.usage,
 }))
 
-const store = {} as OpenAICodexCredentialStore
+const store = {
+  accounts: vi.fn(),
+  activate: vi.fn(),
+} as unknown as OpenAICodexCredentialStore
 const emptyTrustedOrigins = {
   has: async () => false,
 } as unknown as OpenAICodexTrustedOriginsStore
@@ -92,6 +96,8 @@ function request(options: {
   host?: string
   origin?: string
   fetchSite?: string
+  contentType?: string
+  body?: string
 }): IncomingMessage {
   return {
     method: options.method ?? 'GET',
@@ -100,7 +106,9 @@ function request(options: {
       host: options.host ?? '127.0.0.1:3081',
       ...options.origin === undefined ? {} : { origin: options.origin },
       ...options.fetchSite === undefined ? {} : { 'sec-fetch-site': options.fetchSite },
+      ...options.contentType === undefined ? {} : { 'content-type': options.contentType },
     },
+    ...options.body === undefined ? {} : { body: options.body },
   } as unknown as IncomingMessage
 }
 
@@ -124,6 +132,12 @@ beforeEach(() => {
   mocked.status.mockResolvedValue({ authenticated: false })
   mocked.logout.mockResolvedValue(undefined)
   mocked.usage.mockResolvedValue({ rateLimits: [] })
+  vi.mocked(store.accounts).mockResolvedValue([])
+  vi.mocked(store.activate).mockResolvedValue({
+    accountId: 'account-1',
+    active: true,
+    expires: Date.now() + 60_000,
+  })
 })
 
 afterEach(async () => {
@@ -166,6 +180,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     ['status', OPENAI_CODEX_AUTH_STATUS_PATH, 'GET'],
     ['login', OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'],
     ['logout', OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST'],
+    ['accounts', OPENAI_CODEX_AUTH_ACCOUNTS_PATH, 'GET'],
   ] as const)('applies the remote-origin boundary to %s', async (_label, path, method) => {
     const route = captureRoutes().find(candidate => candidate.path === path)
     if (route === undefined) throw new Error(`${path} route was not registered`)
@@ -184,6 +199,36 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     expect(mocked.status).not.toHaveBeenCalled()
     expect(mocked.login).not.toHaveBeenCalled()
     expect(mocked.logout).not.toHaveBeenCalled()
+  })
+
+  it('lists only non-secret account metadata and activates a selected subaccount', async () => {
+    vi.mocked(store.accounts).mockResolvedValue([
+      { accountId: 'account-1', active: false, expires: 10_000 },
+      { accountId: 'account-2', active: true, expires: 20_000 },
+    ])
+    const route = captureRoutes().find(candidate => candidate.path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH)
+    if (route === undefined) throw new Error('accounts route was not registered')
+
+    const listed = response()
+    await route.handler(request({ method: 'GET' }), listed)
+    expect(listed.observed.status).toBe(200)
+    expect(JSON.parse(listed.observed.body ?? 'null')).toEqual({
+      accounts: [
+        { accountId: 'account-1', active: false, expires: 10_000 },
+        { accountId: 'account-2', active: true, expires: 20_000 },
+      ],
+    })
+    expect(listed.observed.body).not.toContain('access')
+    expect(listed.observed.body).not.toContain('refresh')
+
+    const switched = response()
+    await route.handler(request({
+      method: 'POST',
+      contentType: 'application/json',
+      body: JSON.stringify({ accountId: 'account-1' }),
+    }), switched)
+    expect(switched.observed.status).toBe(200)
+    expect(store.activate).toHaveBeenCalledWith('account-1')
   })
 
   it('rejects a DNS-rebinding Host even when the peer and browser Origin agree', async () => {

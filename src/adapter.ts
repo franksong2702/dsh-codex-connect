@@ -11,6 +11,7 @@ import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
+import { withOpenAICodexAccountFallback } from './account-fallback.ts'
 import { withOpenAICodexProxy } from './provider-proxy.ts'
 import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
@@ -145,12 +146,24 @@ export function createOpenAICodexAdapter(
   proxy?: OpenAICodexProxyRunner,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
-  const profiles = new Map<string, ResolvedPiAiProviderProfile>([[
-    OPENAI_CODEX_PROVIDER,
-    createOpenAICodexProfile(provider, fastMode, proxy),
-  ]])
   const models: MutableModels = createModels({ credentials })
   models.setProvider(provider)
+  const resolveAccessToken = async (): Promise<string | undefined> => withOpenAICodexProxy(
+    proxy,
+    async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey,
+  )
+  const profile = createOpenAICodexProfile(provider, fastMode, proxy)
+  const profiles = new Map<string, ResolvedPiAiProviderProfile>([[
+    OPENAI_CODEX_PROVIDER,
+    {
+      ...profile,
+      piProvider: withOpenAICodexAccountFallback(
+        profile.piProvider,
+        credentials,
+        resolveAccessToken,
+      ),
+    },
+  ]])
   class OpenAICodexAdapter extends PiAiAdapter {
     override async listModels(providerId: string) {
       const catalog = await super.listModels(providerId)
@@ -162,10 +175,7 @@ export function createOpenAICodexAdapter(
   }
   return new OpenAICodexAdapter({
     profiles: () => profiles,
-    resolveApiKey: async () => withOpenAICodexProxy(
-      proxy,
-      async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey,
-    ),
+    resolveApiKey: resolveAccessToken,
     auth: { credentials, authContext: defaultProviderAuthContext() },
     resolveAttachments,
   })

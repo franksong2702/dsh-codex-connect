@@ -6,3 +6,5 @@ export const OPENAI_CODEX_AUTH_STATUS_PATH = '/plugins/dsh-openai-codex/auth/sta
 export const OPENAI_CODEX_AUTH_LOGIN_PATH = '/plugins/dsh-openai-codex/auth/login'
 /** Plugin-owned logout endpoint consumed by its browser half. */
 export const OPENAI_CODEX_AUTH_LOGOUT_PATH = '/plugins/dsh-openai-codex/auth/logout'
+/** Plugin-owned account enumeration and active-account switch endpoint. */
+export const OPENAI_CODEX_AUTH_ACCOUNTS_PATH = '/plugins/dsh-openai-codex/auth/accounts'

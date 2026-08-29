@@ -11,6 +11,8 @@ import { OPENAI_CODEX_PROVIDER } from './store.ts'
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
 
 const USAGE_REQUEST_TIMEOUT_MS = 15_000
+const FIVE_HOUR_WINDOW_SECONDS = 5 * 60 * 60
+const FIVE_HOUR_PLAN_TYPES = new Set(['go', 'plus'])
 
 /** Stable public discriminant for an expired or revoked Codex OAuth session. */
 export const OPENAI_CODEX_REAUTH_REQUIRED_CODE = 'OPENAI_CODEX_REAUTH_REQUIRED' as const
@@ -129,11 +131,21 @@ function parseWindow(value: unknown): OpenAICodexRateLimitWindow | undefined {
   }
 }
 
-function parseLimit(id: string, name: string | undefined, value: unknown): OpenAICodexRateLimit | undefined {
+function hasFiveHourLimit(planType: unknown): boolean {
+  return typeof planType === 'string' && FIVE_HOUR_PLAN_TYPES.has(planType.trim().toLowerCase())
+}
+
+function parseLimit(
+  id: string,
+  name: string | undefined,
+  value: unknown,
+  includeFiveHour: boolean,
+): OpenAICodexRateLimit | undefined {
   if (value === undefined || value === null) return undefined
   if (!isRecord(value)) throw new Error('OpenAI Codex returned malformed rate-limit details')
   const windows = [parseWindow(value['primary_window']), parseWindow(value['secondary_window'])]
     .filter(window => window !== undefined)
+    .filter(window => includeFiveHour || window.windowSeconds !== FIVE_HOUR_WINDOW_SECONDS)
   return windows.length === 0 ? undefined : { id, ...name === undefined ? {} : { name }, windows }
 }
 
@@ -188,8 +200,12 @@ function parseIndividualLimit(value: unknown): OpenAICodexIndividualLimit | unde
  */
 export function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage {
   if (!isRecord(value)) throw new Error('OpenAI Codex returned a malformed usage response')
+  // The endpoint can still include a legacy five-hour-shaped window for
+  // accounts whose current plan no longer meters that window. Treat the plan
+  // as authoritative and fail closed: only Go and Plus expose 5h quota UI.
+  const includeFiveHour = hasFiveHourLimit(value['plan_type'])
   const limits: OpenAICodexRateLimit[] = []
-  const primary = parseLimit('codex', 'Codex', value['rate_limit'])
+  const primary = parseLimit('codex', 'Codex', value['rate_limit'], includeFiveHour)
   if (primary !== undefined) limits.push(primary)
 
   const additional = value['additional_rate_limits']
@@ -206,7 +222,12 @@ export function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage {
     if (name !== undefined && name !== null && typeof name !== 'string') {
       throw new Error('OpenAI Codex returned an invalid additional rate-limit name')
     }
-    const limit = parseLimit(id, typeof name === 'string' && name.length > 0 ? name : undefined, item['rate_limit'])
+    const limit = parseLimit(
+      id,
+      typeof name === 'string' && name.length > 0 ? name : undefined,
+      item['rate_limit'],
+      includeFiveHour,
+    )
     if (limit !== undefined) limits.push(limit)
   }
   const credits = parseCredits(value['credits'])

@@ -14,6 +14,7 @@ import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../src/settings-contract.ts'
 import type { OpenAICodexSettingsConfig } from '../src/settings-contract.ts'
 import { OPENAI_CODEX_CONNECTIVITY_PATH } from '../src/proxy-paths.ts'
+import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH } from '../src/auth-paths.ts'
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } })
@@ -117,9 +118,24 @@ describe('OpenAI Codex session proxy indicator', () => {
         { id: 'openai-api', hostname: 'api.openai.com', reachable: true, latencyMs: 31, statusCode: 302 },
       ],
     }
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      expect(requestPath(input)).toBe(OPENAI_CODEX_CONNECTIVITY_PATH)
-      return json(report)
+    let activeAccountId = 'account-2'
+    let connectivityCalls = 0
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const path = requestPath(input)
+      if (path === OPENAI_CODEX_CONNECTIVITY_PATH) {
+        connectivityCalls += 1
+        return json(report)
+      }
+      expect(path).toBe(OPENAI_CODEX_AUTH_ACCOUNTS_PATH)
+      if (init?.method === 'POST') {
+        activeAccountId = (JSON.parse(String(init.body)) as { accountId: string }).accountId
+      }
+      return json({
+        accounts: [
+          { accountId: 'account-1', active: activeAccountId === 'account-1', expires: Date.now() + 60_000 },
+          { accountId: 'account-2', active: activeAccountId === 'account-2', expires: Date.now() + 60_000 },
+        ],
+      })
     })
     vi.stubGlobal('fetch', fetchMock)
     const { scope, set } = settingsScope()
@@ -136,6 +152,9 @@ describe('OpenAI Codex session proxy indicator', () => {
     expect(document.querySelector('[data-openai-codex-connectivity="red"]')).toBeTruthy()
     expect(trigger.textContent).toBe('PROXY')
     expect(trigger.getAttribute('data-openai-codex-proxy-flow')).toBe('water')
+    expect(trigger.getAttribute('data-openai-codex-orb-checking')).toBe('false')
+    expect(trigger.querySelector('[data-openai-codex-orb-shell="gradient"]')).toBeTruthy()
+    expect(trigger.querySelector('[data-openai-codex-orb-layer="aurora"]')).toBeTruthy()
     expect(trigger.hasAttribute('data-openai-codex-proxy-signal')).toBe(false)
     expect(document.querySelector('[data-openai-codex-flow-lights="three-domains"]')).toBeTruthy()
     expect(document.querySelector('[data-openai-codex-flow-light="chatgpt.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('green')
@@ -145,6 +164,11 @@ describe('OpenAI Codex session proxy indicator', () => {
 
     fireEvent.mouseEnter(trigger)
     const popup = await screen.findByRole('dialog', { name: en.proxyHeaderPopup })
+    const accountSelect = await screen.findByRole('combobox', { name: en.accountSelectLabel })
+    expect((accountSelect as HTMLSelectElement).value).toBe('account-2')
+    fireEvent.change(accountSelect, { target: { value: 'account-1' } })
+    await waitFor(() => { expect((accountSelect as HTMLSelectElement).value).toBe('account-1') })
+    expect((await screen.findByText(en.accountSwitched)).textContent).toBe(en.accountSwitched)
     expect(popup.textContent).toContain('http://127.0.0.1:7890')
     expect(popup.textContent).toContain('chatgpt.com')
     expect(popup.textContent).toContain('auth.openai.com')
@@ -160,7 +184,7 @@ describe('OpenAI Codex session proxy indicator', () => {
     expect(screen.getByRole('button', { name: en.proxyActivate })).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: en.connectivityRefresh }))
-    await waitFor(() => { expect(fetchMock).toHaveBeenCalledTimes(2) })
+    await waitFor(() => { expect(connectivityCalls).toBe(2) })
 
     fireEvent.click(screen.getByRole('button', { name: en.proxyDisable }))
     await waitFor(() => { expect(set).toHaveBeenCalledWith('enableProxy', false) })
@@ -252,7 +276,7 @@ describe('OpenAI Codex session proxy indicator', () => {
     fireEvent.pointerUp(trigger, { pointerId: 1, clientX: -500, clientY: 900 })
 
     expect(root.style.left).toBe('296px')
-    expect(root.style.top).toBe('358px')
+    expect(root.style.top).toBe('353px')
     expect(localStorage.getItem('dsh-codex-connect.proxy-ball.session-drag')).not.toBeNull()
   })
 

@@ -8,13 +8,19 @@ import { WebSearchProvider, WebSearchRequest, WebSearchResult } from "@deepseek-
 declare const OPENAI_CODEX_PROVIDER = "openai-codex";
 /** Basename of the OAuth document inside the Harness home. */
 declare const OPENAI_CODEX_AUTH_FILENAME = ".openai-codex-auth.json";
+/** Non-secret account metadata safe for the trusted local browser UI. */
+interface OpenAICodexAccountSummary {
+  accountId: string;
+  active: boolean;
+  expires: number;
+}
 /**
  * Resolve the default OAuth document path.
  * @param dshHome - optional Harness-home override.
  * @returns the absolute owner-only document path.
  */
 declare function openAICodexAuthPath(dshHome?: string): string;
-/** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
+/** File-backed pi-ai store with one active credential and durable account history. */
 declare class OpenAICodexCredentialStore implements CredentialStore {
   /** Absolute credential document path. */
   readonly filename: string;
@@ -23,14 +29,28 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
    */
   constructor(filename?: string);
   /** Read and validate the current document without acquiring the writer lock. */
-  private readCurrent;
+  private readDocument;
+  /** Persist a validated version-2 document while the caller owns the file lock. */
+  private writeDocument;
+  private activeCredential;
+  /** Enumerate stored accounts without returning tokens. */
+  accounts(): Promise<readonly OpenAICodexAccountSummary[]>;
+  /** Resolve the owning account internally without exposing any stored token. */
+  accountIdForAccessToken(access: string): Promise<string | undefined>;
+  /**
+   * Atomically select the next saved account after a failed credential.
+   * Accounts already attempted by the caller are skipped, preventing loops.
+   */
+  activateNext(failedAccountId: string, attemptedAccountIds?: readonly string[]): Promise<OpenAICodexAccountSummary | undefined>;
+  /** Select the credential used by every subsequent Codex request. */
+  activate(accountId: string): Promise<OpenAICodexAccountSummary>;
   /** @inheritdoc */
   read(providerId: string): Promise<Credential | undefined>;
   /** @inheritdoc */
   list(): Promise<readonly CredentialInfo[]>;
   /** @inheritdoc */
   modify(providerId: string, fn: (current: Credential | undefined) => Promise<Credential | undefined>): Promise<Credential | undefined>;
-  /** @inheritdoc */
+  /** Remove only the active account, selecting the next saved account if any. */
   delete(providerId: string): Promise<void>;
 }
 //#endregion

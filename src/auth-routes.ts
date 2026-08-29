@@ -14,6 +14,7 @@ import {
 } from './usage.ts'
 import type { OpenAICodexUsage } from './usage.ts'
 import {
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
@@ -28,6 +29,7 @@ import { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
 import type { OpenAICodexProxyRunner } from './provider-proxy.ts'
 
 export {
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
@@ -119,7 +121,7 @@ export class OpenAICodexWebAuth {
     await this.operation?.catch(() => undefined)
     await logoutOpenAICodex(this.store)
     this.challenge = undefined
-    this.state = { status: 'signed-out' }
+    this.state = await this.readStoredStatus()
   }
 
   /** Stop the owned callback listener during plugin disposal. */
@@ -401,6 +403,16 @@ function fastModeBody(value: unknown): { sessionId: string; enabled: boolean } |
     : undefined
 }
 
+function accountSwitchBody(value: unknown): { accountId: string } | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).length !== 1) return undefined
+  const accountId = record['accountId']
+  return typeof accountId === 'string' && accountId.length > 0 && accountId.length <= 256
+    ? { accountId }
+    : undefined
+}
+
 /** Register the plugin-owned OAuth routes when the Web server is composed. */
 export function registerOpenAICodexAuthRoutes(
   ctx: Context,
@@ -458,6 +470,32 @@ export function registerOpenAICodexAuthRoutes(
             json(res, 200, { ok: true })
           } catch (error: unknown) {
             json(res, 500, { error: safeMessage(error) })
+          }
+        },
+      }),
+      ctx.webServer.register({
+        kind: 'exact',
+        path: OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
+        handler: async (req, res) => {
+          if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
+          if (!await authorize(req, res)) return
+          if (req.method === 'GET') return json(res, 200, { accounts: await store.accounts() })
+          const type = header(req, 'content-type')
+          if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
+            return json(res, 415, { error: 'unsupported content type' })
+          }
+          try {
+            const body = accountSwitchBody(await readFastModeBody(req))
+            if (body === undefined) return json(res, 400, { error: 'invalid input' })
+            await store.activate(body.accountId)
+            return json(res, 200, { accounts: await store.accounts() })
+          } catch (error: unknown) {
+            if (error instanceof RangeError) return json(res, 413, { error: 'request body too large' })
+            if (error instanceof TypeError) return json(res, 400, { error: 'invalid input' })
+            if (error instanceof Error && error.message === 'openai-codex: account was not found') {
+              return json(res, 404, { error: 'account not found' })
+            }
+            return json(res, 500, { error: safeMessage(error) })
           }
         },
       }),

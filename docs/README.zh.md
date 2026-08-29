@@ -131,7 +131,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 只有当前对话选择了 `openai-codex` 提供方的 GPT 模型时，Composer 才会显示下面两个小控件。它们都是当前对话级别的控制，不是 profile 全局设置：
 
 - **Fast Mode（闪电图标）**：每个对话默认关闭。点击后请求更快的 `1.5 倍` 模式，再点一次恢复标准速度。它只绑定当前对话，不会改变模型选择，也不会影响其他对话。鼠标悬停或键盘聚焦闪电图标，可以看到当前状态和额度消耗提示。
-- **5 小时与周额度进度条**：位于模型选择器旁边，分别标记为 `5h` 和 `7d`。每条额度越低，颜色都会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会同时显示两个窗口的精确剩余百分比和服务端重置时间。某个窗口不可用时只隐藏对应行；非 GPT 模型或没有任何可用额度时隐藏整个控件。
+- **按套餐显示的额度进度条**：位于模型选择器旁边。Go 和 Plus 套餐显示 `5h` 与 `7d`；Pro 及其他套餐不显示 `5h`，只显示适用的周额度。每条额度越低，颜色都会从绿色经过黄色/橙色变为红色。鼠标悬停或键盘聚焦时，会显示精确剩余百分比和服务端重置时间；非 GPT 模型或没有任何可用额度时隐藏整个控件。
 - 对于精确模型 `gpt-5.3-codex-spark`，Composer 读取 Spark 的每周额度；其他 GPT Codex 模型读取标准 Codex 周额度，两者是分开的额度桶。
 
 <p align="center">
@@ -164,7 +164,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 2. **Test（测试）**只用当前草稿地址发送探测请求，不保存、不启用。
 3. **Activate（启用）**只有在同一草稿通过 Test 后才可点击。用户点击即表示明确确认，此时才保存地址并启用代理。
 
-代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话还会显示一个保持蓝色的水流流光 Proxy 悬浮球，球下三盏流光灯分别对应三个受监测域名。它大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`：收到任意 HTTP 响应时对应灯为绿色，不区分 401、302 等状态码；只有 DNS、超时、CONNECT、TLS 等无法建立访问的情况才显示红色，尚无结果时显示黄色。具体失败原因仅在鼠标悬停/键盘聚焦弹窗中显示。弹窗同时提供手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
+代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话还会显示一个保持蓝色的水流流光 Proxy 悬浮球，球下三盏流光灯分别对应三个受监测域名。它大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`：收到任意 HTTP 响应时对应灯为绿色，不区分 401、302 等状态码；只有 DNS、超时、CONNECT、TLS 等无法建立访问的情况才显示红色，尚无结果时显示黄色。具体失败原因仅在鼠标悬停/键盘聚焦弹窗中显示。指针停留在悬浮球或弹窗内时弹窗保持展开；离开两者后粘滞 1 秒再收起。弹窗还提供已保存子账户选择、**添加账户**、手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。每个新增子账户都必须通过正常 OpenAI OAuth 授权获得完整凭据；切换会为后续模型、额度、搜索和图片请求同时切换 token 及其绑定的 `chatgpt-account-id`，不会只改一个 UI 名称。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
 
 ```yaml
 - id: llm-openai-codex
@@ -209,9 +209,9 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 登录后，Codex Connect 设置卡片可能显示多个服务端额度窗口。它们是不同的额度桶，不是同一个数字重复显示：
 
 - **Codex · 每周额度**：普通 GPT Codex 模型使用的标准 Codex 周额度。
-- **GPT-5.3-Codex-Spark · 5 小时额度** 和 **GPT-5.3-Codex-Spark · 每周额度**：Spark 模型返回的两个独立窗口。
+- **GPT-5.3-Codex-Spark · 5 小时额度** 只对 Go 和 Plus 显示；**GPT-5.3-Codex-Spark · 每周额度** 仍是 Spark 的独立周额度桶。
 
-每条进度条都会显示剩余百分比和按本地时区格式化的重置时间。额度窗口、模型资格和重置时间由 OpenAI 返回；数据缺失时界面会显示不可用，不会自行猜测。
+每条进度条都会显示剩余百分比和按本地时区格式化的重置时间。插件使用额度接口返回的 `plan_type` 控制 5 小时行，因此 Pro、Business、Team 和未知套餐不会显示遗留的 5 小时形状窗口。额度窗口、模型资格和重置时间由 OpenAI 返回；数据缺失时界面会显示不可用，不会自行猜测。
 
 ### 单独更改默认模型或全局搜索路由
 
@@ -257,7 +257,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - `doctor` 只读取进程与文件系统元数据。`doctor --json` 只输出一条可解析的非敏感 JSON，包含 schema version 1、包/版本/Node 信息、认证文件状态与安全 mode、能力、冲突状态和提示；它省略认证文件绝对路径以及 OAuth、账户和过期时间信息。
 - Alpha 4.10 用户若因未知的 `web/openai-codex-search-llm-request` 事件而无法读取搜索历史，可先运行 `dsh-codex-connect migrate-history --json`，停止 DSH 后再以 `migrate-history --apply --confirm-stopped --json` 应用修复。该命令默认只预检，会备份每个被修改的压缩 JSONL 文件，Windows 仅支持预检；详见 [MIGRATION.md](../MIGRATION.md)。
 - `status --json` 只输出 signed-in 或 signed-out 状态及包元数据。它只为判断登录态读取认证文件，但不会输出认证文件内容或启动 OAuth。
-- OAuth 单独存储于 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）。`~/.codex/auth.json` 不会被复制或修改。支持的平台上，父目录与文件使用仅所有者可访问权限；写入采用原子替换，刷新写入使用跨进程文件锁。
+- 多个 OAuth 账户统一存储于 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）。旧的单账户 version 1 文件会无损读取，并在下一次凭据写入时迁移为多账户格式。`~/.codex/auth.json` 不会被复制或修改。支持的平台上，父目录与文件使用仅所有者可访问权限；写入采用原子替换，账户切换和刷新写入都使用跨进程文件锁。活动账户返回明确的终止型 credit/quota 耗尽错误时，模型流会选择下一个尚未尝试的已保存账户，并对重复前缀去重后续接同一个纯文本 turn；尝试次数不超过已保存账户数。普通 HTTP 429、认证、取消、超时、DNS 与传输错误不会切换账户；工具调用一旦开始，也会直接结束该 turn，避免重复执行副作用。
 - 默认情况下，OAuth 路由只接受 loopback 浏览器请求。当 DSH 在一台设备运行，而你从可信网络中的另一台设备打开 DSH 时，请在运行 DSH 的设备上显式批准浏览器地址栏中的 origin：
 
   ```sh
@@ -283,7 +283,7 @@ dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol
 
 报告为每项检查标注 `supported`（可用）、`rejected`（拒绝）或 `unknown`（未验证），并提供原因与修复动作。运行时可用仅表示声明的主机包版本匹配，不代表 Web profile 或某个 Node 补丁版本经过集成验证。模型目录条目或私有认证文件只能令模型权限与 OAuth 有效性保持 `unknown`。只有 HTTP 200 有限 SSE 响应包含所选模型完整、非空的助手输出，才能确认独立路由；重定向、超时、限流和不完整流仍为 `unknown`。HTTP 400/404 拒绝的是本次请求，并非所有模型或可选功能；HTTP 401/403 还表示本次请求的授权被拒绝。报告省略 token、账号 ID、路径、代理 origin、响应 ID、headers 和生成文本。
 
-本报告仅涵盖独立路由，不验证活动 profile 路由、搜索/图片工具、浏览器兼容性、provider 重试行为或会话恢复。本插件没有实现自动 provider 故障切换，因此该项为 `rejected`，需要用户明确选择其他 provider。有限 SSE 默认路径不会触发 WebSocket 到 SSE 的回退。`contextManagement` 和续接仍为 `unknown`；原生 compaction 和 WebSocket reuse 在当前集成策略下为 `rejected`。诊断结果不会启用这些能力，也不会更改 Harness 历史。退出码只覆盖运行时、OAuth、所选模型、Responses 和 SSE：`0` 表示五项均可用，`1` 表示至少一项被拒绝，`2` 表示证据未知、选项无效或检查失败。被拒绝的可选能力不影响该退出码。
+本报告仅涵盖独立路由，不验证活动 profile 路由、搜索/图片工具、浏览器兼容性、账户 fallback、provider 重试行为或会话恢复。已保存账户的额度 fallback 是模型流运行时能力，`capabilities --probe` 不会触发它；跨 provider 自动故障切换仍为 `rejected`，需要用户明确选择其他 provider。有限 SSE 默认路径不会触发 WebSocket 到 SSE 的回退；原生 `contextManagement`、compaction 和 WebSocket reuse 仍不在当前集成策略内。诊断结果不会启用这些能力，也不会更改 Harness 历史。退出码只覆盖运行时、OAuth、所选模型、Responses 和 SSE：`0` 表示五项均可用，`1` 表示至少一项被拒绝，`2` 表示证据未知、选项无效或检查失败。被拒绝的可选能力不影响该退出码。
 
 ## 兼容性与安全边界
 

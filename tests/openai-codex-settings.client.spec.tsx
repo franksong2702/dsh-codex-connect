@@ -183,9 +183,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
   })
 
   it('renders signed-in quota semantics and signs out', async () => {
+    let signedOut = false
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       const path = requestPath(input)
       if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        if (signedOut) return json({ status: 'signed-out' })
         return json({
           status: 'signed-in',
           usage: {
@@ -205,6 +207,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
         })
       }
       expect(path).toBe(OPENAI_CODEX_AUTH_LOGOUT_PATH)
+      signedOut = true
       return json({ ok: true })
     })
     vi.stubGlobal('fetch', fetchMock)

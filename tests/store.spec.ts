@@ -15,13 +15,13 @@ afterEach(async () => {
   root = undefined
 })
 
-function credential(access = 'access-secret'): OAuthCredential {
+function credential(access = 'access-secret', accountId = 'account-1'): OAuthCredential {
   return {
     type: 'oauth',
     access,
     refresh: 'refresh-secret',
     expires: Date.now() + 60_000,
-    accountId: 'account-1',
+    accountId,
   }
 }
 
@@ -69,6 +69,49 @@ describe('OpenAICodexCredentialStore', () => {
     expect(seen[1]).not.toBe('zero')
   })
 
+  it('keeps multiple OAuth subaccounts, switches atomically, and removes only the active one', async () => {
+    const auth = await store()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('access-one', 'account-1')))
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('access-two', 'account-2')))
+
+    expect(await auth.accounts()).toEqual([
+      expect.objectContaining({ accountId: 'account-1', active: false }),
+      expect.objectContaining({ accountId: 'account-2', active: true }),
+    ])
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'access-two', accountId: 'account-2' })
+
+    await auth.activate('account-1')
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'access-one', accountId: 'account-1' })
+    expect(await auth.accountIdForAccessToken('access-one')).toBe('account-1')
+    expect(await auth.accountIdForAccessToken('unknown')).toBeUndefined()
+    await expect(auth.activateNext('account-1', ['account-1'])).resolves.toMatchObject({
+      accountId: 'account-2',
+      active: true,
+    })
+    await expect(auth.activateNext('account-2', ['account-1', 'account-2'])).resolves.toBeUndefined()
+    await auth.activate('account-1')
+    await expect(auth.activate('missing-account')).rejects.toThrow(/not found/)
+
+    await auth.delete(OPENAI_CODEX_PROVIDER)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'access-two', accountId: 'account-2' })
+    expect(await auth.accounts()).toEqual([
+      expect.objectContaining({ accountId: 'account-2', active: true }),
+    ])
+  })
+
+  it('reads the legacy single-account document and migrates it on the next write', async () => {
+    const auth = await store()
+    await writeFile(auth.filename, JSON.stringify({ version: 1, credential: credential() }), { mode: 0o600 })
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'account-1' })
+
+    await auth.modify(OPENAI_CODEX_PROVIDER, current => Promise.resolve(current))
+    expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
+      version: 2,
+      activeAccountId: 'account-1',
+      accounts: [{ accountId: 'account-1' }],
+    })
+  })
+
   it('rejects malformed and over-broad documents without echoing their contents', async () => {
     const auth = await store()
     await writeFile(auth.filename, '{"version":1,"credential":{"type":"oauth","access":"leaked-secret"}}', { mode: 0o600 })
@@ -88,8 +131,9 @@ describe('OpenAICodexCredentialStore', () => {
     const auth = await store()
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential()))
     expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
-      version: 1,
-      credential: { type: 'oauth', accountId: 'account-1' },
+      version: 2,
+      activeAccountId: 'account-1',
+      accounts: [{ type: 'oauth', accountId: 'account-1' }],
     })
     await expect(auth.modify('other', () => Promise.resolve(credential())))
       .rejects.toThrow(/does not own provider/)
