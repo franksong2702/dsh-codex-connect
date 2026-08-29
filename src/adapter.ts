@@ -177,6 +177,7 @@ export function createOpenAICodexAdapter(
   proxy?: OpenAICodexProxyRunner,
   _resolveProxyUrl?: (() => string | undefined) | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
+  enableAccountFallback?: () => boolean,
 ): PiAiAdapter {
   const provider = openaiCodexProvider()
   const models: MutableModels = createModels({ credentials })
@@ -200,6 +201,7 @@ export function createOpenAICodexAdapter(
             profile.piProvider,
             credentials,
             resolveAccessToken,
+            enableAccountFallback,
           ),
         },
       ]])

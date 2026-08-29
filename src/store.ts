@@ -8,6 +8,11 @@ import { dirname, join, resolve } from 'node:path'
 import type { Credential, CredentialInfo, CredentialStore, OAuthCredential } from '@earendil-works/pi-ai'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import {
+  openAICodexAccountProfilesPath,
+  resolveOpenAICodexAccountProfiles,
+} from './account-profile.ts'
+import type { OpenAICodexAccountProfileSource } from './account-profile.ts'
 
 /** Provider route and pi-ai provider id owned by this bundle. */
 export const OPENAI_CODEX_PROVIDER = 'openai-codex'
@@ -29,7 +34,13 @@ export interface OpenAICodexAccountSummary {
   accountId: string
   active: boolean
   expires: number
+  displayName: string
+  email?: string
+  profileSource: OpenAICodexAccountProfileSource
 }
+
+/** Internal account selection result; unlike summaries it does not resolve labels. */
+export type OpenAICodexAccountSelection = Pick<OpenAICodexAccountSummary, 'accountId' | 'active' | 'expires'>
 
 /** Whether a filesystem error reports an absent path. */
 function isENOENT(error: unknown): boolean {
@@ -143,12 +154,18 @@ export function openAICodexAuthPath(dshHome?: string): string {
 export class OpenAICodexCredentialStore implements CredentialStore {
   /** Absolute credential document path. */
   readonly filename: string
+  /** Absolute optional non-secret account-label document path. */
+  readonly accountProfilesFilename: string
 
   /**
    * @param filename - explicit document path, defaulting under `$DSH_HOME`.
    */
-  constructor(filename: string = openAICodexAuthPath()) {
+  constructor(
+    filename: string = openAICodexAuthPath(),
+    accountProfilesFilename: string = openAICodexAccountProfilesPath(filename),
+  ) {
     this.filename = resolve(filename)
+    this.accountProfilesFilename = resolve(accountProfilesFilename)
   }
 
   /** Read and validate the current document without acquiring the writer lock. */
@@ -181,11 +198,19 @@ export class OpenAICodexCredentialStore implements CredentialStore {
   /** Enumerate stored accounts without returning tokens. */
   async accounts(): Promise<readonly OpenAICodexAccountSummary[]> {
     const document = await this.readDocument()
-    return document?.accounts.map(account => ({
-      accountId: account.accountId as string,
-      active: account.accountId === document.activeAccountId,
-      expires: account.expires,
-    })) ?? []
+    if (document === undefined) return []
+    const profiles = await resolveOpenAICodexAccountProfiles(document.accounts, this.accountProfilesFilename)
+    return document.accounts.map((account, index) => {
+      const profile = profiles[index]
+      return {
+        accountId: account.accountId as string,
+        active: account.accountId === document.activeAccountId,
+        expires: account.expires,
+        displayName: profile?.displayName ?? `Account ${String(index + 1)}`,
+        ...(profile?.email === undefined ? {} : { email: profile.email }),
+        profileSource: profile?.source ?? 'generated',
+      }
+    })
   }
 
   /** Resolve the owning account internally without exposing any stored token. */
@@ -202,7 +227,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
   async activateNext(
     failedAccountId: string,
     attemptedAccountIds: readonly string[] = [],
-  ): Promise<OpenAICodexAccountSummary | undefined> {
+  ): Promise<OpenAICodexAccountSelection | undefined> {
     if (failedAccountId.length === 0 || failedAccountId.length > 256) {
       throw new TypeError('openai-codex: account id is invalid')
     }
@@ -231,7 +256,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
   }
 
   /** Select the credential used by every subsequent Codex request. */
-  async activate(accountId: string): Promise<OpenAICodexAccountSummary> {
+  async activate(accountId: string): Promise<OpenAICodexAccountSelection> {
     if (accountId.length === 0 || accountId.length > 256) throw new TypeError('openai-codex: account id is invalid')
     await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
     return withFileLock(this.filename, async () => {

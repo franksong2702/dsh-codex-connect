@@ -83,6 +83,8 @@ export interface OpenAICodexSettingsConfig {
   enableProxy: boolean
   /** Credential-free HTTP(S) proxy origin; inactive while enableProxy is false. */
   proxyUrl: string
+  /** Continue a quota-exhausted turn with the next saved Codex account. */
+  enableAccountFallback: boolean
   /**
    * Per-model context-window overrides keyed by catalog model id. Each value
    * replaces the advertised `contextWindow` for that model inside the adapter
@@ -103,6 +105,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   models: undefined,
   enableProxy: false,
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
+  enableAccountFallback: false,
   contextWindowOverrides: undefined,
   enableSearch: false,
   enableImageTool: false,
@@ -151,6 +154,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const models = value['models']
   const enableProxy = value['enableProxy']
   const proxyUrl = value['proxyUrl']
+  const enableAccountFallback = value['enableAccountFallback']
   const contextWindowOverrides = value['contextWindowOverrides']
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
@@ -162,6 +166,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (models !== undefined && (!Array.isArray(models) || models.some(model => typeof model !== 'string'))) return undefined
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && typeof proxyUrl !== 'string') return undefined
+  if (enableAccountFallback !== undefined && typeof enableAccountFallback !== 'boolean') return undefined
   if ((enableProxy ?? false) && proxyUrl !== undefined && !isValidOpenAICodexProxyUrl(proxyUrl)) return undefined
   if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
@@ -178,6 +183,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     proxyUrl: proxyUrl === undefined
       ? DEFAULT_OPENAI_CODEX_PROXY_URL
       : (enableProxy ?? false) ? normalizeOpenAICodexProxyUrl(proxyUrl)! : proxyUrl,
+    enableAccountFallback: enableAccountFallback ?? false,
     contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
     enableImageTool,

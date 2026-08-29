@@ -194,6 +194,15 @@ export {
   OPENAI_CODEX_PROVIDER,
   openAICodexAuthPath,
 } from './store.ts'
+export type { OpenAICodexAccountSelection, OpenAICodexAccountSummary } from './store.ts'
+export {
+  OPENAI_CODEX_ACCOUNT_PROFILES_FILENAME,
+  openAICodexAccountProfilesPath,
+} from './account-profile.ts'
+export type {
+  OpenAICodexAccountProfile,
+  OpenAICodexAccountProfileSource,
+} from './account-profile.ts'
 export {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -237,6 +246,7 @@ export interface Config {
   models?: string[] | undefined
   /** Route provider traffic through proxyUrl. */
   enableProxy?: boolean
+  enableAccountFallback?: boolean
   /** Credential-free HTTP(S) proxy origin. */
   proxyUrl?: string
   /**
@@ -266,6 +276,7 @@ export interface Config {
 export const Config: z<Config> = z.object({
   models: z.union([z.const(undefined), z.array(z.string())]),
   enableProxy: z.boolean().default(false),
+  enableAccountFallback: z.boolean().default(false),
   proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
   contextWindowOverrides: z.transform(
     z.union([z.const(undefined), z.dict(z.union([z.const(null), z.number()]))]),
@@ -317,6 +328,7 @@ export function apply(ctx: Context, config: Config): void {
       proxy,
       undefined,
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
+      () => resolveOpenAICodexSettings(current()).enableAccountFallback,
     ),
   )
   ctx.inject(['webServer'], webCtx => {

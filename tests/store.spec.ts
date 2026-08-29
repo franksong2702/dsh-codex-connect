@@ -73,10 +73,14 @@ describe('OpenAICodexCredentialStore', () => {
     const auth = await store()
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('access-one', 'account-1')))
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('access-two', 'account-2')))
+    await writeFile(auth.accountProfilesFilename, JSON.stringify({
+      version: 1,
+      accounts: { 'account-1': 'Work', 'account-2': { name: 'Personal', email: 'personal@example.com' } },
+    }))
 
     expect(await auth.accounts()).toEqual([
-      expect.objectContaining({ accountId: 'account-1', active: false }),
-      expect.objectContaining({ accountId: 'account-2', active: true }),
+      expect.objectContaining({ accountId: 'account-1', active: false, displayName: 'Work', profileSource: 'file' }),
+      expect.objectContaining({ accountId: 'account-2', active: true, displayName: 'Personal', email: 'personal@example.com', profileSource: 'file' }),
     ])
     expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'access-two', accountId: 'account-2' })
 

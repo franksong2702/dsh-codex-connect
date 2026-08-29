@@ -8,7 +8,6 @@ import {
   useSyncExternalStore,
 } from 'react'
 import type {
-  ChangeEvent,
   CSSProperties,
   FocusEvent,
   PointerEvent as ReactPointerEvent,
@@ -37,26 +36,22 @@ interface AccountSummary {
   accountId: string
   active: boolean
   expires: number
+  displayName: string
+  email?: string
+  profileSource: 'file' | 'oauth' | 'local' | 'generated'
 }
 
 interface AccountsResponse {
   accounts: AccountSummary[]
 }
 
-export const OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS = 3_000
 export const OPENAI_CODEX_PROXY_CLOSE_DELAY_MS = 1_000
 
 const BALL_SIZE = 54
-const FLOW_LIGHT_GAP = 5
-const FLOW_LIGHT_HEIGHT = 12
-const INDICATOR_HEIGHT = BALL_SIZE + FLOW_LIGHT_GAP + FLOW_LIGHT_HEIGHT
+const INDICATOR_HEIGHT = BALL_SIZE
+const ACCOUNT_REFRESH_INTERVAL_MS = 3_000
 const EDGE_GAP = 16
 const DRAG_THRESHOLD = 4
-const CONNECTIVITY_LIGHTS = [
-  { id: 'codex-api', hostname: 'chatgpt.com' },
-  { id: 'oauth', hostname: 'auth.openai.com' },
-  { id: 'openai-api', hostname: 'api.openai.com' },
-] as const
 
 export interface OpenAICodexProxyIndicatorInjected {
   readonly directory: SnapshotStore<ModelDirectoryState>
@@ -100,17 +95,41 @@ function accountsResponse(value: unknown): AccountsResponse | undefined {
     const record = item as Record<string, unknown>
     if (typeof record['accountId'] !== 'string' || typeof record['active'] !== 'boolean'
       || typeof record['expires'] !== 'number') return undefined
+    const displayName = typeof record['displayName'] === 'string' && record['displayName'].trim().length > 0
+      ? record['displayName'].trim()
+      : `Account ${String(accounts.length + 1)}`
+    const email = typeof record['email'] === 'string' && record['email'].trim().length > 0
+      ? record['email'].trim()
+      : undefined
+    const profileSource = record['profileSource'] === 'file' || record['profileSource'] === 'oauth'
+      || record['profileSource'] === 'local' || record['profileSource'] === 'generated'
+      ? record['profileSource']
+      : 'generated'
     accounts.push({
       accountId: record['accountId'],
       active: record['active'],
       expires: record['expires'],
+      displayName,
+      ...(email === undefined ? {} : { email }),
+      profileSource,
     })
   }
   return { accounts }
 }
 
-function accountSuffix(accountId: string): string {
-  return accountId.length <= 6 ? accountId : accountId.slice(-6)
+function accountInitials(account: AccountSummary): string {
+  const words = account.displayName.split(/\s+/u).filter(Boolean)
+  const characters = words.length > 1
+    ? [words[0]?.[0], words[1]?.[0]]
+    : Array.from(account.displayName).slice(0, 2)
+  return characters.filter((value): value is string => value !== undefined).join('').toUpperCase()
+}
+
+function accountProfileSourceKey(source: AccountSummary['profileSource']): OpenAICodexSettingsKey {
+  if (source === 'file') return 'accountProfileFile'
+  if (source === 'oauth') return 'accountProfileOauth'
+  if (source === 'local') return 'accountProfileLocal'
+  return 'accountProfileGenerated'
 }
 
 function targetResult(value: unknown): OpenAICodexConnectivityTargetResult | undefined {
@@ -219,7 +238,7 @@ function ratioFromPoint(point: Point, bounds: Bounds): Point {
   }
 }
 
-/** Show and poll only while this session is routed through OpenAI Codex. */
+/** Show only while this session is routed through OpenAI Codex. */
 export function OpenAICodexProxyIndicator({
   directory,
   configScope,
@@ -238,6 +257,7 @@ export function OpenAICodexProxyIndicator({
   )
   const selected = model.status === 'ready' && model.current?.provider === 'openai-codex'
   const active = settings.value?.enableProxy === true
+  const fallbackEnabled = settings.value?.enableAccountFallback === true
   const proxyUrl = settings.value?.proxyUrl
   const rootRef = useRef<HTMLDivElement>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -245,6 +265,7 @@ export function OpenAICodexProxyIndicator({
   const positionRef = useRef<Point>({ x: EDGE_GAP, y: EDGE_GAP })
   const ratioRef = useRef<Point>(readRatio(sessionKey))
   const boundsRef = useRef<Bounds>()
+  const connectivityController = useRef<AbortController>()
   const [position, setPosition] = useState<Point>(positionRef.current)
   const [bounds, setBounds] = useState<Bounds>()
   const [expanded, setExpanded] = useState(false)
@@ -252,10 +273,10 @@ export function OpenAICodexProxyIndicator({
   const [hoveredTarget, setHoveredTarget] = useState<string>()
   const [report, setReport] = useState<OpenAICodexConnectivityReport>()
   const [connectivityError, setConnectivityError] = useState<string>()
-  const [refreshRevision, setRefreshRevision] = useState(0)
   const [checking, setChecking] = useState(false)
   const [accounts, setAccounts] = useState<AccountSummary[]>([])
   const [accountBusy, setAccountBusy] = useState(false)
+  const [fallbackBusy, setFallbackBusy] = useState(false)
   const [accountError, setAccountError] = useState<string>()
   const [accountNotice, setAccountNotice] = useState<string>()
   const popupId = useId()
@@ -316,49 +337,14 @@ export function OpenAICodexProxyIndicator({
   }, [])
 
   useEffect(() => {
-    if (!selected) {
-      setReport(undefined)
-      setConnectivityError(undefined)
-      setChecking(false)
-      return
-    }
-    let stopped = false
-    let inFlight = false
-    let requestController: AbortController | undefined
-    const refresh = async (): Promise<void> => {
-      if (stopped || inFlight || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return
-      inFlight = true
-      requestController = new AbortController()
-      setChecking(true)
-      try {
-        const response = await fetch(OPENAI_CODEX_CONNECTIVITY_PATH, {
-          credentials: 'same-origin',
-          headers: { accept: 'application/json' },
-          signal: requestController.signal,
-        })
-        const next = response.ok ? connectivityReport(await response.json().catch(() => undefined)) : undefined
-        if (next === undefined) throw new Error(`HTTP ${String(response.status)}`)
-        if (!stopped) {
-          setReport(next)
-          setConnectivityError(undefined)
-        }
-      } catch (error: unknown) {
-        if (!stopped && !requestController.signal.aborted) {
-          setConnectivityError(error instanceof Error ? error.message : String(error))
-        }
-      } finally {
-        inFlight = false
-        if (!stopped) setChecking(false)
-      }
-    }
-    void refresh()
-    const timer = setInterval(() => { void refresh() }, OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS)
-    return () => {
-      stopped = true
-      clearInterval(timer)
-      requestController?.abort()
-    }
-  }, [selected, active, proxyUrl, refreshRevision])
+    connectivityController.current?.abort()
+    connectivityController.current = undefined
+    setReport(undefined)
+    setConnectivityError(undefined)
+    setChecking(false)
+  }, [selected, active, proxyUrl])
+
+  useEffect(() => () => { connectivityController.current?.abort() }, [])
 
   useEffect(() => {
     if (!selected || !expanded) return
@@ -386,7 +372,7 @@ export function OpenAICodexProxyIndicator({
       }
     }
     void refreshAccounts()
-    const timer = setInterval(() => { void refreshAccounts() }, OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS)
+    const timer = setInterval(() => { void refreshAccounts() }, ACCOUNT_REFRESH_INTERVAL_MS)
     return () => {
       stopped = true
       clearInterval(timer)
@@ -394,8 +380,35 @@ export function OpenAICodexProxyIndicator({
     }
   }, [selected, expanded])
 
-  const switchAccount = async (event: ChangeEvent<HTMLSelectElement>): Promise<void> => {
-    const accountId = event.currentTarget.value
+  const testConnectivity = async (): Promise<void> => {
+    if (checking) return
+    connectivityController.current?.abort()
+    const controller = new AbortController()
+    connectivityController.current = controller
+    setChecking(true)
+    setConnectivityError(undefined)
+    try {
+      const response = await fetch(OPENAI_CODEX_CONNECTIVITY_PATH, {
+        credentials: 'same-origin',
+        headers: { accept: 'application/json' },
+        signal: controller.signal,
+      })
+      const next = response.ok ? connectivityReport(await response.json().catch(() => undefined)) : undefined
+      if (next === undefined) throw new Error(`HTTP ${String(response.status)}`)
+      if (!controller.signal.aborted && connectivityController.current === controller) setReport(next)
+    } catch (error: unknown) {
+      if (!controller.signal.aborted && connectivityController.current === controller) {
+        setConnectivityError(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (connectivityController.current === controller) {
+        connectivityController.current = undefined
+        setChecking(false)
+      }
+    }
+  }
+
+  const switchAccount = async (accountId: string): Promise<void> => {
     if (accountId.length === 0 || accounts.some(account => account.accountId === accountId) === false) return
     setAccountBusy(true)
     setAccountError(undefined)
@@ -418,6 +431,24 @@ export function OpenAICodexProxyIndicator({
       setAccountError(error instanceof Error ? error.message : String(error))
     } finally {
       setAccountBusy(false)
+    }
+  }
+
+  const toggleAccountFallback = async (): Promise<void> => {
+    const next = !fallbackEnabled
+    setFallbackBusy(true)
+    setAccountError(undefined)
+    setAccountNotice(undefined)
+    try {
+      await configScope.set('enableAccountFallback', next)
+      if ((configScope.getSnapshot().value?.enableAccountFallback === true) !== next) {
+        throw new Error('setting was not confirmed')
+      }
+      setAccountNotice(t(next ? 'accountFallbackEnabled' : 'accountFallbackDisabled'))
+    } catch (error: unknown) {
+      setAccountError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setFallbackBusy(false)
     }
   }
 
@@ -598,9 +629,12 @@ export function OpenAICodexProxyIndicator({
         }
         [data-openai-codex-proxy-flow="water"]:focus-visible,
         [data-openai-codex-proxy-popup] button:focus-visible,
-        [data-openai-codex-proxy-popup] select:focus-visible,
         [data-openai-codex-domain]:focus-visible {
           outline: 2px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 76%, white) !important;
+          outline-offset: 3px;
+        }
+        [data-openai-codex-fallback-switch]:focus-visible + span {
+          outline: 2px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 76%, white);
           outline-offset: 3px;
         }
         [data-openai-codex-proxy-popup] button {
@@ -704,37 +738,6 @@ export function OpenAICodexProxyIndicator({
         </span>
         <span style={{ position: 'absolute', zIndex: 3, left: '50%', bottom: 2, minWidth: 39, boxSizing: 'border-box', padding: '2px 5px 1px', border: '1px solid rgb(255 255 255 / 20%)', borderRadius: 999, background: 'rgb(4 12 31 / 76%)', boxShadow: '0 2px 6px rgb(0 0 0 / 22%)', color: '#f8fafc', fontSize: 8, fontWeight: 750, lineHeight: '10px', letterSpacing: '.08em', textAlign: 'center', textShadow: '0 1px 2px rgb(0 0 0 / 42%)', transform: 'translateX(-50%)' }}>PROXY</span>
       </button>
-      <div
-        role="list"
-        aria-label={signalText}
-        data-openai-codex-flow-lights="three-domains"
-        style={{ boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: 38, height: FLOW_LIGHT_HEIGHT, marginTop: FLOW_LIGHT_GAP, padding: '3px 5px', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 999, background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-1, #fff) 92%, transparent)', boxShadow: '0 3px 9px rgb(0 0 0 / 13%), inset 0 1px 0 rgb(255 255 255 / 32%)', backdropFilter: 'blur(8px)' }}
-      >
-        {CONNECTIVITY_LIGHTS.map(light => {
-          const target = report?.targets.find(candidate => candidate.id === light.id)
-          const lightSignal: Signal = connectivityError !== undefined
-            ? 'red'
-            : target === undefined ? 'yellow' : targetSignal(target)
-          const color = signalColors[lightSignal]
-          return (
-            <span
-              key={light.id}
-              role="listitem"
-              aria-label={`${light.hostname}: ${lightSignal}`}
-              title={`${light.hostname}: ${lightSignal}`}
-              data-openai-codex-flow-light={light.hostname}
-              data-openai-codex-flow-light-signal={lightSignal}
-              style={{
-                width: 6,
-                height: 4,
-                borderRadius: 999,
-                background: `linear-gradient(90deg, color-mix(in srgb, ${color} 70%, transparent), ${color})`,
-                boxShadow: `0 0 6px color-mix(in srgb, ${color} 58%, transparent)`,
-              }}
-            />
-          )
-        })}
-      </div>
       {expanded ? (
         <div id={popupId} role="dialog" aria-label={t('proxyHeaderPopup')} data-openai-codex-proxy-popup="status-and-settings" style={popupStyle}>
           <span
@@ -768,7 +771,7 @@ export function OpenAICodexProxyIndicator({
                 </span>
               </div>
             </div>
-            <button type="button" style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }} disabled={checking} onClick={() => { setRefreshRevision(value => value + 1) }}>
+            <button type="button" data-openai-codex-connectivity-test="manual" style={{ ...buttonStyle, display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }} disabled={checking} onClick={() => { void testConnectivity() }}>
               <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
                 <path d="M15.8 7A6.2 6.2 0 1 0 16 12" strokeLinecap="round" />
                 <path d="M12.8 3.8h3.5v3.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -781,7 +784,7 @@ export function OpenAICodexProxyIndicator({
             data-openai-codex-account-switcher="oauth-credentials"
             style={{
               marginTop: 14,
-              padding: 10,
+              padding: 11,
               border: '1px solid var(--dsw-alias-border-l2)',
               borderRadius: 14,
               background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-2) 62%, transparent)',
@@ -789,7 +792,7 @@ export function OpenAICodexProxyIndicator({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <div style={{ minWidth: 0 }}>
-                <strong id={`${popupId}-accounts`} style={{ display: 'block', fontSize: 12, lineHeight: '17px' }}>
+                <strong id={`${popupId}-accounts`} style={{ display: 'block', fontSize: 13, lineHeight: '18px' }}>
                   {t('accountSwitcherHeading')}
                 </strong>
                 <span style={{ display: 'block', marginTop: 2, color: 'var(--dsw-alias-label-tertiary)', fontSize: 10, lineHeight: '14px' }}>
@@ -805,33 +808,92 @@ export function OpenAICodexProxyIndicator({
                 {accountBusy ? t('accountWorking') : t('accountAdd')}
               </button>
             </div>
-            <select
+            <div
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 10, padding: '9px 10px', border: '1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l2))', borderRadius: 11, background: 'color-mix(in srgb, var(--dsw-alias-brand-primary) 5%, var(--dsw-alias-bg-layer-1))' }}
+            >
+              <label htmlFor={`${popupId}-fallback`} style={{ minWidth: 0, cursor: fallbackBusy ? 'wait' : 'pointer' }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 650, lineHeight: '17px' }}>{t('accountFallback')}</span>
+                <span style={{ display: 'block', marginTop: 1, color: 'var(--dsw-alias-label-tertiary)', fontSize: 10, lineHeight: '14px' }}>{t('accountFallbackHelp')}</span>
+              </label>
+              <label
+                aria-label={t('accountFallback')}
+                style={{ position: 'relative', display: 'inline-flex', flex: '0 0 auto', width: 38, height: 22, cursor: fallbackBusy ? 'wait' : 'pointer' }}
+              >
+                <input
+                  id={`${popupId}-fallback`}
+                  type="checkbox"
+                  role="switch"
+                  data-openai-codex-fallback-switch="quota"
+                  checked={fallbackEnabled}
+                  disabled={fallbackBusy}
+                  onChange={() => { void toggleAccountFallback() }}
+                  style={{ position: 'absolute', width: 1, height: 1, margin: 0, opacity: 0 }}
+                />
+                <span aria-hidden="true" style={{ position: 'absolute', inset: 0, border: '1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 36%, var(--dsw-alias-border-l2))', borderRadius: 999, background: fallbackEnabled ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-bg-layer-3, #94a3b8)', transition: 'background 180ms ease, border-color 180ms ease' }} />
+                <span aria-hidden="true" style={{ position: 'absolute', top: 3, left: fallbackEnabled ? 19 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgb(0 0 0 / 25%)', transition: 'left 180ms cubic-bezier(.2,.8,.2,1)' }} />
+              </label>
+            </div>
+            <div
+              role="radiogroup"
               aria-label={t('accountSelectLabel')}
-              value={accounts.find(account => account.active)?.accountId ?? ''}
-              disabled={accountBusy || accounts.length === 0}
-              onChange={(event) => { void switchAccount(event) }}
               style={{
-                boxSizing: 'border-box',
-                width: '100%',
-                minHeight: 34,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                maxHeight: 190,
                 marginTop: 9,
-                padding: '5px 30px 5px 9px',
-                border: '1px solid var(--dsw-alias-border-l2)',
-                borderRadius: 9,
-                background: 'var(--dsw-alias-bg-layer-1)',
-                color: 'var(--dsw-alias-label-primary)',
-                font: 'inherit',
-                fontSize: 12,
-                cursor: accounts.length === 0 ? 'not-allowed' : 'pointer',
+                overflowY: 'auto',
               }}
             >
-              {accounts.length === 0 ? <option value="">{t('accountUnavailable')}</option> : null}
-              {accounts.map((account, index) => (
-                <option key={account.accountId} value={account.accountId}>
-                  {t('accountOption', { index: index + 1, suffix: accountSuffix(account.accountId) })}
-                </option>
+              {accounts.length === 0 ? (
+                <div style={{ padding: '12px 10px', border: '1px dashed var(--dsw-alias-border-l2)', borderRadius: 10, color: 'var(--dsw-alias-label-tertiary)', fontSize: 11, textAlign: 'center' }}>
+                  {t('accountUnavailable')}
+                </div>
+              ) : accounts.map(account => (
+                <button
+                  key={account.accountId}
+                  type="button"
+                  role="radio"
+                  aria-checked={account.active}
+                  disabled={accountBusy}
+                  onClick={() => { if (!account.active) void switchAccount(account.accountId) }}
+                  data-openai-codex-account-active={account.active || undefined}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 9,
+                    width: '100%',
+                    minHeight: 48,
+                    padding: '6px 8px',
+                    border: account.active ? '1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 46%, var(--dsw-alias-border-l2))' : '1px solid var(--dsw-alias-border-l2)',
+                    borderRadius: 11,
+                    background: account.active ? 'color-mix(in srgb, var(--dsw-alias-brand-primary) 9%, var(--dsw-alias-bg-layer-1))' : 'var(--dsw-alias-bg-layer-1)',
+                    color: 'var(--dsw-alias-label-primary)',
+                    cursor: accountBusy ? 'wait' : account.active ? 'default' : 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span aria-hidden="true" style={{ display: 'inline-grid', flex: '0 0 auto', placeItems: 'center', width: 32, height: 32, borderRadius: 10, background: account.active ? 'linear-gradient(145deg, #2563eb, #4f46e5)' : 'var(--dsw-alias-bg-layer-3, #e2e8f0)', color: account.active ? '#fff' : 'var(--dsw-alias-label-secondary)', fontSize: 11, fontWeight: 750, letterSpacing: '.03em' }}>
+                    {accountInitials(account)}
+                  </span>
+                  <span style={{ display: 'block', flex: '1 1 auto', minWidth: 0 }}>
+                    <span style={{ display: 'block', overflow: 'hidden', fontSize: 12, fontWeight: 650, lineHeight: '17px', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.displayName}</span>
+                    <span style={{ display: 'block', overflow: 'hidden', marginTop: 1, color: 'var(--dsw-alias-label-tertiary)', fontSize: 10, lineHeight: '14px', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {account.email ?? t(accountProfileSourceKey(account.profileSource))}
+                    </span>
+                  </span>
+                  {account.active ? (
+                    <span style={{ display: 'inline-flex', flex: '0 0 auto', alignItems: 'center', gap: 4, color: 'var(--dsw-alias-brand-primary)', fontSize: 10, fontWeight: 650 }}>
+                      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m3.2 8.2 3 3 6.6-6.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      {t('accountActive')}
+                    </span>
+                  ) : null}
+                </button>
               ))}
-            </select>
+            </div>
+            <div style={{ marginTop: 7, color: 'var(--dsw-alias-label-tertiary)', fontSize: 9, lineHeight: '13px' }}>
+              {t('accountProfileFileHelp')}
+            </div>
             {accountNotice !== undefined ? (
               <div role="status" style={{ marginTop: 6, color: 'var(--dsw-alias-state-success-primary, #16a34a)', fontSize: 10, lineHeight: '14px' }}>
                 {accountNotice}
@@ -852,6 +914,11 @@ export function OpenAICodexProxyIndicator({
               background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-2) 62%, transparent)',
             }}
           >
+          {report === undefined && connectivityError === undefined ? (
+            <div style={{ padding: '7px 9px', color: 'var(--dsw-alias-label-tertiary)', fontSize: 10, lineHeight: '14px' }}>
+              {t('connectivityManualHint')}
+            </div>
+          ) : null}
           <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {report?.targets.map(target => {
               const targetState = targetSignal(target)

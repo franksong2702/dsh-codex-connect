@@ -138,14 +138,39 @@ The two small controls are shown only when the current conversation is using a G
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer with the per-conversation Fast Mode lightning control and weekly quota bar" width="820">
 </p>
 
+### Named accounts and quota fallback
+
+The session proxy ball contains an **Account & fallback** card whenever the conversation uses `openai-codex`. Accounts are shown by a friendly identity, never by the opaque OpenAI account id. Codex Connect derives the name and email locally from the saved OAuth access JWT without making a profile request. If those claims are unavailable, it uses `OPENAI_CODEX_LOCAL_USERNAME`, the operating-system username, and finally `Account N`.
+
+You can override names with the optional non-secret file `$DSH_HOME/.openai-codex-account-profiles.json`. Keys may be an OAuth email or an account id; the id remains an internal matching key and is not displayed in the UI:
+
+```json
+{
+  "version": 1,
+  "localUsername": "Burning",
+  "accounts": {
+    "work@example.com": "Work",
+    "another@example.com": {
+      "name": "Personal",
+      "email": "another@example.com"
+    }
+  }
+}
+```
+
+File aliases take priority over OAuth name/email, followed by the configured or detected local username. Invalid or missing profile files are ignored and never block authentication. The file contains labels only; OAuth tokens remain in the separate owner-only auth document.
+
+**Automatic fallback** is disabled by default and can be opted into live inside the same card. When enabled, it activates only after an explicit terminal quota/credit exhaustion, never for ordinary rate limits or transport failures. If no tool call has started, the plugin selects the next saved credential and continues the interrupted turn with duplicate-output suppression. While the switch is off, the original quota error is terminal and the selected account remains unchanged.
+
 ## Optional capabilities (off by default)
 
-The installed bundle is intentionally inert beyond model-provider registration:
+Proxy, account fallback, search, and image capabilities all remain off by default:
 
 ```yaml
 - id: llm-openai-codex
   config:
     enableProxy: false
+    enableAccountFallback: false
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
@@ -164,7 +189,7 @@ The Plugin configuration card deliberately separates discovery from activation:
 2. **Test** sends a probe through the current draft URL. It does not save or enable the proxy.
 3. **Activate** becomes available only after that exact draft passes Test. Clicking it is the explicit confirmation that saves the URL and enables the proxy.
 
-The status rail on the right of the proxy section is green while active and red while direct. An `openai-codex` conversation also shows a neutral blue, water-flow proxy ball with three flowing lights beneath it, one for each monitored domain. About every three seconds it checks `chatgpt.com`, `auth.openai.com`, and `api.openai.com` through the currently selected direct or proxy path. A light is green after any HTTP response, regardless of status code, red only for reachability failures such as DNS, timeout, CONNECT, or TLS errors, and yellow while no result is available. Failure details appear only in the ball's hover/focus popover. The popover stays open while the pointer is over either the ball or panel, then collapses one second after the pointer leaves both. It also provides a saved-account selector, **Add account**, a manual connection check, and the same Detect, Test, Activate, and **Disable proxy** workflow as Plugin configuration. Each added subaccount is a complete OAuth credential obtained through the normal OpenAI authorization flow; switching changes the token and token-bound `chatgpt-account-id` for subsequent model, quota, search, and image requests. The process-global dispatcher bridge is installed only while a Codex operation is in flight and is restored after that operation settles. Switching a session to another adapter stops its monitor and leaves no persistent proxy registration, without disabling the saved proxy for other Codex sessions. Disabling the setting or uninstalling the plugin retires its proxy agents after in-flight requests finish. Multiple installed instances keep independent proxy controllers.
+The status rail on the right of the proxy section is green while active and red while direct. An `openai-codex` conversation also shows a neutral blue water-flow proxy ball, without connectivity lights or background probes. Its hover/focus popover stays open while the pointer is over either the ball or panel, then collapses one second after the pointer leaves both. A small **Test connections** button is pinned to the popover header; only an explicit click checks `chatgpt.com`, `auth.openai.com`, and `api.openai.com` through the currently selected direct or proxy path. Any HTTP response counts as reachable regardless of status code, while DNS, timeout, CONNECT, and TLS failures are reported as unreachable. The result and failure detail remain in the popover until another manual test or a route-setting change; closing the popover never starts a test. The panel also provides named account cards, the opt-in **Automatic fallback** switch, **Add account**, and the same proxy Detect, Test, Activate, and **Disable proxy** workflow as Plugin configuration. Each added subaccount is a complete OAuth credential obtained through the normal OpenAI authorization flow; switching changes the token and token-bound `chatgpt-account-id` for subsequent model, quota, search, and image requests. The process-global dispatcher bridge is installed only while a Codex operation is in flight and is restored after that operation settles. Switching a session to another adapter aborts any manual connectivity test and leaves no persistent proxy registration, without disabling the saved proxy for other Codex sessions. Disabling the setting or uninstalling the plugin retires its proxy agents after in-flight requests finish. Multiple installed instances keep independent proxy controllers.
 
 ```yaml
 - id: llm-openai-codex
@@ -243,6 +268,7 @@ Selecting Codex as the profile's global search route is another explicit change:
 | `models` | full catalog | Codex model id array; empty hides all entries |
 | `enableProxy` | `false` | boolean; affects only this Codex provider instance |
 | `proxyUrl` | `http://127.0.0.1:7890` | credential-free HTTP(S) proxy URL |
+| `enableAccountFallback` | `false` | opt in to continuing safe quota-exhausted turns with the next saved account |
 | `contextWindowOverrides` | none | Per-model context-window override map; see below |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |

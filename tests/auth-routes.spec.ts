@@ -203,8 +203,8 @@ describe('OpenAI Codex Web OAuth boundary', () => {
 
   it('lists only non-secret account metadata and activates a selected subaccount', async () => {
     vi.mocked(store.accounts).mockResolvedValue([
-      { accountId: 'account-1', active: false, expires: 10_000 },
-      { accountId: 'account-2', active: true, expires: 20_000 },
+      { accountId: 'account-1', active: false, expires: 10_000, displayName: 'Personal', profileSource: 'file' },
+      { accountId: 'account-2', active: true, expires: 20_000, displayName: 'Ada Lovelace', email: 'ada@example.com', profileSource: 'oauth' },
     ])
     const route = captureRoutes().find(candidate => candidate.path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH)
     if (route === undefined) throw new Error('accounts route was not registered')
@@ -214,8 +214,8 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     expect(listed.observed.status).toBe(200)
     expect(JSON.parse(listed.observed.body ?? 'null')).toEqual({
       accounts: [
-        { accountId: 'account-1', active: false, expires: 10_000 },
-        { accountId: 'account-2', active: true, expires: 20_000 },
+        { accountId: 'account-1', active: false, expires: 10_000, displayName: 'Personal', profileSource: 'file' },
+        { accountId: 'account-2', active: true, expires: 20_000, displayName: 'Ada Lovelace', email: 'ada@example.com', profileSource: 'oauth' },
       ],
     })
     expect(listed.observed.body).not.toContain('access')

@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ModelDirectoryState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import {
-  OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS,
   OPENAI_CODEX_PROXY_CLOSE_DELAY_MS,
   OpenAICodexProxyIndicator,
 } from '../src/client/OpenAICodexProxyIndicator.tsx'
@@ -108,7 +107,7 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex session proxy indicator', () => {
-  it('shows live domain failures, keeps the popup interactive, and switches immediately to direct mode', async () => {
+  it('tests connectivity only on demand, keeps the popup interactive, and switches immediately to direct mode', async () => {
     const report = {
       checkedAt: Date.now(),
       mode: 'proxy',
@@ -132,8 +131,8 @@ describe('OpenAI Codex session proxy indicator', () => {
       }
       return json({
         accounts: [
-          { accountId: 'account-1', active: activeAccountId === 'account-1', expires: Date.now() + 60_000 },
-          { accountId: 'account-2', active: activeAccountId === 'account-2', expires: Date.now() + 60_000 },
+          { accountId: 'account-1', active: activeAccountId === 'account-1', expires: Date.now() + 60_000, displayName: 'Work', email: 'work@example.com', profileSource: 'file' },
+          { accountId: 'account-2', active: activeAccountId === 'account-2', expires: Date.now() + 60_000, displayName: 'Ada Lovelace', email: 'ada@example.com', profileSource: 'oauth' },
         ],
       })
     })
@@ -145,31 +144,40 @@ describe('OpenAI Codex session proxy indicator', () => {
       </div>,
     )
 
-    expect(OPENAI_CODEX_CONNECTIVITY_INTERVAL_MS).toBe(3_000)
-    await waitFor(() => { expect(fetchMock).toHaveBeenCalledOnce() })
-    const trigger = await screen.findByRole('button', { name: en.connectivityBallLabel.replace('{summary}', en.connectivitySignalRed) })
+    expect(fetchMock).not.toHaveBeenCalled()
+    const trigger = await screen.findByRole('button', { name: en.connectivityBallLabel.replace('{summary}', en.connectivitySignalYellow) })
     expect(document.querySelector('[data-openai-codex-proxy-indicator="active"]')).toBeTruthy()
-    expect(document.querySelector('[data-openai-codex-connectivity="red"]')).toBeTruthy()
+    expect(document.querySelector('[data-openai-codex-connectivity="yellow"]')).toBeTruthy()
     expect(trigger.textContent).toBe('PROXY')
     expect(trigger.getAttribute('data-openai-codex-proxy-flow')).toBe('water')
     expect(trigger.getAttribute('data-openai-codex-orb-checking')).toBe('false')
     expect(trigger.querySelector('[data-openai-codex-orb-shell="gradient"]')).toBeTruthy()
     expect(trigger.querySelector('[data-openai-codex-orb-layer="aurora"]')).toBeTruthy()
     expect(trigger.hasAttribute('data-openai-codex-proxy-signal')).toBe(false)
-    expect(document.querySelector('[data-openai-codex-flow-lights="three-domains"]')).toBeTruthy()
-    expect(document.querySelector('[data-openai-codex-flow-light="chatgpt.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('green')
-    expect(document.querySelector('[data-openai-codex-flow-light="auth.openai.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('red')
-    expect(document.querySelector('[data-openai-codex-flow-light="api.openai.com"]')?.getAttribute('data-openai-codex-flow-light-signal')).toBe('green')
+    expect(document.querySelector('[data-openai-codex-flow-lights]')).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
 
     fireEvent.mouseEnter(trigger)
     const popup = await screen.findByRole('dialog', { name: en.proxyHeaderPopup })
-    const accountSelect = await screen.findByRole('combobox', { name: en.accountSelectLabel })
-    expect((accountSelect as HTMLSelectElement).value).toBe('account-2')
-    fireEvent.change(accountSelect, { target: { value: 'account-1' } })
-    await waitFor(() => { expect((accountSelect as HTMLSelectElement).value).toBe('account-1') })
+    const currentAccount = await screen.findByRole('radio', { name: /Ada Lovelace/u })
+    expect(currentAccount.getAttribute('aria-checked')).toBe('true')
+    expect(popup.textContent).toContain('ada@example.com')
+    expect(popup.textContent).not.toContain('account-1')
+    expect(popup.textContent).not.toContain('account-2')
+    fireEvent.click(screen.getByRole('radio', { name: /Work/u }))
+    await waitFor(() => { expect(screen.getByRole('radio', { name: /Work/u }).getAttribute('aria-checked')).toBe('true') })
     expect((await screen.findByText(en.accountSwitched)).textContent).toBe(en.accountSwitched)
+    const fallback = screen.getByRole('switch', { name: new RegExp(en.accountFallback, 'u') })
+    expect((fallback as HTMLInputElement).checked).toBe(false)
+    fireEvent.click(fallback)
+    await waitFor(() => { expect(set).toHaveBeenCalledWith('enableAccountFallback', true) })
+    expect((fallback as HTMLInputElement).checked).toBe(true)
     expect(popup.textContent).toContain('http://127.0.0.1:7890')
+    expect(popup.textContent).toContain(en.connectivityManualHint)
+    expect(popup.textContent).not.toContain('chatgpt.com')
+    expect(screen.getByRole('button', { name: en.connectivityRefresh })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: en.connectivityRefresh }))
+    await waitFor(() => { expect(connectivityCalls).toBe(1) })
     expect(popup.textContent).toContain('chatgpt.com')
     expect(popup.textContent).toContain('auth.openai.com')
     expect(popup.textContent).not.toContain('ECONNREFUSED: proxy tunnel failed')
@@ -178,13 +186,9 @@ describe('OpenAI Codex session proxy indicator', () => {
     expect(document.querySelector('[data-openai-codex-domain="api.openai.com"]')?.getAttribute('data-openai-codex-domain-signal')).toBe('green')
     fireEvent.mouseEnter(screen.getByText('auth.openai.com'))
     expect(popup.textContent).toContain('ECONNREFUSED: proxy tunnel failed')
-    expect(screen.getByRole('button', { name: en.connectivityRefresh })).toBeTruthy()
     expect(screen.getByRole('button', { name: en.proxyDetect })).toBeTruthy()
     expect(screen.getByRole('button', { name: en.proxyTest })).toBeTruthy()
     expect(screen.getByRole('button', { name: en.proxyActivate })).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: en.connectivityRefresh }))
-    await waitFor(() => { expect(connectivityCalls).toBe(2) })
 
     fireEvent.click(screen.getByRole('button', { name: en.proxyDisable }))
     await waitFor(() => { expect(set).toHaveBeenCalledWith('enableProxy', false) })
@@ -203,15 +207,24 @@ describe('OpenAI Codex session proxy indicator', () => {
 
   it('stops monitoring and removes the ball when the session switches adapters', async () => {
     let signal: AbortSignal | undefined
-    const fetchMock = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      if (requestPath(input) === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) return Promise.resolve(json({ accounts: [] }))
       signal = init?.signal instanceof AbortSignal ? init.signal : undefined
       return new Promise<Response>(() => {})
     })
     vi.stubGlobal('fetch', fetchMock)
     const { scope } = settingsScope()
     const directory = directoryStore()
-    render(<OpenAICodexProxyIndicator directory={directory} configScope={scope} sessionKey="session-switch" t={t} />)
-    await waitFor(() => { expect(fetchMock).toHaveBeenCalledOnce() })
+    render(
+      <div data-conversation-scroll="">
+        <OpenAICodexProxyIndicator directory={directory} configScope={scope} sessionKey="session-switch" t={t} />
+      </div>,
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+    const trigger = screen.getByRole('button', { name: en.connectivityBallLabel.replace('{summary}', en.connectivitySignalYellow) })
+    fireEvent.mouseEnter(trigger)
+    fireEvent.click(screen.getByRole('button', { name: en.connectivityRefresh }))
+    await waitFor(() => { expect(signal).toBeDefined() })
 
     directory.set({
       current: { provider: 'deepseek', model: 'deepseek-chat' },
@@ -276,7 +289,7 @@ describe('OpenAI Codex session proxy indicator', () => {
     fireEvent.pointerUp(trigger, { pointerId: 1, clientX: -500, clientY: 900 })
 
     expect(root.style.left).toBe('296px')
-    expect(root.style.top).toBe('353px')
+    expect(root.style.top).toBe('370px')
     expect(localStorage.getItem('dsh-codex-connect.proxy-ball.session-drag')).not.toBeNull()
   })
 

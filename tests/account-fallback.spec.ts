@@ -224,6 +224,32 @@ describe('OpenAI Codex account fallback', () => {
     })
   })
 
+  it('leaves the active account and terminal error unchanged while fallback is disabled', async () => {
+    const store = await storedAccounts()
+    const calls = vi.fn()
+    const source = provider((_requestContext, options) => {
+      calls(options?.apiKey)
+      const stream = createAssistantMessageEventStream()
+      const exhausted = message('', 'error', 'usage_limit_reached')
+      stream.push({ type: 'start', partial: message('', 'stop') })
+      stream.push({ type: 'error', reason: 'error', error: exhausted })
+      stream.end(exhausted)
+      return stream
+    })
+    const wrapped = withOpenAICodexAccountFallback(
+      source,
+      store,
+      () => activeAccess(store),
+      () => false,
+    )
+
+    const events = await collect(wrapped.streamSimple(model(), context, { apiKey: 'access-account-1' }))
+
+    expect(calls).toHaveBeenCalledOnce()
+    expect(events.at(-1)).toMatchObject({ type: 'error', error: { errorMessage: 'usage_limit_reached' } })
+    expect((await store.accounts()).find(account => account.active)?.accountId).toBe('account-1')
+  })
+
   it('does not switch accounts for a transient rate limit or after a tool call starts', async () => {
     const store = await storedAccounts()
     const callCount = vi.fn()

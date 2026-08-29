@@ -25,7 +25,15 @@ describe('OpenAI Codex proxy settings contract', () => {
     expect(decodeOpenAICodexSettings(legacySettings)).toMatchObject({
       enableProxy: false,
       proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
+      enableAccountFallback: false,
     })
+  })
+
+  it('keeps account fallback opt-in for legacy snapshots and supports explicit activation', () => {
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableAccountFallback).toBe(false)
+    expect(decodeOpenAICodexSettings({ ...legacySettings, enableAccountFallback: true }))
+      .toMatchObject({ enableAccountFallback: true })
+    expect(decodeOpenAICodexSettings({ ...legacySettings, enableAccountFallback: 'false' })).toBeUndefined()
   })
 
   it('accepts direct mode without requiring a populated proxy URL', () => {

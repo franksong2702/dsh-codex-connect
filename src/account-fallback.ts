@@ -225,6 +225,7 @@ export function withOpenAICodexAccountFallback(
   provider: Provider,
   credentials: OpenAICodexCredentialStore,
   resolveAccessToken: () => Promise<string | undefined>,
+  enabled: () => boolean = () => true,
 ): Provider {
   const streamSimple = provider.streamSimple
   return {
@@ -276,6 +277,7 @@ export function withOpenAICodexAccountFallback(
                 && event.reason === 'error'
                 && isOpenAICodexAccountQuotaExhausted(event.error.errorMessage ?? '')
               const safeToContinue = quotaFailure
+                && enabled()
                 && options?.signal?.aborted !== true
                 && !hasToolCall(raw)
                 && ![...openBlocks.values()].includes('toolCall')

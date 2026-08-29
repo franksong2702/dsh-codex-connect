@@ -138,14 +138,39 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中按对话绑定的 Fast Mode 闪电控件和周额度进度条" width="820">
 </p>
 
+### 账户名称与额度 Fallback
+
+当对话使用 `openai-codex` 时，会话悬浮球内会显示“**账户与 Fallback**”卡片。界面始终使用友好的账户身份，不显示 OpenAI 的不透明 account id。Codex Connect 会直接从已保存 OAuth access JWT 中在本地提取姓名和邮箱，不会额外发起 profile 网络请求；若 JWT 没有这些字段，则依次使用 `OPENAI_CODEX_LOCAL_USERNAME`、操作系统用户名，最后使用 `Account N`。
+
+如需自定义名称，可以创建非敏感文件 `$DSH_HOME/.openai-codex-account-profiles.json`。键可以是 OAuth 邮箱或 account id；id 只作为内部匹配键，不会显示在界面：
+
+```json
+{
+  "version": 1,
+  "localUsername": "Burning",
+  "accounts": {
+    "work@example.com": "工作账户",
+    "another@example.com": {
+      "name": "个人账户",
+      "email": "another@example.com"
+    }
+  }
+}
+```
+
+名称优先级为：本地文件别名、OAuth 姓名/邮箱、配置或自动检测到的本机用户名。配置文件缺失或格式错误时会被安全忽略，不会阻止认证。该文件只保存显示标签；OAuth token 仍位于独立且仅文件所有者可读的认证文件中。
+
+“**自动 Fallback**”默认关闭，可在同一卡片中主动开启。开启后，它只在服务明确返回账户额度/credit 已耗尽时触发，不会因普通限流或网络中断轮换账户；如果当前尚未开始工具调用，插件会选择下一个已保存凭据，在同一 turn 中接续被中断的回答并抑制重复输出。开关保持关闭时，原额度错误会直接终止，当前账户保持不变。
+
 ## 可选能力（默认关闭）
 
-安装后的 bundle 只注册模型提供方，默认不额外启用任何能力：
+代理、账户 Fallback、搜索和图片能力全部默认关闭：
 
 ```yaml
 - id: llm-openai-codex
   config:
     enableProxy: false
+    enableAccountFallback: false
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
@@ -164,7 +189,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 2. **Test（测试）**只用当前草稿地址发送探测请求，不保存、不启用。
 3. **Activate（启用）**只有在同一草稿通过 Test 后才可点击。用户点击即表示明确确认，此时才保存地址并启用代理。
 
-代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话还会显示一个保持蓝色的水流流光 Proxy 悬浮球，球下三盏流光灯分别对应三个受监测域名。它大约每 3 秒通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`：收到任意 HTTP 响应时对应灯为绿色，不区分 401、302 等状态码；只有 DNS、超时、CONNECT、TLS 等无法建立访问的情况才显示红色，尚无结果时显示黄色。具体失败原因仅在鼠标悬停/键盘聚焦弹窗中显示。指针停留在悬浮球或弹窗内时弹窗保持展开；离开两者后粘滞 1 秒再收起。弹窗还提供已保存子账户选择、**添加账户**、手动连接检查，以及与插件设置相同的 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。每个新增子账户都必须通过正常 OpenAI OAuth 授权获得完整凭据；切换会为后续模型、额度、搜索和图片请求同时切换 token 及其绑定的 `chatgpt-account-id`，不会只改一个 UI 名称。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会停止监控且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
+代理设置区右侧状态栏在启用时为绿色，直连时为红色。选择 `openai-codex` 的会话还会显示一个保持蓝色的水流流光 Proxy 悬浮球，但球下不再显示连接灯，也不会在后台持续探测。指针停留在悬浮球或弹窗内时弹窗保持展开，离开两者后粘滞 1 秒再收起。弹窗顶部固定一个小型 **手动测试连接** 按钮；只有用户明确点击时，才会通过当前直连或代理路径检查 `chatgpt.com`、`auth.openai.com` 和 `api.openai.com`。收到任意 HTTP 响应均视为可达，不区分 401、302 等状态码；DNS、超时、CONNECT 和 TLS 失败会报告为不可达。结果和具体错误会保留到下一次手动测试或路由配置发生变化，单纯展开/收起弹窗不会触发测试。弹窗还提供具名账户卡片、默认关闭的 **自动 Fallback** 开关、**添加账户**，以及与插件设置相同的代理 Detect、Test、Activate 和 **Disable proxy（禁用代理）** 流程。每个新增子账户都必须通过正常 OpenAI OAuth 授权获得完整凭据；切换会为后续模型、额度、搜索和图片请求同时切换 token 及其绑定的 `chatgpt-account-id`，不会只改一个 UI 名称。进程级 dispatcher 桥只在 Codex 请求执行期间临时注册，请求结束就恢复；会话切换到其他 adaptor 后会中止尚未完成的手动连接测试且不保留代理注册，但不会替其他 Codex 会话关闭已保存的代理配置。禁用设置或卸载插件时，代理连接会在进行中的请求结束后安全回收。安装多个实例时，每个实例使用独立的代理控制器，不会互相串用。
 
 ```yaml
 - id: llm-openai-codex
@@ -243,6 +268,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | `models` | 完整目录 | Codex model id 数组；空数组隐藏全部条目 |
 | `enableProxy` | `false` | boolean；只影响当前 Codex provider 实例 |
 | `proxyUrl` | `http://127.0.0.1:7890` | 不含凭据的 HTTP(S) 代理地址 |
+| `enableAccountFallback` | `false` | 主动开启后，额度耗尽时使用下一个已保存账户安全接续当前 turn |
 | `contextWindowOverrides` | 无 | 按模型覆盖 contextWindow 的映射；见下文 |
 | `enableSearch` | `false` | boolean |
 | `enableImageTool` | `false` | boolean |
