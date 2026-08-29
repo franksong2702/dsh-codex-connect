@@ -104,7 +104,10 @@ describe('Codex Connect global update reminder', () => {
     await waitFor(() => { expect(writeText).toHaveBeenCalledWith(en.agentUpgradePrompt.replace('{repository}', OPENAI_CODEX_REPOSITORY_URL)) })
     expect(screen.getByText(en.agentPromptCopied)).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: en.recheckAfterUpgrade }))
+    const recheck = screen.getByRole('button', { name: en.recheckAfterUpgrade }) as HTMLButtonElement
+    expect(recheck.style.background).toBe('var(--dsw-alias-button-primary-fill)')
+    expect(recheck.style.color).toBe('var(--dsw-alias-label-primary-foreground)')
+    fireEvent.click(recheck)
     await waitFor(() => { expect(fetchMock).toHaveBeenCalledTimes(4) })
     expect(screen.getByRole('status').textContent).toContain(en.upgradeStillAvailable.replace('{version}', '0.1.0-alpha.4.14'))
 

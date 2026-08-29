@@ -128,7 +128,10 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.spyOn(window, 'open').mockReturnValue(null)
 
     render(<OpenAICodexSettings t={t} embedded />)
-    fireEvent.click(await screen.findByRole('button', { name: en.login }))
+    const login = await screen.findByRole('button', { name: en.login }) as HTMLButtonElement
+    expect(login.style.background).toBe('var(--dsw-alias-button-primary-fill)')
+    expect(login.style.color).toBe('var(--dsw-alias-label-primary-foreground)')
+    fireEvent.click(login)
 
     expect(await screen.findByText(en.authorizationHelp)).toBeTruthy()
     const link = screen.getByRole('link', { name: en.openLoginInBrowser }) as HTMLAnchorElement
@@ -315,6 +318,9 @@ describe('OpenAI Codex Plugin configuration card', () => {
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
+    const save = screen.getByRole('button', { name: en.save }) as HTMLButtonElement
+    expect(save.style.background).toBe('var(--dsw-alias-button-primary-fill)')
+    expect(save.style.color).toBe('var(--dsw-alias-label-primary-foreground)')
     expect(enableSearch.checked).toBe(false)
     expect(enableImageGeneration.checked).toBe(false)
     expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
@@ -334,7 +340,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: en.searchMaxOutputTokens }), { target: { value: '2048' } })
     fireEvent.click(enableImageGeneration)
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    fireEvent.click(save)
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
     expect(set).toHaveBeenCalledWith('enableSearch', true)
