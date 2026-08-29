@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-The unreleased development branch targets DSH `0.1.2-alpha.1` and pi-ai `0.84.2`. It is not yet an installation recommendation: normal npm installation and full Web/OAuth validation remain release gates. The released-version table below is unchanged; Alpha 4.21 has not been newly verified against DSH `0.1.2-alpha.1`.
+The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.1` and pi-ai `0.84.2`. It is not yet an installation recommendation: normal npm installation and full Web/OAuth validation remain release gates. The released-version table below is unchanged; Alpha 4.22 is not added until those gates pass.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
@@ -56,9 +56,9 @@ These choices reflect the repository's existing verification record, not a new i
 
 6. If the user explicitly requests login, open **Settings → Plugins → Plugin configuration → Codex Connect**, or check `status` and then use `login` or `login --device-code`. OAuth approval belongs to the user.
 
-   The unreleased DSH 0.1.2 branch additionally offers the same account actions in **Settings → Models → Codex Connect**. Advanced configuration remains under Plugins; neither entry automatically starts login or changes model/search defaults.
+   The Alpha 4.22 release candidate additionally offers the same account actions in **Settings → Models → Openai-Codex**, plus a shared **More settings** dialog for model visibility, proxy, search, image, and context-budget controls. The original Plugin settings entry remains available; neither entry automatically starts login or changes model/search defaults.
 
-   Click **Manage** to expand the Models account row. If authorization is abandoned, use **Reopen authorization** or **Cancel sign-in** and retry; cancellation does not delete an existing account. Pending authorization expires after 10 minutes by default (`oauthTimeoutMs` in plugin configuration, applied on load).
+   When signed out, select **Authorize**. When signed in, use **Sign out** or **View quota**; use **More settings** for plugin options. If authorization is abandoned, use **Reopen authorization** or **Cancel sign-in** and retry; cancellation does not delete an existing account. Pending authorization expires after 10 minutes by default (`oauthTimeoutMs` in plugin configuration, applied on load).
 
 ### Remote browser access
 

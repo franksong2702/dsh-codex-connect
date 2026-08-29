@@ -318,17 +318,24 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                       </div>
                     </div>
                     {expandedModels[model.id] === true ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'end', flexWrap: 'wrap', gap: 8 }}>
-                          <label style={{ ...formFieldStyle, flex: '1 1 180px', minWidth: 0 }}>
-                            <span style={labelStyle}>{t('contextTokens')}</span>
-                            <input type="number" min={1} step={1} max={model.maxContextWindow} style={controlStyle}
-                              value={Number.isNaN(effectiveBudget) ? '' : effectiveBudget}
-                              aria-invalid={invalidBudget}
-                              onChange={event => { changeBudget(event.currentTarget.valueAsNumber) }}
-                            />
-                          </label>
-                          <button type="button" style={buttonStyle} onClick={() => {
+                      <div role="group" aria-label={t('contextTokens')} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <span style={labelStyle}>{t('contextTokens')}</span>
+                          <input type="number" min={1} step={1} max={model.maxContextWindow} style={{ ...controlStyle, width: 112, flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}
+                            value={Number.isNaN(effectiveBudget) ? '' : effectiveBudget}
+                            aria-invalid={invalidBudget}
+                            onChange={event => { changeBudget(event.currentTarget.valueAsNumber) }}
+                          />
+                        </label>
+                        <div style={{ ...bodyStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            {model.contextLimitSource === 'codex-catalog'
+                              ? <a href={OPENAI_CODEX_CONTEXT_LIMIT_SOURCE} target="_blank" rel="noopener noreferrer" title={t('contextLimitSource')} style={{ color: 'inherit', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{t('contextMaximum')}</a>
+                              : <span title={t('contextLimitFallback')}>{t('contextMaximum')}</span>}
+                            <span style={{ padding: '1px 6px', borderRadius: 4, background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))', fontVariantNumeric: 'tabular-nums' }}>{model.maxContextWindow}</span>
+                            <span>tokens</span>
+                          </span>
+                          <button type="button" title={`${t('contextDefault')}: ${model.contextWindow.toLocaleString()} tokens`} style={{ ...bodyStyle, padding: '2px 0', border: 0, background: 'transparent', font: 'inherit', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }} onClick={() => {
                             const overrides = { ...draft.contextWindowOverrides }
                             delete overrides[model.id]
                             update('contextWindowOverrides', overrides)
@@ -337,14 +344,10 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                         <input type="range" min={1} max={model.maxContextWindow} step={1}
                           aria-label={t('contextSlider')}
                           aria-valuetext={invalidBudget ? t('contextInvalid') : `${effectiveBudget.toLocaleString()} tokens`}
-                          style={{ width: '100%', margin: '4px 0', accentColor: 'var(--dsw-alias-brand-primary)' }}
+                          style={{ width: '100%', height: 20, margin: 0, accentColor: 'var(--dsw-alias-label-secondary)' }}
                           value={invalidBudget ? model.contextWindow : effectiveBudget}
                           onChange={event => { changeBudget(event.currentTarget.valueAsNumber) }}
                         />
-                        <p style={bodyStyle}>{t('contextDefault')}: {model.contextWindow.toLocaleString()} tokens · {t('contextMaximum')}: {model.maxContextWindow.toLocaleString()} tokens</p>
-                        <p style={bodyStyle}>{model.contextLimitSource === 'codex-catalog'
-                          ? <a href={OPENAI_CODEX_CONTEXT_LIMIT_SOURCE} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{t('contextLimitSource')}</a>
-                          : t('contextLimitFallback')}</p>
                         {budget !== undefined && budget > model.contextWindow && !invalidBudget
                           ? <p style={bodyStyle} role="status">{t('contextAboveDefault')}</p> : null}
                         {invalidBudget ? <p style={errorStyle} role="alert">{t('contextInvalid')} (1–{model.maxContextWindow.toLocaleString()})</p> : null}

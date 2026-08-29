@@ -68,6 +68,10 @@
     {
       "version": "0.1.0-alpha.4.21",
       "highlights": ["image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.22",
+      "highlights": ["runtime-compatibility", "models-account", "context-budget"]
     }
   ]
 }

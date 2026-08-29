@@ -68,6 +68,32 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it('keeps the label and numeric input on one row, the limit on the next and the slider full-width', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await page.getByRole('button', { name: en.contextAdjust, exact: true }).click()
+    for (const width of [526, 360]) {
+      await page.viewport(width, 800)
+      host.style.width = '100%'
+      const control = page.getByRole('group', { name: en.contextTokens, exact: true })
+      const input = control.getByRole('spinbutton').element().getBoundingClientRect()
+      const label = control.getByText(en.contextTokens, { exact: true }).element().getBoundingClientRect()
+      const limit = control.getByRole('link', { name: en.contextMaximum }).element().getBoundingClientRect()
+      const slider = control.getByRole('slider').element().getBoundingClientRect()
+      const box = control.element().getBoundingClientRect()
+      expect(Math.abs(label.y + label.height / 2 - input.y - input.height / 2)).toBeLessThan(1)
+      expect(input.width).toBe(112)
+      expect(Math.abs(input.right - box.right)).toBeLessThan(1)
+      expect(limit.top).toBeGreaterThanOrEqual(input.bottom)
+      expect(slider.top).toBeGreaterThanOrEqual(limit.bottom)
+      expect(Math.abs(slider.width - box.width)).toBeLessThan(1)
+      expect(box.height).toBeLessThanOrEqual(100)
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth)
+    }
+    await expect.element(page.getByRole('link', { name: en.contextMaximum })).toHaveAttribute('title', en.contextLimitSource)
+  })
+
   it('stages per-model budgets, preserves hidden models, discards edits and resets without changing other budgets', async () => {
     const models = [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' }]
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(modelCatalogFixture(models)))))
@@ -197,7 +223,7 @@ describe('Codex model visibility in Chromium', () => {
     const { scope } = settingsScopeFixture()
     root.render(createElement(OpenAICodexConfiguration, { scope, t }))
     await page.getByRole('button', { name: en.contextAdjust, exact: true }).click()
-    await expect.element(page.getByText(en.contextLimitFallback)).toBeVisible()
+    await expect.element(page.getByText(en.contextMaximum, { exact: true })).toHaveAttribute('title', en.contextLimitFallback)
     const input = page.getByRole('spinbutton', { name: en.contextTokens })
     await expect.element(input).toHaveValue(128_000)
     await input.fill('128001')

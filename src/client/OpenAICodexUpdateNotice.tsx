@@ -69,6 +69,8 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'oauth-history': 'updateHighlightOauthHistory',
   'model-visibility': 'updateHighlightModelVisibility',
   'proxy-connection': 'updateHighlightProxyConnection',
+  'models-account': 'updateHighlightModelsAccount',
+  'context-budget': 'updateHighlightContextBudget',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
