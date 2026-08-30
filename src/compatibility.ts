@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.2-alpha.2'
-export const SUPPORTED_PI_AI_VERSION = '0.84.2'
+export const SUPPORTED_PI_AI_RANGE = '^0.84.2'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 
 export const DSH_PLUGIN_API_PACKAGES = [
@@ -76,7 +76,7 @@ export const COMPATIBILITY_CONTRACT = {
     version: SUPPORTED_DSH_PLUGIN_API_VERSION,
     packages: DSH_PLUGIN_API_PACKAGES,
   },
-  piAi: { package: PI_AI_PACKAGE, version: SUPPORTED_PI_AI_VERSION },
+  piAi: { package: PI_AI_PACKAGE, version: SUPPORTED_PI_AI_RANGE },
 } as const
 
 interface PackageJson {
@@ -88,6 +88,15 @@ const PACKAGE_JSON_SEARCH_DEPTH = 8
 
 function compareVersion(left: string, right: string): CompatibilityStatus {
   return left === right ? 'compatible' : 'incompatible'
+}
+
+function piAiVersionStatus(value: string): CompatibilityStatus {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(value.trim())
+  if (match === null) return 'incompatible'
+  const major = Number(match[1])
+  const minor = Number(match[2])
+  const patch = Number(match[3])
+  return major === 0 && minor === 84 && patch >= 2 ? 'compatible' : 'incompatible'
 }
 
 function parseNodeVersion(value: string): [number, number, number] | undefined {
@@ -112,13 +121,14 @@ function nodeStatus(value: string | null | undefined): CompatibilityStatus {
 function packageEntry(
   supported: string,
   installed: string | null | undefined,
+  status: (value: string) => CompatibilityStatus = value => compareVersion(value, supported),
 ): CompatibilityEntry {
   return {
     supported,
     installed: installed ?? null,
     status: installed === undefined || installed === null || installed === ''
       ? 'unknown'
-      : compareVersion(installed, supported),
+      : status(installed),
   }
 }
 
@@ -143,7 +153,7 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
   const packages = {
     '@deepseek-ai/dsh-llm': packageEntry(SUPPORTED_DSH_PLUGIN_API_VERSION, suppliedPackages['@deepseek-ai/dsh-llm']),
     '@deepseek-ai/dsh-llm-pi-ai': packageEntry(SUPPORTED_DSH_PLUGIN_API_VERSION, suppliedPackages['@deepseek-ai/dsh-llm-pi-ai']),
-    [PI_AI_PACKAGE]: packageEntry(SUPPORTED_PI_AI_VERSION, suppliedPackages[PI_AI_PACKAGE]),
+    [PI_AI_PACKAGE]: packageEntry(SUPPORTED_PI_AI_RANGE, suppliedPackages[PI_AI_PACKAGE], piAiVersionStatus),
   } as Record<CompatibilityPackageName, CompatibilityEntry>
   const node = nodeEntry(installedNode)
   return {

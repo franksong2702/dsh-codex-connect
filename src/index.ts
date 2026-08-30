@@ -67,7 +67,7 @@ export {
   PI_AI_PACKAGE,
   SUPPORTED_DSH_PLUGIN_API_VERSION,
   SUPPORTED_NODE_RANGE,
-  SUPPORTED_PI_AI_VERSION,
+  SUPPORTED_PI_AI_RANGE,
   evaluateCompatibility,
 } from './compatibility.ts'
 export type {

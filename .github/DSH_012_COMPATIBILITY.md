@@ -1,6 +1,6 @@
 # DSH 0.1.2 compatibility preparation
 
-This is an unreleased migration targeting DSH `0.1.2-alpha.2` (tag commit `0a53fb55bea101816fa226bb964ae2bed71c343b`) and pi-ai `0.84.2`. It does not extend the published Alpha 4.21 compatibility record.
+This is an unreleased migration targeting DSH `0.1.2-alpha.2` (tag commit `0a53fb55bea101816fa226bb964ae2bed71c343b`) and its declared pi-ai range `^0.84.2`; the current registry installation resolves pi-ai `0.84.4`. It does not extend the published Alpha 4.21 compatibility record.
 
 ## Changes
 

@@ -32,7 +32,7 @@ After Alpha 4.22 is published, reproduce it exactly with `dsh plugin --profile w
 
 ### What's new in Alpha 4.22
 
-- Target the DSH `0.1.2-alpha.2` client settings and session-controller APIs together with `@earendil-works/pi-ai` `0.84.2`.
+- Target the DSH `0.1.2-alpha.2` client settings and session-controller APIs together with its declared `@earendil-works/pi-ai` range `^0.84.2`.
 - Manage ChatGPT authorization, quota and shared Codex Connect settings from a compact **Openai-Codex** card in **Settings → Models**, while retaining the original Plugin settings entry.
 - Continue, cancel or retry an interrupted browser authorization without restarting DSH or deleting an existing credential. The full authorization flow has a configurable bounded deadline.
 - Adjust a bounded local context budget per visible Codex model with a linked slider and numeric input. Catalog defaults remain in effect until an override is saved; the configuration limit is not a claim about the service-side context capacity.
@@ -307,7 +307,7 @@ This report covers only the standalone route, not active profile routing, search
 
 ## Compatibility and security boundary
 
-- Published Alpha 4.21 remains verified with DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`. The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.2` and pi-ai `0.84.2`; [compatibility.json](compatibility.json) describes that target, while [verified-compatibility.json](verified-compatibility.json) deliberately omits Alpha 4.22 until normal npm installation and full Web/OAuth validation pass. See [INSTALL.md](INSTALL.md) for released version pairs.
+- Published Alpha 4.21 remains verified with DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`. The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.2` and its pi-ai range `^0.84.2`; [compatibility.json](compatibility.json) describes that target, while [verified-compatibility.json](verified-compatibility.json) deliberately omits Alpha 4.22 until normal npm installation and full Web/OAuth validation pass. See [INSTALL.md](INSTALL.md) for released version pairs.
 - The new DSH client splits its former runtime into Session Controller, Settings, Store, and Renderer packages. Codex Connect uses those public interfaces for settings and image actions. DSH owns normalized preview encoding and dimensions; Codex Connect retains the exact original image separately.
 - Upgrade the DSH plugin API packages and `@earendil-works/pi-ai` as one group, then run `dsh-codex-connect doctor --json` and the compatibility check again. This contract does not make claims about future versions.
 - When the daily upstream check finds a new `latest` or `next` DSH candidate, it installs Codex Connect into an isolated profile, boots the installed model runtime without OAuth credentials, verifies model and reasoning-effort discovery, and confirms provider disposal. Live sign-in, quota, and model requests still require manual validation in the test profile.

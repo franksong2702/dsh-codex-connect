@@ -1,6 +1,6 @@
 # Alpha 4.22 release readiness
 
-Alpha 4.22 is the Codex Connect release candidate for DSH `0.1.2-alpha.2` and `@earendil-works/pi-ai` `0.84.2`. It combines the DSH client API migration, the optional Models account card, interrupted OAuth recovery, shared settings, and bounded per-model context budgets.
+Alpha 4.22 is the Codex Connect release candidate for DSH `0.1.2-alpha.2` and its declared `@earendil-works/pi-ai` range `^0.84.2`; the current registry installation resolves pi-ai `0.84.4`. It combines the DSH client API migration, the optional Models account card, interrupted OAuth recovery, shared settings, and bounded per-model context budgets.
 
 ## Previous source-linked evidence
 

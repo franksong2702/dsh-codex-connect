@@ -24,6 +24,6 @@
   },
   "piAi": {
     "package": "@earendil-works/pi-ai",
-    "version": "0.84.2"
+    "version": "^0.84.2"
   }
 }
