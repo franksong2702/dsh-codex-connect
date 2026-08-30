@@ -32,7 +32,7 @@ Alpha 4.22 发布后，可以使用 `dsh plugin --profile web add dsh-codex-conn
 
 ### Alpha 4.22 更新内容
 
-- 同时适配 DSH `0.1.2-alpha.1` 的客户端设置、会话控制器接口及 `@earendil-works/pi-ai` `0.84.2`。
+- 同时适配 DSH `0.1.2-alpha.2` 的客户端设置、会话控制器接口及 `@earendil-works/pi-ai` `0.84.2`。
 - 在 **设置 → 模型** 中提供紧凑的 **Openai-Codex** 卡片，用于 ChatGPT 授权、额度和共享 Codex Connect 设置，同时保留原插件设置入口。
 - 浏览器授权中断后，可以继续、取消或重试，不需要重启 DSH，也不会删除已有凭据；完整授权流程使用可配置且有范围限制的期限。
 - 使用联动的滑条和数字输入框，逐模型调整有范围限制的本地上下文预算。保存覆盖值前继续使用目录默认值；配置上限不代表服务端上下文容量。
@@ -69,7 +69,7 @@ dsh web
 
 打开 **设置 → 插件 → 插件配置 → Codex Connect**。
 
-面向 DSH `0.1.2-alpha.1` 的 Alpha 4.22 发布候选还在 **设置 → 模型** 中提供 **Openai-Codex** 账户卡，辅助文案标注“由 Codex Connect 插件提供支持。”，用于 ChatGPT 登录、重新授权、退出和查看额度。两个页面共用同一份内存账户状态及轮询。**更多设置** 会在弹窗中打开现有的代理、模型显示、搜索、图片和上下文预算配置表单，原插件设置入口仍保留。两处保存到同一份配置；关闭弹窗或按 Escape 会放弃弹窗内未保存的修改。模型页底部入口是可选增强：没有该设置分区的 profile 仍保留原插件入口。在正常 npm 安装及完整 Web/OAuth 门禁通过前，这些功能仍属于发布候选。
+面向 DSH `0.1.2-alpha.2` 的 Alpha 4.22 发布候选还在 **设置 → 模型** 中提供 **Openai-Codex** 账户卡，辅助文案标注“由 Codex Connect 插件提供支持。”，用于 ChatGPT 登录、重新授权、退出和查看额度。两个页面共用同一份内存账户状态及轮询。**更多设置** 会在弹窗中打开现有的代理、模型显示、搜索、图片和上下文预算配置表单，原插件设置入口仍保留。两处保存到同一份配置；关闭弹窗或按 Escape 会放弃弹窗内未保存的修改。模型页底部入口是可选增强：没有该设置分区的 profile 仍保留原插件入口。在正常 npm 安装及完整 Web/OAuth 门禁通过前，这些功能仍属于发布候选。
 
 模型页紧凑卡片在未登录时显示 **授权**，已登录时显示 **退出登录** 和 **查看额度**。展开后只显示服务端返回的额度条目，不再重复账户操作。浏览器授权中断后，可以点击模型页的 **继续授权**（插件页为 **重新打开授权**）继续原登录，或点击 **取消登录** 后，从任一设置页或另一个受信任浏览器重试。取消不会退出已有账户。未完成的授权默认在 10 分钟后到期；插件配置 `oauthTimeoutMs` 可设为 1,000–1,800,000 毫秒，在插件加载时生效。获取初始授权链接仍有独立的 30 秒等待上限。取消和到期都不需要重启 DSH。
 
@@ -307,7 +307,7 @@ dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol
 
 ## 兼容性与安全边界
 
-- 已发布 Alpha 4.21 的已验证组合仍是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`。Alpha 4.22 发布候选面向 DSH `0.1.2-alpha.1` 与 pi-ai `0.84.2`；[compatibility.json](../compatibility.json) 描述这个目标，而 [verified-compatibility.json](../verified-compatibility.json) 会在正常 npm 安装及完整 Web/OAuth 验证通过前刻意不列出 Alpha 4.22。已发布版本的对应关系见 [INSTALL.md](../INSTALL.md)。
+- 已发布 Alpha 4.21 的已验证组合仍是 DSH 插件 API packages `0.1.1-rc.2`、`@earendil-works/pi-ai` `0.82.1` 和 Node.js `^22.19.0 || >=24.0.0`。Alpha 4.22 发布候选面向 DSH `0.1.2-alpha.2` 与 pi-ai `0.84.2`；[compatibility.json](../compatibility.json) 描述这个目标，而 [verified-compatibility.json](../verified-compatibility.json) 会在正常 npm 安装及完整 Web/OAuth 验证通过前刻意不列出 Alpha 4.22。已发布版本的对应关系见 [INSTALL.md](../INSTALL.md)。
 - 新版 DSH 将原来的 client runtime 拆分为 Session Controller、Settings、Store 和 Renderer 包。Codex Connect 通过这些公开接口接入设置和图片操作。规范化预览的编码与尺寸由 DSH 决定；Codex Connect 另行保留字节完全一致的原图。
 - 升级时请将 DSH 插件 API packages 与 `@earendil-works/pi-ai` 作为一组升级，再运行 `dsh-codex-connect doctor --json` 和兼容性检查。本契约不对未来版本作判断。
 - 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认提供方可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。

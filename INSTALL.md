@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.1` and pi-ai `0.84.2`. It is not yet an installation recommendation: normal npm installation and full Web/OAuth validation remain release gates. The released-version table below is unchanged; Alpha 4.22 is not added until those gates pass.
+The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.2` and pi-ai `0.84.2`. It is not yet an installation recommendation: normal npm installation and full Web/OAuth validation remain release gates. The released-version table below is unchanged; Alpha 4.22 is not added until those gates pass.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 

@@ -57,12 +57,13 @@ async function importFromProfile(profilePackagePath, specifier) {
 }
 
 /** Boot the installed plugin against one isolated DSH profile and inspect its runtime registration. */
-export async function checkInstalledRuntime(profilePackagePath) {
+export async function checkInstalledRuntime(profilePackagePath, hostPackagePath = profilePackagePath) {
   const packagePath = resolve(profilePackagePath)
+  const hostPath = resolve(hostPackagePath)
   const [{ Context }, { default: LlmRuntime }, PiAiRuntime, OpenAICodex] = await Promise.all([
-    importFromProfile(packagePath, '@deepseek-ai/cordis'),
-    importFromProfile(packagePath, '@deepseek-ai/dsh-llm'),
-    importFromProfile(packagePath, '@deepseek-ai/dsh-llm-pi-ai'),
+    importFromProfile(hostPath, '@deepseek-ai/cordis'),
+    importFromProfile(hostPath, '@deepseek-ai/dsh-llm'),
+    importFromProfile(hostPath, '@deepseek-ai/dsh-llm-pi-ai'),
     importFromProfile(packagePath, 'dsh-codex-connect'),
   ])
 
@@ -95,12 +96,13 @@ export async function checkInstalledRuntime(profilePackagePath) {
 const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
   const profilePackagePath = process.argv[2]
-  if (profilePackagePath === undefined || process.argv.length !== 3) {
-    process.stderr.write('usage: check-installed-runtime <profile-package.json>\n')
+  const hostPackagePath = process.argv[3]
+  if (profilePackagePath === undefined || process.argv.length > 4) {
+    process.stderr.write('usage: check-installed-runtime <profile-package.json> [host-package.json]\n')
     process.exitCode = 1
   } else {
     try {
-      process.stdout.write(`${JSON.stringify(await checkInstalledRuntime(profilePackagePath))}\n`)
+      process.stdout.write(`${JSON.stringify(await checkInstalledRuntime(profilePackagePath, hostPackagePath))}\n`)
     } catch (error) {
       process.stderr.write(`check-installed-runtime: ${error instanceof Error ? error.message : String(error)}\n`)
       process.exitCode = 1

@@ -8,7 +8,7 @@ import type { Context, Fiber } from '@deepseek-ai/cordis'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
-import { deepEqualJson, installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-session'
@@ -216,7 +216,7 @@ export const name = 'llm-openai-codex'
 export const inject = ['llm']
 
 /** Branded Host settings namespace for Codex Connect capability configuration. */
-export const OPENAI_CODEX_SETTINGS_NS = settingsNamespace(OPENAI_CODEX_SETTINGS_NAMESPACE)
+export const OPENAI_CODEX_SETTINGS_NS = OPENAI_CODEX_SETTINGS_NAMESPACE
 
 /** Composite model and standalone-search configuration. */
 export interface Config {
@@ -436,25 +436,27 @@ export function apply(ctx: Context, config: Config): void {
     await proxyManager.dispose()
   }, 'dsh-codex-connect: optional capability lifecycle')
 
-  installSettingsSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
-    validate(value) {
-      validateSettings(value)
-      if (value.enableProxy === true && !isValidOpenAICodexProxyUrl(value.proxyUrl)) {
-        throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
-      }
-    },
-    setSource(source) { current = source },
-    onChange() {
-      const proxyIsActive = resolveProviderProxyUrl() !== undefined
-      if (proxyWasActive && !proxyIsActive) {
-        void proxyManager.deactivate().catch((error: unknown) => {
-          ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
-          ctx.logger.error(error)
-        })
-      }
-      proxyWasActive = proxyIsActive
-      scheduleCapabilities()
-    },
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
+      validate(value) {
+        validateSettings(value)
+        if (value.enableProxy === true && !isValidOpenAICodexProxyUrl(value.proxyUrl)) {
+          throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
+        }
+      },
+      setSource(source) { current = source },
+      onChange() {
+        const proxyIsActive = resolveProviderProxyUrl() !== undefined
+        if (proxyWasActive && !proxyIsActive) {
+          void proxyManager.deactivate().catch((error: unknown) => {
+            ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
+            ctx.logger.error(error)
+          })
+        }
+        proxyWasActive = proxyIsActive
+        scheduleCapabilities()
+      },
+    })
   })
   scheduleCapabilities()
 }
