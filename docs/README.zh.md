@@ -18,17 +18,17 @@
 
 ## 五分钟快速开始
 
-本指南使用 `web` profile。请把 `web` 替换成你已经在用的 Harness profile 名称。你需要先有可用的 `dsh` 安装；如果在 DeepSeek Harness 源码 checkout 中运行，请在命令前加 `pnpm`。
+本快速指南适用于 DSH `0.1.2-alpha.2` 与 Codex Connect Alpha 4.22。请先运行 `dsh --version`。如果使用 DSH `0.1.1-rc.2` 或 `0.1.0-rc.7`，请在 [INSTALL.md](../INSTALL.md) 中选择匹配的插件版本。本指南使用 `web` profile；请把 `web` 替换成你已经在用的 Harness profile 名称。如果在 DeepSeek Harness 源码 checkout 中运行，请在命令前加 `pnpm`。
 
 ### 1. 将插件装入一个 profile
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@alpha
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22
 ```
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
-匹配的 npm 包发布后，使用 `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22` 可以精确安装 Alpha 4.22。
+请使用上面的精确版本，确保已验证的 DSH 与插件组合可以复现。`alpha` 是会移动的 npm 标签，不是兼容性保证。
 
 ### Alpha 4.22 更新内容
 
@@ -36,6 +36,7 @@ dsh plugin --profile web add dsh-codex-connect@alpha
 - 在 **设置 → 模型** 中提供紧凑的 **Openai-Codex** 卡片，用于 ChatGPT 授权、额度和共享 Codex Connect 设置，同时保留原插件设置入口。
 - 浏览器授权中断后，可以继续、取消或重试，不需要重启 DSH，也不会删除已有凭据；完整授权流程使用可配置且有范围限制的期限。
 - 使用联动的滑条和数字输入框，逐模型调整有范围限制的本地上下文预算。保存覆盖值前继续使用目录默认值；配置上限不代表服务端上下文容量。
+- 使用跟随主题的前景色和填充色，确保深色模式下主按钮文字清晰可读。
 
 ### 版本更新提醒
 
@@ -65,15 +66,17 @@ dsh web
 
 预期结果：所选 profile 的 Harness Web UI 打开。
 
-### 3. 找到 Codex Connect 卡片
+### 3. 找到 Openai-Codex 账户卡
 
-打开 **设置 → 插件 → 插件配置 → Codex Connect**。
+打开 **设置 → 模型**，找到 **Openai-Codex**。这是 Alpha 4.22 的主要账户入口。如果当前 profile 没有模型设置分区，请改用 **设置 → 插件 → 插件配置 → Codex Connect**。
 
-面向 DSH `0.1.2-alpha.2` 的 Alpha 4.22 还在 **设置 → 模型** 中提供 **Openai-Codex** 账户卡，辅助文案标注“由 Codex Connect 插件提供支持。”，用于 ChatGPT 登录、重新授权、退出和查看额度。两个页面共用同一份内存账户状态及轮询。**更多设置** 会在弹窗中打开现有的代理、模型显示、搜索、图片和上下文预算配置表单，原插件设置入口仍保留。两处保存到同一份配置；关闭弹窗或按 Escape 会放弃弹窗内未保存的修改。模型页底部入口是可选增强：没有该设置分区的 profile 仍保留原插件入口。
+模型页账户卡标注“由 Codex Connect 插件提供支持。”，用于 ChatGPT 授权、重新授权、退出和查看额度。两个设置页面共用同一份内存账户状态及轮询。**更多设置** 会在弹窗中打开代理、模型显示、搜索、图片和上下文预算配置表单，原插件设置入口仍保留。两处保存到同一份配置；关闭弹窗或按 Escape 会放弃弹窗内未保存的修改。模型页底部入口是可选增强：没有该设置分区的 profile 仍保留原插件入口。
 
 模型页紧凑卡片在未登录时显示 **授权**，已登录时显示 **退出登录** 和 **查看额度**。展开后只显示服务端返回的额度条目，不再重复账户操作。浏览器授权中断后，可以点击模型页的 **继续授权**（插件页为 **重新打开授权**）继续原登录，或点击 **取消登录** 后，从任一设置页或另一个受信任浏览器重试。取消不会退出已有账户。未完成的授权默认在 10 分钟后到期；插件配置 `oauthTimeoutMs` 可设为 1,000–1,800,000 毫秒，在插件加载时生效。获取初始授权链接仍有独立的 30 秒等待上限。取消和到期都不需要重启 DSH。
 
-预期结果：新安装时账户区显示 **尚未登录**，并出现 **使用 ChatGPT 登录** 按钮。之后管理可选能力也在同一张卡片中完成。
+预期结果：新安装时模型页显示 **授权**。插件配置备用入口显示 **尚未登录** 和 **使用 ChatGPT 登录**。
+
+下图展示的是保留的插件配置备用入口。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/plugin-entry.jpg" alt="Harness 插件配置中的中文 Codex Connect 折叠入口" width="586">
@@ -81,9 +84,9 @@ dsh web
 
 ### 4. 使用 ChatGPT 登录
 
-点击 **使用 ChatGPT 登录**，并自行完成浏览器审批。如果内嵌 WebView 阻止登录窗口，请点击页面显示的 **打开 ChatGPT 登录页面**，在系统浏览器中继续。不要把授权 URL、授权码、token 或账户标识复制到 Issue、日志或配置文件中。
+在模型页点击 **授权**，或在插件配置中点击 **使用 ChatGPT 登录**，然后自行完成浏览器审批。如果内嵌 WebView 阻止登录窗口，请点击页面显示的 **打开 ChatGPT 登录页面**，在系统浏览器中继续。不要把授权 URL、授权码、token 或账户标识复制到 Issue、日志或配置文件中。
 
-预期结果：账户区变为 **已登录**。下图展示的是完成本步骤后的成功状态，不是开始登录前的页面。
+预期结果：模型页显示 **退出登录** 和 **查看额度**；插件配置的账户区显示 **已登录**。下图展示的是成功登录后的备用入口，不是开始登录前的页面。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/oauth-status.jpg" alt="Harness 插件配置中的中文 Codex Connect 已登录状态" width="720">

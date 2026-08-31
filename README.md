@@ -18,17 +18,17 @@ The setup and image-result screenshots in this English guide are captured from t
 
 ## Quick start (about five minutes)
 
-This guide uses the `web` profile. Replace `web` with the name of the Harness profile you already use. You need a working `dsh` installation; from a DeepSeek Harness source checkout, prefix the commands with `pnpm`.
+This quick start targets DSH `0.1.2-alpha.2` with Codex Connect Alpha 4.22. Check `dsh --version` first. For DSH `0.1.1-rc.2` or `0.1.0-rc.7`, select the matching plugin version in [INSTALL.md](INSTALL.md). This guide uses the `web` profile; replace `web` with the name of the Harness profile you already use. From a DeepSeek Harness source checkout, prefix the commands with `pnpm`.
 
 ### 1. Install the plugin into one profile
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@alpha
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22
 ```
 
 Expected result: the package is added to that profile. This does not change the profile's default model or global search route.
 
-After its matching package is published, install Alpha 4.22 exactly with `dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22`.
+Use the exact version above to keep the verified DSH and plugin pair reproducible. `alpha` is a moving npm tag, not a compatibility guarantee.
 
 ### What's new in Alpha 4.22
 
@@ -36,6 +36,7 @@ After its matching package is published, install Alpha 4.22 exactly with `dsh pl
 - Manage ChatGPT authorization, quota and shared Codex Connect settings from a compact **Openai-Codex** card in **Settings → Models**, while retaining the original Plugin settings entry.
 - Continue, cancel or retry an interrupted browser authorization without restarting DSH or deleting an existing credential. The full authorization flow has a configurable bounded deadline.
 - Adjust a bounded local context budget per visible Codex model with a linked slider and numeric input. Catalog defaults remain in effect until an override is saved; the configuration limit is not a claim about the service-side context capacity.
+- Keep primary button labels readable in dark mode with theme-aware foreground and fill colors.
 
 ### Version updates
 
@@ -43,9 +44,7 @@ Codex Connect checks public package metadata and this repository's `verified-com
 
 The compatibility record lists exact plugin and DSH versions rather than assuming every later release remains compatible. Maintainers can add a newly verified DSH version to the repository file without publishing another plugin release. A green result means the installed pair was verified; yellow means the latest plugin was verified with the installed DSH version and should be installed first; red means the installed DSH version is known but neither the installed plugin nor the latest published plugin has a matching record; gray means the installed DSH version is not recorded or the public record could not be checked. A red result includes a prefilled GitHub issue link for the installed DSH version so users can remind the maintainer without composing a report from scratch.
 
-When a newer plugin version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes are available as a secondary detail, or from the release page. The plugin never runs an upgrade command by itself.
-
-The notice first summarizes the user-facing changes between your installed version and the newest version. Technical release notes remain available as a secondary detail. To update, copy the short request shown in the notice to the Agent you use for this DSH project. The Agent can inspect the project instructions and choose the appropriate install or update method; the plugin does not execute anything on your behalf.
+When a newer plugin version is available, a frame-wide DSH notice appears even if you switch conversations. It first shows the user-facing changes between your installed version and the newest version; technical release notes remain available as a secondary detail or from the release page. To update, copy the short request shown in the notice to the Agent you use for this DSH project. The Agent can inspect the project instructions and choose the appropriate install or update method; the plugin never runs an upgrade command itself.
 
 After the Agent reports completion, return to the notice or settings card and select **Done — check again**. If the running process still reports the old version, restart that profile's DSH Web process and check again.
 
@@ -65,15 +64,17 @@ dsh web
 
 Expected result: the Harness web UI opens for the selected profile.
 
-### 3. Find the Codex Connect card
+### 3. Find the Openai-Codex account card
 
-Open **Settings → Plugins → Plugin configuration → Codex Connect**.
+Open **Settings → Models** and find **Openai-Codex**. This is the primary Alpha 4.22 account entry. If the profile does not expose the Models settings section, open **Settings → Plugins → Plugin configuration → Codex Connect** instead.
 
-Alpha 4.22 for DSH `0.1.2-alpha.2` also includes an **Openai-Codex** account card in **Settings → Models**, with the attribution “Powered by the Codex Connect plugin.” for ChatGPT sign-in, reauthorization, sign-out and quota. Both pages share one in-memory account state and polling owner. **More settings** opens the existing proxy, model visibility, search, image and context-budget configuration form in a dialog; the original Plugin settings entry remains available. Both entries save to the same settings scope. Close or Escape discards unsaved dialog edits. The Models footer is optional: profiles without that settings section retain the existing Plugin entry.
+The Models card carries the attribution “Powered by the Codex Connect plugin.” and provides ChatGPT authorization, reauthorization, sign-out and quota. Both settings pages share one in-memory account state and polling owner. **More settings** opens the proxy, model visibility, search, image and context-budget configuration form in a dialog; the original Plugin settings entry remains available. Both entries save to the same settings scope. Close or Escape discards unsaved dialog edits. The Models footer is optional: profiles without that settings section retain the existing Plugin entry.
 
 The compact Models row shows **Authorize** when signed out, or **Sign out** and **View quota** when signed in. Expanding quota shows only the server-reported usage rows, without repeating account controls. If browser authorization is interrupted, use **Continue authorization** in Models (**Reopen authorization** in Plugins) to resume the pending login, or **Cancel sign-in** and retry from either settings page or another trusted browser. Cancellation preserves an existing signed-in account. An abandoned authorization expires after 10 minutes by default; the plugin's `oauthTimeoutMs` configuration accepts 1,000–1,800,000 milliseconds and applies when the plugin loads. The separate 30-second wait for the initial authorization URL remains bounded. Neither cancellation nor expiry restarts DSH.
 
-Expected result: a fresh installation shows **Not signed in** and a **Sign in with ChatGPT** button. The card is where you later manage optional capabilities too.
+Expected result: a fresh installation shows **Authorize** in Models. The Plugin configuration fallback shows **Not signed in** and **Sign in with ChatGPT**.
+
+The screenshot below shows the retained Plugin configuration fallback.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/plugin-entry.jpg" alt="Collapsed English-localized Codex Connect entry under Harness plugin configuration" width="586">
@@ -81,9 +82,9 @@ Expected result: a fresh installation shows **Not signed in** and a **Sign in wi
 
 ### 4. Sign in with ChatGPT
 
-Click **Sign in with ChatGPT** and complete the browser approval yourself. If an embedded WebView blocks the sign-in window, use the displayed **Open ChatGPT sign-in page** link to continue in your system browser. Do not copy an authorization URL, code, token, or account identifier into an issue, log, or configuration file.
+Select **Authorize** in Models, or **Sign in with ChatGPT** in Plugin configuration, and complete the browser approval yourself. If an embedded WebView blocks the sign-in window, use the displayed **Open ChatGPT sign-in page** link to continue in your system browser. Do not copy an authorization URL, code, token, or account identifier into an issue, log, or configuration file.
 
-Expected result: the account area changes to **Signed in**. The screenshot below is the successful end state after this step; it is not the initial sign-in screen.
+Expected result: Models shows **Sign out** and **View quota**. The Plugin configuration account area shows **Signed in**. The screenshot below shows that fallback view after a successful sign-in; it is not the initial sign-in screen.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/oauth-status.jpg" alt="English-localized Codex Connect signed-in state inside Harness plugin configuration" width="720">

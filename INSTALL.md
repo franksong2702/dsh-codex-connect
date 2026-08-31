@@ -45,7 +45,7 @@ These choices reflect the repository's existing verification record, not a new i
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21
    ```
 
-   After the matching package is published, use Alpha 4.22 with DSH `0.1.2-alpha.2`:
+   For DSH `0.1.2-alpha.2`, use Alpha 4.22:
 
    ```sh
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22
