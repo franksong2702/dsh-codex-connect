@@ -28,8 +28,8 @@ server.on('connect', (_req, socket) => {
 const env = Object.fromEntries(['PATH', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP'].flatMap(key => process.env[key] === undefined ? [] : [[key, process.env[key]]]))
 env.DSH_HOME = root
 
-async function command(args) {
-  const result = await runBoundedCommand(process.execPath, [bin, 'capabilities', ...args, '--json'], { env, timeoutMs: 10_000 })
+async function command(action, args) {
+  const result = await runBoundedCommand(process.execPath, [bin, action, ...args, '--json'], { env, timeoutMs: 10_000 })
   assert.equal(result.error, undefined)
   assert.equal(result.cleanupError, undefined)
   assert.equal(result.signal, null)
@@ -39,7 +39,7 @@ async function command(args) {
 }
 
 try {
-  const offline = await command(['--model', 'gpt-5.6-sol'])
+  const offline = await command('capabilities', ['--model', 'gpt-5.6-sol'])
   assert.equal(offline.code, 1)
   assert.equal(offline.report.checks.runtime.status, 'supported')
   assert.equal(offline.report.probe.state, 'not-requested')
@@ -50,11 +50,15 @@ try {
   })
   const address = server.address()
   assert.ok(address !== null && typeof address !== 'string')
-  const probed = await command(['--model', 'gpt-5.6-sol', '--probe', '--proxy', `http://127.0.0.1:${address.port}`, '--timeout-ms', '1000'])
+  const probed = await command('capabilities', ['--model', 'gpt-5.6-sol', '--probe', '--proxy', `http://127.0.0.1:${address.port}`, '--timeout-ms', '1000'])
   assert.equal(probed.code, 2)
   assert.equal(probed.report.probe.state, 'fresh')
   assert.equal(probed.report.checks.responses.status, 'unknown')
-  assert.equal(connects, 1)
+  const reviewed = await command('auto-review-probe', ['--proxy', `http://127.0.0.1:${address.port}`, '--timeout-ms', '1000'])
+  assert.equal(reviewed.code, 2)
+  assert.equal(reviewed.report.probe.state, 'fresh')
+  assert.equal(reviewed.report.checks.reviewer.status, 'unknown')
+  assert.equal(connects, 2)
   assert.equal(sockets.size, 0)
   assert.equal(await readFile(authFile, 'utf8'), credential)
   process.stdout.write('capability-cli: offline report, explicit proxy rejection, unchanged credentials, and natural child exit verified\n')

@@ -10,7 +10,7 @@ describe('capability documentation', () => {
       const text = bytes.toString('utf8')
       const hash = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')
       expect(pairing).toContain(`${path}: ${hash}`)
-      for (const term of ['capabilities --model gpt-5.6-sol --json', 'capabilities --model gpt-5.6-sol --probe --json', '--timeout-ms <1..60000>', '--proxy <http(s)-origin>', 'supported', 'rejected', 'unknown', '64 KiB']) expect(text).toContain(term)
+      for (const term of ['capabilities --model gpt-5.6-sol --json', 'capabilities --model gpt-5.6-sol --probe --json', 'auto-review-probe --json', '--timeout-ms <1..60000>', '--proxy <http(s)-origin>', 'supported', 'rejected', 'unknown', '64 KiB']) expect(text).toContain(term)
     }
   })
 })

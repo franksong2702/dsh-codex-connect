@@ -308,6 +308,18 @@ dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol
 
 本报告仅涵盖独立路由，不验证活动 profile 路由、搜索/图片工具、浏览器兼容性、provider 重试行为或会话恢复。本插件没有实现自动 provider 故障切换，因此该项为 `rejected`，需要用户明确选择其他 provider。有限 SSE 默认路径不会触发 WebSocket 到 SSE 的回退。`contextManagement` 和续接仍为 `unknown`；原生 compaction 和 WebSocket reuse 在当前集成策略下为 `rejected`。诊断结果不会启用这些能力，也不会更改 Harness 历史。退出码只覆盖运行时、OAuth、所选模型、Responses 和 SSE：`0` 表示五项均可用，`1` 表示至少一项被拒绝，`2` 表示证据未知、选项无效或检查失败。被拒绝的可选能力不影响该退出码。
 
+### 隐藏审批审查能力探针
+
+Issue #84 使用一条独立、按需执行的探针开展调研。它不会把 `codex-auto-review` 加入模型选择器，也不会审查或执行真实的 Harness 命令。
+
+```sh
+dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
+```
+
+该命令通过 ChatGPT OAuth Responses 路由向隐藏 reviewer 发送一条固定的合成空操作。它要求已存凭据尚未过期，不刷新或写入凭据，不跟随重定向、不重试，响应上限为 64 KiB，并在返回前销毁自有连接。`--proxy <http(s)-origin>` 和 `--timeout-ms <1..60000>` 与普通能力探针具有相同的显式网络含义。
+
+`supported` 只表示路由接受了精确的隐藏模型 ID，并返回一条符合 reviewer JSON 字段的完整审查结果。`rejected` 表示请求或本地前置条件被明确拒绝。超时、取消、格式错误、不完整流、限流和网络故障均保持 `unknown`。输出会省略凭据、账号 ID、response ID、服务端消息、模型文本、路径、headers 和代理 origin。只有运行时、OAuth 和 reviewer 三项均为可用时才返回 `0`；至少一项被拒绝时返回 `1`；证据未知或输入无效时返回 `2`。该报告只提供证据：它绝不会启用自动审批、修改 DSH 策略或授权任何操作。
+
 ## 兼容性与安全边界
 
 - Alpha 4.22 已与 DSH 插件 API packages `0.1.2-alpha.2`、`@earendil-works/pi-ai` `^0.84.2`（验证时解析为 `0.84.4`）和 Node.js `^22.19.0 || >=24.0.0` 完成验证。已发布 Alpha 4.21 仍与 DSH `0.1.1-rc.2` 和 pi-ai `0.82.1` 保持已验证状态。[verified-compatibility.json](../verified-compatibility.json) 记录精确组合；安装命令见 [INSTALL.md](../INSTALL.md)。

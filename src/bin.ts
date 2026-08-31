@@ -17,6 +17,7 @@ import {
 import { CODEX_CONNECT_VERSION } from './doctor.ts'
 import { normalizeTrustedOrigin, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { runCapabilityCommand } from './capability-cli.ts'
+import { runAutoReviewProbeCommand } from './auto-review-cli.ts'
 
 type Action = 'doctor' | 'login' | 'logout' | 'migrate-history' | 'status' | 'trust-origin' | 'trusted-origins' | 'untrust-origin'
 type DiagnosticReport = Awaited<ReturnType<typeof diagnoseOpenAICodex>>
@@ -102,8 +103,10 @@ function printHelp(): void {
     '       dsh-codex-connect trusted-origins [--json]',
     '       dsh-codex-connect untrust-origin <origin>',
     '       dsh-codex-connect capabilities [--model <catalog-id>] [--probe] [--proxy <http(s)-origin>] [--timeout-ms <1..60000>] [--json]',
+    '       dsh-codex-connect auto-review-probe [--proxy <http(s)-origin>] [--timeout-ms <1..60000>] [--json]',
     '',
     '  doctor         inspect secret-free runtime and OAuth file metadata',
+    '  auto-review-probe test the hidden approval reviewer with one synthetic no-op',
     '  login          sign in with a separate ChatGPT OAuth session',
     '  logout         remove the dsh credential without changing ~/.codex',
     '  migrate-history find or repair Alpha 4.10 private search events (dry-run by default)',
@@ -112,7 +115,7 @@ function printHelp(): void {
     '  trusted-origins list the currently allowed browser origins',
     '  untrust-origin remove one exact browser origin from the allowlist',
     '  --device-code  use headless device-code login (login only)',
-    '  --json         emit one JSON document (doctor/status/trusted-origins/migrate-history)',
+    '  --json         emit one JSON document (doctor/status/capabilities/auto-review-probe/trusted-origins/migrate-history)',
     '',
   ].join('\n'))
 }
@@ -156,6 +159,7 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
   const [rawAction, ...flags] = argv
   if (rawAction === 'capabilities') return runCapabilityCommand(flags)
+  if (rawAction === 'auto-review-probe') return runAutoReviewProbeCommand(flags)
   const actions: readonly Action[] = ['doctor', 'login', 'logout', 'migrate-history', 'status', 'trust-origin', 'trusted-origins', 'untrust-origin']
   if (!actions.includes(rawAction as Action)) {
     process.stderr.write(`dsh-codex-connect: expected doctor, login, logout, migrate-history, status, trust-origin, trusted-origins, or untrust-origin; got ${JSON.stringify(rawAction)}\n`)

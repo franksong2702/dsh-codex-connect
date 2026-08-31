@@ -35,6 +35,16 @@ describe('assembled capability CLI', () => {
     expect(output).not.toContain(root)
   })
 
+  it('uses the real reviewer command to stay offline when signed out', async () => {
+    root = await mkdtemp(join(tmpdir(), 'codex-capabilities-'))
+    vi.stubEnv('DSH_HOME', root)
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation(chunk => { output += String(chunk); return true })
+    expect(await run(['auto-review-probe', '--json'])).toBe(1)
+    expect(JSON.parse(output)).toMatchObject({ scope: 'auto-review-route-only', probe: { state: 'skipped' }, checks: { oauth: { status: 'rejected' }, reviewer: { status: 'unknown' } } })
+    expect(output).not.toContain(root)
+  })
+
   it.each([
     ['--probe'], ['--model'], ['--timeout-ms', '0'], ['--timeout-ms', '60001'],
     ['--proxy', 'https://user:private-password@example.test'], ['--json', '--json'], ['--token', 'private-access'],
