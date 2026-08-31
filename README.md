@@ -164,7 +164,7 @@ Codex Connect uses a **Direct connection** by default. A proxy is optional and a
 
 Select **Detect proxy** to test only the standard proxy environment variables and the documented loopback candidates `127.0.0.1:7890`, `127.0.0.1:7897`, and `127.0.0.1:10809`. Detection makes no model call, consumes no quota, and does not write settings. A response from the canonical Codex endpoint proves network reachability; `401/403`, proxy `407`, DNS, refused connection, timeout, TLS, and CONNECT failures remain separate diagnostics.
 
-Choose **Use this proxy** only after reviewing a candidate, then click **Save changes**. **Configure manually** lets you test a credential-free HTTP(S) proxy origin before activation. **Disable proxy** is always available. A failed probe leaves the previous mode unchanged, and an enabled proxy failure is shown as an actionable error; Codex Connect never silently retries the request through a direct connection.
+Choose **Use this proxy** only after reviewing a candidate, then click **Save changes**. **Configure manually** requires the exact current credential-free HTTP(S) proxy origin to pass its test before the activation action becomes available; editing the draft invalidates the earlier result. **Disable proxy** is always available. A failed probe leaves the previous mode unchanged, and an enabled proxy failure is shown as an actionable error; Codex Connect never silently retries the request through a direct connection.
 
 ### Enable only the capability you intend to use
 

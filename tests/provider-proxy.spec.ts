@@ -113,4 +113,34 @@ describe('OpenAI Codex proxy manager', () => {
     expect(completed).toBe(true)
     expect(getGlobalDispatcher()).toBe(fallback)
   })
+
+  it('deactivates and reconfigures one controller without intercepting unrelated traffic', async () => {
+    const fallback = new RecordingDispatcher()
+    setGlobalDispatcher(fallback)
+    const dispatch = vi.spyOn(ProxyAgent.prototype, 'dispatch').mockReturnValue(true)
+    const close = vi.spyOn(ProxyAgent.prototype, 'close').mockResolvedValue()
+    const manager = new OpenAICodexProxyManager()
+
+    manager.run(DEFAULT_OPENAI_CODEX_PROXY_URL, () => {
+      getGlobalDispatcher().dispatch({ origin: 'https://chatgpt.com', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
+    })
+    getGlobalDispatcher().dispatch({ origin: 'https://unrelated.example', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
+    expect(dispatch).toHaveBeenCalledOnce()
+    expect(fallback.calls).toBe(1)
+
+    await manager.deactivate()
+    expect(close).toHaveBeenCalledOnce()
+    expect(getGlobalDispatcher()).toBe(fallback)
+
+    manager.run('http://127.0.0.1:7897', () => {
+      getGlobalDispatcher().dispatch({ origin: 'https://chatgpt.com', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
+    })
+    getGlobalDispatcher().dispatch({ origin: 'https://unrelated.example', path: '/', method: 'GET' }, {} as Dispatcher.DispatchHandler)
+    expect(dispatch).toHaveBeenCalledTimes(2)
+    expect(fallback.calls).toBe(2)
+
+    await manager.dispose()
+    expect(close).toHaveBeenCalledTimes(2)
+    expect(getGlobalDispatcher()).toBe(fallback)
+  })
 })

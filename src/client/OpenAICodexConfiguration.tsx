@@ -4,7 +4,11 @@ import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore }
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
-import { isValidOpenAICodexContextWindowOverrides, isValidOpenAICodexProxyUrl } from '../settings-contract.ts'
+import {
+  isValidOpenAICodexContextWindowOverrides,
+  isValidOpenAICodexProxyUrl,
+  normalizeOpenAICodexProxyUrl,
+} from '../settings-contract.ts'
 import {
   decodeOpenAICodexModelCatalog,
   isValidOpenAICodexContextBudget,
@@ -275,6 +279,9 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
   const validProxy = draft !== undefined && isValidOpenAICodexProxyUrl(draft.proxyUrl)
+  const testedManualProxy = draft !== undefined
+    && manualProbe?.reachable === true
+    && manualProbe.proxyUrl === normalizeOpenAICodexProxyUrl(draft.proxyUrl)
   const validContexts = draft !== undefined && isValidOpenAICodexContextWindowOverrides(draft.contextWindowOverrides ?? {})
     && Object.entries(draft.contextWindowOverrides ?? {}).every(([id, budget]) => {
       const model = modelCatalog?.find(entry => entry.id === id)
@@ -450,7 +457,10 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                   style={controlStyle}
                   value={draft.proxyUrl}
                   aria-invalid={!isValidOpenAICodexProxyUrl(draft.proxyUrl)}
-                  onChange={event => { update('proxyUrl', event.currentTarget.value) }}
+                  onChange={event => {
+                    setManualProbe(undefined)
+                    update('proxyUrl', event.currentTarget.value)
+                  }}
                 />
               </label>
               <div style={buttonsStyle}>
@@ -466,7 +476,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                   <button
                     type="button"
                     style={primaryButtonStyle}
-                    disabled={!isValidOpenAICodexProxyUrl(draft.proxyUrl)}
+                    disabled={!testedManualProxy}
                     onClick={() => { useProxy(draft.proxyUrl) }}
                   >
                     {t('useThisProxy')}
@@ -478,6 +488,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                   {manualProbe.reachable ? t('proxyTestSucceeded', { status: manualProbe.status ?? manualProbe.classification }) : t('proxyTestFailed', { reason: manualProbe.classification })}
                 </p>
               )}
+              {!draft.enableProxy && !testedManualProxy ? <p style={bodyStyle}>{t('proxyTestRequired')}</p> : null}
             </div>
           ) : null}
           <div style={{ paddingTop: 4 }}>
