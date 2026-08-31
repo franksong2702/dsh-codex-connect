@@ -119,8 +119,12 @@ export class OpenAICodexAccountStore {
     } catch (error: unknown) {
       popup?.close()
       this.publish({ status: this.failure(error), busy: false })
+      if (error instanceof AccountRequestError && error.message === 'OpenAI Codex sign-in cancelled') {
+        // Another browser can cancel the shared server operation while this login request is pending.
+        await this.refresh()
+      }
     } finally {
-      this.popup = null
+      if (this.popup === popup) this.popup = null
       this.schedule()
     }
   }

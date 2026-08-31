@@ -7,7 +7,7 @@ Alpha 4.22 is the Codex Connect release candidate for DSH `0.1.2-alpha.2` and it
 - The candidate is based on the current `main` branch rather than the obsolete stacked PR bases.
 - Source-linked DSH registration, disposal, settings, account-state, OAuth recovery, quota, context-budget, browser, build-output, and package-content checks pass.
 - The context-budget pressure test reaches the real DSH compaction decision with no network request. It verifies local threshold selection only; it does not establish a service-side context limit or complete a model-generated summary.
-- Published Alpha 4.21 compatibility remains unchanged in `verified-compatibility.json` and `INSTALL.md`.
+- Published Alpha 4.21 remains a historical verified pair in `verified-compatibility.json` and `INSTALL.md`.
 
 ## Required registry and runtime evidence
 
@@ -20,4 +20,4 @@ Alpha 4.22 is the Codex Connect release candidate for DSH `0.1.2-alpha.2` and it
 
 ## Current status
 
-DSH `0.1.2-alpha.2` was published to the public npm registry on 2026-08-30. The registry-only lockfile, clean frozen installation, 405-test check, 12-test browser suite, 39-file package validation, and isolated published-DSH installation with seven-model registration and disposal have passed locally. The exact PR head still requires CI and isolated full Web/OAuth acceptance before the verified compatibility record can change.
+DSH `0.1.2-alpha.2` was published to the public npm registry on 2026-08-30. The registry-only lockfile, clean frozen installation, 410-test check, 12-test browser suite, 39-file package validation, isolated published-DSH installation with seven-model registration and disposal, and the exact-head Node 22.19, Node 24, browser, Windows, dependency-review, and CodeQL checks passed. On 2026-08-31, the maintainer completed and accepted the isolated Web/OAuth, model and tool, search and image, proxy, quota, context-budget, and session-restoration checks. The verified compatibility record and installation table now include Alpha 4.22; only final diff review, merge, GitHub/npm release, and authorized dist-tag changes remain.

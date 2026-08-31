@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-The Alpha 4.22 release candidate targets DSH `0.1.2-alpha.2` and its declared pi-ai range `^0.84.2`; the current registry installation resolves pi-ai `0.84.4`. It is not yet an installation recommendation: normal npm installation and full Web/OAuth validation remain release gates. The released-version table below is unchanged; Alpha 4.22 is not added until those gates pass.
+Alpha 4.22 is verified with DSH `0.1.2-alpha.2` and its declared pi-ai range `^0.84.2`; the verified registry installation resolves pi-ai `0.84.4`.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
@@ -22,10 +22,11 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | --- | --- |
 | `0.1.0-rc.7` | `0.1.0-alpha.4.14` |
 | `0.1.1-rc.2` | `0.1.0-alpha.4.21` |
+| `0.1.2-alpha.2` | `0.1.0-alpha.4.22` |
 
 If your exact DSH version is unknown or not listed, stop and verify the combination before installing. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-Alpha 4.21's verified contract is DSH plugin API packages `0.1.1-rc.2`, `@earendil-works/pi-ai` `0.82.1`, and Node.js `^22.19.0 || >=24.0.0`. It uses the rc.2 keyed Plugin configuration slot. Staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14, not installing Alpha 4.21 into that older API. Upgrading DSH is a separate decision: upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility` for the selected combination.
+Alpha 4.22's verified contract is DSH plugin API packages `0.1.2-alpha.2`, `@earendil-works/pi-ai` `^0.84.2` (resolved as `0.84.4` during verification), and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`; staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Upgrading DSH is a separate decision: upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility` for the selected combination.
 
 These choices reflect the repository's existing verification record, not a new installation or runtime probe. This guidance does not fix upstream DSH compatibility or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
 
@@ -44,7 +45,13 @@ These choices reflect the repository's existing verification record, not a new i
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.21
    ```
 
-   If npm is unavailable after its matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination.
+   After the matching package is published, use Alpha 4.22 with DSH `0.1.2-alpha.2`:
+
+   ```sh
+   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.22
+   ```
+
+   If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.22'` only for the DSH `0.1.2-alpha.2` combination.
 
 3. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
 4. Confirm the effective `agent-default-model` and `web.searchProvider` values are unchanged from before installation.
@@ -56,7 +63,7 @@ These choices reflect the repository's existing verification record, not a new i
 
 6. If the user explicitly requests login, open **Settings → Plugins → Plugin configuration → Codex Connect**, or check `status` and then use `login` or `login --device-code`. OAuth approval belongs to the user.
 
-   The Alpha 4.22 release candidate additionally offers the same account actions in **Settings → Models → Openai-Codex**, plus a shared **More settings** dialog for model visibility, proxy, search, image, and context-budget controls. The original Plugin settings entry remains available; neither entry automatically starts login or changes model/search defaults.
+   Alpha 4.22 additionally offers the same account actions in **Settings → Models → Openai-Codex**, plus a shared **More settings** dialog for model visibility, proxy, search, image, and context-budget controls. The original Plugin settings entry remains available; neither entry automatically starts login or changes model/search defaults.
 
    When signed out, select **Authorize**. When signed in, use **Sign out** or **View quota**; use **More settings** for plugin options. If authorization is abandoned, use **Reopen authorization** or **Cancel sign-in** and retry; cancellation does not delete an existing account. Pending authorization expires after 10 minutes by default (`oauthTimeoutMs` in plugin configuration, applied on load).
 

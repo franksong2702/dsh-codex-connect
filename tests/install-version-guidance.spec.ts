@@ -12,6 +12,7 @@ describe('installation version guidance', () => {
   it.each([
     ['0.1.0-rc.7', '0.1.0-alpha.4.14'],
     ['0.1.1-rc.2', '0.1.0-alpha.4.21'],
+    ['0.1.2-alpha.2', '0.1.0-alpha.4.22'],
   ])('selects the recorded DSH %s / Codex Connect %s pair before installation', (dsh, plugin) => {
     expect(firstInstall).toBeGreaterThan(0)
     expect(compatibility.pluginVersions).toContainEqual(expect.objectContaining({
@@ -32,7 +33,8 @@ describe('installation version guidance', () => {
     expect(shellBlocks).not.toContain('dsh plugin --profile web add dsh-codex-connect@alpha')
   })
 
-  it('retains the exact Alpha 4.21 GitHub fallback when npm is unavailable', () => {
+  it('retains exact GitHub fallbacks for the latest releases when npm is unavailable', () => {
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.21/iu)
+    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.22/iu)
   })
 })

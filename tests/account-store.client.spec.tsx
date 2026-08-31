@@ -86,6 +86,88 @@ describe('shared Models and Plugin account state', () => {
     expect(fetchMock.mock.calls.some(([path]) => path === OPENAI_CODEX_AUTH_LOGOUT_PATH)).toBe(false)
     account.dispose()
   })
+
+  it('refreshes server state when another browser cancels a pending login request', async () => {
+    let finishLogin!: (value: Response) => void
+    const fetchMock = vi.fn((path: string) => path === OPENAI_CODEX_AUTH_LOGIN_PATH
+      ? new Promise<Response>(resolve => { finishLogin = resolve })
+      : Promise.resolve(json({ status: 'signed-out' })))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await waitFor(() => { expect(account.getSnapshot().status.status).toBe('signed-out') })
+    const login = account.signIn()
+    await waitFor(() => { expect(account.getSnapshot().busy).toBe(true) })
+    finishLogin(new Response(JSON.stringify({ error: 'OpenAI Codex sign-in cancelled' }), { status: 500 }))
+    await login
+    expect(account.getSnapshot()).toMatchObject({ status: { status: 'signed-out' }, busy: false })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    unsubscribe()
+    account.dispose()
+  })
+
+  it('keeps unrelated login failures visible instead of replacing them with server state', async () => {
+    const fetchMock = vi.fn((path: string) => Promise.resolve(path === OPENAI_CODEX_AUTH_LOGIN_PATH
+      ? new Response(JSON.stringify({ error: 'OAuth is unavailable' }), { status: 503 })
+      : json({ status: 'signed-out' })))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await waitFor(() => { expect(account.getSnapshot().status.status).toBe('signed-out') })
+    await account.signIn()
+    expect(account.getSnapshot()).toMatchObject({
+      status: { status: 'error', message: 'OAuth is unavailable' }, busy: false,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    unsubscribe()
+    account.dispose()
+  })
+
+  it('retains a newer login popup while an older cancelled login refresh settles', async () => {
+    let resolveFirstLogin!: (value: Response) => void
+    let resolveSecondLogin!: (value: Response) => void
+    let resolveCancellationRefresh!: (value: Response) => void
+    let loginRequests = 0
+    let statusRequests = 0
+    const fetchMock = vi.fn((path: string) => {
+      if (path === OPENAI_CODEX_AUTH_LOGIN_PATH) {
+        loginRequests += 1
+        return new Promise<Response>(resolve => {
+          if (loginRequests === 1) resolveFirstLogin = resolve
+          else resolveSecondLogin = resolve
+        })
+      }
+      statusRequests += 1
+      return statusRequests === 1
+        ? Promise.resolve(json({ status: 'signed-out' }))
+        : new Promise<Response>(resolve => { resolveCancellationRefresh = resolve })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const firstClose = vi.fn()
+    const secondClose = vi.fn()
+    const firstPopup = { close: firstClose, location: { replace: vi.fn() } } as unknown as Window
+    const secondPopup = { close: secondClose, location: { replace: vi.fn() } } as unknown as Window
+    vi.spyOn(window, 'open').mockReturnValueOnce(firstPopup).mockReturnValueOnce(secondPopup)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await waitFor(() => { expect(account.getSnapshot().status.status).toBe('signed-out') })
+    const firstLogin = account.signIn()
+    resolveFirstLogin(new Response(JSON.stringify({ error: 'OpenAI Codex sign-in cancelled' }), { status: 500 }))
+    await waitFor(() => { expect(account.getSnapshot().status.status).toBe('error') })
+    const secondLogin = account.signIn()
+    await waitFor(() => { expect(loginRequests).toBe(2) })
+    resolveCancellationRefresh(json({ status: 'signed-out' }))
+    await firstLogin
+    account.dispose()
+    expect(firstClose).toHaveBeenCalledOnce()
+    expect(secondClose).toHaveBeenCalledOnce()
+    resolveSecondLogin(json({ url: 'https://auth.openai.com/authorize' }))
+    await secondLogin
+    unsubscribe()
+  })
+
   it('shares one status read, synchronizes logout, and keeps advanced options off Models', async () => {
     const fetchMock = vi.fn(async (path: string) => path === OPENAI_CODEX_AUTH_LOGOUT_PATH
       ? json({ ok: true }) : json({ status: 'signed-in', usage: { rateLimits: [] } }))
