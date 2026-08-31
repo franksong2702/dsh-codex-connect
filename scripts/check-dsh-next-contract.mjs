@@ -7,9 +7,10 @@ import { join, resolve } from 'node:path'
 import { resolveCommandInvocation, runBoundedCommand } from './bounded-command.mjs'
 
 import {
+  classifyCandidateVersion,
   classifyCandidateCheckStatus,
   confirmedCompatibilityFailure,
-  duplicateCandidate,
+  duplicateCandidateOwner,
   parseCanaryArgs,
   parseRegistryDistTags,
   parseRegistryVersion,
@@ -35,9 +36,17 @@ function assertContract(name, condition) {
 
 assertContract('JSON registry versions are accepted', parseRegistryVersion('"0.1.2-rc.1"\n') === '0.1.2-rc.1')
 assertContract('plain registry versions are accepted', parseRegistryVersion('0.1.2') === '0.1.2')
-assertContract('latest and next registry tags are accepted', (() => {
-  const tags = parseRegistryDistTags('{"latest":"0.1.2","next":"0.1.3-rc.1"}')
-  return tags.latest === '0.1.2' && tags.next === '0.1.3-rc.1'
+assertContract('invalid numeric prerelease identifiers are rejected', (() => {
+  try {
+    parseRegistryVersion('0.1.2-alpha.01')
+    return false
+  } catch {
+    return true
+  }
+})())
+assertContract('latest, next, and alpha registry tags are accepted', (() => {
+  const tags = parseRegistryDistTags('{"latest":"0.1.2","next":"0.1.3-rc.1","alpha":"0.1.4-alpha.1"}')
+  return tags.latest === '0.1.2' && tags.next === '0.1.3-rc.1' && tags.alpha === '0.1.4-alpha.1'
 })())
 assertContract('incomplete registry tags are rejected', (() => {
   try {
@@ -58,16 +67,19 @@ assertContract('invalid registry output is rejected', (() => {
 assertContract('channel, deduplication, and report arguments are parsed', (() => {
   const args = parseCanaryArgs([
     '--',
-    '--channel', 'next',
+    '--channel', 'alpha',
     '--dedupe-against', 'latest',
+    '--dedupe-against', 'next',
     '--resolved-latest', '0.1.2',
     '--resolved-next', '0.1.3-rc.1',
+    '--resolved-alpha', '0.1.4-alpha.1',
     '--report', '.canary/report.json',
   ])
-  return args.channel === 'next'
-    && args.dedupeAgainst === 'latest'
+  return args.channel === 'alpha'
+    && JSON.stringify(args.dedupeAgainst) === JSON.stringify(['latest', 'next'])
     && args.resolvedDistTags.latest === '0.1.2'
     && args.resolvedDistTags.next === '0.1.3-rc.1'
+    && args.resolvedDistTags.alpha === '0.1.4-alpha.1'
     && args.outputPath === resolve('.canary/report.json')
 })())
 assertContract('dist-tag output mode is parsed separately', (() => {
@@ -76,7 +88,7 @@ assertContract('dist-tag output mode is parsed separately', (() => {
 })())
 assertContract('partial resolved snapshots are rejected', (() => {
   try {
-    parseCanaryArgs(['--resolved-latest', '0.1.2'])
+    parseCanaryArgs(['--resolved-latest', '0.1.2', '--resolved-next', '0.1.3-rc.1'])
     return false
   } catch {
     return true
@@ -90,13 +102,41 @@ assertContract('a channel cannot deduplicate against itself', (() => {
     return true
   }
 })())
+assertContract('a deduplication owner cannot be repeated', (() => {
+  try {
+    parseCanaryArgs(['--channel', 'alpha', '--dedupe-against', 'latest', '--dedupe-against', 'latest'])
+    return false
+  } catch {
+    return true
+  }
+})())
 assertContract(
-  'next deduplicates an identical latest candidate',
-  duplicateCandidate('next', 'latest', { latest: '0.1.2', next: '0.1.2' }),
+  'alpha deduplicates against the first identical prior candidate',
+  duplicateCandidateOwner('alpha', ['latest', 'next'], {
+    latest: '0.1.2',
+    next: '0.1.3-rc.1',
+    alpha: '0.1.3-rc.1',
+  }) === 'next',
 )
 assertContract(
   'different channel versions remain independent candidates',
-  !duplicateCandidate('next', 'latest', { latest: '0.1.2', next: '0.1.3-rc.1' }),
+  duplicateCandidateOwner('alpha', ['latest', 'next'], {
+    latest: '0.1.2',
+    next: '0.1.3-rc.1',
+    alpha: '0.1.4-alpha.1',
+  }) === undefined,
+)
+assertContract('an exact declared version is unchanged', classifyCandidateVersion('0.1.2-alpha.2', '0.1.2-alpha.2') === 'unchanged')
+assertContract('an older stable candidate is not newer than a declared alpha', classifyCandidateVersion('0.1.1-rc.2', '0.1.2-alpha.2') === 'not-newer')
+assertContract(
+  'later prereleases and stable releases supersede a declared alpha',
+  classifyCandidateVersion('0.1.2-alpha.3', '0.1.2-alpha.2') === 'newer'
+    && classifyCandidateVersion('0.1.2', '0.1.2-alpha.2') === 'newer',
+)
+assertContract(
+  'numeric prerelease identifiers and build metadata follow semantic-version precedence',
+  classifyCandidateVersion('0.1.2-alpha.10', '0.1.2-alpha.2') === 'newer'
+    && classifyCandidateVersion('0.1.2-alpha.2+candidate', '0.1.2-alpha.2+declared') === 'not-newer',
 )
 
 const scrubbedEnvironment = scrubCanaryEnvironment({
@@ -212,6 +252,7 @@ async function runCandidateFixture(exitCode) {
       '--channel', 'next',
       '--resolved-latest', supportedVersion,
       '--resolved-next', '9.9.9-next.1',
+      '--resolved-alpha', supportedVersion,
       '--report', reportPath,
     ]), { candidateCheckPath: candidateCheck })
     return {
@@ -222,6 +263,35 @@ async function runCandidateFixture(exitCode) {
     await rm(root, { recursive: true, force: true })
   }
 }
+
+async function runSupersededCandidateFixture() {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-superseded-contract-'))
+  try {
+    const reportPath = join(root, 'report.json')
+    const status = await runCanary(parseCanaryArgs([
+      '--channel', 'latest',
+      '--resolved-latest', '0.1.1-rc.2',
+      '--resolved-next', '0.1.1-rc.2',
+      '--resolved-alpha', '0.1.2-alpha.2',
+      '--report', reportPath,
+    ]), { candidateCheckPath: join(root, 'must-not-run.mjs') })
+    return {
+      status,
+      report: JSON.parse(await readFile(reportPath, 'utf8')),
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}
+
+const supersededFixture = await runSupersededCandidateFixture()
+assertContract(
+  'issue 86 regression: an older channel is skipped before the isolated checker runs',
+  supersededFixture.status === 0
+    && supersededFixture.report.status === 'pass'
+    && supersededFixture.report.classification === 'not-newer'
+    && supersededFixture.report.stage === 'compare-candidate',
+)
 
 const compatibilityFixture = await runCandidateFixture(1)
 assertContract(

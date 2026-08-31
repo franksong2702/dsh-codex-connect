@@ -16,7 +16,8 @@ const INSTALL_CHECK = resolve(REPO_ROOT, 'scripts/check-dsh-install.mjs')
 const MAX_SUMMARY_LENGTH = 1600
 const REGISTRY_TIMEOUT_MS = 60 * 1000
 const CANDIDATE_CHECK_TIMEOUT_MS = 25 * 60 * 1000
-const CHANNELS = new Set(['latest', 'next'])
+const DIST_TAG_NAMES = ['latest', 'next', 'alpha']
+const CHANNELS = new Set(DIST_TAG_NAMES)
 
 function commandName(name) {
   return process.platform === 'win32' && name === 'npm' ? `${name}.cmd` : name
@@ -43,6 +44,47 @@ async function runCommand(command, args, options = {}) {
   }
 }
 
+function parseSemanticVersion(value) {
+  const match = value.match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/u)
+  if (match === null) return undefined
+  const prerelease = match[4]?.split('.')
+  const build = match[5]?.split('.')
+  if (prerelease?.some(identifier => identifier === '' || (/^\d+$/u.test(identifier) && identifier.length > 1 && identifier.startsWith('0'))) === true) return undefined
+  if (build?.some(identifier => identifier === '') === true) return undefined
+  return {
+    core: [BigInt(match[1]), BigInt(match[2]), BigInt(match[3])],
+    prerelease,
+  }
+}
+
+function compareSemanticVersions(left, right) {
+  const leftVersion = parseSemanticVersion(left)
+  const rightVersion = parseSemanticVersion(right)
+  if (leftVersion === undefined || rightVersion === undefined) {
+    throw new Error('cannot compare invalid DSH semantic versions')
+  }
+  for (let index = 0; index < leftVersion.core.length; index += 1) {
+    if (leftVersion.core[index] > rightVersion.core[index]) return 1
+    if (leftVersion.core[index] < rightVersion.core[index]) return -1
+  }
+  if (leftVersion.prerelease === undefined) return rightVersion.prerelease === undefined ? 0 : 1
+  if (rightVersion.prerelease === undefined) return -1
+  const identifierCount = Math.max(leftVersion.prerelease.length, rightVersion.prerelease.length)
+  for (let index = 0; index < identifierCount; index += 1) {
+    const leftIdentifier = leftVersion.prerelease[index]
+    const rightIdentifier = rightVersion.prerelease[index]
+    if (leftIdentifier === undefined) return -1
+    if (rightIdentifier === undefined) return 1
+    if (leftIdentifier === rightIdentifier) continue
+    const leftNumeric = /^\d+$/u.test(leftIdentifier)
+    const rightNumeric = /^\d+$/u.test(rightIdentifier)
+    if (leftNumeric && rightNumeric) return BigInt(leftIdentifier) > BigInt(rightIdentifier) ? 1 : -1
+    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1
+    return leftIdentifier > rightIdentifier ? 1 : -1
+  }
+  return 0
+}
+
 export function parseRegistryVersion(output) {
   let value
   try {
@@ -50,7 +92,7 @@ export function parseRegistryVersion(output) {
   } catch {
     value = output.trim()
   }
-  if (typeof value !== 'string' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(value)) {
+  if (typeof value !== 'string' || parseSemanticVersion(value) === undefined) {
     throw new Error('npm returned an invalid DSH next version')
   }
   return value
@@ -66,13 +108,14 @@ export function parseRegistryDistTags(output) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('npm returned invalid DSH dist-tags JSON')
   }
-  if (typeof value.latest !== 'string' || typeof value.next !== 'string') {
-    throw new Error('npm returned incomplete DSH dist-tags JSON')
+  const distTags = {}
+  for (const name of DIST_TAG_NAMES) {
+    if (typeof value[name] !== 'string') {
+      throw new Error('npm returned incomplete DSH dist-tags JSON')
+    }
+    distTags[name] = parseRegistryVersion(value[name])
   }
-  return {
-    latest: parseRegistryVersion(value.latest),
-    next: parseRegistryVersion(value.next),
-  }
+  return distTags
 }
 
 export function sanitizeSummary(value) {
@@ -96,8 +139,13 @@ export function confirmedCompatibilityFailure(first, second) {
     && first.candidateVersion === second.candidateVersion
 }
 
-export function duplicateCandidate(channel, dedupeAgainst, distTags) {
-  return dedupeAgainst !== undefined && distTags[channel] === distTags[dedupeAgainst]
+export function duplicateCandidateOwner(channel, dedupeAgainst, distTags) {
+  return dedupeAgainst.find(owner => distTags[channel] === distTags[owner])
+}
+
+export function classifyCandidateVersion(candidateVersion, supportedVersion) {
+  if (candidateVersion === supportedVersion) return 'unchanged'
+  return compareSemanticVersions(candidateVersion, supportedVersion) > 0 ? 'newer' : 'not-newer'
 }
 
 export function classifyCandidateCheckStatus(status) {
@@ -114,22 +162,24 @@ export function parseCanaryArgs(args) {
     return { distTagsOutputPath: resolve(process.cwd(), value) }
   }
   let channel = 'next'
-  let dedupeAgainst
+  const dedupeAgainst = []
   let outputPath
   let resolvedLatest
   let resolvedNext
+  let resolvedAlpha
   for (let index = 0; index < values.length; index += 2) {
     const name = values[index]
     const value = values[index + 1]
     if (value === undefined || value === '') {
-      throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--report <json-file>]')
+      throw new Error('usage: check-dsh-next [--channel <latest|next|alpha>] [--dedupe-against <latest|next|alpha>] [--report <json-file>]')
     }
     if (name === '--channel' && CHANNELS.has(value)) {
       channel = value
       continue
     }
     if (name === '--dedupe-against' && CHANNELS.has(value)) {
-      dedupeAgainst = value
+      if (dedupeAgainst.includes(value)) throw new Error(`duplicate canary deduplication owner: ${value}`)
+      dedupeAgainst.push(value)
       continue
     }
     if (name === '--report') {
@@ -144,15 +194,22 @@ export function parseCanaryArgs(args) {
       resolvedNext = parseRegistryVersion(value)
       continue
     }
-    throw new Error('usage: check-dsh-next [--channel <latest|next>] [--dedupe-against <latest|next>] [--resolved-latest <version> --resolved-next <version>] [--report <json-file>]')
+    if (name === '--resolved-alpha') {
+      resolvedAlpha = parseRegistryVersion(value)
+      continue
+    }
+    throw new Error('usage: check-dsh-next [--channel <latest|next|alpha>] [--dedupe-against <latest|next|alpha>] [--resolved-latest <version> --resolved-next <version> --resolved-alpha <version>] [--report <json-file>]')
   }
-  if (dedupeAgainst === channel) {
+  if (dedupeAgainst.includes(channel)) {
     throw new Error('the canary channel cannot deduplicate against itself')
   }
-  if ((resolvedLatest === undefined) !== (resolvedNext === undefined)) {
-    throw new Error('resolved latest and next versions must be supplied together')
+  const resolvedValues = [resolvedLatest, resolvedNext, resolvedAlpha]
+  if (resolvedValues.some(value => value === undefined) && resolvedValues.some(value => value !== undefined)) {
+    throw new Error('resolved latest, next, and alpha versions must be supplied together')
   }
-  const resolvedDistTags = resolvedLatest === undefined ? undefined : { latest: resolvedLatest, next: resolvedNext }
+  const resolvedDistTags = resolvedLatest === undefined
+    ? undefined
+    : { latest: resolvedLatest, next: resolvedNext, alpha: resolvedAlpha }
   return { channel, dedupeAgainst, outputPath, resolvedDistTags }
 }
 
@@ -197,7 +254,7 @@ export async function runCanary(options, dependencies = {}) {
     if (resolved.distTags === undefined) throw new Error(resolved.error)
     await appendFile(
       options.distTagsOutputPath,
-      `latest=${resolved.distTags.latest}\nnext=${resolved.distTags.next}\n`,
+      `latest=${resolved.distTags.latest}\nnext=${resolved.distTags.next}\nalpha=${resolved.distTags.alpha}\n`,
       'utf8',
     )
     process.stdout.write(`${JSON.stringify(resolved.distTags)}\n`)
@@ -208,6 +265,9 @@ export async function runCanary(options, dependencies = {}) {
   const supportedVersion = compatibility?.dshPluginApi?.version
   if (typeof supportedVersion !== 'string' || supportedVersion.length === 0) {
     throw new Error('compatibility.json has no declared DSH plugin API version')
+  }
+  if (parseSemanticVersion(supportedVersion) === undefined) {
+    throw new Error('compatibility.json has an invalid DSH plugin API version')
   }
   const base = baseReport(supportedVersion, channel)
   const resolved = resolvedDistTags === undefined ? await resolveRegistryDistTags() : { distTags: resolvedDistTags }
@@ -224,19 +284,21 @@ export async function runCanary(options, dependencies = {}) {
   const distTags = resolved.distTags
   const candidateVersion = distTags[channel]
 
-  if (duplicateCandidate(channel, dedupeAgainst, distTags)) {
+  const duplicateOwner = duplicateCandidateOwner(channel, dedupeAgainst, distTags)
+  if (duplicateOwner !== undefined) {
     await emitReport(outputPath, {
       ...base,
       candidateVersion,
       status: 'pass',
       classification: 'duplicate',
       stage: 'compare-candidate',
-      summary: `DSH ${channel} matches ${dedupeAgainst} at ${candidateVersion}; the ${dedupeAgainst} canary owns this candidate.`,
+      summary: `DSH ${channel} matches ${duplicateOwner} at ${candidateVersion}; the ${duplicateOwner} canary owns this candidate.`,
     })
     return 0
   }
 
-  if (candidateVersion === supportedVersion) {
+  const versionClassification = classifyCandidateVersion(candidateVersion, supportedVersion)
+  if (versionClassification === 'unchanged') {
     await emitReport(outputPath, {
       ...base,
       candidateVersion,
@@ -244,6 +306,18 @@ export async function runCanary(options, dependencies = {}) {
       classification: 'unchanged',
       stage: 'compare-candidate',
       summary: `DSH ${channel} remains at the declared supported version ${supportedVersion}.`,
+    })
+    return 0
+  }
+
+  if (versionClassification === 'not-newer') {
+    await emitReport(outputPath, {
+      ...base,
+      candidateVersion,
+      status: 'pass',
+      classification: 'not-newer',
+      stage: 'compare-candidate',
+      summary: `DSH ${channel} is ${candidateVersion}, which does not supersede the declared supported version ${supportedVersion}; the isolated candidate check was skipped.`,
     })
     return 0
   }
