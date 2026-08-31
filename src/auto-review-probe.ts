@@ -28,8 +28,19 @@ export interface AutoReviewProbeRequest {
 /** A response-reading limit, not a model output-token setting. */
 const MAX_PROBE_RESPONSE_BYTES = 64 * 1024
 
-const instructions = 'This is a capability diagnostic. Do not call tools or execute any action. Return strict JSON for the supplied synthetic approval request. For this fixed low-risk no-op, return {"outcome":"allow"}.'
+const instructions = 'This is a capability diagnostic. Do not call tools or execute any action. Return one strict JSON assessment for the supplied synthetic approval request, including risk_level, user_authorization, outcome, and rationale.'
 const input = 'Synthetic approval request only; nothing will be executed. Planned action JSON: {"type":"diagnostic-no-op","sideEffects":false}'
+const assessmentSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    risk_level: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+    user_authorization: { type: 'string', enum: ['unknown', 'low', 'medium', 'high'] },
+    outcome: { type: 'string', enum: ['allow', 'deny'] },
+    rationale: { type: 'string' },
+  },
+  required: ['risk_level', 'user_authorization', 'outcome', 'rationale'],
+} as const
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -51,17 +62,18 @@ function assessment(text: string): boolean {
   return value['rationale'] === undefined || typeof value['rationale'] === 'string'
 }
 
-function completedResponse(value: unknown): boolean {
-  if (!record(value) || value['status'] !== 'completed' || value['model'] !== CODEX_AUTO_REVIEW_MODEL || !Array.isArray(value['output'])) return false
-  const texts = value['output'].flatMap(item => record(item) && item['type'] === 'message' && item['role'] === 'assistant' && Array.isArray(item['content'])
+function completedResponse(value: unknown): string[] | undefined {
+  if (!record(value) || value['status'] !== 'completed' || typeof value['model'] !== 'string' || !Array.isArray(value['output'])) return undefined
+  return value['output'].flatMap(item => record(item) && item['type'] === 'message' && item['role'] === 'assistant' && Array.isArray(item['content'])
     ? item['content'].flatMap(part => record(part) && part['type'] === 'output_text' && typeof part['text'] === 'string' ? [part['text']] : [])
     : [])
-  return texts.length === 1 && assessment(texts[0]!)
 }
 
 /** Inspect complete SSE frames and accept exactly one matching terminal response. */
 function completedStream(text: string): boolean {
   let completed = false
+  let terminalTexts: string[] | undefined
+  const streamedTexts: string[] = []
   let data: string[] = []
   for (const line of text.split(/\r\n|\r|\n/u)) {
     if (line === '') {
@@ -76,15 +88,22 @@ function completedStream(text: string): boolean {
         return false
       }
       if (!record(event) || event['type'] === 'error' || event['type'] === 'response.failed' || event['type'] === 'response.incomplete') return false
+      if (event['type'] === 'response.output_text.done') {
+        if (typeof event['text'] !== 'string') return false
+        streamedTexts.push(event['text'])
+      }
       if (event['type'] === 'response.completed' || event['type'] === 'response.done') {
-        if (completed || !completedResponse(event['response'])) return false
+        terminalTexts = completedResponse(event['response'])
+        if (completed || terminalTexts === undefined) return false
         completed = true
       }
     } else if (line.startsWith('data:')) {
       data.push(line.slice(5).replace(/^ /u, ''))
     }
   }
-  return completed && data.length === 0
+  if (!completed || data.length !== 0) return false
+  const texts = terminalTexts!.length > 0 ? terminalTexts! : streamedTexts
+  return texts.length === 1 && assessment(texts[0]!)
 }
 
 /**
@@ -130,6 +149,14 @@ export async function probeCodexAutoReview(
         model: CODEX_AUTO_REVIEW_MODEL,
         instructions,
         input: [{ role: 'user', content: [{ type: 'input_text', text: input }] }],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'codex_auto_review_assessment',
+            strict: true,
+            schema: assessmentSchema,
+          },
+        },
         stream: true,
         store: false,
       }),
@@ -139,7 +166,8 @@ export async function probeCodexAutoReview(
       await response.body?.cancel()
       return { outcome: [400, 401, 403, 404, 405, 422].includes(httpStatus) ? 'http-rejected' : 'transient', httpStatus }
     }
-    if (httpStatus !== 200 || !response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream') || response.body === null) {
+    const contentType = response.headers.get('content-type')
+    if (httpStatus !== 200 || (contentType !== null && !contentType.toLowerCase().startsWith('text/event-stream')) || response.body === null) {
       await response.body?.cancel()
       return { outcome: 'incomplete', httpStatus }
     }
