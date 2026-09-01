@@ -7,7 +7,7 @@ import {
 
 const catalog = {
   schemaVersion: 1 as const,
-  checkedAt: '2026-08-31',
+  checkedAt: '2026-09-01',
   latestDshVersion: '0.1.2-alpha.2',
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
@@ -19,6 +19,7 @@ const catalog = {
     { version: '0.1.0-alpha.4.20', verifiedDshVersions: ['0.1.1-rc.2'] },
     { version: '0.1.0-alpha.4.21', verifiedDshVersions: ['0.1.1-rc.2'] },
     { version: '0.1.0-alpha.4.22', verifiedDshVersions: ['0.1.2-alpha.2'] },
+    { version: '0.1.0-alpha.4.23', verifiedDshVersions: ['0.1.2-alpha.2'] },
   ],
 }
 
