@@ -71,6 +71,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'proxy-connection': 'updateHighlightProxyConnection',
   'models-account': 'updateHighlightModelsAccount',
   'context-budget': 'updateHighlightContextBudget',
+  'auto-review-probe': 'updateHighlightAutoReviewProbe',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {

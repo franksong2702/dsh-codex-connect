@@ -72,6 +72,10 @@
     {
       "version": "0.1.0-alpha.4.22",
       "highlights": ["runtime-compatibility", "models-account", "context-budget"]
+    },
+    {
+      "version": "0.1.0-alpha.4.23",
+      "highlights": ["auto-review-probe"]
     }
   ]
 }

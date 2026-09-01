@@ -18,7 +18,7 @@ The public npm packages at `0.1.2-alpha.2` support a registry-only lockfile and 
 
 The lockfile contains no local links, workspace overrides, tarball references, or Git dependencies. The installed-runtime check resolves Host packages from the isolated DSH installation and the plugin from the profile, matching the ownership split introduced by the upstream peer-dependency changes.
 
-For the alpha.3 development baseline, the registry-only lockfile and clean frozen installation pass. `pnpm run check` passes 438 tests and validates 39 packed files, `pnpm run test:browser` passes 12 tests, and `pnpm run check:dsh-install` installs DSH `0.1.2-alpha.3`, preserves default configuration, registers seven reasoning-capable Codex models, and verifies provider disposal. These keyless checks establish the development baseline; they do not add alpha.3 to the released compatibility table.
+For the alpha.3 development baseline, the registry-only lockfile and clean frozen installation pass. `pnpm run check` passes 438 tests and validates 39 packed files, `pnpm run test:browser` passes 13 tests, and `pnpm run check:dsh-install` installs DSH `0.1.2-alpha.3`, preserves default configuration, registers seven reasoning-capable Codex models, and verifies provider disposal. These keyless checks establish the development baseline; they do not add alpha.3 to the released compatibility table.
 
 ## Release evidence
 
