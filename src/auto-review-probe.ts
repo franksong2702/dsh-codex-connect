@@ -56,10 +56,10 @@ function assessment(text: string): boolean {
   if (!record(value)) return false
   const keys = Object.keys(value)
   if (keys.some(key => !['risk_level', 'user_authorization', 'outcome', 'rationale'].includes(key))) return false
+  if (!['low', 'medium', 'high', 'critical'].includes(String(value['risk_level']))) return false
+  if (!['unknown', 'low', 'medium', 'high'].includes(String(value['user_authorization']))) return false
   if (!['allow', 'deny'].includes(String(value['outcome']))) return false
-  if (value['risk_level'] !== undefined && !['low', 'medium', 'high', 'critical'].includes(String(value['risk_level']))) return false
-  if (value['user_authorization'] !== undefined && !['unknown', 'low', 'medium', 'high'].includes(String(value['user_authorization']))) return false
-  return value['rationale'] === undefined || typeof value['rationale'] === 'string'
+  return typeof value['rationale'] === 'string'
 }
 
 function completedResponse(value: unknown): string[] | undefined {

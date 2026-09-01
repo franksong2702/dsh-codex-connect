@@ -50,7 +50,7 @@ function fixture(status: number, body: string, headers: Record<string, string> =
 
 describe('hidden approval reviewer probe', () => {
   it('accepts one structured assessment and disposes its dispatcher', async () => {
-    const agent = fixture(200, sse(response('{"outcome":"allow"}')))
+    const agent = fixture(200, sse(response('{"risk_level":"low","user_authorization":"high","outcome":"allow","rationale":"Synthetic no-op."}')))
     const destroy = vi.spyOn(agent, 'destroy')
     expect(await probeCodexAutoReview(request, () => agent)).toEqual({ outcome: 'completed', httpStatus: 200 })
     expect(destroy).toHaveBeenCalledOnce()
@@ -65,6 +65,8 @@ describe('hidden approval reviewer probe', () => {
 
   it.each([
     response('allow'),
+    response('{"outcome":"allow"}'),
+    response('{"risk_level":"low","user_authorization":"high","outcome":"allow"}'),
     response('{"outcome":"maybe"}'),
     response('{"outcome":"allow","secret":"private-output"}'),
     { type: 'response.completed', response: { status: 'completed', model: null, output: response('{"outcome":"allow"}').response.output } },
