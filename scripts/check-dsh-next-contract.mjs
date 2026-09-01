@@ -126,17 +126,17 @@ assertContract(
     alpha: '0.1.4-alpha.1',
   }) === undefined,
 )
-assertContract('an exact declared version is unchanged', classifyCandidateVersion('0.1.2-alpha.2', '0.1.2-alpha.2') === 'unchanged')
-assertContract('an older stable candidate is not newer than a declared alpha', classifyCandidateVersion('0.1.1-rc.2', '0.1.2-alpha.2') === 'not-newer')
+assertContract('an exact declared version is unchanged', classifyCandidateVersion('0.1.2-alpha.3', '0.1.2-alpha.3') === 'unchanged')
+assertContract('an older stable candidate is not newer than a declared alpha', classifyCandidateVersion('0.1.1-rc.2', '0.1.2-alpha.3') === 'not-newer')
 assertContract(
   'later prereleases and stable releases supersede a declared alpha',
-  classifyCandidateVersion('0.1.2-alpha.3', '0.1.2-alpha.2') === 'newer'
-    && classifyCandidateVersion('0.1.2', '0.1.2-alpha.2') === 'newer',
+  classifyCandidateVersion('0.1.2-alpha.4', '0.1.2-alpha.3') === 'newer'
+    && classifyCandidateVersion('0.1.2', '0.1.2-alpha.3') === 'newer',
 )
 assertContract(
   'numeric prerelease identifiers and build metadata follow semantic-version precedence',
-  classifyCandidateVersion('0.1.2-alpha.10', '0.1.2-alpha.2') === 'newer'
-    && classifyCandidateVersion('0.1.2-alpha.2+candidate', '0.1.2-alpha.2+declared') === 'not-newer',
+  classifyCandidateVersion('0.1.2-alpha.10', '0.1.2-alpha.3') === 'newer'
+    && classifyCandidateVersion('0.1.2-alpha.3+candidate', '0.1.2-alpha.3+declared') === 'not-newer',
 )
 
 const scrubbedEnvironment = scrubCanaryEnvironment({
@@ -272,7 +272,7 @@ async function runSupersededCandidateFixture() {
       '--channel', 'latest',
       '--resolved-latest', '0.1.1-rc.2',
       '--resolved-next', '0.1.1-rc.2',
-      '--resolved-alpha', '0.1.2-alpha.2',
+      '--resolved-alpha', '0.1.2-alpha.3',
       '--report', reportPath,
     ]), { candidateCheckPath: join(root, 'must-not-run.mjs') })
     return {

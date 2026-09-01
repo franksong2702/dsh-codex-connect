@@ -13,7 +13,7 @@ function fixture(): AutoReviewProbeDependencies {
       capabilities: { modelProvider: true, search: false, imageTool: false, imageGeneration: false, changesHarnessDefaultModel: false, changesHarnessSearchRoute: false },
       providerConflict: false, hints: [],
       compatibility: evaluateCompatibility({ nodeVersion: 'v22.19.0', packageVersions: {
-        '@deepseek-ai/dsh-llm': '0.1.2-alpha.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.2-alpha.2', '@earendil-works/pi-ai': '0.84.4',
+        '@deepseek-ai/dsh-llm': '0.1.2-alpha.3', '@deepseek-ai/dsh-llm-pi-ai': '0.1.2-alpha.3', '@earendil-works/pi-ai': '0.84.4',
       } }),
     }),
     credentials: { read: async () => ({ type: 'oauth', access: secret, refresh: 'private-refresh', accountId: 'private-account', expires: 10_000 }) },
