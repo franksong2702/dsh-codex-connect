@@ -24,6 +24,7 @@ export type OpenAICodexUpdateHighlightKind =
   | 'proxy-connection'
   | 'models-account'
   | 'context-budget'
+  | 'auto-review-probe'
 
 export interface OpenAICodexUpdateHighlight {
   version: string
@@ -76,6 +77,7 @@ const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'proxy-connection',
   'models-account',
   'context-budget',
+  'auto-review-probe',
 ]
 
 function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {
