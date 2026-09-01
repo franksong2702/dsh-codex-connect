@@ -112,6 +112,9 @@ if (/^- id: agent-default-model/mu.test(patch) || /searchProvider:\s*openai-code
 if (!/^\s+enableImageGeneration: false$/mu.test(patch)) {
   failures.push('bundle patch must keep image generation disabled by default')
 }
+if (!/^\s+enableAutoReview: false$/mu.test(patch)) {
+  failures.push('bundle patch must keep Auto-review disabled by default')
+}
 
 const clientInject = packageJson.dsh?.client?.inject
 for (const platformModule of ['@deepseek-ai/dsh-client-ui-attachment', '@deepseek-ai/dsh-client-ui-slots']) {

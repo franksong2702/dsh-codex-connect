@@ -8,3 +8,4 @@
         enableSearch: false
         enableImageTool: false
         enableImageGeneration: false
+        enableAutoReview: false

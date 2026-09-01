@@ -393,6 +393,8 @@ interface OpenAICodexSettingsConfig {
   enableSearch: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
+  /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
+  enableAutoReview: boolean;
   searchModel: string;
   searchMode: OpenAICodexSearchMode;
   searchContextSize: OpenAICodexSearchContextSize;
@@ -702,6 +704,8 @@ interface Config {
   enableImageTool?: boolean;
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean;
+  /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
+  enableAutoReview?: boolean;
   /** Model used for auxiliary standalone searches. */
   searchModel?: string;
   /** Cached, indexed, or live web access. */

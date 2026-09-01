@@ -155,6 +155,7 @@ The installed bundle is intentionally inert beyond model-provider registration:
     enableSearch: false
     enableImageTool: false
     enableImageGeneration: false
+    enableAutoReview: false
 ```
 
 Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
@@ -306,9 +307,11 @@ The report labels each check `supported`, `rejected`, or `unknown`, with a reaso
 
 This report covers only the standalone route, not active profile routing, search/image tools, browser compatibility, provider retry behavior, or session recovery. Automatic provider failover is `rejected` because this plugin does not implement it; select an alternative provider explicitly. WebSocket-to-SSE fallback is inactive with the finite SSE default. `contextManagement` and continuation remain `unknown`; native compaction and WebSocket reuse are `rejected` by the current integration policy. No diagnostic result enables these capabilities or changes Harness history. Exit codes cover runtime, OAuth, selected model, Responses, and SSE only: `0` means all five were supported, `1` means at least one was rejected, and `2` means unknown evidence, invalid options, or an inspection failure. Rejected optional capabilities do not change that exit code.
 
-### Hidden approval-review capability probe
+### Codex Auto-review and capability probe
 
-Issue #84 is being investigated with a separate, opt-in probe. It does not add `codex-auto-review` to the model selector and does not review or execute a real Harness command.
+Codex Auto-review is a default-off optional capability under **Settings → Plugins → Codex Connect**. When enabled, it reviews eligible Harness approval requests after DSH policy runs. Enabling it permits the plugin to send bounded recent approval context, tool arguments, working directory, and the planned action to `chatgpt.com`; hidden reasoning and stored credentials are excluded. Only a complete structured allow result can grant one execution. Denials inject a rationale and no-circumvention instruction, repeated denials open a turn-local circuit breaker, and `/approve <denial-id>` can authorize one exact retry when the optional command service is present. See [Auto-review](docs/auto-review.md) and [自动审查](docs/auto-review.zh.md).
+
+The separate probe remains available for diagnosing the hidden route. It does not add `codex-auto-review` to the model selector and does not review or execute a real Harness command.
 
 ```sh
 dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
@@ -316,7 +319,7 @@ dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
 
 The command sends one fixed, synthetic no-op to the hidden reviewer through the ChatGPT OAuth Responses route. It requires an unexpired stored credential, never refreshes or writes credentials, does not follow redirects or retry, caps the response at 64 KiB, and destroys its owned connection before returning. `--proxy <http(s)-origin>` and `--timeout-ms <1..60000>` have the same explicit-network meaning as the ordinary capability probe.
 
-`supported` means only that the route accepted the exact hidden model id and returned one complete assessment matching the reviewer JSON fields. `rejected` means the request or local prerequisite was explicitly rejected. Timeouts, cancellation, malformed output, incomplete streams, rate limits, and network failures remain `unknown`. Output omits credentials, account ids, response ids, provider messages, model text, paths, headers, and proxy origins. Exit `0` requires runtime, OAuth, and reviewer checks to be supported; exit `1` means at least one was rejected; exit `2` means evidence is unknown or input is invalid. The report is evidence only: it never enables automatic approval, changes DSH policy, or authorizes an action.
+`supported` means only that the route accepted the exact hidden model id and returned one complete assessment matching the reviewer JSON fields. `rejected` means the request or local prerequisite was explicitly rejected. Timeouts, cancellation, malformed output, incomplete streams, rate limits, and network failures remain `unknown`. Output omits credentials, account ids, response ids, provider messages, model text, paths, headers, and proxy origins. Exit `0` requires runtime, OAuth, and reviewer checks to be supported; exit `1` means at least one was rejected; exit `2` means evidence is unknown or input is invalid. The report is evidence only: it never changes the Auto-review setting, DSH policy, or authorization state.
 
 ## Compatibility and security boundary
 

@@ -73,6 +73,7 @@ const CONFIG_FIELDS = [
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
+  'enableAutoReview',
   'searchModel',
   'searchMode',
   'searchContextSize',
@@ -515,6 +516,17 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
             <span style={toggleCopyStyle}>
               <span style={labelStyle}>{t('enableImageGeneration')}</span>
               <span style={bodyStyle}>{t('enableImageGenerationHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableAutoReview}
+              onChange={event => { update('enableAutoReview', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableAutoReview')}</span>
+              <span style={bodyStyle}>{t('enableAutoReviewHelp')}</span>
             </span>
           </label>
         </fieldset>

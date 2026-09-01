@@ -9,6 +9,7 @@ import LlmRuntime from '@deepseek-ai/dsh-llm'
 import * as PiAiRuntime from '@deepseek-ai/dsh-llm-pi-ai'
 import SettingsProvider from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
+import type { Agent } from '@deepseek-ai/dsh-agent'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import WebRuntime from '@deepseek-ai/dsh-web'
@@ -69,6 +70,11 @@ describe('OpenAI Codex Host settings integration', () => {
     expect(fullCatalog.length).toBeGreaterThan(2)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
     expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
+    const approvalAgent = { id: 'settings-approval-fixture' } as unknown as Agent
+    await expect(ctx.waterfall('approval/request', {
+      agent: approvalAgent,
+      toolName: 'fixture',
+    }, async () => 'allowed-once')).resolves.toBe('allowed-once')
     await expect(ctx.web.search({ query: 'disabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
 
     await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, {

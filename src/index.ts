@@ -16,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-web'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@deepseek-ai/dsh-user-approval'
 import { assertOpenAICodexContextWindowOverrides, createOpenAICodexAdapter, openAICodexModelCatalog } from './adapter.ts'
 import { OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS, registerOpenAICodexAuthRoutes } from './auth-routes.ts'
 import { registerOpenAICodexProxyRoutes } from './proxy-routes.ts'
@@ -38,6 +39,7 @@ import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
+import { registerOpenAICodexAutoReview } from './auto-review.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -242,6 +244,8 @@ export interface Config {
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean
+  /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
+  enableAutoReview?: boolean
   /** Model used for auxiliary standalone searches. */
   searchModel?: string
   /** Cached, indexed, or live web access. */
@@ -264,6 +268,7 @@ export const Config: z<Config> = z.object({
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
+  enableAutoReview: z.boolean().default(false),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),
   searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE),
@@ -296,6 +301,13 @@ export function apply(ctx: Context, config: Config): void {
   const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl)
+  registerOpenAICodexAutoReview(
+    ctx,
+    credentials,
+    proxyManager,
+    resolveProviderProxyUrl,
+    () => resolveOpenAICodexSettings(current()).enableAutoReview,
+  )
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
     createOpenAICodexAdapter(

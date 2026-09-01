@@ -224,7 +224,8 @@ async function main() {
     if (!/^    enableProxy: false$/mu.test(pluginBlock)
       || !/^    enableSearch: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
-      || !/^    enableImageGeneration: false$/mu.test(pluginBlock)) {
+      || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
+      || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
 
@@ -262,6 +263,7 @@ async function main() {
         enableSearch: false,
         enableImageTool: false,
         enableImageGeneration: false,
+        enableAutoReview: false,
       },
       runtime: runtimeReport,
     })}\n`)
