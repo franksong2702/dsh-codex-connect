@@ -154,6 +154,40 @@ describe('Codex model visibility in Chromium', () => {
     expect(set).not.toHaveBeenCalled()
   })
 
+  it('discloses Auto-review details and asks once before the first profile enablement', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, set } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    const checkbox = page.getByRole('checkbox', { name: /Codex Auto-review/u })
+    await expect.element(page.getByText(en.autoReviewOfficialBadge, { exact: true })).toBeVisible()
+    const details = page.getByText(en.autoReviewDetails, { exact: true }).element().closest('details') as HTMLDetailsElement
+    expect(details.open).toBe(false)
+    await page.getByText(en.autoReviewDetails, { exact: true }).click()
+    expect(details.open).toBe(true)
+    await expect.element(page.getByRole('link', { name: en.autoReviewOfficialDocs, exact: true })).toHaveAttribute('href', 'https://learn.chatgpt.com/docs/sandboxing/auto-review')
+
+    await checkbox.click()
+    await expect.element(page.getByRole('dialog', { name: en.autoReviewConfirmTitle, exact: true })).toBeVisible()
+    await expect.element(checkbox).not.toBeChecked()
+    await page.getByRole('button', { name: en.autoReviewCancel, exact: true }).click()
+    await expect.element(page.getByRole('dialog', { name: en.autoReviewConfirmTitle, exact: true })).not.toBeInTheDocument()
+
+    await checkbox.click()
+    await page.getByRole('button', { name: en.autoReviewConfirm, exact: true }).click()
+    await expect.element(checkbox).toBeChecked()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await vi.waitFor(() => {
+      expect(set).toHaveBeenCalledWith('autoReviewDisclosureAcknowledged', true)
+      expect(set).toHaveBeenCalledWith('enableAutoReview', true)
+    })
+
+    await checkbox.click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await checkbox.click()
+    await expect.element(checkbox).toBeChecked()
+    await expect.element(page.getByRole('dialog', { name: en.autoReviewConfirmTitle, exact: true })).not.toBeInTheDocument()
+  })
+
   it('shows the full catalog, saves a subset, and stays inside a narrow viewport', async () => {
     const models = [
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },

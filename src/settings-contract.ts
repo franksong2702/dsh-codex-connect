@@ -94,6 +94,8 @@ export interface OpenAICodexSettingsConfig {
   enableSearch: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
+  /** Whether this profile accepted the Auto-review data disclosure. */
+  autoReviewDisclosureAcknowledged: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview: boolean
   searchModel: string
@@ -110,6 +112,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   enableSearch: false,
   enableImageTool: false,
   enableImageGeneration: false,
+  autoReviewDisclosureAcknowledged: false,
   enableAutoReview: false,
   searchModel: DEFAULT_OPENAI_CODEX_SEARCH_MODEL,
   searchMode: DEFAULT_OPENAI_CODEX_SEARCH_MODE,
@@ -155,6 +158,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
+  const autoReviewDisclosureAcknowledged = value['autoReviewDisclosureAcknowledged']
   const enableAutoReview = value['enableAutoReview']
   const searchModel = value['searchModel']
   const searchMode = value['searchMode']
@@ -167,6 +171,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
+  // Older Host snapshots predate the disclosure acknowledgement; absence requires confirmation.
+  if (autoReviewDisclosureAcknowledged !== undefined && typeof autoReviewDisclosureAcknowledged !== 'boolean') return undefined
   // Older Host snapshots predate Auto-review; absence maps to its safe default.
   if (enableAutoReview !== undefined && typeof enableAutoReview !== 'boolean') return undefined
   if (typeof searchModel !== 'string' || searchModel.trim().length === 0) return undefined
@@ -182,6 +188,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,
+    autoReviewDisclosureAcknowledged: autoReviewDisclosureAcknowledged ?? false,
     enableAutoReview: enableAutoReview ?? false,
     searchModel,
     searchMode,

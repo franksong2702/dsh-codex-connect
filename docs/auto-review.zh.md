@@ -1,8 +1,8 @@
 # 自动审查
 
-Codex Connect 可以使用 Codex 官方隐藏审核器回答符合条件的 DeepSeek Harness 审批请求。该功能默认关闭，并且只在当前请求提供方是 `openai-codex` 时参与审批；其他提供方的会话始终保留原有回答器链。它也不会削弱 Harness 的审批策略、沙箱、工具限制或权限检查：是否需要审批始终由 Harness 先决定。
+Auto-review 是 Codex 官方能力，Codex Connect 把它的审核器接入符合条件的 DeepSeek Harness 审批请求。该功能默认关闭，并且只在当前请求提供方是 `openai-codex` 时参与审批；其他提供方的会话始终保留原有回答器链。它也不会削弱 Harness 的审批策略、沙箱、工具限制或权限检查：是否需要审批始终由 Harness 先决定。
 
-在 **设置 → 插件 → Codex Connect → 可选能力** 中启用 **Codex 自动审查**。启用即明确允许 Codex Connect 把最近的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`。隐藏推理和已保存凭据不会进入审核请求。关闭后立即把所有请求交还原有人工审批链。
+在 **设置 → 插件 → Codex Connect → 可选能力** 中启用 **Codex 自动审查**。设置卡片常驻一句简短说明，完整告知放在 **了解发送内容与失败处理** 中。每个 profile 首次启用时必须确认；该确认保存在 profile 中，更换浏览器后不会再次弹出。启用即允许 Codex Connect 把最近的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`。隐藏推理和已保存凭据不会进入审核请求。关闭后立即把所有请求交还原有人工审批链。
 
 ## 决策规则
 
@@ -21,6 +21,6 @@ Codex Connect 可以使用 Codex 官方隐藏审核器回答符合条件的 Deep
 
 ## 服务状态
 
-OpenAI 没有把 `codex-auto-review` 公布为稳定公共 API。独立的 `auto-review-probe` 命令只检查当前 OAuth 路由能否完成一次合成的空操作评估。运行时失败始终回到人工审批，绝不会放行执行。
+OpenAI 已把 Auto-review 记录为 Codex 功能，但没有承诺 `codex-auto-review` OAuth 路由是稳定公共 API。独立的 `auto-review-probe` 命令只检查当前 OAuth 路由能否完成一次合成的空操作评估。运行时失败始终回到人工审批，绝不会放行执行。
 
 参见 [OpenAI Auto-review](https://learn.chatgpt.com/docs/sandboxing/auto-review)、[OpenAI 审批与护栏](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals) 和 [Issue #84](https://github.com/franksong2702/dsh-codex-connect/issues/84)。

@@ -1,6 +1,6 @@
 /** Staged optional-capability editor inside the OpenAI Codex plugin card. */
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
@@ -43,6 +43,7 @@ const buttonStyle: CSSProperties = { boxSizing: 'border-box', minHeight: 34, pad
 const primaryButtonStyle: CSSProperties = { ...buttonStyle, borderColor: 'var(--dsw-alias-button-primary-fill)', background: 'var(--dsw-alias-button-primary-fill)', color: 'var(--dsw-alias-label-primary-foreground)' }
 const errorStyle: CSSProperties = { ...bodyStyle, color: 'var(--dsw-alias-state-error-primary)' }
 const successStyle: CSSProperties = { ...bodyStyle, color: 'var(--dsw-alias-state-success-primary, #16825d)' }
+const badgeStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 18, padding: '0 6px', borderRadius: 999, background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))', color: 'var(--dsw-alias-label-secondary)', fontSize: 11, lineHeight: '18px', fontWeight: 500 }
 
 type ProxyDetectionState =
   | { status: 'idle' }
@@ -73,12 +74,48 @@ const CONFIG_FIELDS = [
   'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
+  'autoReviewDisclosureAcknowledged',
   'enableAutoReview',
   'searchModel',
   'searchMode',
   'searchContextSize',
   'searchMaxOutputTokens',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
+
+interface AutoReviewConsentDialogProps {
+  t: OpenAICodexConfigurationProps['t']
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+/** Require one profile-scoped acknowledgement before staging Auto-review. */
+function AutoReviewConsentDialog({ t, onCancel, onConfirm }: AutoReviewConsentDialogProps) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  useEffect(() => {
+    const element = dialog.current
+    element?.showModal()
+    return () => { element?.close() }
+  }, [])
+  const close = (): void => {
+    dialog.current?.close()
+    onCancel()
+  }
+  return <dialog ref={dialog} aria-labelledby={titleId}
+    onCancel={event => { event.preventDefault(); close() }}
+    style={{ boxSizing: 'border-box', width: 'min(560px, calc(100vw - 32px))', padding: 20, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 12, background: 'var(--dsw-alias-bg-layer-1, white)', color: 'var(--dsw-alias-label-primary)', margin: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h2 id={titleId} style={{ margin: 0, fontSize: 18 }}>{t('autoReviewConfirmTitle')}</h2>
+      <p style={bodyStyle}>{t('autoReviewDisclosure')}</p>
+      <p style={bodyStyle}>{t('autoReviewFailureDisclosure')}</p>
+      <a href="https://learn.chatgpt.com/docs/sandboxing/auto-review" target="_blank" rel="noopener noreferrer" style={{ ...bodyStyle, textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('autoReviewOfficialDocs')}</a>
+      <div style={{ ...buttonsStyle, justifyContent: 'flex-end' }}>
+        <button type="button" style={buttonStyle} onClick={close}>{t('autoReviewCancel')}</button>
+        <button type="button" style={primaryButtonStyle} onClick={() => { dialog.current?.close(); onConfirm() }}>{t('autoReviewConfirm')}</button>
+      </div>
+    </div>
+  </dialog>
+}
 
 function sameField(
   field: keyof OpenAICodexSettingsConfig,
@@ -126,6 +163,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const [manualProxy, setManualProxy] = useState(false)
   const [manualProbe, setManualProbe] = useState<OpenAICodexProxyProbeResult | undefined>()
   const [manualProbeBusy, setManualProbeBusy] = useState(false)
+  const [autoReviewConfirmOpen, setAutoReviewConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (scope === undefined) return
@@ -166,6 +204,18 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     setFeedback('idle')
     setProxyDetection({ status: 'idle' })
     setManualProbe(undefined)
+    setAutoReviewConfirmOpen(false)
+  }
+
+  const confirmAutoReview = (): void => {
+    setDraft(current => current === undefined ? current : {
+      ...current,
+      autoReviewDisclosureAcknowledged: true,
+      enableAutoReview: true,
+    })
+    setDirty(true)
+    setFeedback('idle')
+    setAutoReviewConfirmOpen(false)
   }
 
   const detectProxy = async (): Promise<void> => {
@@ -522,15 +572,34 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
             <input
               type="checkbox"
               checked={draft.enableAutoReview}
-              onChange={event => { update('enableAutoReview', event.currentTarget.checked) }}
+              onChange={event => {
+                if (!event.currentTarget.checked) {
+                  update('enableAutoReview', false)
+                  return
+                }
+                if (draft.autoReviewDisclosureAcknowledged) update('enableAutoReview', true)
+                else setAutoReviewConfirmOpen(true)
+              }}
             />
             <span style={toggleCopyStyle}>
-              <span style={labelStyle}>{t('enableAutoReview')}</span>
+              <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <span style={labelStyle}>{t('enableAutoReview')}</span>
+                <span style={badgeStyle}>{t('autoReviewOfficialBadge')}</span>
+              </span>
               <span style={bodyStyle}>{t('enableAutoReviewHelp')}</span>
             </span>
           </label>
+          <details style={{ marginLeft: 26 }}>
+            <summary style={{ ...bodyStyle, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('autoReviewDetails')}</summary>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+              <p style={bodyStyle}>{t('autoReviewDisclosure')}</p>
+              <p style={bodyStyle}>{t('autoReviewFailureDisclosure')}</p>
+              <a href="https://learn.chatgpt.com/docs/sandboxing/auto-review" target="_blank" rel="noopener noreferrer" style={{ ...bodyStyle, textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('autoReviewOfficialDocs')}</a>
+            </div>
+          </details>
         </fieldset>
       )}
+      {autoReviewConfirmOpen ? <AutoReviewConsentDialog t={t} onCancel={() => { setAutoReviewConfirmOpen(false) }} onConfirm={confirmAutoReview} /> : null}
       {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
       {!validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
       {!validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}

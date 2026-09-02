@@ -244,6 +244,8 @@ export interface Config {
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean
+  /** Record that this profile accepted the Auto-review data disclosure. */
+  autoReviewDisclosureAcknowledged?: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview?: boolean
   /** Model used for auxiliary standalone searches. */
@@ -268,6 +270,7 @@ export const Config: z<Config> = z.object({
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
+  autoReviewDisclosureAcknowledged: z.boolean().default(false),
   enableAutoReview: z.boolean().default(false),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),

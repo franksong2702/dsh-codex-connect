@@ -309,7 +309,7 @@ dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol
 
 ### Codex 自动审查与能力探针
 
-Codex 自动审查是 **设置 → 插件 → Codex Connect** 中默认关闭的可选能力。启用后，它会在 DSH 策略检查之后审查符合条件的 Harness 审批请求。启用即允许插件把有界的最近审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`；隐藏推理和已保存凭据会被排除。只有完整的结构化允许结果才能授权一次执行。拒绝会注入理由和禁止绕行指引；连续拒绝会打开当前轮熔断器；存在可选命令服务时，`/approve <拒绝记录 ID>` 可以授权一次完全相同的重试。详见[自动审查](auto-review.zh.md)和 [Auto-review](auto-review.md)。
+Codex 自动审查是 Codex Connect 接入的 Codex 官方能力，在 **设置 → 插件 → Codex Connect** 中默认关闭。界面常驻简短说明，完整告知可展开，每个 profile 首次启用时需要确认。启用后，它会在 DSH 策略检查之后审查符合条件的 Harness 审批请求。启用即允许插件把有界的最近审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`；隐藏推理和已保存凭据会被排除。只有完整的结构化允许结果才能授权一次执行。拒绝会注入理由和禁止绕行指引；连续拒绝会打开当前轮熔断器；存在可选命令服务时，`/approve <拒绝记录 ID>` 可以授权一次完全相同的重试。详见[自动审查](auto-review.zh.md)和 [Auto-review](auto-review.md)。
 
 独立探针继续用于诊断隐藏路由。它不会把 `codex-auto-review` 加入模型选择器，也不会审查或执行真实的 Harness 命令。
 

@@ -16,8 +16,10 @@ The one-shot human override is an optional `/approve` command. It retains a SHA-
 
 Harness already persists approval asks/outcomes and command lifecycle events. This plugin therefore does not introduce a second raw-argument audit event. Logs contain only the action fingerprint and structured assessment labels.
 
+The settings surface keeps a compact explanation visible, puts the full data and failure disclosure in an expandable section, and requires one acknowledgement before the first enablement in each profile. The acknowledgement is stored separately from the enablement switch so disabling Auto-review does not make browsers request consent again.
+
 ## Consequences
 
-Enabling the setting is explicit authorization to send bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`. Hidden reasoning and stored credentials are excluded. OpenAI does not promise the hidden route as a stable public API, so unavailability preserves human approval instead of stopping all work or allowing execution.
+Enabling the setting is explicit authorization to send bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`. Hidden reasoning and stored credentials are excluded. Auto-review is an official Codex capability, but OpenAI does not promise the hidden OAuth route as a stable public API, so unavailability preserves human approval instead of stopping all work or allowing execution.
 
 The command integration is optional because a profile can compose approval without `dsh-commands`. In that profile automatic allow/deny still works, while exact human retry remains available through the existing human approval path rather than `/approve`.

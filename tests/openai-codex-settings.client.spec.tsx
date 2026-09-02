@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { formatOpenAICodexResetAt, OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { en, zh } from '../src/client/locales.ts'
@@ -88,8 +88,23 @@ function settingsScopeFixture(writable = true): {
   }
 }
 
+beforeEach(() => {
+  Object.defineProperties(HTMLDialogElement.prototype, {
+    showModal: {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.setAttribute('open', '') },
+    },
+    close: {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.removeAttribute('open') },
+    },
+  })
+})
+
 afterEach(() => {
   cleanup()
+  Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
+  Reflect.deleteProperty(HTMLDialogElement.prototype, 'close')
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
@@ -317,7 +332,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
-    const enableAutoReview = screen.getByRole('checkbox', { name: /Enable Codex Auto-review/u }) as HTMLInputElement
+    const enableAutoReview = screen.getByRole('checkbox', { name: /Codex Auto-review/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
     const save = screen.getByRole('button', { name: en.save }) as HTMLButtonElement
     expect(save.style.background).toBe('var(--dsw-alias-button-primary-fill)')
@@ -328,8 +343,16 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
     expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
     expect(zh.enableImageGenerationHelp).toBe('启用后，GPT 模型可以在对话中调用 GPT Image 生成图片。')
-    expect(en.enableAutoReviewHelp).toContain('sent to chatgpt.com')
-    expect(zh.enableAutoReviewHelp).toContain('会发送到 chatgpt.com')
+    expect(screen.getByText(en.autoReviewOfficialBadge)).toBeTruthy()
+    expect(screen.getByText(en.enableAutoReviewHelp)).toBeTruthy()
+    expect(en.autoReviewDisclosure).toContain('to chatgpt.com')
+    expect(zh.autoReviewDisclosure).toContain('会发送到 chatgpt.com')
+    const details = screen.getByText(en.autoReviewDetails).closest('details') as HTMLDetailsElement
+    expect(details.open).toBe(false)
+    fireEvent.click(screen.getByText(en.autoReviewDetails))
+    expect(details.open).toBe(true)
+    const officialDocs = screen.getByRole('link', { name: en.autoReviewOfficialDocs }) as HTMLAnchorElement
+    expect(officialDocs.href).toBe('https://learn.chatgpt.com/docs/sandboxing/auto-review')
     expect(model.disabled).toBe(true)
 
     fireEvent.click(enableSearch)
@@ -345,6 +368,14 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.change(screen.getByRole('spinbutton', { name: en.searchMaxOutputTokens }), { target: { value: '2048' } })
     fireEvent.click(enableImageGeneration)
     fireEvent.click(enableAutoReview)
+    expect(screen.getByRole('dialog', { name: en.autoReviewConfirmTitle })).toBeTruthy()
+    expect(enableAutoReview.checked).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: en.autoReviewCancel }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(enableAutoReview.checked).toBe(false)
+    fireEvent.click(enableAutoReview)
+    fireEvent.click(screen.getByRole('button', { name: en.autoReviewConfirm }))
+    expect(enableAutoReview.checked).toBe(true)
     fireEvent.click(save)
 
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
@@ -353,7 +384,15 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('searchMode', 'live')
     expect(set).toHaveBeenCalledWith('searchMaxOutputTokens', 2048)
     expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
+    expect(set).toHaveBeenCalledWith('autoReviewDisclosureAcknowledged', true)
     expect(set).toHaveBeenCalledWith('enableAutoReview', true)
+
+    fireEvent.click(enableAutoReview)
+    fireEvent.click(save)
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    fireEvent.click(enableAutoReview)
+    expect(enableAutoReview.checked).toBe(true)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('stages model visibility in provider order and saves it with the other plugin settings', async () => {
