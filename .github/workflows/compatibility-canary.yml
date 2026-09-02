@@ -32,4 +32,4 @@ jobs:
       - run: pnpm --silent run check:compatibility
       - run: pnpm --silent run check:dsh-install
         env:
-          DSH_VERSION: 0.1.2-alpha.4
+          DSH_VERSION: 0.1.2-alpha.5
