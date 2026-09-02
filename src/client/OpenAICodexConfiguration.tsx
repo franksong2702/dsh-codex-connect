@@ -242,12 +242,19 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   }
 
   const useProxy = (proxyUrl: string): void => {
-    if (draft === undefined || !isValidOpenAICodexProxyUrl(proxyUrl)) return
-    setDraft({ ...draft, proxyUrl, enableProxy: true })
+    if (draft === undefined) return
+    const normalized = normalizeOpenAICodexProxyUrl(proxyUrl)
+    if (normalized === undefined) return
+    const detected = proxyDetection.status === 'candidate'
+      ? proxyDetection.candidates.find(candidate => candidate.reachable && candidate.proxyUrl === normalized)
+      : undefined
+    const tested = manualProbe?.reachable === true && manualProbe.proxyUrl === normalized ? manualProbe : detected
+    if (tested === undefined) return
+    setDraft({ ...draft, proxyUrl: normalized, enableProxy: true })
     setDirty(true)
     setFeedback('idle')
     setManualProxy(true)
-    setManualProbe(undefined)
+    setManualProbe(tested)
     setProxyDetection({ status: 'idle' })
   }
 
@@ -279,15 +286,19 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
   const validProxy = draft !== undefined && isValidOpenAICodexProxyUrl(draft.proxyUrl)
-  const testedManualProxy = draft !== undefined
+  const testedProxy = draft !== undefined
     && manualProbe?.reachable === true
     && manualProbe.proxyUrl === normalizeOpenAICodexProxyUrl(draft.proxyUrl)
+  const acceptedProxyUnchanged = draft?.enableProxy === true
+    && snapshot.value?.enableProxy === true
+    && normalizeOpenAICodexProxyUrl(draft.proxyUrl) === normalizeOpenAICodexProxyUrl(snapshot.value.proxyUrl)
+  const validProxySelection = draft?.enableProxy !== true || acceptedProxyUnchanged || testedProxy
   const validContexts = draft !== undefined && isValidOpenAICodexContextWindowOverrides(draft.contextWindowOverrides ?? {})
     && Object.entries(draft.contextWindowOverrides ?? {}).every(([id, budget]) => {
       const model = modelCatalog?.find(entry => entry.id === id)
       return model !== undefined && isValidOpenAICodexContextBudget(budget, model.maxContextWindow)
     })
-  const valid = validModel && validTokens && validProxy && validContexts
+  const valid = validModel && validTokens && validProxy && validContexts && validProxySelection
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
@@ -476,7 +487,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                   <button
                     type="button"
                     style={primaryButtonStyle}
-                    disabled={!testedManualProxy}
+                    disabled={!testedProxy}
                     onClick={() => { useProxy(draft.proxyUrl) }}
                   >
                     {t('useThisProxy')}
@@ -488,7 +499,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                   {manualProbe.reachable ? t('proxyTestSucceeded', { status: manualProbe.status ?? manualProbe.classification }) : t('proxyTestFailed', { reason: manualProbe.classification })}
                 </p>
               )}
-              {!draft.enableProxy && !testedManualProxy ? <p style={bodyStyle}>{t('proxyTestRequired')}</p> : null}
+              {!acceptedProxyUnchanged && !testedProxy ? <p style={bodyStyle}>{t('proxyTestRequired')}</p> : null}
             </div>
           ) : null}
           <div style={{ paddingTop: 4 }}>

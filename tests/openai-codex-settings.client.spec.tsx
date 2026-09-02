@@ -48,14 +48,17 @@ function popupFixture(): { popup: Window; close: ReturnType<typeof vi.fn>; repla
   }
 }
 
-function settingsScopeFixture(writable = true): {
+function settingsScopeFixture(
+  writable = true,
+  initial: OpenAICodexSettingsConfig = DEFAULT_OPENAI_CODEX_SETTINGS,
+): {
   scope: SettingsScope<OpenAICodexSettingsConfig>
   set: ReturnType<typeof vi.fn>
 } {
   let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready',
-    value: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
-    base: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
+    value: { ...initial },
+    base: { ...initial },
     user: undefined,
     revision: 0,
     writable,
@@ -505,6 +508,44 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('proxyUrl', second)
     expect(set).toHaveBeenCalledWith('enableProxy', true)
     expect(tested).toEqual([first, second])
+  })
+
+  it('requires a fresh test before replacing an enabled proxy', async () => {
+    const first = 'http://127.0.0.1:8110'
+    const second = 'http://127.0.0.1:8111'
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      const path = requestPath(input)
+      if (path === OPENAI_CODEX_MODEL_CATALOG_PATH) return json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) return json({ status: 'signed-out' })
+      const requestUrl = new URL(
+        typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+        'http://localhost',
+      )
+      const proxyUrl = requestUrl.searchParams.get('proxyUrl') ?? ''
+      return json({ proxyUrl, reachable: true, classification: 'reachable', status: 401 })
+    })
+    const { scope, set } = settingsScopeFixture(true, {
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      enableProxy: true,
+      proxyUrl: first,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    await screen.findByText(en.customProxyActive.replace('{proxyUrl}', first))
+    fireEvent.click(screen.getByRole('button', { name: en.configureProxyManually }))
+    fireEvent.change(screen.getByRole('textbox', { name: en.proxyAddress }), { target: { value: second } })
+    const save = screen.getByRole('button', { name: en.save }) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: en.testProxy }))
+    await waitFor(() => { expect(save.disabled).toBe(false) })
+    fireEvent.click(save)
+
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(set).toHaveBeenCalledWith('proxyUrl', second)
+    expect(set).not.toHaveBeenCalledWith('enableProxy', false)
+    expect(scope.getSnapshot().value?.enableProxy).toBe(true)
   })
 
   it('disables capability edits when the Host settings document is read-only', async () => {
