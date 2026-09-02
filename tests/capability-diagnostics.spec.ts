@@ -17,13 +17,13 @@ function fixture() {
     capabilities: { modelProvider: true, search: false, imageTool: false, imageGeneration: false, changesHarnessDefaultModel: false, changesHarnessSearchRoute: false },
     providerConflict: false, hints: [],
     compatibility: evaluateCompatibility({ nodeVersion: 'v22.19.0', packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.1.2-alpha.3', '@deepseek-ai/dsh-llm-pi-ai': '0.1.2-alpha.3', '@earendil-works/pi-ai': '0.84.2',
+      '@deepseek-ai/dsh-llm': '0.1.2-alpha.4', '@deepseek-ai/dsh-llm-pi-ai': '0.1.2-alpha.4', '@earendil-works/pi-ai': '0.84.2',
     } }),
   }
   const credential = { type: 'oauth' as const, access: secrets[0]!, accountId: secrets[1]!, refresh: secrets[2]!, expires: 1_000_000 }
   const probe = vi.fn(async (): Promise<ResponsesProbeEvidence> => ({ outcome: 'completed', httpStatus: 200 }))
   const read = vi.fn(async () => credential)
-  const readVersion = vi.fn(async (_name: string): Promise<string | undefined> => '0.1.2-alpha.3')
+  const readVersion = vi.fn(async (_name: string): Promise<string | undefined> => '0.1.2-alpha.4')
   const deps: CapabilityDiagnosticDependencies = {
     diagnose: async () => local, readVersion, catalog: () => modelCatalogFixture([{ id: model, name: model }]),
     credentials: { read }, probe, now: () => now,
@@ -46,7 +46,7 @@ describe('capability evidence', () => {
 
   it('gates network work on the complete declared host package set, including session', async () => {
     const f = fixture()
-    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.0-rc.7' : '0.1.2-alpha.3')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.0-rc.7' : '0.1.2-alpha.4')
     const report = await f.diagnostics.inspect(f.request)
     expect(report.checks.runtime).toMatchObject({ status: 'rejected', reason: 'declared-version-mismatch' })
     expect(report.checks.runtime.action).toContain('0.1.0-alpha.4.14')
@@ -166,7 +166,7 @@ describe('capability evidence', () => {
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('fresh')
     f.readVersion.mockResolvedValue('0.1.0-rc.7')
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('skipped')
-    f.readVersion.mockResolvedValue('0.1.2-alpha.3')
+    f.readVersion.mockResolvedValue('0.1.2-alpha.4')
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('fresh')
     expect(f.probe).toHaveBeenCalledTimes(4)
   })

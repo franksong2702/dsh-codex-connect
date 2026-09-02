@@ -107,7 +107,12 @@ describe('OpenAI Codex original image download route', () => {
       expect(Buffer.from(res.body as Uint8Array)).toEqual(Buffer.from(PNG_1X1))
     }
 
-    const restored = Session.fromRestore(grandchild.id, JSON.parse(JSON.stringify(grandchild.events)), JSON.parse(JSON.stringify(grandchild.header)))
+    const restored = Session.fromRestore(
+      grandchild.id,
+      JSON.parse(JSON.stringify(grandchild.snapshotEvents())),
+      JSON.parse(JSON.stringify(grandchild.header)),
+      grandchild.inheritedEventCount,
+    )
     await ctx.fiber.dispose()
     const reopened = await sessionContext()
     reopened.sessions.enter(restored)

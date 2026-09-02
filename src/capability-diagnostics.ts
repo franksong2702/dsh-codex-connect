@@ -123,7 +123,7 @@ export class CodexCapabilityDiagnostics {
     const mismatch = DSH_PLUGIN_API_PACKAGES.some(name => versions[name] !== null && versions[name] !== SUPPORTED_DSH_PLUGIN_API_VERSION)
       || compatibility.status === 'incompatible'
     const runtime = mismatch
-      ? result('rejected', 'declared-version-mismatch', 'Use DSH API 0.1.2-alpha.3 and pi-ai ^0.84.2 together. DSH 0.1.0-rc.7 requires Codex Connect 0.1.0-alpha.4.14.')
+      ? result('rejected', 'declared-version-mismatch', 'Use DSH API 0.1.2-alpha.4 and pi-ai ^0.84.2 together. DSH 0.1.0-rc.7 requires Codex Connect 0.1.0-alpha.4.14.')
       : missing || compatibility.status === 'unknown'
         ? result('unknown', 'version-metadata-unavailable', 'Run this command from the plugin installation in the intended profile.')
         : result('supported', 'declared-host-versions-match', 'Host package versions satisfy the declared requirements; this is not a live profile or browser compatibility test.')

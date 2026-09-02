@@ -30,7 +30,7 @@ function agent(options: {
   return {
     id: 'agent-1',
     session: {
-      events,
+      snapshotEvents: () => events,
       header: { version: 0, id: 'agent-1', createdAt: 0, ...options.cwd === undefined ? {} : { cwd: options.cwd } },
       deriveMessages: () => options.messages ?? [],
       requestHeader: () => ({ tools: [{ name: 'shell', description: 'Run a command', parameters: {} }] }),

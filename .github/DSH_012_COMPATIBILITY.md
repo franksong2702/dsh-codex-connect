@@ -2,7 +2,7 @@
 
 Alpha 4.22 targets DSH `0.1.2-alpha.2` (tag commit `0a53fb55bea101816fa226bb964ae2bed71c343b`) and its declared pi-ai range `^0.84.2`; the verified registry installation resolves pi-ai `0.84.4`. The public compatibility record lists this exact pair while retaining Alpha 4.21 for DSH `0.1.1-rc.2`.
 
-After Alpha 4.22, the development compatibility baseline advances to DSH `0.1.2-alpha.3` (tag commit `dd6322d604e00eec1ba5e0c8541159906a21094a`). The published Alpha 4.22 compatibility record remains unchanged: a later release must complete real Web, OAuth, model, tool, image, network, quota, context-budget, and session-restoration acceptance before it claims the alpha.3 pairing.
+After Alpha 4.22, the development compatibility baseline advances to DSH `0.1.2-alpha.4` (tag commit `4e84901e6471b79ec0338099867ebb4606d12bb5`). The published Alpha 4.22 compatibility record remains unchanged: a later release must complete real Web, OAuth, model, tool, image, network, quota, context-budget, and session-restoration acceptance before it claims the alpha.4 pairing.
 
 ## Changes
 
@@ -18,7 +18,7 @@ The public npm packages at `0.1.2-alpha.2` support a registry-only lockfile and 
 
 The lockfile contains no local links, workspace overrides, tarball references, or Git dependencies. The installed-runtime check resolves Host packages from the isolated DSH installation and the plugin from the profile, matching the ownership split introduced by the upstream peer-dependency changes.
 
-For the alpha.3 development baseline, the registry-only lockfile and clean frozen installation pass. `pnpm run check` passes 438 tests and validates 39 packed files, `pnpm run test:browser` passes 13 tests, and `pnpm run check:dsh-install` installs DSH `0.1.2-alpha.3`, preserves default configuration, registers seven reasoning-capable Codex models, and verifies provider disposal. These keyless checks establish the development baseline; they do not add alpha.3 to the released compatibility table.
+For the alpha.4 development baseline, the registry-only lockfile and clean frozen installation pass. `pnpm run check` passes 454 tests and validates 41 packed files, `pnpm run test:browser` passes 14 tests, and `pnpm run check:dsh-install` installs DSH `0.1.2-alpha.4`, preserves default configuration, registers seven reasoning-capable Codex models, and verifies provider disposal. These keyless checks establish the development baseline; they do not add alpha.4 to the released compatibility table or replace real profile acceptance.
 
 ## Release evidence
 

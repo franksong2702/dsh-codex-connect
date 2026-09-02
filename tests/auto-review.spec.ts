@@ -24,7 +24,7 @@ function fixture(): {
   const agent = {
     id: 'agent-1',
     session: {
-      events,
+      snapshotEvents: () => events,
       header: { version: 0, id: 'agent-1', createdAt: 0, cwd: '/workspace' },
       deriveMessages: () => [],
       requestHeader: () => ({ config: { provider: 'openai-codex', model: 'gpt-5.6-sol' }, tools: [] }),

@@ -81,7 +81,7 @@ function canonicalJson(value: unknown): string {
 /** Resolve one exact, unambiguous tool call; all other requests stay human-owned. */
 export function resolveAutoReviewAction(request: ApprovalRequestEvent): AutoReviewAction | undefined {
   if (request.callId === undefined) return undefined
-  const calls = request.agent.session.events.filter(event => event.type === 'tool/call' && event.data.callId === request.callId)
+  const calls = request.agent.session.snapshotEvents().filter(event => event.type === 'tool/call' && event.data.callId === request.callId)
   if (calls.length !== 1) return undefined
   const call = calls[0]!
   if (call.type !== 'tool/call' || call.data.name !== request.toolName) return undefined
