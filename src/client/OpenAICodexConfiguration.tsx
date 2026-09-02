@@ -26,7 +26,14 @@ import type { OpenAICodexProxyProbeResult } from '../provider-proxy.ts'
 export interface OpenAICodexConfigurationProps {
   scope?: SettingsScope<OpenAICodexSettingsConfig>
   t: (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
+  /** Select one settings module from the Plugin page. Omit to show local navigation. */
+  activeModule?: OpenAICodexSettingsModule
+  /** Stable prefix that associates external module tabs with these panels. */
+  panelIdPrefix?: string
 }
+
+/** Modules shared by the Plugin settings page and the Models settings dialog. */
+export type OpenAICodexSettingsModule = 'account' | 'models' | 'network' | 'capabilities'
 
 const sectionStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 18, borderTop: '1px solid var(--dsw-alias-border-l2)' }
 const headingStyle: CSSProperties = { margin: 0, fontSize: 14, lineHeight: '20px', fontWeight: 600, color: 'var(--dsw-alias-label-primary)' }
@@ -57,6 +64,11 @@ const proxyTabsStyle: CSSProperties = { display: 'inline-flex', alignSelf: 'flex
 const proxyTabStyle: CSSProperties = { boxSizing: 'border-box', minHeight: 44, padding: '8px 14px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--dsw-alias-label-secondary)', font: 'inherit', fontSize: 13, cursor: 'pointer' }
 const activeProxyTabStyle: CSSProperties = { ...proxyTabStyle, background: 'var(--dsw-alias-bg-layer-1)', color: 'var(--dsw-alias-label-primary)', boxShadow: '0 1px 3px rgb(0 0 0 / 8%)' }
 const pendingStyle: CSSProperties = { ...bodyStyle, padding: '9px 12px', borderRadius: 8, background: 'var(--dsw-alias-state-warning-bg, #fff7df)', color: 'var(--dsw-alias-state-warning-primary, #8a5a00)' }
+const moduleTabsStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }
+const moduleTabStyle: CSSProperties = { ...buttonStyle, minWidth: 0, minHeight: 44, borderRadius: 10, overflowWrap: 'anywhere' }
+const activeModuleTabStyle: CSSProperties = { ...moduleTabStyle, border: '1px solid var(--dsw-alias-button-primary-fill)', background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))', color: 'var(--dsw-alias-label-primary)' }
+
+const CONFIGURATION_MODULES = ['models', 'network', 'capabilities'] as const
 
 type ProxyDetectionState =
   | { status: 'idle' }
@@ -163,7 +175,7 @@ function sameConfig(
 }
 
 /** Edit the Host-owned llm-openai-codex settings section with Save/Discard staging. */
-export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationProps) {
+export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix }: OpenAICodexConfigurationProps) {
   const subscribe = useCallback((listener: () => void) => scope?.subscribe(listener) ?? (() => undefined), [scope])
   const getSnapshot = useCallback(() => scope?.getSnapshot() ?? UNAVAILABLE_SNAPSHOT, [scope])
   const snapshot = useSyncExternalStore(
@@ -185,6 +197,8 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
   const [manualProbeBusy, setManualProbeBusy] = useState(false)
   const [currentProxyCheck, setCurrentProxyCheck] = useState<CurrentProxyCheckState>({ status: 'idle' })
   const [autoReviewConfirmOpen, setAutoReviewConfirmOpen] = useState(false)
+  const [localModule, setLocalModule] = useState<(typeof CONFIGURATION_MODULES)[number]>('models')
+  const localPanelIdPrefix = useId()
   const proxyDetectionRequest = useRef(0)
   const manualProbeRequest = useRef(0)
   const currentProxyCheckRequest = useRef(0)
@@ -428,14 +442,51 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
     && (snapshot.value.enableProxy !== draft.enableProxy || normalizeOpenAICodexProxyUrl(snapshot.value.proxyUrl) !== normalizeOpenAICodexProxyUrl(draft.proxyUrl))
   const manualProxyIsCurrent = normalizedManualProxy !== undefined && savedProxyUrl === normalizedManualProxy
   const manualProxyIsSelected = !manualProxyIsCurrent && normalizedManualProxy !== undefined && draftProxyUrl === normalizedManualProxy
+  const visibleModule = activeModule ?? localModule
+  const panelPrefix = panelIdPrefix ?? localPanelIdPrefix
+
+  const selectLocalModule = (module: (typeof CONFIGURATION_MODULES)[number]): void => {
+    setLocalModule(module)
+    document.getElementById(`${panelPrefix}-${module}-tab`)?.focus()
+  }
 
   return (
-    <section style={sectionStyle} aria-label={t('configurationHeading')}>
+    <section style={{ ...sectionStyle, display: visibleModule === 'account' && !dirty ? 'none' : sectionStyle.display }} aria-label={t('configurationHeading')}>
       {loading ? <p style={bodyStyle} role="status">{t('settingsLoading')}</p> : null}
       {snapshot.status === 'unavailable' ? <p style={errorStyle} role="alert">{t('settingsUnavailable')}</p> : null}
       {snapshot.status === 'ready' && !snapshot.writable ? <p style={errorStyle} role="alert">{t('settingsReadOnly')}</p> : null}
       {draft === undefined ? null : (
-        <fieldset style={fieldsetStyle} disabled={!editable}>
+        <>
+          {activeModule === undefined ? (
+            <div style={moduleTabsStyle} role="tablist" aria-label={t('settingsModules')}>
+              {CONFIGURATION_MODULES.map((module, index) => (
+                <button
+                  key={module}
+                  id={`${panelPrefix}-${module}-tab`}
+                  type="button"
+                  role="tab"
+                  aria-label={t(`${module}Module`)}
+                  aria-selected={localModule === module}
+                  aria-controls={`${panelPrefix}-${module}`}
+                  tabIndex={localModule === module ? 0 : -1}
+                  style={localModule === module ? activeModuleTabStyle : moduleTabStyle}
+                  onClick={() => { setLocalModule(module) }}
+                  onKeyDown={event => {
+                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                    event.preventDefault()
+                    const nextIndex = event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? CONFIGURATION_MODULES.length - 1
+                        : (index + (event.key === 'ArrowRight' ? 1 : -1) + CONFIGURATION_MODULES.length) % CONFIGURATION_MODULES.length
+                    selectLocalModule(CONFIGURATION_MODULES[nextIndex]!)
+                  }}
+                >{t(`${module}Module`)}</button>
+              ))}
+            </div>
+          ) : null}
+          <fieldset style={fieldsetStyle} disabled={!editable}>
+          <div id={`${panelPrefix}-models`} role="tabpanel" aria-labelledby={`${panelPrefix}-models-tab`} hidden={visibleModule !== 'models'} style={{ ...fieldsetStyle, display: visibleModule === 'models' ? fieldsetStyle.display : 'none' }}>
           <div>
             <h3 style={headingStyle}>{t('modelCatalog')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('modelCatalogIntro')}</p>
@@ -521,6 +572,8 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
           )}
           <p style={bodyStyle}>{t('contextWarning')}</p>
           {!validContexts ? <p style={errorStyle} role="alert">{t('contextInvalid')}</p> : null}
+          </div>
+          <div id={`${panelPrefix}-network`} role="tabpanel" aria-labelledby={`${panelPrefix}-network-tab`} hidden={visibleModule !== 'network'} style={{ ...fieldsetStyle, display: visibleModule === 'network' ? fieldsetStyle.display : 'none' }}>
           <div style={{ paddingTop: 4 }}>
             <h3 style={headingStyle}>{t('networkHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('networkIntro')}</p>
@@ -638,6 +691,8 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
             </div>
           </div>
           {proxyDraftChanged ? <p style={pendingStyle} role="status">{draft.enableProxy ? t('pendingProxy', { proxyUrl: draft.proxyUrl }) : t('pendingDirect')}</p> : null}
+          </div>
+          <div id={`${panelPrefix}-capabilities`} role="tabpanel" aria-labelledby={`${panelPrefix}-capabilities-tab`} hidden={visibleModule !== 'capabilities'} style={{ ...fieldsetStyle, display: visibleModule === 'capabilities' ? fieldsetStyle.display : 'none' }}>
           <div style={{ paddingTop: 4 }}>
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
@@ -755,14 +810,16 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
               <a href="https://learn.chatgpt.com/docs/sandboxing/auto-review" target="_blank" rel="noopener noreferrer" style={{ ...bodyStyle, textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('autoReviewOfficialDocs')}</a>
             </div>
           </details>
+          </div>
         </fieldset>
+        </>
       )}
       {autoReviewConfirmOpen ? <AutoReviewConsentDialog t={t} onCancel={() => { setAutoReviewConfirmOpen(false) }} onConfirm={confirmAutoReview} /> : null}
-      {!validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
-      {!validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
-      {!validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}
-      <p style={bodyStyle}>{t('routingNote')}</p>
-      <div style={actionsStyle}>
+      {visibleModule === 'capabilities' && !validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
+      {visibleModule === 'capabilities' && !validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
+      {visibleModule === 'network' && !validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}
+      {visibleModule === 'capabilities' ? <p style={bodyStyle}>{t('routingNote')}</p> : null}
+      <div style={{ ...actionsStyle, position: 'sticky', bottom: 0, zIndex: 1, padding: '10px 0', background: 'var(--dsw-alias-bg-layer-1, white)' }}>
         <span aria-live="polite">
           {feedback === 'saved' ? <span style={successStyle}>{t('settingsSaved')}</span> : null}
           {feedback === 'error' ? <span style={errorStyle}>{t('settingsSaveFailed')}</span> : null}

@@ -1,6 +1,6 @@
 /** Plugin-owned OpenAI Codex account controls used inside Plugin configuration. */
 
-import { useState, useSyncExternalStore, useId } from 'react'
+import { useCallback, useState, useSyncExternalStore, useId } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexUsage } from '../usage.ts'
@@ -9,6 +9,7 @@ import { OpenAICodexAccountStore } from './account-store.ts'
 import type { AccountStatus, AccountSnapshot } from './account-store.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
+import type { OpenAICodexSettingsModule } from './OpenAICodexConfiguration.tsx'
 import { OpenAICodexUpdateSettings } from './OpenAICodexUpdateNotice.tsx'
 import type { OpenAICodexUpdateStore } from './update-store.ts'
 
@@ -49,6 +50,15 @@ const quotaTitleStyle: CSSProperties = { margin: 0, fontSize: 14, lineHeight: '2
 const quotaLabelStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, lineHeight: '20px', color: 'var(--dsw-alias-label-secondary)' }
 const progressTrackStyle: CSSProperties = { height: 8, overflow: 'hidden', borderRadius: 999, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.08))' }
 const commandStyle: CSSProperties = { margin: 0, padding: '10px 12px', overflowX: 'auto', borderRadius: 8, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.06))', color: 'var(--dsw-alias-label-primary)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13, lineHeight: '20px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }
+const moduleTabsStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, paddingTop: 2 }
+const moduleTabStyle: CSSProperties = { ...buttonStyle, minWidth: 0, minHeight: 54, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2, overflowWrap: 'anywhere' }
+const activeModuleTabStyle: CSSProperties = { ...moduleTabStyle, border: '1px solid var(--dsw-alias-button-primary-fill)', background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))' }
+const moduleSummaryStyle: CSSProperties = { fontSize: 11, lineHeight: '16px', fontWeight: 400, color: 'var(--dsw-alias-label-secondary)' }
+const SETTINGS_MODULES = ['account', 'models', 'network', 'capabilities'] as const satisfies readonly OpenAICodexSettingsModule[]
+const UNAVAILABLE_CONFIG_SNAPSHOT = {
+  status: 'unavailable' as const, value: undefined, base: undefined, user: undefined,
+  revision: undefined, writable: false, mode: 'memory' as const,
+}
 
 function progressFillStyle(percent: number): CSSProperties {
   return {
@@ -268,10 +278,25 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
   const [localAccount] = useState(() => new OpenAICodexAccountStore())
   const store = account ?? localAccount
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+  const subscribeConfig = useCallback((listener: () => void) => configScope?.subscribe(listener) ?? (() => undefined), [configScope])
+  const getConfigSnapshot = useCallback(() => configScope?.getSnapshot() ?? UNAVAILABLE_CONFIG_SNAPSHOT, [configScope])
+  const configSnapshot = useSyncExternalStore(subscribeConfig, getConfigSnapshot, getConfigSnapshot)
   const { status } = snapshot
   const titleId = useId()
+  const [activeModule, setActiveModule] = useState<OpenAICodexSettingsModule>('account')
+  const panelIdPrefix = `${titleId}-module`
 
   const label = accountStatusLabel(status.status, t)
+  const moduleSummary = (module: OpenAICodexSettingsModule): string => {
+    if (module === 'account') return t('accountModuleSummary', { status: label })
+    const config = configSnapshot.value
+    if (module === 'models') return config?.models === undefined
+      ? t('modelsModuleDefault')
+      : t('modelsModuleSelected', { count: config.models.length })
+    if (module === 'network') return t(config?.enableProxy === true ? 'networkModuleProxy' : 'networkModuleDirect')
+    const count = config === undefined ? 0 : [config.enableSearch, config.enableImageTool, config.enableImageGeneration, config.enableAutoReview].filter(Boolean).length
+    return t('capabilitiesModuleEnabled', { count })
+  }
 
   return (
     <section
@@ -286,6 +311,30 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
       )}
       <div style={embedded ? embeddedCardStyle : cardStyle}>
         {accountOnly || updater === undefined ? null : <OpenAICodexUpdateSettings t={t} updater={updater} />}
+        {accountOnly ? null : (
+          <div style={moduleTabsStyle} role="tablist" aria-label={t('settingsModules')}>
+            {SETTINGS_MODULES.map((module, index) => (
+              <button key={module} id={`${panelIdPrefix}-${module}-tab`} type="button" role="tab"
+                aria-label={t(`${module}Module`)}
+                aria-selected={activeModule === module} aria-controls={`${panelIdPrefix}-${module}`}
+                tabIndex={activeModule === module ? 0 : -1}
+                style={activeModule === module ? activeModuleTabStyle : moduleTabStyle}
+                onClick={() => { setActiveModule(module) }}
+                onKeyDown={event => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                  event.preventDefault()
+                  const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? SETTINGS_MODULES.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + SETTINGS_MODULES.length) % SETTINGS_MODULES.length
+                  const next = SETTINGS_MODULES[nextIndex]!
+                  setActiveModule(next)
+                  document.getElementById(`${panelIdPrefix}-${next}-tab`)?.focus()
+                }}>
+                <span>{t(`${module}Module`)}</span>
+                <span style={moduleSummaryStyle}>{moduleSummary(module)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div id={`${panelIdPrefix}-account`} role={accountOnly ? undefined : 'tabpanel'} aria-labelledby={accountOnly ? undefined : `${panelIdPrefix}-account-tab`} hidden={!accountOnly && activeModule !== 'account'} style={{ display: accountOnly || activeModule === 'account' ? 'flex' : 'none', flexDirection: 'column', gap: 14 }}>
         <h3 style={quotaTitleStyle}>{t('accountHeading')}</h3>
         <div style={rowStyle}>
           <div style={statusStyle} role="status">
@@ -302,8 +351,12 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
               t={t}
             />
           : null}
-        {accountOnly ? <p style={bodyStyle}>{t('modelsAccountHelp')}</p> : <OpenAICodexConfiguration
+        {accountOnly ? <p style={bodyStyle}>{t('modelsAccountHelp')}</p> : null}
+        </div>
+        {accountOnly ? null : <OpenAICodexConfiguration
           t={t}
+          activeModule={activeModule}
+          panelIdPrefix={panelIdPrefix}
           {...configScope === undefined ? {} : { scope: configScope }}
         />}
       </div>

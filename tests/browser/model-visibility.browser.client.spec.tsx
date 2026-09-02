@@ -75,6 +75,23 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it('keeps staged changes and actions while switching settings modules', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, set } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    const model = page.getByRole('checkbox', { name: /GPT-5\.6 Sol/u })
+    await model.click()
+    await expect.element(page.getByRole('button', { name: en.save, exact: true })).toBeEnabled()
+    await page.getByRole('tab', { name: en.networkModule, exact: true }).click()
+    await expect.element(page.getByText(en.networkHeading, { exact: true })).toBeVisible()
+    await expect.element(page.getByRole('button', { name: en.save, exact: true })).toBeEnabled()
+    await page.getByRole('tab', { name: en.modelsModule, exact: true }).click()
+    await expect.element(model).not.toBeChecked()
+    await page.getByRole('button', { name: en.discard, exact: true }).click()
+    await expect.element(model).toBeChecked()
+    expect(set).not.toHaveBeenCalled()
+  })
+
   it('keeps the label and numeric input on one row, the limit on the next and the slider full-width', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope } = settingsScopeFixture()
@@ -165,6 +182,7 @@ describe('Codex model visibility in Chromium', () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, set } = settingsScopeFixture()
     root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await page.getByRole('tab', { name: en.capabilitiesModule, exact: true }).click()
     const checkbox = page.getByRole('checkbox', { name: /Codex Auto-review/u })
     await expect.element(page.getByText(en.autoReviewOfficialBadge, { exact: true })).toBeVisible()
     const details = page.getByText(en.autoReviewDetails, { exact: true }).element().closest('details') as HTMLDetailsElement
@@ -291,6 +309,7 @@ describe('Codex model visibility in Chromium', () => {
     }))
     const { scope, set } = settingsScopeFixture()
     root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await page.getByRole('tab', { name: en.networkModule, exact: true }).click()
     await page.viewport(360, 800)
     host.style.width = '100%'
 

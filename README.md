@@ -156,7 +156,7 @@ The installed bundle is intentionally inert beyond model-provider registration:
     enableAutoReview: false
 ```
 
-Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the account and these options in one card. **Save changes** affects only this plugin's capability section and applies live. It never selects a default model or a global search route.
+Open **Settings → Plugins → Plugin configuration → Codex Connect** to manage the same settings through four modules: **Account & quota**, **Models**, **Network**, and **Capabilities**. Switching modules preserves staged edits; the persistent Save/Discard actions apply them together. **Save changes** affects only this plugin and never selects a default model or a global search route. The Models page's **More settings** dialog uses the same organization without repeating the account module.
 
 ### Network connection and proxy detection
 
