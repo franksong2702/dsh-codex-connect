@@ -571,7 +571,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                 >{mode === 'auto' ? t('automaticDetection') : t('manualEntry')}</button>
               ))}
             </div>
-            <div id="openai-codex-proxy-auto" role="tabpanel" aria-labelledby="openai-codex-proxy-auto-tab" hidden={proxyMode !== 'auto'} style={fieldsetStyle}>
+            <div id="openai-codex-proxy-auto" role="tabpanel" aria-labelledby="openai-codex-proxy-auto-tab" hidden={proxyMode !== 'auto'} style={{ ...fieldsetStyle, display: proxyMode === 'auto' ? fieldsetStyle.display : 'none' }}>
               <div style={actionsStyle}>
                 <p style={bodyStyle}>{t('automaticDetectionHelp')}</p>
                 <button type="button" style={proxyButtonStyle} onClick={() => { void detectProxy() }} disabled={proxyDetection.status === 'detecting'}>
@@ -603,7 +603,7 @@ export function OpenAICodexConfiguration({ scope, t }: OpenAICodexConfigurationP
                 </div>
               ) : null}
             </div>
-            <div id="openai-codex-proxy-manual" role="tabpanel" aria-labelledby="openai-codex-proxy-manual-tab" hidden={proxyMode !== 'manual'} style={fieldsetStyle}>
+            <div id="openai-codex-proxy-manual" role="tabpanel" aria-labelledby="openai-codex-proxy-manual-tab" hidden={proxyMode !== 'manual'} style={{ ...fieldsetStyle, display: proxyMode === 'manual' ? fieldsetStyle.display : 'none' }}>
               <p style={bodyStyle}>{t('manualProxyHelp')}</p>
               <label style={formFieldStyle}>
                 <span style={labelStyle}>{t('proxyAddress')}</span>
