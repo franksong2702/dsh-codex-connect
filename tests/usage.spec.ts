@@ -28,9 +28,9 @@ function response(value: unknown, status = 200): Response {
   })
 }
 
-function payload(): unknown {
+function payload(planType: unknown = 'business'): unknown {
   return {
-    plan_type: 'business',
+    plan_type: planType,
     rate_limit: {
       allowed: true,
       limit_reached: false,
@@ -100,6 +100,16 @@ describe('OpenAI Codex usage', () => {
       },
     })
   })
+
+  it.each(['plus', 'pro', 'business', 'team', undefined, null])(
+    'preserves server-returned windows without guessing semantics for the %s plan', planType => {
+      const parsed = parseOpenAICodexUsage(payload(planType))
+      expect(parsed.rateLimits[0]?.windows).toEqual([
+        { remainingPercent: 87, windowSeconds: 604_800 },
+        { remainingPercent: 59.5, windowSeconds: 18_000 },
+      ])
+    },
+  )
 
   it('rejects percentages that would make a quota bar misleading', () => {
     expect(() => parseOpenAICodexUsage({
