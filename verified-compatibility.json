@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-09-01",
-  "latestDshVersion": "0.1.2-alpha.2",
+  "checkedAt": "2026-09-02",
+  "latestDshVersion": "0.1.2-alpha.5",
   "pluginVersions": [
     {
       "version": "0.1.0-alpha.4.14",
@@ -42,6 +42,10 @@
     {
       "version": "0.1.0-alpha.4.23",
       "verifiedDshVersions": ["0.1.2-alpha.2"]
+    },
+    {
+      "version": "0.1.0-alpha.4.24",
+      "verifiedDshVersions": ["0.1.2-alpha.5"]
     }
   ]
 }

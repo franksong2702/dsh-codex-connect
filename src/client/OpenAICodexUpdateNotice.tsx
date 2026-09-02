@@ -72,6 +72,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'models-account': 'updateHighlightModelsAccount',
   'context-budget': 'updateHighlightContextBudget',
   'auto-review-probe': 'updateHighlightAutoReviewProbe',
+  'auto-review': 'updateHighlightAutoReview',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {

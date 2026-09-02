@@ -42,10 +42,10 @@ const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness w
 if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
   failures.push('README opening description mismatch')
 }
-const quickStartInstall = 'dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.23'
-if (!readme.includes(quickStartInstall)) failures.push('README must use the verified Alpha 4.23 install command')
+const quickStartInstall = 'dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.24'
+if (!readme.includes(quickStartInstall)) failures.push('README must use the verified Alpha 4.24 install command')
 if (!(await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')).includes(quickStartInstall)) {
-  failures.push('Chinese README must use the verified Alpha 4.23 install command')
+  failures.push('Chinese README must use the verified Alpha 4.24 install command')
 }
 if (!readme.includes('Use the image generation capability included with your current GPT subscription.')) {
   failures.push('README must describe image generation with the approved subscription copy')
@@ -57,7 +57,7 @@ if (!chineseReadme.includes('使用你当前 GPT 订阅计划提供的图片生�
 
 try {
   const manifest = JSON.parse(await readFile(new URL('../update-highlights.json', import.meta.url), 'utf8'))
-  const validKinds = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection', 'models-account', 'context-budget', 'auto-review-probe'])
+  const validKinds = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review'])
   const versionPattern = /^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u
   if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest?.releases) || manifest.releases.length > 256) {
     failures.push('update-highlights.json must use schemaVersion 1 with at most 256 releases')
