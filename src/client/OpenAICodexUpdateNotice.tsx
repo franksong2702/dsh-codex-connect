@@ -288,8 +288,8 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
             </a>
           ) : null}
           {compatibility.reportCompatibilityGap === true && snapshot.currentDshVersion !== undefined ? (
-            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion, compatibility.latestDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
-              {t('compatibilityReport')}
+            <a href={compatibility.trackerUrl ?? compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion, compatibility.latestDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+              {compatibility.trackerUrl === undefined ? t('compatibilityReport') : t('compatibilityViewTracker')}
             </a>
           ) : null}
         </div>
