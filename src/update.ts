@@ -6,11 +6,13 @@ export const OPENAI_CODEX_RELEASE_API_BASE = 'https://api.github.com/repos/frank
 export const OPENAI_CODEX_RELEASE_PAGE_BASE = 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v'
 export const OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL = 'https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/update-highlights.json'
 export const OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL = 'https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/verified-compatibility.json'
+export const OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL = 'https://api.github.com/search/issues'
 export const OPENAI_CODEX_UPDATE_TIMEOUT_MS = 8_000
 export const OPENAI_CODEX_UPDATE_MAX_METADATA_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_HIGHLIGHTS_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_COMPATIBILITY_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_RELEASE_BYTES = 32 * 1024
+export const OPENAI_CODEX_UPDATE_MAX_TRACKER_BYTES = 32 * 1024
 
 export type OpenAICodexUpdateHighlightKind =
   | 'trusted-origins'
@@ -54,6 +56,7 @@ export interface OpenAICodexDshCompatibilityAdvice {
   latestPluginVersion: string
   latestDshVersion?: string
   reportCompatibilityGap?: true
+  trackerUrl?: string
 }
 
 export interface OpenAICodexVerifiedPluginVersion {
@@ -435,6 +438,7 @@ async function dshCompatibilityAdvice(
   fetchImpl: FetchImpl,
   timeoutMs: number,
 ): Promise<OpenAICodexDshCompatibilityAdvice> {
+  let catalog: OpenAICodexVerifiedCompatibilityCatalog | undefined
   try {
     const { response, text } = await fetchBounded(
       fetchImpl,
@@ -443,15 +447,63 @@ async function dshCompatibilityAdvice(
       timeoutMs,
       { accept: 'application/json' },
     )
-    if (!response.ok) return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion)
-    return evaluateOpenAICodexDshCompatibility(
-      currentVersion,
-      latestPluginVersion,
-      currentDshVersion,
-      parseOpenAICodexVerifiedCompatibility(JSON.parse(text) as unknown),
-    )
+    if (response.ok) catalog = parseOpenAICodexVerifiedCompatibility(JSON.parse(text) as unknown)
   } catch {
-    return evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion)
+    catalog = undefined
+  }
+  const advice = evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion, catalog)
+  if (advice.reportCompatibilityGap !== true || currentDshVersion === undefined) return advice
+  const trackerUrl = await findOpenAICodexCanaryTracker(currentDshVersion, fetchImpl, timeoutMs)
+  return trackerUrl === undefined ? advice : { ...advice, trackerUrl }
+}
+
+function canaryTrackerSearchUrl(version: string): string {
+  const params = new URLSearchParams({
+    q: `repo:franksong2702/dsh-codex-connect is:issue in:title "compatibility: track DSH ${version}"`,
+    per_page: '5',
+  })
+  return `${OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL}?${params.toString()}`
+}
+
+function validCanaryTrackerUrl(value: unknown): value is string {
+  return typeof value === 'string'
+    && /^https:\/\/github\.com\/franksong2702\/dsh-codex-connect\/issues\/[1-9]\d*$/u.test(value)
+}
+
+async function findOpenAICodexCanaryTracker(
+  version: string,
+  fetchImpl: FetchImpl,
+  timeoutMs: number,
+): Promise<string | undefined> {
+  try {
+    const { response, text } = await fetchBounded(
+      fetchImpl,
+      canaryTrackerSearchUrl(version),
+      OPENAI_CODEX_UPDATE_MAX_TRACKER_BYTES,
+      timeoutMs,
+      { accept: 'application/vnd.github+json' },
+    )
+    if (!response.ok) return undefined
+    const value = JSON.parse(text) as unknown
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+    const items = (value as Record<string, unknown>)['items']
+    if (!Array.isArray(items) || items.length > 5) return undefined
+    const expectedTitle = `compatibility: track DSH ${version}`
+    const expectedMarker = `<!-- dsh-canary:${version} -->`
+    for (const item of items) {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) continue
+      const issue = item as Record<string, unknown>
+      if (issue['title'] === expectedTitle
+        && typeof issue['body'] === 'string'
+        && issue['body'].includes(expectedMarker)
+        && issue['pull_request'] === undefined
+        && validCanaryTrackerUrl(issue['html_url'])) {
+        return issue['html_url']
+      }
+    }
+    return undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -592,8 +644,10 @@ function parseOpenAICodexDshCompatibilityAdvice(
   if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
   const latestDshVersion = record['latestDshVersion']
   const reportCompatibilityGap = record['reportCompatibilityGap']
+  const trackerUrl = record['trackerUrl']
   if (reportCompatibilityGap !== undefined && reportCompatibilityGap !== true) return undefined
   if (reportCompatibilityGap === true && status !== 'not-yet-compatible') return undefined
+  if (trackerUrl !== undefined && (reportCompatibilityGap !== true || !validCanaryTrackerUrl(trackerUrl))) return undefined
   if (status === 'unverified') {
     if (latestDshVersion === undefined) return { status, latestPluginVersion }
     if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
@@ -605,5 +659,6 @@ function parseOpenAICodexDshCompatibilityAdvice(
     latestPluginVersion,
     latestDshVersion,
     ...reportCompatibilityGap === true ? { reportCompatibilityGap: true as const } : {},
+    ...trackerUrl === undefined ? {} : { trackerUrl },
   }
 }

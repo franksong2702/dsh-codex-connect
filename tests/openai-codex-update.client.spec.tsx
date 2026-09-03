@@ -192,6 +192,34 @@ describe('Codex Connect global update reminder', () => {
     updater.dispose()
   })
 
+  it('opens the canonical compatibility tracker when the server finds one', async () => {
+    const browserStorage = storageFixture()
+    vi.stubGlobal('localStorage', browserStorage)
+    vi.stubGlobal('fetch', vi.fn(async (input: string): Promise<Response> => input === OPENAI_CODEX_RUNTIME_PATH
+      ? json({ currentDshVersion: '0.1.2-alpha.6' })
+      : json({
+          status: 'up-to-date',
+          currentVersion: '0.1.0-alpha.4.24',
+          currentDshVersion: '0.1.2-alpha.6',
+          latestVersion: '0.1.0-alpha.4.24',
+          compatibility: {
+            status: 'not-yet-compatible',
+            latestPluginVersion: '0.1.0-alpha.4.24',
+            latestDshVersion: '0.1.2-alpha.5',
+            reportCompatibilityGap: true,
+            trackerUrl: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+          },
+        })))
+    const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.24')
+    await act(async () => { await updater.refresh(true) })
+
+    render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} useSessionPendingInteraction={vi.fn() as never} />)
+    const tracker = screen.getByRole('link', { name: en.compatibilityViewTracker }) as HTMLAnchorElement
+    expect(tracker.href).toBe('https://github.com/franksong2702/dsh-codex-connect/issues/123')
+    expect(screen.queryByRole('link', { name: en.compatibilityReport })).toBeNull()
+    updater.dispose()
+  })
+
   it('recommends updating DSH instead of asking the user to report a known upgrade path', async () => {
     const browserStorage = storageFixture()
     vi.stubGlobal('localStorage', browserStorage)

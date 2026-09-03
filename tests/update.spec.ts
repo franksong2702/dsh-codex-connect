@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   checkForOpenAICodexUpdate,
   compareOpenAICodexVersions,
+  OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL,
   OPENAI_CODEX_NPM_METADATA_URL,
   OPENAI_CODEX_RELEASE_API_BASE,
   OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL,
@@ -155,6 +156,79 @@ describe('Codex Connect update metadata', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('links the exact canonical tracker for an unverified newer DSH version', async () => {
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => {
+      if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ alpha: '0.1.0-alpha.4.24' })
+      if (url === OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL) return json({
+        schemaVersion: 1,
+        checkedAt: '2026-09-03',
+        latestDshVersion: '0.1.2-alpha.5',
+        pluginVersions: [{ version: '0.1.0-alpha.4.24', verifiedDshVersions: ['0.1.2-alpha.5'] }],
+      })
+      const searchUrl = new URL(url)
+      expect(searchUrl.origin + searchUrl.pathname).toBe(OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL)
+      expect(searchUrl.searchParams.get('q')).toContain('compatibility: track DSH 0.1.2-alpha.6')
+      return json({
+        items: [{
+          title: 'compatibility: track DSH 0.1.2-alpha.6',
+          body: '<!-- dsh-canary:0.1.2-alpha.6 -->',
+          html_url: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+        }],
+      })
+    })
+
+    await expect(checkForOpenAICodexUpdate({
+      currentVersion: '0.1.0-alpha.4.24',
+      currentDshVersion: '0.1.2-alpha.6',
+      fetchImpl: fetchMock,
+    })).resolves.toMatchObject({
+      compatibility: {
+        status: 'not-yet-compatible',
+        reportCompatibilityGap: true,
+        trackerUrl: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+      },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('falls back to a new report when tracker lookup is unavailable or untrusted', async () => {
+    let trackerAttempts = 0
+    const fetchMock = vi.fn(async (url: string): Promise<Response> => {
+      if (url === OPENAI_CODEX_NPM_METADATA_URL) return json({ alpha: '0.1.0-alpha.4.24' })
+      if (url === OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL) return json({
+        schemaVersion: 1,
+        checkedAt: '2026-09-03',
+        latestDshVersion: '0.1.2-alpha.5',
+        pluginVersions: [{ version: '0.1.0-alpha.4.24', verifiedDshVersions: ['0.1.2-alpha.5'] }],
+      })
+      trackerAttempts += 1
+      return trackerAttempts === 1 ? json({ items: [{
+        title: 'compatibility: track DSH 0.1.2-alpha.6',
+        body: 'A user-created issue with the same title but no canary marker.',
+        html_url: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+      }] }) : json({ message: 'rate limited' }, 403)
+    })
+
+    const untrusted = await checkForOpenAICodexUpdate({
+      currentVersion: '0.1.0-alpha.4.24',
+      currentDshVersion: '0.1.2-alpha.6',
+      fetchImpl: fetchMock,
+    })
+    expect(untrusted).toMatchObject({
+      compatibility: {
+        status: 'not-yet-compatible',
+        reportCompatibilityGap: true,
+      },
+    })
+    expect(untrusted.status === 'unavailable' ? undefined : untrusted.compatibility.trackerUrl).toBeUndefined()
+    const unavailable = await checkForOpenAICodexUpdate({
+      currentVersion: '0.1.0-alpha.4.24',
+      currentDshVersion: '0.1.2-alpha.6',
+      fetchImpl: fetchMock,
+    })
+    expect(unavailable.status === 'unavailable' ? undefined : unavailable.compatibility.trackerUrl).toBeUndefined()
+  })
+
   it('fails closed for network errors, malformed tags, and oversized bodies', async () => {
     const rejected = vi.fn(async (): Promise<Response> => { throw new Error('network down') })
     await expect(checkForOpenAICodexUpdate({ currentVersion: '0.1.0-alpha.4.14', fetchImpl: rejected })).resolves.toMatchObject({
@@ -236,6 +310,36 @@ describe('Codex Connect update metadata', () => {
         reportCompatibilityGap: true,
       },
     })
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.3',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'not-yet-compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.3',
+        reportCompatibilityGap: true,
+        trackerUrl: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+      },
+    })).toMatchObject({
+      compatibility: {
+        trackerUrl: 'https://github.com/franksong2702/dsh-codex-connect/issues/123',
+      },
+    })
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.3',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'not-yet-compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.3',
+        reportCompatibilityGap: true,
+        trackerUrl: 'https://example.com/issues/123',
+      },
+    })).toBeUndefined()
     expect(parseOpenAICodexUpdateResult({
       status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.15',
