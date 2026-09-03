@@ -3,6 +3,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+import { buildCanaryTrackingIssue } from './canary-tracking.mjs'
+
 const workflowPath = fileURLToPath(new URL('../.github/workflows/upstream-dsh-canary.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
 const packagePath = fileURLToPath(new URL('../package.json', import.meta.url))
@@ -59,12 +61,80 @@ assertContract('the job budget covers two candidate timeouts plus ten minutes', 
 assertContract('daily workflow leaves the declared baseline to its existing gate', !/check:dsh-install/.test(workflow))
 assertContract('candidate check consumes the shared snapshot and writes a first report', /check:dsh-next -- --channel "\$\{\{ matrix\.channel \}\}"[^\n]*?--resolved-latest "\$\{\{ needs\.resolve\.outputs\.latest \}\}" --resolved-next "\$\{\{ needs\.resolve\.outputs\.next \}\}" --resolved-alpha "\$\{\{ needs\.resolve\.outputs\.alpha \}\}" --report \.canary\/first\.json/.test(workflow))
 assertContract('candidate failure retries the same shared snapshot once', /steps\.first-canary\.outcome == 'failure'[\s\S]*?check:dsh-next -- --channel "\$\{\{ matrix\.channel \}\}"[^\n]*?--resolved-latest "\$\{\{ needs\.resolve\.outputs\.latest \}\}" --resolved-next "\$\{\{ needs\.resolve\.outputs\.next \}\}" --resolved-alpha "\$\{\{ needs\.resolve\.outputs\.alpha \}\}" --report \.canary\/second\.json/.test(workflow))
-assertContract('issue recording requires two failed attempts', /Record a confirmed compatibility alert[\s\S]*?if: steps\.first-canary\.outcome == 'failure' && steps\.second-canary\.outcome == 'failure'/.test(workflow))
-assertContract('issue recording requires matching channel and compatibility classifications', /first\.classification === 'compatibility'[\s\S]*?second\.classification === 'compatibility'[\s\S]*?first\.channel === second\.channel[\s\S]*?first\.candidateVersion === second\.candidateVersion/.test(workflow))
-assertContract('issues are deduplicated by candidate version', /dsh-canary:\$\{version\}[\s\S]*?listForRepo[\s\S]*?issue\.body\?\.includes\(marker\)/.test(workflow))
+assertContract('candidate tracking runs after successful and failed checks', /Record candidate tracking state[\s\S]*?if: always\(\) && steps\.first-canary\.outcome != 'skipped'/.test(workflow))
+assertContract('candidate tracking reads an optional retry report through the tested helper', /canary-tracking\.mjs[\s\S]*?existsSync\(process\.env\.SECOND_REPORT\)[\s\S]*?buildCanaryTrackingIssue\(first, second/.test(workflow))
+assertContract('issues are deduplicated by candidate version', /listForRepo[\s\S]*?issue\.body\?\.includes\(tracking\.marker\)/.test(workflow))
 assertContract('closed alerts are reopened instead of duplicated', /existing\.state === 'closed'[\s\S]*?state: 'open'/.test(workflow))
-assertContract('open alerts receive the latest bounded report', /github\.rest\.issues\.update\([\s\S]*?issue_number: existing\.number,[\s\S]*?body,[\s\S]*?Updated compatibility issue/.test(workflow))
+assertContract('unchanged tracker state and title do not rewrite an open issue', /existing\.body\?\.includes\(tracking\.stateMarker\) && existing\.title === tracking\.title[\s\S]*?no update is needed/.test(workflow))
+assertContract('tracker state changes preserve unrelated labels', /new Set\(existing\.labels[\s\S]*?labels\.delete\('bug'\)[\s\S]*?labels\.delete\('enhancement'\)[\s\S]*?labels\.add\(tracking\.label\)/.test(workflow))
+assertContract('open trackers receive a changed bounded state', /github\.rest\.issues\.update\([\s\S]*?issue_number: existing\.number,[\s\S]*?body: tracking\.body,[\s\S]*?Updated DSH candidate tracker/.test(workflow))
 assertContract('confirmed failure leaves the workflow failed', /Fail after two unsuccessful checks[\s\S]*?run: exit 1/.test(workflow))
+
+const trackingMetadata = {
+  runUrl: 'https://github.com/franksong2702/dsh-codex-connect/actions/runs/123',
+  pluginCommit: '0123456789abcdef',
+}
+const candidateReport = overrides => ({
+  status: 'pass',
+  classification: 'candidate-compatible',
+  channel: 'alpha',
+  supportedVersion: '0.1.2-alpha.5',
+  candidateVersion: '0.1.2-alpha.6',
+  stage: 'isolated-install',
+  nodeVersion: 'v24.15.0',
+  pluginCommit: null,
+  summary: 'candidate check passed',
+  ...overrides,
+})
+const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, trackingMetadata)
+assertContract(
+  'a passing newer candidate becomes a preliminary validation tracker',
+  passedTracking?.state === 'passed-needs-full-validation'
+    && passedTracking.marker === '<!-- dsh-canary:0.1.2-alpha.6 -->'
+    && passedTracking.label === 'enhancement'
+    && passedTracking.body.includes('preliminary evidence only'),
+)
+const compatibilityTracking = buildCanaryTrackingIssue(
+  candidateReport({ status: 'fail', classification: 'compatibility', summary: 'first failure' }),
+  candidateReport({ status: 'fail', classification: 'compatibility', summary: 'second failure' }),
+  trackingMetadata,
+)
+assertContract(
+  'two matching compatibility failures become an adaptation tracker',
+  compatibilityTracking?.state === 'compatibility-failed'
+    && compatibilityTracking.label === 'bug'
+    && compatibilityTracking.body.includes('failed twice'),
+)
+const infrastructureTracking = buildCanaryTrackingIssue(
+  candidateReport({ status: 'fail', classification: 'infrastructure', summary: 'registry timeout' }),
+  candidateReport({ status: 'fail', classification: 'infrastructure', summary: 'registry timeout' }),
+  trackingMetadata,
+)
+assertContract(
+  'repeated infrastructure failures remain distinct from compatibility failures',
+  infrastructureTracking?.state === 'infrastructure-blocked'
+    && infrastructureTracking.label === 'enhancement'
+    && infrastructureTracking.body.includes('infrastructure failure'),
+)
+const recoveredTracking = buildCanaryTrackingIssue(
+  candidateReport({ status: 'fail', classification: 'infrastructure', summary: 'transient timeout' }),
+  candidateReport(),
+  trackingMetadata,
+)
+assertContract('a successful retry records preliminary success', recoveredTracking?.state === 'passed-needs-full-validation')
+assertContract(
+  'unchanged and deduplicated channel results do not create trackers',
+  buildCanaryTrackingIssue(candidateReport({ classification: 'unchanged' }), undefined, trackingMetadata) === undefined
+    && buildCanaryTrackingIssue(candidateReport({ classification: 'duplicate' }), undefined, trackingMetadata) === undefined,
+)
+assertContract('mismatched retry candidates fail closed', (() => {
+  try {
+    buildCanaryTrackingIssue(candidateReport(), candidateReport({ candidateVersion: '0.1.2-alpha.7' }), trackingMetadata)
+    return false
+  } catch {
+    return true
+  }
+})())
 assertContract('candidate checker opts into the undeclared-version mode', /DSH_UNDECLARED_CANARY_VERSION:\s*'1'/.test(nextCheck))
 assertContract('only candidates that supersede declared support reach isolated installation', /compareSemanticVersions\(candidateVersion, supportedVersion\) > 0[\s\S]*?versionClassification === 'not-newer'[\s\S]*?const candidateCheck/u.test(nextCheck))
 assertContract('candidate classification is driven by fail-closed exit codes', /classifyCandidateCheckStatus\(candidateCheck\.status\)/.test(nextCheck) && /error instanceof CompatibilityCheckError \? 1 : 2/.test(installCheck))
