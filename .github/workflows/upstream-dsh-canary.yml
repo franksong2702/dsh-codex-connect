@@ -72,8 +72,8 @@ jobs:
         if: steps.first-canary.outcome == 'failure'
         continue-on-error: true
         run: pnpm --silent run check:dsh-next -- --channel "${{ matrix.channel }}" ${{ matrix.dedupe_args }} --resolved-latest "${{ needs.resolve.outputs.latest }}" --resolved-next "${{ needs.resolve.outputs.next }}" --resolved-alpha "${{ needs.resolve.outputs.alpha }}" --report .canary/second.json
-      - name: Record a confirmed compatibility alert
-        if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
+      - name: Record candidate tracking state
+        if: always() && steps.first-canary.outcome != 'skipped'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           FIRST_REPORT: .canary/first.json
@@ -81,86 +81,74 @@ jobs:
         with:
           script: |
             const fs = require('node:fs')
-            const first = JSON.parse(fs.readFileSync(process.env.FIRST_REPORT, 'utf8'))
-            const second = JSON.parse(fs.readFileSync(process.env.SECOND_REPORT, 'utf8'))
-            const confirmed = first.status === 'fail'
-              && second.status === 'fail'
-              && first.classification === 'compatibility'
-              && second.classification === 'compatibility'
-              && typeof first.channel === 'string'
-              && first.channel === second.channel
-              && typeof first.candidateVersion === 'string'
-              && first.candidateVersion === second.candidateVersion
-            if (!confirmed) {
-              core.info('The repeated failure was not a confirmed compatibility failure; no issue was created.')
+            const { pathToFileURL } = require('node:url')
+            const trackerUrl = pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/canary-tracking.mjs`).href
+            const { buildCanaryTrackingIssue } = await import(trackerUrl)
+            if (!fs.existsSync(process.env.FIRST_REPORT)) {
+              core.info('The candidate check produced no report; no version-scoped tracker can be updated.')
               return
             }
-
-            const version = first.candidateVersion
-            const channel = first.channel
-            const marker = `<!-- dsh-canary:${version} -->`
-            const title = `compatibility: DSH ${version} ${channel} canary failure`
+            const first = JSON.parse(fs.readFileSync(process.env.FIRST_REPORT, 'utf8'))
+            const second = fs.existsSync(process.env.SECOND_REPORT)
+              ? JSON.parse(fs.readFileSync(process.env.SECOND_REPORT, 'utf8'))
+              : undefined
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-            const safeSummary = String(second.summary ?? 'No bounded summary was available.').replaceAll('```', '---')
-            const body = [
-              marker,
-              '## Upstream DSH compatibility alert',
-              '',
-              `The isolated Codex Connect check failed twice against \`@deepseek-ai/dsh@${channel}\` version \`${version}\`.`,
-              '',
-              `- Declared supported DSH version: \`${second.supportedVersion}\``,
-              `- Candidate stage: \`${second.stage}\``,
-              `- Plugin commit: \`${second.pluginCommit ?? context.sha}\``,
-              `- Node.js: \`${second.nodeVersion}\``,
-              `- Workflow run: ${runUrl}`,
-              '',
-              'Bounded, path-redacted summary:',
-              '',
-              '```text',
-              safeSummary,
-              '```',
-              '',
-              'This alert does not widen the supported version range or publish a release. Reproduce the exact candidate check, inspect the upstream change, then use the test profile for full OAuth and model validation before changing `compatibility.json`.',
-              '',
-            ].join('\n')
+            const tracking = buildCanaryTrackingIssue(first, second, {
+              runUrl,
+              pluginCommit: context.sha,
+            })
+            if (tracking === undefined) {
+              core.info('The channel is unchanged, older, or deduplicated; no candidate tracker is needed.')
+              return
+            }
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'all',
               per_page: 100,
             })
-            const existing = issues.find(issue => issue.pull_request === undefined && issue.body?.includes(marker))
+            const existing = issues.find(issue => issue.pull_request === undefined && issue.body?.includes(tracking.marker))
             if (existing === undefined) {
               const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title,
-                body,
-                labels: ['bug'],
+                title: tracking.title,
+                body: tracking.body,
+                labels: [tracking.label],
               })
-              core.notice(`Created compatibility issue ${created.data.html_url}`)
+              core.notice(`Created DSH candidate tracker ${created.data.html_url}`)
               return
             }
+            const labels = new Set(existing.labels.map(label => typeof label === 'string' ? label : label.name).filter(Boolean))
+            labels.delete('bug')
+            labels.delete('enhancement')
+            labels.add(tracking.label)
             if (existing.state === 'closed') {
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: existing.number,
                 state: 'open',
-                title,
-                body,
+                title: tracking.title,
+                body: tracking.body,
+                labels: [...labels],
               })
-              core.notice(`Reopened compatibility issue ${existing.html_url}`)
+              core.notice(`Reopened DSH candidate tracker ${existing.html_url}`)
+              return
+            }
+            if (existing.body?.includes(tracking.stateMarker)) {
+              core.info(`DSH candidate tracker ${existing.html_url} already records ${tracking.state}; no update is needed.`)
               return
             }
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: existing.number,
-              title,
-              body,
+              title: tracking.title,
+              body: tracking.body,
+              labels: [...labels],
             })
-            core.notice(`Updated compatibility issue ${existing.html_url}`)
+            core.notice(`Updated DSH candidate tracker ${existing.html_url}`)
       - name: Fail after two unsuccessful checks
         if: steps.first-canary.outcome == 'failure' && steps.second-canary.outcome == 'failure'
         run: exit 1
