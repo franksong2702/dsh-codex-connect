@@ -80,6 +80,10 @@
     {
       "version": "0.1.0-alpha.4.24",
       "highlights": ["runtime-compatibility", "auto-review", "proxy-connection"]
+    },
+    {
+      "version": "0.1.0-alpha.4.25",
+      "highlights": ["runtime-compatibility"]
     }
   ]
 }
