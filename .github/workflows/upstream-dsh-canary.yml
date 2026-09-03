@@ -136,7 +136,7 @@ jobs:
               core.notice(`Reopened DSH candidate tracker ${existing.html_url}`)
               return
             }
-            if (existing.body?.includes(tracking.stateMarker)) {
+            if (existing.body?.includes(tracking.stateMarker) && existing.title === tracking.title) {
               core.info(`DSH candidate tracker ${existing.html_url} already records ${tracking.state}; no update is needed.`)
               return
             }

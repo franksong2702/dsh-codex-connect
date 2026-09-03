@@ -65,7 +65,7 @@ assertContract('candidate tracking runs after successful and failed checks', /Re
 assertContract('candidate tracking reads an optional retry report through the tested helper', /canary-tracking\.mjs[\s\S]*?existsSync\(process\.env\.SECOND_REPORT\)[\s\S]*?buildCanaryTrackingIssue\(first, second/.test(workflow))
 assertContract('issues are deduplicated by candidate version', /listForRepo[\s\S]*?issue\.body\?\.includes\(tracking\.marker\)/.test(workflow))
 assertContract('closed alerts are reopened instead of duplicated', /existing\.state === 'closed'[\s\S]*?state: 'open'/.test(workflow))
-assertContract('unchanged tracker state does not rewrite an open issue', /existing\.body\?\.includes\(tracking\.stateMarker\)[\s\S]*?no update is needed/.test(workflow))
+assertContract('unchanged tracker state and title do not rewrite an open issue', /existing\.body\?\.includes\(tracking\.stateMarker\) && existing\.title === tracking\.title[\s\S]*?no update is needed/.test(workflow))
 assertContract('tracker state changes preserve unrelated labels', /new Set\(existing\.labels[\s\S]*?labels\.delete\('bug'\)[\s\S]*?labels\.delete\('enhancement'\)[\s\S]*?labels\.add\(tracking\.label\)/.test(workflow))
 assertContract('open trackers receive a changed bounded state', /github\.rest\.issues\.update\([\s\S]*?issue_number: existing\.number,[\s\S]*?body: tracking\.body,[\s\S]*?Updated DSH candidate tracker/.test(workflow))
 assertContract('confirmed failure leaves the workflow failed', /Fail after two unsuccessful checks[\s\S]*?run: exit 1/.test(workflow))
