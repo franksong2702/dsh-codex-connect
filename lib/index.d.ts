@@ -582,11 +582,12 @@ interface OpenAICodexUpdateHighlight {
   version: string;
   kind: OpenAICodexUpdateHighlightKind;
 }
-type OpenAICodexDshCompatibilityStatus = 'compatible' | 'plugin-update-required' | 'not-yet-compatible' | 'unverified';
+type OpenAICodexDshCompatibilityStatus = 'compatible' | 'plugin-update-required' | 'dsh-update-required' | 'not-yet-compatible' | 'unverified';
 interface OpenAICodexDshCompatibilityAdvice {
   status: OpenAICodexDshCompatibilityStatus;
   latestPluginVersion: string;
   latestDshVersion?: string;
+  reportCompatibilityGap?: true;
 }
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';

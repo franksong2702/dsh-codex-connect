@@ -45,6 +45,7 @@ export interface OpenAICodexUpdateCatalog {
 export type OpenAICodexDshCompatibilityStatus =
   | 'compatible'
   | 'plugin-update-required'
+  | 'dsh-update-required'
   | 'not-yet-compatible'
   | 'unverified'
 
@@ -52,6 +53,7 @@ export interface OpenAICodexDshCompatibilityAdvice {
   status: OpenAICodexDshCompatibilityStatus
   latestPluginVersion: string
   latestDshVersion?: string
+  reportCompatibilityGap?: true
 }
 
 export interface OpenAICodexVerifiedPluginVersion {
@@ -262,12 +264,23 @@ export function evaluateOpenAICodexDshCompatibility(
   if (latestPluginVersion !== currentVersion && verified(latestPluginVersion)) {
     return { status: 'plugin-update-required', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
   }
-  const dshVersionIsKnown = currentDshVersion === catalog.latestDshVersion
-    || catalog.pluginVersions.some(plugin => plugin.verifiedDshVersions.includes(currentDshVersion))
+  const latestPairVerified = catalog.pluginVersions.some(plugin => (
+    plugin.version === latestPluginVersion
+    && plugin.verifiedDshVersions.includes(catalog.latestDshVersion)
+  ))
+  if (latestPairVerified && compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) < 0) {
+    return {
+      status: 'dsh-update-required',
+      latestPluginVersion,
+      latestDshVersion: catalog.latestDshVersion,
+    }
+  }
+  const currentDshAtOrBeyondLatest = compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) >= 0
   return {
-    status: dshVersionIsKnown ? 'not-yet-compatible' : 'unverified',
+    status: currentDshAtOrBeyondLatest ? 'not-yet-compatible' : 'unverified',
     latestPluginVersion,
     latestDshVersion: catalog.latestDshVersion,
+    ...currentDshAtOrBeyondLatest ? { reportCompatibilityGap: true as const } : {},
   }
 }
 
@@ -575,14 +588,22 @@ function parseOpenAICodexDshCompatibilityAdvice(
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
   const status = record['status']
-  if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
+  if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'dsh-update-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
   if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
   const latestDshVersion = record['latestDshVersion']
+  const reportCompatibilityGap = record['reportCompatibilityGap']
+  if (reportCompatibilityGap !== undefined && reportCompatibilityGap !== true) return undefined
+  if (reportCompatibilityGap === true && status !== 'not-yet-compatible') return undefined
   if (status === 'unverified') {
     if (latestDshVersion === undefined) return { status, latestPluginVersion }
     if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
     return { status, latestPluginVersion, latestDshVersion }
   }
   if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
-  return { status, latestPluginVersion, latestDshVersion }
+  return {
+    status,
+    latestPluginVersion,
+    latestDshVersion,
+    ...reportCompatibilityGap === true ? { reportCompatibilityGap: true as const } : {},
+  }
 }

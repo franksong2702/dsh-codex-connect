@@ -67,12 +67,15 @@ describe('Codex Connect verified DSH compatibility', () => {
     })
   })
 
-  it('returns red only for a known DSH version with no current or latest plugin match', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.13', '0.1.0-alpha.4.17', '0.1.0-rc.7', catalog)).toEqual({
-      status: 'not-yet-compatible',
-      latestPluginVersion: '0.1.0-alpha.4.17',
+  it('recommends updating DSH when the latest plugin matches the latest verified DSH', () => {
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.24', '0.1.0-alpha.4.24', '0.1.2-alpha.2', catalog)).toEqual({
+      status: 'dsh-update-required',
+      latestPluginVersion: '0.1.0-alpha.4.24',
       latestDshVersion: '0.1.2-alpha.5',
     })
+  })
+
+  it('reports a maintainer gap when the latest DSH has no verified published plugin', () => {
     expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.16', '0.1.0-alpha.4.17', '0.1.2-alpha.5', {
       ...catalog,
       pluginVersions: [],
@@ -80,6 +83,16 @@ describe('Codex Connect verified DSH compatibility', () => {
       status: 'not-yet-compatible',
       latestPluginVersion: '0.1.0-alpha.4.17',
       latestDshVersion: '0.1.2-alpha.5',
+      reportCompatibilityGap: true,
+    })
+  })
+
+  it('reports a maintainer gap when the installed DSH is newer than the public record', () => {
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.24', '0.1.0-alpha.4.24', '0.1.2-alpha.6', catalog)).toEqual({
+      status: 'not-yet-compatible',
+      latestPluginVersion: '0.1.0-alpha.4.24',
+      latestDshVersion: '0.1.2-alpha.5',
+      reportCompatibilityGap: true,
     })
   })
 

@@ -206,6 +206,60 @@ describe('Codex Connect update metadata', () => {
     })
     expect(parseOpenAICodexUpdateResult({
       status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.0-rc.7',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'dsh-update-required',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.2',
+      },
+    })).toMatchObject({
+      compatibility: {
+        status: 'dsh-update-required',
+      },
+    })
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.3',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'not-yet-compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.3',
+        reportCompatibilityGap: true,
+      },
+    })).toMatchObject({
+      compatibility: {
+        status: 'not-yet-compatible',
+        reportCompatibilityGap: true,
+      },
+    })
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.1-rc.3',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'compatible',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.3',
+        reportCompatibilityGap: true,
+      },
+    })).toBeUndefined()
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.0-rc.7',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'dsh-update-required',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+      },
+    })).toBeUndefined()
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
       currentDshVersion: 'not-a-version',
       latestVersion: '0.1.0-alpha.4.14',
