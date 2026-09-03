@@ -1,10 +1,12 @@
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { OAuthCredential } from '@earendil-works/pi-ai'
 import {
   OpenAICodexCredentialStore,
+  OPENAI_CODEX_ACCOUNT_LIMIT,
+  OPENAI_CODEX_AUTH_DOCUMENT_LIMIT,
   OPENAI_CODEX_PROVIDER,
 } from '../src/store.ts'
 
@@ -15,13 +17,13 @@ afterEach(async () => {
   root = undefined
 })
 
-function credential(access = 'access-secret'): OAuthCredential {
+function credential(access = 'access-secret', accountId = 'account-1'): OAuthCredential {
   return {
     type: 'oauth',
     access,
     refresh: 'refresh-secret',
     expires: Date.now() + 60_000,
-    accountId: 'account-1',
+    accountId,
   }
 }
 
@@ -31,7 +33,7 @@ async function store(): Promise<OpenAICodexCredentialStore> {
 }
 
 describe('OpenAICodexCredentialStore', () => {
-  it('persists, lists, detaches, and removes one OAuth credential owner-only', async () => {
+  it('persists, lists, detaches, and removes all OAuth credentials owner-only', async () => {
     const auth = await store()
     expect(await auth.read(OPENAI_CODEX_PROVIDER)).toBeUndefined()
 
@@ -84,15 +86,124 @@ describe('OpenAICodexCredentialStore', () => {
     }
   })
 
-  it('writes the versioned document and refuses provider ids it does not own', async () => {
+  it('writes the multi-account document and refuses provider ids it does not own', async () => {
     const auth = await store()
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential()))
     expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
-      version: 1,
-      credential: { type: 'oauth', accountId: 'account-1' },
+      version: 2,
+      activeAccountId: 'account-1',
+      credentials: [{ type: 'oauth', accountId: 'account-1' }],
     })
     await expect(auth.modify('other', () => Promise.resolve(credential())))
       .rejects.toThrow(/does not own provider/)
     expect(await auth.read('other')).toBeUndefined()
+  })
+
+  it('migrates version 1 on write and preserves one owner-only rollback copy', async () => {
+    const auth = await store()
+    const original = `${JSON.stringify({ version: 1, credential: credential('old') }, null, 2)}\n`
+    await writeFile(auth.filename, original, { mode: 0o600 })
+
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2')))
+
+    expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
+      version: 2,
+      activeAccountId: 'account-2',
+      credentials: [{ accountId: 'account-1' }, { accountId: 'account-2' }],
+    })
+    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(original)
+    if (process.platform !== 'win32') expect((await stat(auth.version1BackupFilename)).mode & 0o777).toBe(0o600)
+
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('newer', 'account-3')))
+    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(original)
+  })
+
+  it('refuses to replace version 1 when an existing rollback copy does not match', async () => {
+    const auth = await store()
+    const original = `${JSON.stringify({ version: 1, credential: credential('old') }, null, 2)}\n`
+    const unrelated = `${JSON.stringify({ version: 1, credential: credential('other', 'other-account') }, null, 2)}\n`
+    await writeFile(auth.filename, original, { mode: 0o600 })
+    await writeFile(auth.version1BackupFilename, unrelated, { mode: 0o600 })
+
+    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2'))))
+      .rejects.toThrow(/rollback copy does not match/u)
+    expect(await readFile(auth.filename, 'utf8')).toBe(original)
+    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(unrelated)
+  })
+
+  it('lists opaque account summaries and activates a selected account', async () => {
+    const auth = await store()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('one', 'provider-account-one')))
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('two', 'provider-account-two')))
+
+    const accounts = await auth.accounts()
+    expect(accounts).toHaveLength(2)
+    expect(accounts.map(account => account.accountKey)).not.toContain('provider-account-one')
+    expect(JSON.stringify(accounts)).not.toContain('provider-account')
+    expect(accounts.map(account => account.active)).toEqual([false, true])
+    expect(accounts.map(account => account.displayName)).toEqual(['ChatGPT account 1', 'ChatGPT account 2'])
+    expect(await auth.accountIdForAccess('one')).toBe('provider-account-one')
+    expect(await auth.accountIdForAccess('missing')).toBeUndefined()
+
+    await auth.activate(accounts[0]!.accountKey)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'provider-account-one' })
+    expect((await auth.accounts()).map(account => account.active)).toEqual([true, false])
+    await expect(auth.activate('acct_0000000000000000000000000000000000000000000')).rejects.toThrow(/account not found/u)
+  })
+
+  it('requires an explicit replacement when removing the active account', async () => {
+    const auth = await store()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('one', 'account-1')))
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('two', 'account-2')))
+    const accounts = await auth.accounts()
+    const first = accounts[0]!
+    const second = accounts[1]!
+
+    await expect(auth.removeAccount(second.accountKey)).rejects.toThrow(/requires replacementAccountKey/u)
+    await expect(auth.removeAccount(first.accountKey, second.accountKey)).rejects.toThrow(/only valid/u)
+    await expect(auth.removeAccount(second.accountKey, 'acct_0000000000000000000000000000000000000000000'))
+      .rejects.toThrow(/replacement account not found/u)
+    await auth.removeAccount(second.accountKey, first.accountKey)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'account-1' })
+    await expect(auth.removeAccount(second.accountKey)).rejects.toThrow(/account not found/u)
+    await auth.removeAccount(first.accountKey)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toBeUndefined()
+  })
+
+  it('removes a non-active account without changing the active account', async () => {
+    const auth = await store()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('one', 'account-1')))
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('two', 'account-2')))
+    const accounts = await auth.accounts()
+    await auth.removeAccount(accounts[0]!.accountKey)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'account-2' })
+    expect(await auth.accounts()).toHaveLength(1)
+  })
+
+  it('enforces account and serialized document limits', async () => {
+    const auth = await store()
+    for (let index = 0; index < OPENAI_CODEX_ACCOUNT_LIMIT; index++) {
+      await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential(`token-${String(index)}`, `account-${String(index)}`)))
+    }
+    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('overflow', 'overflow'))))
+      .rejects.toThrow(/at most 16 accounts/u)
+
+    await writeFile(auth.filename, ' '.repeat(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT + 1), { mode: 0o600 })
+    await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/exceeds 524288 bytes/u)
+    await rm(auth.filename)
+    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('x'.repeat(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT)))))
+      .rejects.toThrow(/credential document exceeds/u)
+  })
+
+  it('rejects non-regular credential paths and clears migration backup on logout', async () => {
+    const auth = await store()
+    await mkdir(auth.filename)
+    await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/regular file/u)
+    await rm(auth.filename, { recursive: true })
+    await writeFile(auth.filename, JSON.stringify({ version: 1, credential: credential() }), { mode: 0o600 })
+    await auth.activate((await auth.accounts())[0]!.accountKey)
+    await auth.delete(OPENAI_CODEX_PROVIDER)
+    await expect(stat(auth.filename)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(stat(auth.version1BackupFilename)).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })

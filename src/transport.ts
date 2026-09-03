@@ -278,9 +278,8 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     } catch {
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.reauthRequired)
     }
-    const refreshed = await this.credentials.read(OPENAI_CODEX_PROVIDER)
     const access = auth?.auth.apiKey
-    const accountId = refreshed?.type === 'oauth' ? refreshed.accountId : undefined
+    const accountId = access === undefined ? undefined : await this.credentials.accountIdForAccess(access)
     if (typeof access !== 'string' || access.length === 0
       || typeof accountId !== 'string' || accountId.length === 0) {
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.reauthRequired)

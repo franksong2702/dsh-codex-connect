@@ -179,10 +179,14 @@ export {
 export type { OpenAICodexUpdateResult } from './update.ts'
 export {
   OpenAICodexCredentialStore,
+  OPENAI_CODEX_ACCOUNT_LIMIT,
+  OPENAI_CODEX_AUTH_DOCUMENT_LIMIT,
   OPENAI_CODEX_AUTH_FILENAME,
+  OPENAI_CODEX_AUTH_V1_BACKUP_SUFFIX,
   OPENAI_CODEX_PROVIDER,
   openAICodexAuthPath,
 } from './store.ts'
+export type { OpenAICodexAccountSummary } from './store.ts'
 export {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,

@@ -11,6 +11,7 @@ import {
   OpenAICodexWebAuth,
   OPENAI_CODEX_AUTH_STATUS_PATH,
   OPENAI_CODEX_AUTH_CANCEL_PATH,
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   REMOTE_WEB_ORIGIN_NOT_TRUSTED,
   registerOpenAICodexAuthRoutes,
   trustedRequestDecision,
@@ -40,7 +41,12 @@ vi.mock('../src/usage.ts', async importOriginal => ({
   readOpenAICodexRateLimits: mocked.usage,
 }))
 
-const store = {} as OpenAICodexCredentialStore
+const storeMethods = {
+  accounts: vi.fn(),
+  activate: vi.fn(),
+  removeAccount: vi.fn(),
+}
+const store = storeMethods as unknown as OpenAICodexCredentialStore
 const emptyTrustedOrigins = {
   has: async () => false,
 } as unknown as OpenAICodexTrustedOriginsStore
@@ -93,6 +99,8 @@ function request(options: {
   host?: string
   origin?: string
   fetchSite?: string
+  contentType?: string
+  body?: string
 }): IncomingMessage {
   return {
     method: options.method ?? 'GET',
@@ -101,7 +109,9 @@ function request(options: {
       host: options.host ?? '127.0.0.1:3081',
       ...options.origin === undefined ? {} : { origin: options.origin },
       ...options.fetchSite === undefined ? {} : { 'sec-fetch-site': options.fetchSite },
+      ...options.contentType === undefined ? {} : { 'content-type': options.contentType },
     },
+    ...options.body === undefined ? {} : { body: options.body },
   } as unknown as IncomingMessage
 }
 
@@ -125,6 +135,9 @@ beforeEach(() => {
   mocked.status.mockResolvedValue({ authenticated: false })
   mocked.logout.mockResolvedValue(undefined)
   mocked.usage.mockResolvedValue({ rateLimits: [] })
+  storeMethods.accounts.mockResolvedValue([])
+  storeMethods.activate.mockResolvedValue(undefined)
+  storeMethods.removeAccount.mockResolvedValue(undefined)
 })
 
 afterEach(async () => {
@@ -186,6 +199,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     ['login', OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'],
     ['logout', OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST'],
     ['cancel', OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST'],
+    ['accounts', OPENAI_CODEX_AUTH_ACCOUNTS_PATH, 'GET'],
   ] as const)('applies the remote-origin boundary to %s', async (_label, path, method) => {
     const route = captureRoutes().find(candidate => candidate.path === path)
     if (route === undefined) throw new Error(`${path} route was not registered`)
@@ -248,6 +262,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
 
     expect(res.observed.status).toBe(200)
     expect(mocked.status).toHaveBeenCalled()
+    expect(JSON.parse(res.observed.body ?? 'null')).toMatchObject({ accounts: [] })
   })
 
   it('reuses one login operation and one HTTPS challenge across concurrent callers', async () => {
@@ -274,6 +289,88 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     completion.resolve()
     await completion.promise
     await auth.dispose()
+  })
+
+  it('lists accounts and activates or removes them through opaque keys', async () => {
+    const accountKey = 'acct_0000000000000000000000000000000000000000000'
+    const replacementAccountKey = 'acct_1111111111111111111111111111111111111111111'
+    storeMethods.accounts.mockResolvedValue([{ accountKey, displayName: 'ChatGPT account 1', profileSource: 'generated', active: true }])
+    const routes = captureRoutes()
+    const route = routes.find(candidate => candidate.path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH)!
+
+    const listed = response()
+    await route.handler(request({ method: 'GET' }), listed)
+    expect(listed.observed.status).toBe(200)
+    expect(JSON.parse(listed.observed.body!)).toMatchObject({ accounts: [{ accountKey, active: true }] })
+
+    const activated = response()
+    await route.handler(request({
+      method: 'POST',
+      contentType: 'application/json',
+      body: JSON.stringify({ accountKey }),
+    }), activated)
+    expect(activated.observed.status).toBe(200)
+    expect(storeMethods.activate).toHaveBeenCalledWith(accountKey)
+
+    const removed = response()
+    await route.handler(request({
+      method: 'DELETE',
+      contentType: 'application/json; charset=utf-8',
+      body: JSON.stringify({ accountKey, replacementAccountKey }),
+    }), removed)
+    expect(removed.observed.status).toBe(200)
+    expect(storeMethods.removeAccount).toHaveBeenCalledWith(accountKey, replacementAccountKey)
+  })
+
+  it('serializes account activation after cancelling an in-flight login', async () => {
+    let observedSignal: AbortSignal | undefined
+    mocked.login.mockImplementation((interaction: AuthInteraction) => {
+      observedSignal = interaction.signal
+      return abortableLogin(interaction)
+    })
+    const auth = new OpenAICodexWebAuth(store)
+    const login = auth.signIn()
+
+    await expect(auth.activateAccount('acct_0000000000000000000000000000000000000000000'))
+      .resolves.toEqual({ status: 'signed-out' })
+
+    await expect(login).rejects.toThrow(/sign-in cancelled/u)
+    expect(observedSignal?.aborted).toBe(true)
+    expect(storeMethods.activate).toHaveBeenCalledOnce()
+    await auth.dispose()
+  })
+
+  it('rejects malformed account mutations and maps selection conflicts', async () => {
+    const accountKey = 'acct_0000000000000000000000000000000000000000000'
+    const route = captureRoutes().find(candidate => candidate.path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH)!
+    for (const options of [
+      { method: 'PUT' },
+      { method: 'POST', body: JSON.stringify({ accountKey }) },
+      { method: 'POST', contentType: 'application/json', body: '{}' },
+      { method: 'DELETE', contentType: 'application/json', body: JSON.stringify({ accountKey, extra: true }) },
+    ]) {
+      const res = response()
+      await route.handler(request(options), res)
+      expect(res.observed.status).toBe(options.method === 'PUT' ? 405 : options.contentType === undefined ? 415 : 400)
+    }
+
+    storeMethods.removeAccount.mockRejectedValueOnce(new Error('openai-codex: removing the active account requires replacementAccountKey'))
+    const conflict = response()
+    await route.handler(request({
+      method: 'DELETE',
+      contentType: 'application/json',
+      body: JSON.stringify({ accountKey }),
+    }), conflict)
+    expect(conflict.observed.status).toBe(409)
+
+    storeMethods.activate.mockRejectedValueOnce(new Error('openai-codex: account not found'))
+    const missing = response()
+    await route.handler(request({
+      method: 'POST',
+      contentType: 'application/json',
+      body: JSON.stringify({ accountKey }),
+    }), missing)
+    expect(missing.observed.status).toBe(404)
   })
 
   it('rejects an unsafe authorization URL and cancels the provider login', async () => {

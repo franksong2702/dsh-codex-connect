@@ -18,6 +18,7 @@ import {
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
   OPENAI_CODEX_AUTH_CANCEL_PATH,
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
 } from './auth-paths.ts'
 import {
   OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME,
@@ -33,6 +34,7 @@ export {
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
   OPENAI_CODEX_AUTH_CANCEL_PATH,
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
 } from './auth-paths.ts'
 export { OPENAI_CODEX_FAST_MODE_PATH } from './fast-mode-paths.ts'
 
@@ -144,6 +146,16 @@ export class OpenAICodexWebAuth {
     await this.finishLogin('cancel')
   }
 
+  /** Cancel pending OAuth and select one already stored account. */
+  async activateAccount(accountKey: string): Promise<OpenAICodexWebAuthStatus> {
+    return this.mutateStoredAccount(() => this.store.activate(accountKey))
+  }
+
+  /** Cancel pending OAuth and remove exactly one stored account. */
+  async removeAccount(accountKey: string, replacementAccountKey?: string): Promise<OpenAICodexWebAuthStatus> {
+    return this.mutateStoredAccount(() => this.store.removeAccount(accountKey, replacementAccountKey))
+  }
+
   /** Stop the owned callback listener during plugin disposal. */
   async dispose(): Promise<void> {
     this.disposed = true
@@ -166,6 +178,29 @@ export class OpenAICodexWebAuth {
     })()
     this.transition = transition
     try { await transition } finally {
+      if (this.transition === transition) this.transition = undefined
+    }
+  }
+
+  private async mutateStoredAccount(operation: () => Promise<unknown>): Promise<OpenAICodexWebAuthStatus> {
+    while (this.transition !== undefined) await this.transition
+    if (this.disposed) throw new Error('OpenAI Codex plugin disposed')
+    const login = this.operation
+    this.cancelSignIn(new Error('OpenAI Codex sign-in cancelled'))
+    let result: OpenAICodexWebAuthStatus | undefined
+    const transition = (async () => {
+      await login?.catch(() => undefined)
+      this.challenge = undefined
+      await operation()
+      result = await this.readStoredStatus()
+      this.state = result
+    })()
+    this.transition = transition
+    try {
+      await transition
+      if (result === undefined) throw new Error('openai-codex: account mutation did not produce status')
+      return result
+    } finally {
       if (this.transition === transition) this.transition = undefined
     }
   }
@@ -452,6 +487,36 @@ function fastModeBody(value: unknown): { sessionId: string; enabled: boolean } |
     : undefined
 }
 
+function accountKey(value: unknown): string | undefined {
+  return typeof value === 'string' && /^acct_[A-Za-z0-9_-]{43}$/u.test(value) ? value : undefined
+}
+
+function activateAccountBody(value: unknown): { accountKey: string } | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).length !== 1) return undefined
+  const parsed = accountKey(record['accountKey'])
+  return parsed === undefined ? undefined : { accountKey: parsed }
+}
+
+function removeAccountBody(value: unknown): { accountKey: string; replacementAccountKey?: string } | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).some(key => key !== 'accountKey' && key !== 'replacementAccountKey')) return undefined
+  const selected = accountKey(record['accountKey'])
+  if (selected === undefined) return undefined
+  if (record['replacementAccountKey'] === undefined) return { accountKey: selected }
+  const replacement = accountKey(record['replacementAccountKey'])
+  return replacement === undefined ? undefined : { accountKey: selected, replacementAccountKey: replacement }
+}
+
+function accountMutationError(error: unknown): { status: number; error: string } {
+  const message = safeMessage(error)
+  if (/account not found/u.test(message)) return { status: 404, error: message }
+  if (/requires replacementAccountKey|only valid when removing/u.test(message)) return { status: 409, error: message }
+  return { status: 500, error: message }
+}
+
 /** Register the plugin-owned OAuth routes when the Web server is composed. */
 export function registerOpenAICodexAuthRoutes(
   ctx: Context,
@@ -482,7 +547,8 @@ export function registerOpenAICodexAuthRoutes(
         handler: async (req, res) => {
           if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
           if (!await authorize(req, res)) return
-          json(res, 200, await auth.status())
+          const [status, accounts] = await Promise.all([auth.status(), store.accounts()])
+          json(res, 200, { ...status, accounts })
         },
       }),
       ctx.webServer.register({
@@ -523,6 +589,37 @@ export function registerOpenAICodexAuthRoutes(
             json(res, 200, { ok: true })
           } catch (error: unknown) {
             json(res, 500, { error: safeMessage(error) })
+          }
+        },
+      }),
+      ctx.webServer.register({
+        kind: 'exact',
+        path: OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
+        handler: async (req, res) => {
+          if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'DELETE') {
+            return json(res, 405, { error: 'method not allowed' })
+          }
+          if (!await authorize(req, res)) return
+          if (req.method === 'GET') return json(res, 200, { accounts: await store.accounts() })
+          const type = header(req, 'content-type')
+          if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
+            return json(res, 415, { error: 'unsupported content type' })
+          }
+          try {
+            const raw = await readFastModeBody(req)
+            if (req.method === 'POST') {
+              const body = activateAccountBody(raw)
+              if (body === undefined) return json(res, 400, { error: 'invalid input' })
+              return json(res, 200, await auth.activateAccount(body.accountKey))
+            }
+            const body = removeAccountBody(raw)
+            if (body === undefined) return json(res, 400, { error: 'invalid input' })
+            return json(res, 200, await auth.removeAccount(body.accountKey, body.replacementAccountKey))
+          } catch (error: unknown) {
+            if (error instanceof RangeError) return json(res, 413, { error: 'request body too large' })
+            if (error instanceof TypeError) return json(res, 400, { error: 'invalid input' })
+            const mapped = accountMutationError(error)
+            return json(res, mapped.status, { error: mapped.error })
           }
         },
       }),

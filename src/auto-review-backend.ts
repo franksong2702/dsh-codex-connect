@@ -149,8 +149,7 @@ export class OpenAICodexAutoReviewBackend implements AutoReviewBackend {
     try {
       const auth = await this.models.getAuth(OPENAI_CODEX_PROVIDER, { signal: controller.signal })
       const access = auth?.auth.apiKey
-      const stored = await this.credentialStore.read(OPENAI_CODEX_PROVIDER)
-      const accountId = stored?.type === 'oauth' && typeof stored.accountId === 'string' ? stored.accountId : undefined
+      const accountId = access === undefined ? undefined : await this.credentialStore.accountIdForAccess(access)
       if (access === undefined || access.length === 0 || accountId === undefined || accountId.length === 0) return { status: 'unavailable' }
       const response = await this.proxyManager.run(this.resolveProxyUrl(), () => fetch(`${OPENAI_CODEX_BASE_URL}/responses`, {
         method: 'POST',
