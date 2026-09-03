@@ -11,7 +11,7 @@ import { OpenAICodexAccountStore } from '../../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../../src/client/OpenAICodexSettings.tsx'
 import { en } from '../../src/client/locales.ts'
-import { OPENAI_CODEX_AUTH_CANCEL_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH } from '../../src/auth-paths.ts'
+import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH, OPENAI_CODEX_AUTH_CANCEL_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../../src/auth-paths.ts'
 
 let root: Root | undefined
 let host: HTMLDivElement | undefined
@@ -36,7 +36,7 @@ describe('Models account navigation', () => {
     }
     vi.stubGlobal('fetch', async (path: string) => Response.json(path === OPENAI_CODEX_MODEL_CATALOG_PATH
       ? modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])
-      : { status: 'signed-out' }))
+      : { status: 'signed-out', accounts: [] }))
     account = new OpenAICodexAccountStore()
     host = document.createElement('div')
     document.body.append(host)
@@ -118,7 +118,7 @@ describe('Models account navigation', () => {
       }
       if (path === OPENAI_CODEX_AUTH_CANCEL_PATH) pending = false
       if (path === OPENAI_CODEX_AUTH_LOGOUT_PATH) throw new Error('Cancellation must not sign out')
-      return Response.json({ status: pending ? 'signing-in' : 'signed-out' })
+      return Response.json({ status: pending ? 'signing-in' : 'signed-out', accounts: [] })
     })
     account = new OpenAICodexAccountStore()
     const second = new OpenAICodexAccountStore()
@@ -152,9 +152,12 @@ describe('Models account navigation', () => {
   it('keeps the shared signed-out state when switching from Models back to Plugins', async () => {
     let signedIn = true
     let logoutCalls = 0
+    const current = { accountKey: `acct_${'a'.repeat(43)}`, active: true, displayName: 'Work account', maskedEmail: 'wo••@example.com', profileSource: 'oauth' }
     vi.stubGlobal('fetch', async (path: string) => {
       if (path === OPENAI_CODEX_AUTH_LOGOUT_PATH) { signedIn = false; logoutCalls++; return Response.json({ ok: true }) }
-      return Response.json(signedIn ? { status: 'signed-in', usage: { rateLimits: [] } } : { status: 'signed-out' })
+      return Response.json(signedIn
+        ? { status: 'signed-in', usage: { rateLimits: [] }, accounts: [current] }
+        : { status: 'signed-out', accounts: [] })
     })
     account = new OpenAICodexAccountStore()
     const shared = account
@@ -174,10 +177,42 @@ describe('Models account navigation', () => {
     await page.getByRole('button', { name: en.viewQuota, exact: true }).click()
     await expect.element(page.getByText(en.modelsAccountHelp)).toBeVisible()
     await expect.element(page.getByText(en.signedIn, { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: en.logout, exact: true }).click()
+    await page.getByRole('button', { name: en.manageAccounts, exact: true }).click()
+    await page.getByRole('button', { name: en.signOutAll, exact: true }).click()
     await expect.element(page.getByText(en.signedOut, { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Switch page' }).click()
     await expect.element(page.getByRole('button', { name: en.login, exact: true })).toBeVisible()
     expect(logoutCalls).toBe(1)
+  })
+
+  it('switches saved accounts without exposing raw account ids', async () => {
+    const firstKey = `acct_${'a'.repeat(43)}`
+    const secondKey = `acct_${'b'.repeat(43)}`
+    let accounts = [
+      { accountKey: firstKey, active: true, displayName: 'Work account', maskedEmail: 'wo••@example.com', profileSource: 'oauth' },
+      { accountKey: secondKey, active: false, displayName: 'Personal account', maskedEmail: 'pe••@example.com', profileSource: 'oauth' },
+    ]
+    vi.stubGlobal('fetch', async (path: string, init?: RequestInit) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) return Response.json({ status: 'signed-in', usage: { rateLimits: [] }, accounts })
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { accountKey: string }
+        accounts = accounts.map(item => ({ ...item, active: item.accountKey === body.accountKey }))
+        return Response.json({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) return Response.json({ accounts })
+      throw new Error(`unexpected request ${path}`)
+    })
+    account = new OpenAICodexAccountStore()
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+    root.render(<OpenAICodexModelsCard t={t} account={account} />)
+
+    await expect.element(page.getByText('Work account', { exact: true }).first()).toBeVisible()
+    await page.getByRole('button', { name: en.manageAccounts, exact: true }).click()
+    expect(document.body.textContent).not.toContain('openai-account-id')
+    await page.getByRole('button', { name: en.useAccount, exact: true }).click()
+    await expect.element(page.getByText('Personal account', { exact: true }).first()).toBeVisible()
+    await vi.waitFor(() => { expect(accounts.find(item => item.active)?.accountKey).toBe(secondKey) })
   })
 })

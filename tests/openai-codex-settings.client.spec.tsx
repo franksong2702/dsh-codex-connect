@@ -9,6 +9,7 @@ import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../src/settings-contract.ts'
 import type { OpenAICodexSettingsConfig } from '../src/settings-contract.ts'
 import {
+  OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
@@ -28,7 +29,13 @@ function t(key: OpenAICodexSettingsKey, params: Record<string, unknown> = {}): s
 }
 
 function json(value: unknown, status = 200): Response {
-  return new Response(JSON.stringify(value), {
+  const projected = typeof value === 'object' && value !== null && 'status' in value
+    ? { ...value, accounts: value.status === 'signed-in' || value.status === 'reauth-required' ? [{
+      accountKey: `acct_${'a'.repeat(43)}`, active: true, displayName: 'Work account',
+      maskedEmail: 'wo••@example.com', profileSource: 'oauth',
+    }] : [] }
+    : value
+  return new Response(JSON.stringify(projected), {
     status,
     headers: { 'content-type': 'application/json' },
   })
@@ -195,11 +202,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
     render(<OpenAICodexSettings t={t} embedded />)
     expect(await screen.findByText(reauthMessage)).toBeTruthy()
     expect(screen.getByRole('status').textContent).toContain(en.reauthRequired)
-    expect(screen.getByRole('button', { name: en.loginAgain })).toBeTruthy()
+    expect(screen.getByRole('button', { name: en.reauthorize })).toBeTruthy()
     expect(screen.queryByRole('button', { name: en.logout })).toBeNull()
     expect(zh.reauthRequired).toBe('需要重新登录')
 
-    fireEvent.click(screen.getByRole('button', { name: en.loginAgain }))
+    fireEvent.click(screen.getByRole('button', { name: en.reauthorize }))
     await waitFor(() => { expect(replace).toHaveBeenCalledWith('https://auth.openai.com/authorize') })
 
     const paths = fetchMock.mock.calls.map(([input]) => requestPath(input))
@@ -242,7 +249,8 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.fiveHourLimit}` })).toBeTruthy()
     expect(screen.getByRole('progressbar', { name: `GPT-5.3-Codex-Spark · ${en.weeklyLimit}` })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: en.logout }))
+    fireEvent.click(screen.getByRole('button', { name: en.manageAccounts }))
+    fireEvent.click(screen.getByRole('button', { name: en.signOutAll }))
     expect((await screen.findAllByText(en.signedOut)).length).toBeGreaterThan(0)
   })
 
@@ -319,10 +327,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     render(<OpenAICodexSettings t={t} embedded />)
-    fireEvent.click(await screen.findByRole('button', { name: en.logout }))
+    fireEvent.click(await screen.findByRole('button', { name: en.manageAccounts }))
+    fireEvent.click(screen.getByRole('button', { name: en.signOutAll }))
 
     expect(await screen.findByText('Could not sign out')).toBeTruthy()
-    expect((screen.getByRole('button', { name: en.loginAgain }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: en.signOutAll }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('stages, discards, and saves optional capability settings in the same card', async () => {

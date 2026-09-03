@@ -2,7 +2,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
 import type { OpenAICodexSettingsInjected } from './OpenAICodexSettings.tsx'
-import { AccountActions, AccountFeedback, accountStatusLabel, dotStyle, UsageLimits } from './OpenAICodexSettings.tsx'
+import { AccountFeedback, AccountManager, accountStatusLabel, dotStyle, UsageLimits } from './OpenAICodexSettings.tsx'
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
 
 export type OpenAICodexModelsCardInjected = Required<Pick<OpenAICodexSettingsInjected, 't' | 'account'>>
@@ -70,13 +70,11 @@ export function OpenAICodexModelsCard({ t, account, configScope }: OpenAICodexMo
       <span style={{ fontSize: 14, lineHeight: '22px', fontWeight: 500 }}>{t('modelsProviderName')}</span>
       <span aria-hidden="true" style={{ ...dotStyle(status.status), width: 8, height: 8 }} />
       <span role="status" style={{ ...secondaryStyle, flex: 1 }}>{label}</span>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginLeft: 'auto' }}>
-        <AccountActions t={t} store={account} snapshot={snapshot} compact />
-        {status.status === 'signed-in' && <button type="button" aria-expanded={expanded} aria-controls={detailsId}
-          onClick={() => { setExpanded(!expanded) }} style={buttonStyle}>{t(expanded ? 'hideQuota' : 'viewQuota')}</button>}
-      </div>
     </div>
     <div style={{ ...secondaryStyle, marginTop: 4 }}>{t('modelsProviderSupport')}</div>
+    <div style={{ marginTop: 12 }}>
+      <AccountManager t={t} store={account} snapshot={snapshot} compact quotaExpanded={expanded} onToggleQuota={() => { setExpanded(!expanded) }} />
+    </div>
     <AccountFeedback t={t} snapshot={snapshot} />
     {expanded && status.status === 'signed-in' && <div id={detailsId} style={{ borderTop: '1px solid var(--dsw-alias-border-l2)', marginTop: 12, paddingTop: 12 }}>
       <UsageLimits t={t} usage={status.usage} heading={false} {...status.quotaError === undefined ? {} : { quotaError: status.quotaError }} />
