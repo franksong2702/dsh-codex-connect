@@ -42,10 +42,10 @@ const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness w
 if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
   failures.push('README opening description mismatch')
 }
-const quickStartInstall = 'dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.24'
-if (!readme.includes(quickStartInstall)) failures.push('README must use the verified Alpha 4.24 install command')
+const quickStartInstall = 'dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.25'
+if (!readme.includes(quickStartInstall)) failures.push('README must use the verified Alpha 4.25 install command')
 if (!(await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')).includes(quickStartInstall)) {
-  failures.push('Chinese README must use the verified Alpha 4.24 install command')
+  failures.push('Chinese README must use the verified Alpha 4.25 install command')
 }
 if (!readme.includes('Use the image generation capability included with your current GPT subscription.')) {
   failures.push('README must describe image generation with the approved subscription copy')
