@@ -78,6 +78,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleTitle',
   'plugin-update-required': 'compatibilityPluginUpdateTitle',
+  'plugin-version-required': 'compatibilityPluginVersionTitle',
   'not-yet-compatible': 'compatibilityNotReadyTitle',
   unverified: 'compatibilityUnverifiedTitle',
 }
@@ -85,6 +86,7 @@ const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICo
 const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleBody',
   'plugin-update-required': 'compatibilityPluginUpdateBody',
+  'plugin-version-required': 'compatibilityPluginVersionBody',
   'not-yet-compatible': 'compatibilityNotReadyBody',
   unverified: 'compatibilityUnverifiedBody',
 }
@@ -92,6 +94,7 @@ const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICod
 const compatibilityIcons: Record<OpenAICodexDshCompatibilityStatus, string> = {
   compatible: '🟢',
   'plugin-update-required': '🟡',
+  'plugin-version-required': '🟡',
   'not-yet-compatible': '🔴',
   unverified: '⚪',
 }
@@ -239,7 +242,9 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
     compatibilityTitleKey = 'compatibilityCurrentDshNewerTitle'
     compatibilityBodyKey = 'compatibilityCurrentDshNewerBody'
   }
-  const compatibilityWarning = compatibility?.status === 'plugin-update-required' || compatibility?.status === 'not-yet-compatible'
+  const compatibilityWarning = compatibility?.status === 'plugin-update-required'
+    || compatibility?.status === 'plugin-version-required'
+    || compatibility?.status === 'not-yet-compatible'
   const noticeKey = latestVersion === undefined
     ? undefined
     : `${snapshot.currentVersion}:${latestVersion}:${snapshot.currentDshVersion ?? 'unknown'}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}`
@@ -272,7 +277,18 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
           <strong style={titleStyle}>{compatibilityIcons[compatibility.status]} {t(compatibilityTitleKey ?? compatibilityTitleKeys[compatibility.status])}</strong>
           <p style={bodyStyle}>{dshVersionSummary(snapshot.currentDshVersion, compatibility.latestDshVersion, t)}</p>
           <p style={bodyStyle}>{pluginVersionSummary(snapshot.currentVersion, compatibility.latestPluginVersion, t)}</p>
-          <p style={bodyStyle}>{t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
+          <p style={bodyStyle}>{compatibility.status === 'plugin-version-required'
+            ? t('compatibilityPluginVersionBody', {
+                dshVersion: snapshot.currentDshVersion ?? '',
+                pluginVersion: compatibility.recommendedPluginVersion,
+                latestDshVersion: compatibility.latestDshVersion,
+              })
+            : t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
+          {compatibility.status === 'plugin-version-required' ? (
+            <a href={`${OPENAI_CODEX_REPOSITORY_URL}/releases/tag/v${compatibility.recommendedPluginVersion}`} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+              {t('compatibilityPluginVersionAction', { version: compatibility.recommendedPluginVersion })}
+            </a>
+          ) : null}
           {compatibility.status === 'not-yet-compatible' && snapshot.currentDshVersion !== undefined ? (
             <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
               {t('compatibilityReport')}

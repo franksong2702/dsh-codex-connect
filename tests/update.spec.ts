@@ -206,6 +206,35 @@ describe('Codex Connect update metadata', () => {
     })
     expect(parseOpenAICodexUpdateResult({
       status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.0-rc.7',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'plugin-version-required',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.2',
+        recommendedPluginVersion: '0.1.0-alpha.4.14',
+      },
+    })).toMatchObject({
+      compatibility: {
+        status: 'plugin-version-required',
+        recommendedPluginVersion: '0.1.0-alpha.4.14',
+      },
+    })
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
+      currentVersion: '0.1.0-alpha.4.15',
+      currentDshVersion: '0.1.0-rc.7',
+      latestVersion: '0.1.0-alpha.4.15',
+      compatibility: {
+        status: 'plugin-version-required',
+        latestPluginVersion: '0.1.0-alpha.4.15',
+        latestDshVersion: '0.1.1-rc.2',
+        recommendedPluginVersion: '0.1.0-alpha.4.15',
+      },
+    })).toBeUndefined()
+    expect(parseOpenAICodexUpdateResult({
+      status: 'up-to-date',
       currentVersion: '0.1.0-alpha.4.14',
       currentDshVersion: 'not-a-version',
       latestVersion: '0.1.0-alpha.4.14',
