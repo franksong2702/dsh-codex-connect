@@ -78,6 +78,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleTitle',
   'plugin-update-required': 'compatibilityPluginUpdateTitle',
+  'dsh-update-required': 'compatibilityDshUpdateTitle',
   'not-yet-compatible': 'compatibilityNotReadyTitle',
   unverified: 'compatibilityUnverifiedTitle',
 }
@@ -85,6 +86,7 @@ const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICo
 const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleBody',
   'plugin-update-required': 'compatibilityPluginUpdateBody',
+  'dsh-update-required': 'compatibilityDshUpdateBody',
   'not-yet-compatible': 'compatibilityNotReadyBody',
   unverified: 'compatibilityUnverifiedBody',
 }
@@ -92,6 +94,7 @@ const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICod
 const compatibilityIcons: Record<OpenAICodexDshCompatibilityStatus, string> = {
   compatible: '🟢',
   'plugin-update-required': '🟡',
+  'dsh-update-required': '🟡',
   'not-yet-compatible': '🔴',
   unverified: '⚪',
 }
@@ -114,10 +117,10 @@ function pluginVersionSummary(current: string, latest: string | undefined, t: Op
     : t('compatibilityPluginDifferent', { current, latest })
 }
 
-function compatibilityIssueUrl(currentVersion: string, latestPluginVersion: string, currentDshVersion: string): string {
+function compatibilityIssueUrl(currentVersion: string, latestPluginVersion: string, currentDshVersion: string, latestDshVersion?: string): string {
   const params = new URLSearchParams({
-    title: `Verify Codex Connect compatibility with DSH ${currentDshVersion}`,
-    body: `The compatibility card reports that Codex Connect ${currentVersion} is not verified with DSH ${currentDshVersion}. The latest published plugin version shown is ${latestPluginVersion}. Please verify or update the public compatibility record.`,
+    title: `Support Codex Connect on DSH ${currentDshVersion}`,
+    body: `The compatibility card could not find a verified Codex Connect release for DSH ${currentDshVersion}. Installed Codex Connect: ${currentVersion}. Latest published Codex Connect: ${latestPluginVersion}. Latest DSH version in the compatibility record: ${latestDshVersion ?? 'unavailable'}. This reports a verification or adaptation gap; it does not claim that the installed combination is known to fail.`,
   })
   return `${OPENAI_CODEX_REPOSITORY_URL}/issues/new?${params.toString()}`
 }
@@ -239,10 +242,12 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
     compatibilityTitleKey = 'compatibilityCurrentDshNewerTitle'
     compatibilityBodyKey = 'compatibilityCurrentDshNewerBody'
   }
-  const compatibilityWarning = compatibility?.status === 'plugin-update-required' || compatibility?.status === 'not-yet-compatible'
+  const compatibilityWarning = compatibility?.status === 'plugin-update-required'
+    || compatibility?.status === 'dsh-update-required'
+    || compatibility?.status === 'not-yet-compatible'
   const noticeKey = latestVersion === undefined
     ? undefined
-    : `${snapshot.currentVersion}:${latestVersion}:${snapshot.currentDshVersion ?? 'unknown'}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}`
+    : `${snapshot.currentVersion}:${latestVersion}:${snapshot.currentDshVersion ?? 'unknown'}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}:${compatibility?.reportCompatibilityGap === true ? 'report' : 'no-report'}`
   if (overlay && ((!compatibilityWarning && snapshot.status !== 'update-available') || noticeKey === undefined || snapshot.dismissedNotice === noticeKey)) return null
   const available = snapshot.status === 'update-available'
   const technicalDetails = available && technicalDetailsOpen
@@ -272,9 +277,18 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
           <strong style={titleStyle}>{compatibilityIcons[compatibility.status]} {t(compatibilityTitleKey ?? compatibilityTitleKeys[compatibility.status])}</strong>
           <p style={bodyStyle}>{dshVersionSummary(snapshot.currentDshVersion, compatibility.latestDshVersion, t)}</p>
           <p style={bodyStyle}>{pluginVersionSummary(snapshot.currentVersion, compatibility.latestPluginVersion, t)}</p>
-          <p style={bodyStyle}>{t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
-          {compatibility.status === 'not-yet-compatible' && snapshot.currentDshVersion !== undefined ? (
-            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+          <p style={bodyStyle}>{compatibility.status === 'dsh-update-required'
+            ? t('compatibilityDshUpdateBody', {
+                latestDshVersion: compatibility.latestDshVersion ?? '',
+              })
+            : t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
+          {compatibility.status === 'dsh-update-required' && compatibility.latestDshVersion !== undefined ? (
+            <a href={`https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v${compatibility.latestDshVersion}`} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+              {t('compatibilityDshUpdateAction', { version: compatibility.latestDshVersion })}
+            </a>
+          ) : null}
+          {compatibility.reportCompatibilityGap === true && snapshot.currentDshVersion !== undefined ? (
+            <a href={compatibilityIssueUrl(snapshot.currentVersion, compatibility.latestPluginVersion, snapshot.currentDshVersion, compatibility.latestDshVersion)} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
               {t('compatibilityReport')}
             </a>
           ) : null}
