@@ -78,7 +78,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleTitle',
   'plugin-update-required': 'compatibilityPluginUpdateTitle',
-  'plugin-version-required': 'compatibilityPluginVersionTitle',
+  'dsh-update-required': 'compatibilityDshUpdateTitle',
   'not-yet-compatible': 'compatibilityNotReadyTitle',
   unverified: 'compatibilityUnverifiedTitle',
 }
@@ -86,7 +86,7 @@ const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICo
 const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {
   compatible: 'compatibilityCompatibleBody',
   'plugin-update-required': 'compatibilityPluginUpdateBody',
-  'plugin-version-required': 'compatibilityPluginVersionBody',
+  'dsh-update-required': 'compatibilityDshUpdateBody',
   'not-yet-compatible': 'compatibilityNotReadyBody',
   unverified: 'compatibilityUnverifiedBody',
 }
@@ -94,7 +94,7 @@ const compatibilityBodyKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICod
 const compatibilityIcons: Record<OpenAICodexDshCompatibilityStatus, string> = {
   compatible: '🟢',
   'plugin-update-required': '🟡',
-  'plugin-version-required': '🟡',
+  'dsh-update-required': '🟡',
   'not-yet-compatible': '🔴',
   unverified: '⚪',
 }
@@ -243,7 +243,7 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
     compatibilityBodyKey = 'compatibilityCurrentDshNewerBody'
   }
   const compatibilityWarning = compatibility?.status === 'plugin-update-required'
-    || compatibility?.status === 'plugin-version-required'
+    || compatibility?.status === 'dsh-update-required'
     || compatibility?.status === 'not-yet-compatible'
   const noticeKey = latestVersion === undefined
     ? undefined
@@ -277,16 +277,14 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
           <strong style={titleStyle}>{compatibilityIcons[compatibility.status]} {t(compatibilityTitleKey ?? compatibilityTitleKeys[compatibility.status])}</strong>
           <p style={bodyStyle}>{dshVersionSummary(snapshot.currentDshVersion, compatibility.latestDshVersion, t)}</p>
           <p style={bodyStyle}>{pluginVersionSummary(snapshot.currentVersion, compatibility.latestPluginVersion, t)}</p>
-          <p style={bodyStyle}>{compatibility.status === 'plugin-version-required'
-            ? t('compatibilityPluginVersionBody', {
-                dshVersion: snapshot.currentDshVersion ?? '',
-                pluginVersion: compatibility.recommendedPluginVersion,
-                latestDshVersion: compatibility.latestDshVersion,
+          <p style={bodyStyle}>{compatibility.status === 'dsh-update-required'
+            ? t('compatibilityDshUpdateBody', {
+                latestDshVersion: compatibility.latestDshVersion ?? '',
               })
             : t(compatibilityBodyKey ?? compatibilityBodyKeys[compatibility.status])}</p>
-          {compatibility.status === 'plugin-version-required' ? (
-            <a href={`${OPENAI_CODEX_REPOSITORY_URL}/releases/tag/v${compatibility.recommendedPluginVersion}`} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
-              {t('compatibilityPluginVersionAction', { version: compatibility.recommendedPluginVersion })}
+          {compatibility.status === 'dsh-update-required' && compatibility.latestDshVersion !== undefined ? (
+            <a href={`https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v${compatibility.latestDshVersion}`} target="_blank" rel="noopener noreferrer" style={textButtonStyle}>
+              {t('compatibilityDshUpdateAction', { version: compatibility.latestDshVersion })}
             </a>
           ) : null}
           {compatibility.status === 'not-yet-compatible' && snapshot.currentDshVersion !== undefined ? (

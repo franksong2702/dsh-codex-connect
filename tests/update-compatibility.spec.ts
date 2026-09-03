@@ -67,12 +67,11 @@ describe('Codex Connect verified DSH compatibility', () => {
     })
   })
 
-  it('recommends the newest published verified plugin for an older DSH version', () => {
+  it('recommends updating DSH when the latest plugin matches the latest verified DSH', () => {
     expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.24', '0.1.0-alpha.4.24', '0.1.2-alpha.2', catalog)).toEqual({
-      status: 'plugin-version-required',
+      status: 'dsh-update-required',
       latestPluginVersion: '0.1.0-alpha.4.24',
       latestDshVersion: '0.1.2-alpha.5',
-      recommendedPluginVersion: '0.1.0-alpha.4.23',
     })
   })
 

@@ -191,7 +191,7 @@ describe('Codex Connect global update reminder', () => {
     updater.dispose()
   })
 
-  it('shows the verified historical plugin instead of asking the user to report a known pair', async () => {
+  it('recommends updating DSH instead of asking the user to report a known upgrade path', async () => {
     const browserStorage = storageFixture()
     vi.stubGlobal('localStorage', browserStorage)
     vi.stubGlobal('fetch', vi.fn(async (input: string): Promise<Response> => input === OPENAI_CODEX_RUNTIME_PATH
@@ -202,10 +202,9 @@ describe('Codex Connect global update reminder', () => {
           currentDshVersion: '0.1.2-alpha.2',
           latestVersion: '0.1.0-alpha.4.24',
           compatibility: {
-            status: 'plugin-version-required',
+            status: 'dsh-update-required',
             latestPluginVersion: '0.1.0-alpha.4.24',
             latestDshVersion: '0.1.2-alpha.5',
-            recommendedPluginVersion: '0.1.0-alpha.4.23',
           },
         })))
     const updater = new OpenAICodexUpdateStore('0.1.0-alpha.4.24')
@@ -213,12 +212,12 @@ describe('Codex Connect global update reminder', () => {
 
     render(<OpenAICodexUpdateOverlay updater={updater} t={t} useSessions={vi.fn() as never} useWorkspaces={vi.fn() as never} useSessionPendingInteraction={vi.fn() as never} />)
     const notice = screen.getByRole('status')
-    expect(document.querySelector('[data-compatibility-status="plugin-version-required"]')).toBeTruthy()
-    expect(notice.textContent).toContain(en.compatibilityPluginVersionTitle)
-    expect(notice.textContent).toContain('DSH 0.1.2-alpha.2 is verified with Codex Connect 0.1.0-alpha.4.23')
+    expect(document.querySelector('[data-compatibility-status="dsh-update-required"]')).toBeTruthy()
+    expect(notice.textContent).toContain(en.compatibilityDshUpdateTitle)
+    expect(notice.textContent).toContain('The latest Codex Connect is verified with DSH 0.1.2-alpha.5')
     expect(screen.queryByRole('link', { name: en.compatibilityReport })).toBeNull()
-    const release = screen.getByRole('link', { name: 'Open Codex Connect 0.1.0-alpha.4.23 release' }) as HTMLAnchorElement
-    expect(release.href).toBe(`${OPENAI_CODEX_REPOSITORY_URL}/releases/tag/v0.1.0-alpha.4.23`)
+    const dshRelease = screen.getByRole('link', { name: 'Open DSH 0.1.2-alpha.5 release' }) as HTMLAnchorElement
+    expect(dshRelease.href).toBe('https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.2-alpha.5')
     updater.dispose()
   })
 

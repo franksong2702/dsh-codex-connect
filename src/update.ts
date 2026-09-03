@@ -45,22 +45,15 @@ export interface OpenAICodexUpdateCatalog {
 export type OpenAICodexDshCompatibilityStatus =
   | 'compatible'
   | 'plugin-update-required'
-  | 'plugin-version-required'
+  | 'dsh-update-required'
   | 'not-yet-compatible'
   | 'unverified'
 
-export type OpenAICodexDshCompatibilityAdvice =
-  | {
-      status: Exclude<OpenAICodexDshCompatibilityStatus, 'plugin-version-required'>
-      latestPluginVersion: string
-      latestDshVersion?: string
-    }
-  | {
-      status: 'plugin-version-required'
-      latestPluginVersion: string
-      latestDshVersion: string
-      recommendedPluginVersion: string
-    }
+export interface OpenAICodexDshCompatibilityAdvice {
+  status: OpenAICodexDshCompatibilityStatus
+  latestPluginVersion: string
+  latestDshVersion?: string
+}
 
 export interface OpenAICodexVerifiedPluginVersion {
   version: string
@@ -270,21 +263,15 @@ export function evaluateOpenAICodexDshCompatibility(
   if (latestPluginVersion !== currentVersion && verified(latestPluginVersion)) {
     return { status: 'plugin-update-required', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
   }
-  const recommendedPluginVersion = catalog.pluginVersions
-    .filter(plugin => (
-      plugin.verifiedDshVersions.includes(currentDshVersion)
-      && compareOpenAICodexVersions(plugin.version, latestPluginVersion) <= 0
-    ))
-    .map(plugin => plugin.version)
-    .reduce<string | undefined>((best, version) => (
-      best === undefined || compareOpenAICodexVersions(version, best) > 0 ? version : best
-    ), undefined)
-  if (recommendedPluginVersion !== undefined) {
+  const latestPairVerified = catalog.pluginVersions.some(plugin => (
+    plugin.version === latestPluginVersion
+    && plugin.verifiedDshVersions.includes(catalog.latestDshVersion)
+  ))
+  if (latestPairVerified) {
     return {
-      status: 'plugin-version-required',
+      status: 'dsh-update-required',
       latestPluginVersion,
       latestDshVersion: catalog.latestDshVersion,
-      recommendedPluginVersion,
     }
   }
   const dshVersionIsKnown = currentDshVersion === catalog.latestDshVersion
@@ -600,7 +587,7 @@ function parseOpenAICodexDshCompatibilityAdvice(
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
   const record = value as Record<string, unknown>
   const status = record['status']
-  if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'plugin-version-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
+  if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'dsh-update-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
   if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
   const latestDshVersion = record['latestDshVersion']
   if (status === 'unverified') {
@@ -609,12 +596,5 @@ function parseOpenAICodexDshCompatibilityAdvice(
     return { status, latestPluginVersion, latestDshVersion }
   }
   if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
-  if (status === 'plugin-version-required') {
-    const recommendedPluginVersion = record['recommendedPluginVersion']
-    if (typeof recommendedPluginVersion !== 'string'
-      || parseOpenAICodexVersion(recommendedPluginVersion) === undefined
-      || recommendedPluginVersion === latestPluginVersion) return undefined
-    return { status, latestPluginVersion, latestDshVersion, recommendedPluginVersion }
-  }
   return { status, latestPluginVersion, latestDshVersion }
 }
