@@ -587,6 +587,7 @@ interface OpenAICodexDshCompatibilityAdvice {
   status: OpenAICodexDshCompatibilityStatus;
   latestPluginVersion: string;
   latestDshVersion?: string;
+  reportCompatibilityGap?: true;
 }
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';

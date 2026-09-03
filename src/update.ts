@@ -53,6 +53,7 @@ export interface OpenAICodexDshCompatibilityAdvice {
   status: OpenAICodexDshCompatibilityStatus
   latestPluginVersion: string
   latestDshVersion?: string
+  reportCompatibilityGap?: true
 }
 
 export interface OpenAICodexVerifiedPluginVersion {
@@ -267,19 +268,19 @@ export function evaluateOpenAICodexDshCompatibility(
     plugin.version === latestPluginVersion
     && plugin.verifiedDshVersions.includes(catalog.latestDshVersion)
   ))
-  if (latestPairVerified) {
+  if (latestPairVerified && compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) < 0) {
     return {
       status: 'dsh-update-required',
       latestPluginVersion,
       latestDshVersion: catalog.latestDshVersion,
     }
   }
-  const dshVersionIsKnown = currentDshVersion === catalog.latestDshVersion
-    || catalog.pluginVersions.some(plugin => plugin.verifiedDshVersions.includes(currentDshVersion))
+  const currentDshAtOrBeyondLatest = compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) >= 0
   return {
-    status: dshVersionIsKnown ? 'not-yet-compatible' : 'unverified',
+    status: currentDshAtOrBeyondLatest ? 'not-yet-compatible' : 'unverified',
     latestPluginVersion,
     latestDshVersion: catalog.latestDshVersion,
+    ...currentDshAtOrBeyondLatest ? { reportCompatibilityGap: true as const } : {},
   }
 }
 
@@ -590,11 +591,19 @@ function parseOpenAICodexDshCompatibilityAdvice(
   if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'dsh-update-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
   if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
   const latestDshVersion = record['latestDshVersion']
+  const reportCompatibilityGap = record['reportCompatibilityGap']
+  if (reportCompatibilityGap !== undefined && reportCompatibilityGap !== true) return undefined
+  if (reportCompatibilityGap === true && status !== 'not-yet-compatible') return undefined
   if (status === 'unverified') {
     if (latestDshVersion === undefined) return { status, latestPluginVersion }
     if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
     return { status, latestPluginVersion, latestDshVersion }
   }
   if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
-  return { status, latestPluginVersion, latestDshVersion }
+  return {
+    status,
+    latestPluginVersion,
+    latestDshVersion,
+    ...reportCompatibilityGap === true ? { reportCompatibilityGap: true as const } : {},
+  }
 }
