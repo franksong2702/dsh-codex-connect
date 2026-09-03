@@ -42,6 +42,7 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
   constructor(filename?: string);
   /** Read and validate the current document without acquiring the writer lock. */
   private readDocument;
+  private readDocumentAt;
   private writeDocument;
   /** @inheritdoc */
   read(providerId: string): Promise<Credential | undefined>;
@@ -49,6 +50,8 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
   list(): Promise<readonly CredentialInfo[]>;
   /** List browser-safe account summaries without exposing provider account ids. */
   accounts(): Promise<readonly OpenAICodexAccountSummary[]>;
+  /** Resolve the account id stored with one exact access token. */
+  accountIdForAccess(access: string): Promise<string | undefined>;
   /** Select a stored account using its browser-safe key. */
   activate(selectedAccountKey: string): Promise<OAuthCredential>;
   /** Remove one account; active removal requires an explicit stored replacement. */

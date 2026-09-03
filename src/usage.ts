@@ -228,9 +228,8 @@ export async function readOpenAICodexRateLimits(
   const models = createModels({ credentials: store })
   models.setProvider(openaiCodexProvider())
   const auth = await models.getAuth(OPENAI_CODEX_PROVIDER)
-  const credential = await store.read(OPENAI_CODEX_PROVIDER)
   const access = auth?.auth.apiKey
-  const accountId = credential?.type === 'oauth' ? credential.accountId : undefined
+  const accountId = access === undefined ? undefined : await store.accountIdForAccess(access)
   if (access === undefined || access.length === 0 || typeof accountId !== 'string' || accountId.length === 0) {
     throw new Error('OpenAI Codex is signed out')
   }

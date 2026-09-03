@@ -4,7 +4,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { mkdir, open, rm, stat } from 'node:fs/promises'
+import { mkdir, open, rm } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import type { Credential, CredentialInfo, CredentialStore, OAuthCredential } from '@earendil-works/pi-ai'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
@@ -198,21 +198,25 @@ export class OpenAICodexCredentialStore implements CredentialStore {
 
   /** Read and validate the current document without acquiring the writer lock. */
   private async readDocument(): Promise<AuthDocument | undefined> {
+    return this.readDocumentAt(this.filename)
+  }
+
+  private async readDocumentAt(filename: string): Promise<AuthDocument | undefined> {
     let handle
     try {
-      handle = await open(this.filename, 'r')
+      handle = await open(filename, 'r')
     } catch (error) {
       if (isENOENT(error)) return undefined
       throw error
     }
     try {
       const info = await handle.stat()
-      if (!info.isFile()) throw new Error(`openai-codex: ${this.filename} must be a regular file`)
-      assertOwnerOnly(this.filename, info.mode)
+      if (!info.isFile()) throw new Error(`openai-codex: ${filename} must be a regular file`)
+      assertOwnerOnly(filename, info.mode)
       if (info.size > OPENAI_CODEX_AUTH_DOCUMENT_LIMIT) {
-        throw new Error(`openai-codex: ${this.filename} exceeds ${String(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT)} bytes`)
+        throw new Error(`openai-codex: ${filename} exceeds ${String(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT)} bytes`)
       }
-      return parseDocument(await handle.readFile('utf8'), this.filename)
+      return parseDocument(await handle.readFile('utf8'), filename)
     } finally {
       await handle.close()
     }
@@ -221,14 +225,15 @@ export class OpenAICodexCredentialStore implements CredentialStore {
   private async writeDocument(document: AuthDocumentV2, previous?: AuthDocument): Promise<void> {
     const text = serializeDocument(document)
     if (previous?.version === 1) {
-      try {
-        await stat(this.version1BackupFilename)
-      } catch (error) {
-        if (!isENOENT(error)) throw error
+      const existingBackup = await this.readDocumentAt(this.version1BackupFilename)
+      if (existingBackup === undefined) {
         await writeFileAtomic(this.version1BackupFilename, serializeDocument(previous), {
           mode: 0o600,
           dirMode: 0o700,
         })
+      } else if (existingBackup.version !== 1
+        || serializeDocument(existingBackup) !== serializeDocument(previous)) {
+        throw new Error(`openai-codex: ${this.version1BackupFilename} rollback copy does not match the current version 1 credential`)
       }
     }
     await writeFileAtomic(this.filename, text, { mode: 0o600, dirMode: 0o700 })
@@ -262,6 +267,13 @@ export class OpenAICodexCredentialStore implements CredentialStore {
       profileSource: profiles[index]!.source,
       active: credential.accountId === activeAccountId,
     }))
+  }
+
+  /** Resolve the account id stored with one exact access token. */
+  async accountIdForAccess(access: string): Promise<string | undefined> {
+    const document = await this.readDocument()
+    if (document === undefined) return undefined
+    return documentCredentials(document).find(credential => credential.access === access)?.accountId
   }
 
   /** Select a stored account using its browser-safe key. */

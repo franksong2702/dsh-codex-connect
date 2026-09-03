@@ -118,6 +118,19 @@ describe('OpenAICodexCredentialStore', () => {
     expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(original)
   })
 
+  it('refuses to replace version 1 when an existing rollback copy does not match', async () => {
+    const auth = await store()
+    const original = `${JSON.stringify({ version: 1, credential: credential('old') }, null, 2)}\n`
+    const unrelated = `${JSON.stringify({ version: 1, credential: credential('other', 'other-account') }, null, 2)}\n`
+    await writeFile(auth.filename, original, { mode: 0o600 })
+    await writeFile(auth.version1BackupFilename, unrelated, { mode: 0o600 })
+
+    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2'))))
+      .rejects.toThrow(/rollback copy does not match/u)
+    expect(await readFile(auth.filename, 'utf8')).toBe(original)
+    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(unrelated)
+  })
+
   it('lists opaque account summaries and activates a selected account', async () => {
     const auth = await store()
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('one', 'provider-account-one')))
@@ -129,6 +142,8 @@ describe('OpenAICodexCredentialStore', () => {
     expect(JSON.stringify(accounts)).not.toContain('provider-account')
     expect(accounts.map(account => account.active)).toEqual([false, true])
     expect(accounts.map(account => account.displayName)).toEqual(['ChatGPT account 1', 'ChatGPT account 2'])
+    expect(await auth.accountIdForAccess('one')).toBe('provider-account-one')
+    expect(await auth.accountIdForAccess('missing')).toBeUndefined()
 
     await auth.activate(accounts[0]!.accountKey)
     expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'provider-account-one' })
