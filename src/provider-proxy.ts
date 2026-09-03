@@ -174,7 +174,7 @@ export class OpenAICodexProxyManager {
   private agentFor(proxyUrl: string): ProxyAgent {
     let agent = this.agents.get(proxyUrl)
     if (agent !== undefined) return agent
-    agent = new ProxyAgent(proxyUrl)
+    agent = new ProxyAgent({ uri: proxyUrl, proxyTunnel: true })
     this.agents.set(proxyUrl, agent)
     return agent
   }
