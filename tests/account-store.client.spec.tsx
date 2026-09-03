@@ -51,6 +51,7 @@ describe('shared Models and Plugin account state', () => {
     const account = new OpenAICodexAccountStore()
     render(<OpenAICodexModelsCard t={t} account={account} />)
     const view = await screen.findByRole('button', { name: en.viewQuota })
+    expect(view.getAttribute('aria-controls')).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     fireEvent.click(view)
     expect(screen.getAllByRole('progressbar')).toHaveLength(4)
@@ -320,6 +321,48 @@ describe('shared Models and Plugin account state', () => {
     await account.remove(SECOND_ACCOUNT_KEY, ACCOUNT_KEY)
     expect(account.getSnapshot().accounts).toEqual([{ ...ACTIVE_ACCOUNT, active: true }])
     expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('https://auth.openai.com/account-id')
+    unsubscribe()
+    account.dispose()
+  })
+
+  it('reconciles a successful mutation after its account-list refresh fails', async () => {
+    vi.useFakeTimers()
+    let statusReads = 0
+    const switched = [
+      { ...ACTIVE_ACCOUNT, active: false },
+      { ...SECOND_ACCOUNT, active: true },
+    ]
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        statusReads += 1
+        return rawJson({
+          status: 'signed-in',
+          usage: { rateLimits: [] },
+          accounts: statusReads === 1 ? [ACTIVE_ACCOUNT, SECOND_ACCOUNT] : switched,
+        })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST') {
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) {
+        return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 503 })
+      }
+      throw new Error(`unexpected request ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(account.getSnapshot().accounts).toHaveLength(2)
+
+    await account.activate(SECOND_ACCOUNT_KEY)
+    expect(account.getSnapshot().operationError).toBe('temporary failure')
+    await vi.advanceTimersByTimeAsync(4_999)
+    expect(statusReads).toBe(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(statusReads).toBe(2)
+    expect(account.getSnapshot().accounts).toEqual(switched)
+    expect(account.getSnapshot().operationError).toBeUndefined()
     unsubscribe()
     account.dispose()
   })

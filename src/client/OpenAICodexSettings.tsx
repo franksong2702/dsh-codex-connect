@@ -227,14 +227,16 @@ export function AccountActions({ t, store, snapshot, compact = false }: {
 }
 
 /** Saved-account summary and explicit account-management actions. */
-export function AccountManager({ t, store, snapshot, quotaExpanded, onToggleQuota, compact = false }: {
+export function AccountManager({ t, store, snapshot, quotaExpanded, quotaControlsId, onToggleQuota, compact = false }: {
   t: OpenAICodexSettingsInjected['t']
   store: OpenAICodexAccountStore
   snapshot: AccountSnapshot
   quotaExpanded?: boolean
+  quotaControlsId?: string
   onToggleQuota?: () => void
   compact?: boolean
 }) {
+  const accountsPanelId = useId()
   const [expanded, setExpanded] = useState(false)
   const [removeKey, setRemoveKey] = useState<string>()
   const { accounts, busy, operation, status } = snapshot
@@ -272,17 +274,17 @@ export function AccountManager({ t, store, snapshot, quotaExpanded, onToggleQuot
           : null}
         {authorizing ? <AccountActions t={t} store={store} snapshot={snapshot} compact /> : null}
         {onToggleQuota === undefined || status.status !== 'signed-in' ? null : (
-          <button type="button" style={buttonStyle} aria-expanded={quotaExpanded} onClick={onToggleQuota}>
+          <button type="button" style={buttonStyle} aria-expanded={quotaExpanded} aria-controls={quotaControlsId} onClick={onToggleQuota}>
             {t(quotaExpanded === true ? 'hideQuota' : 'viewQuota')}
           </button>
         )}
-        <button type="button" style={buttonStyle} aria-expanded={expanded} onClick={() => { setExpanded(!expanded) }}>
+        <button type="button" style={buttonStyle} aria-expanded={expanded} aria-controls={accountsPanelId} onClick={() => { setExpanded(!expanded) }}>
           {t(expanded ? 'hideAccounts' : 'manageAccounts')}
         </button>
       </div>
     </div>
     {authorizing ? <p style={bodyStyle}>{t('addingAccountKeepsCurrent')}</p> : null}
-    {expanded ? <div style={accountPanelStyle}>
+    {expanded ? <div id={accountsPanelId} style={accountPanelStyle}>
       <div style={{ ...rowStyle, padding: '10px 14px', background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04))' }}>
         <strong>{t('savedAccounts')} · {accounts.length}</strong>
         <button type="button" style={primaryButtonStyle} disabled={busy || authorizing} onClick={() => { void store.signIn() }}>

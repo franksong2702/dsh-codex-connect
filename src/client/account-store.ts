@@ -238,8 +238,9 @@ export class OpenAICodexAccountStore {
   private schedule(): void {
     clearTimeout(this.timer)
     const interval = this.snapshot.operation.kind === 'waiting-authorization' || this.snapshot.status.status === 'signing-in' ? 1_000
-      : this.snapshot.status.status === 'signed-in' ? 60_000
-        : this.snapshot.status.status === 'error' && this.snapshot.accounts.length > 0 ? 5_000 : undefined
+      : this.snapshot.operationError !== undefined && this.snapshot.accounts.length > 0 ? 5_000
+        : this.snapshot.status.status === 'signed-in' ? 60_000
+          : this.snapshot.status.status === 'error' && this.snapshot.accounts.length > 0 ? 5_000 : undefined
     if (!this.disposed && this.listeners.size > 0 && interval !== undefined) {
       this.timer = setTimeout(() => { void this.refresh() }, interval)
     }
