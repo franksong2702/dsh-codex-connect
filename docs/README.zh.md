@@ -18,19 +18,23 @@
 
 ## 五分钟快速开始
 
-本快速指南适用于 DSH `0.1.2-alpha.5` 与 Codex Connect Alpha 4.25。请先运行 `dsh --version`。如果使用 DSH `0.1.2-alpha.2`、`0.1.1-rc.2` 或 `0.1.0-rc.7`，请在 [INSTALL.md](../INSTALL.md) 中选择匹配的插件版本。本指南使用 `web` profile；请把 `web` 替换成你已经在用的 Harness profile 名称。如果在 DeepSeek Harness 源码 checkout 中运行，请在命令前加 `pnpm`。
+本快速指南适用于 DSH `0.1.2-rc.1` 与 Codex Connect Alpha 4.26。请先运行 `dsh --version`。如果使用 DSH `0.1.2-alpha.5`、`0.1.2-alpha.2`、`0.1.1-rc.2` 或 `0.1.0-rc.7`，请在 [INSTALL.md](../INSTALL.md) 中选择匹配的插件版本。本指南使用 `web` profile；请把 `web` 替换成你已经在用的 Harness profile 名称。如果在 DeepSeek Harness 源码 checkout 中运行，请在命令前加 `pnpm`。
 
 ### 1. 将插件装入一个 profile
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.25
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.26
 ```
 
 预期结果：包被加入该 profile。这个动作不会更改 profile 的默认模型或全局搜索路由。
 
 请使用上面的精确版本，确保已验证的 DSH 与插件组合可以复现。`alpha` 是会移动的 npm 标签，不是兼容性保证。
 
-### Alpha 4.25 更新内容
+### Alpha 4.26 更新内容
+
+- 新增对 DSH `0.1.2-rc.1` 的已验证兼容性，覆盖隔离安装、profile 组合、诊断、模型目录和卸载清理 canary。
+
+### Alpha 4.25 既有内容
 
 - 显示 ChatGPT 为当前 Codex 模型实际返回的 5 小时和每周额度窗口。缺少的窗口不会凭空出现，Spark 额度保持独立，也不会因套餐名称而隐藏服务端数据。
 - 将“当前组合是否已验证”和“是否需要提醒维护者”分开判断。缺少验证记录不再被说成已知运行失败，也不会建议降级插件。
@@ -324,7 +328,7 @@ dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
 
 ## 兼容性与安全边界
 
-- Alpha 4.25 已与 DSH 插件 API packages `0.1.2-alpha.5`、`@earendil-works/pi-ai` `^0.84.2`（验证时解析为 `0.84.4`）和 Node.js `^22.19.0 || >=24.0.0` 完成验证。Alpha 4.24 仍是同一 DSH 版本较早的已验证选择；Alpha 4.23 仍是 DSH `0.1.2-alpha.2` 的已验证选择；Alpha 4.21 仍与 DSH `0.1.1-rc.2` 和 pi-ai `0.82.1` 保持已验证状态。[verified-compatibility.json](../verified-compatibility.json) 记录精确组合；安装命令见 [INSTALL.md](../INSTALL.md)。
+- Alpha 4.26 已与 DSH 插件 API packages `0.1.2-rc.1`、`@earendil-works/pi-ai` `^0.84.2` 和 Node.js `^22.19.0 || >=24.0.0` 完成验证。Alpha 4.25 仍是 DSH `0.1.2-alpha.5` 的已验证选择；Alpha 4.23 仍是 DSH `0.1.2-alpha.2` 的已验证选择；Alpha 4.21 仍与 DSH `0.1.1-rc.2` 和 pi-ai `0.82.1` 保持已验证状态。[verified-compatibility.json](../verified-compatibility.json) 记录精确组合；安装命令见 [INSTALL.md](../INSTALL.md)。
 - 新版 DSH 将原来的 client runtime 拆分为 Session Controller、Settings、Store 和 Renderer 包。Codex Connect 通过这些公开接口接入设置和图片操作。规范化预览的编码与尺寸由 DSH 决定；Codex Connect 另行保留字节完全一致的原图。
 - 升级时请将 DSH 插件 API packages 与 `@earendil-works/pi-ai` 作为一组升级，再运行 `dsh-codex-connect doctor --json` 和兼容性检查。本契约不对未来版本作判断。
 - 每日上游检查发现新的 DSH `latest` 或 `next` 候选版本时，会把 Codex Connect 安装到隔离 Profile 中，在没有 OAuth 凭据的情况下启动已安装的模型运行时，验证模型与推理强度发现，并确认提供方可被正确卸载。真实登录、额度和模型请求仍需在测试 Profile 中人工验证。
