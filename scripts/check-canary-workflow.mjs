@@ -78,8 +78,8 @@ const candidateReport = overrides => ({
   status: 'pass',
   classification: 'candidate-compatible',
   channel: 'alpha',
-  supportedVersion: '0.1.2-alpha.5',
-  candidateVersion: '0.1.2-alpha.6',
+  supportedVersion: '0.1.2-rc.1',
+  candidateVersion: '0.1.2-rc.2',
   stage: 'isolated-install',
   nodeVersion: 'v24.15.0',
   pluginCommit: null,
@@ -90,7 +90,7 @@ const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, tr
 assertContract(
   'a passing newer candidate becomes a preliminary validation tracker',
   passedTracking?.state === 'passed-needs-full-validation'
-    && passedTracking.marker === '<!-- dsh-canary:0.1.2-alpha.6 -->'
+    && passedTracking.marker === '<!-- dsh-canary:0.1.2-rc.2 -->'
     && passedTracking.label === 'enhancement'
     && passedTracking.body.includes('preliminary evidence only'),
 )
@@ -145,6 +145,10 @@ assertContract('undeclared candidates install the packed artifact', /allowUndecl
 assertContract(
   'candidate checks boot the installed model runtime',
   /check-installed-runtime/.test(installCheck) && /installed runtime contract/.test(installCheck),
+)
+assertContract(
+  'candidate checks compose the installed profile before plugin commands',
+  /\['web', '--help'\][\s\S]*?installed profile boot[\s\S]*?plugin doctor/u.test(installCheck),
 )
 assertContract('publishing and deployment commands are absent', !/npm publish|gh release create|\bdeploy\b|3080|3081/iu.test(workflow))
 assertContract(

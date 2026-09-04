@@ -9,7 +9,7 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 
 const JSON_SCHEMA_VERSION = 1
-const DEFAULT_DSH_VERSION = '0.1.2-alpha.5'
+const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
@@ -228,6 +228,10 @@ async function main() {
       || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
+
+    // DSH rc.1 prepares profile-to-installation module fallback during profile composition.
+    const profileHelp = await runCommand(dshBinary, ['web', '--help'], { cwd: workspace, env })
+    requireSuccess('installed profile boot', profileHelp, 'compatibility')
 
     const doctor = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'exec', 'dsh-codex-connect', 'doctor', '--json',

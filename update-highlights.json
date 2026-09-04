@@ -84,6 +84,10 @@
     {
       "version": "0.1.0-alpha.4.25",
       "highlights": ["runtime-compatibility"]
+    },
+    {
+      "version": "0.1.0-alpha.4.26",
+      "highlights": ["runtime-compatibility"]
     }
   ]
 }
