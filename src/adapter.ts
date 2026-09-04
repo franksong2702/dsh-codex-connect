@@ -232,8 +232,6 @@ export function createOpenAICodexAdapter(
     }
     return profiles
   }
-  const models: MutableModels = createModels({ credentials })
-  models.setProvider(provider)
   class OpenAICodexAdapter extends PiAiAdapter {
     override async listModels(providerId: string) {
       const catalog = await super.listModels(providerId)
@@ -246,7 +244,12 @@ export function createOpenAICodexAdapter(
   return new OpenAICodexAdapter({
     profiles: currentProfiles,
     resolveApiKey: async () => {
-      const operation = async () => (await models.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey
+      const operation = async () => {
+        const requestCredentials = await credentials.captureActiveAccount()
+        const requestModels: MutableModels = createModels({ credentials: requestCredentials })
+        requestModels.setProvider(provider)
+        return (await requestModels.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey
+      }
       return proxyManager?.run(resolveProxyUrl?.(), operation) ?? operation()
     },
     auth: { credentials, authContext: defaultProviderAuthContext() },

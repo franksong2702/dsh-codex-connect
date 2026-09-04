@@ -246,6 +246,67 @@ export class OpenAICodexCredentialStore implements CredentialStore {
     return document === undefined ? undefined : cloneCredential(activeCredential(document))
   }
 
+  /**
+   * Capture the current account for one request's complete auth resolution.
+   * Refreshes through the returned store update only that captured account and
+   * never change the user's current account selection.
+   */
+  async captureActiveAccount(): Promise<CredentialStore> {
+    const document = await this.readDocument()
+    const captured = document === undefined ? undefined : cloneCredential(activeCredential(document))
+    const capturedAccountId = captured?.accountId
+    let requestCredential: StoredOAuthCredential | undefined = captured
+    return {
+      read: async providerId => providerId === OPENAI_CODEX_PROVIDER && requestCredential !== undefined
+        ? cloneCredential(requestCredential)
+        : undefined,
+      list: async () => requestCredential === undefined
+        ? []
+        : [{ providerId: OPENAI_CODEX_PROVIDER, type: 'oauth' }],
+      modify: async (providerId, fn) => {
+        if (providerId !== OPENAI_CODEX_PROVIDER) {
+          throw new Error(`openai-codex: captured credential store does not own provider "${providerId}"`)
+        }
+        if (capturedAccountId === undefined) return undefined
+        requestCredential = await this.modifyCapturedAccount(capturedAccountId, fn)
+        return requestCredential === undefined ? undefined : cloneCredential(requestCredential)
+      },
+      delete: async providerId => {
+        if (providerId === OPENAI_CODEX_PROVIDER) {
+          throw new Error('openai-codex: a captured request credential cannot log out')
+        }
+      },
+    }
+  }
+
+  private async modifyCapturedAccount(
+    capturedAccountId: string,
+    fn: (current: Credential | undefined) => Promise<Credential | undefined>,
+  ): Promise<StoredOAuthCredential | undefined> {
+    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    return withFileLock(this.filename, async () => {
+      const document = await this.readDocument()
+      if (document === undefined) return undefined
+      const credentials = [...documentCredentials(document)]
+      const capturedIndex = credentials.findIndex(credential => credential.accountId === capturedAccountId)
+      if (capturedIndex < 0) return undefined
+      const current = cloneCredential(credentials[capturedIndex]!)
+      const candidate = await fn(current)
+      if (candidate === undefined) return current
+      const validated = parseCredential(candidate, this.filename)
+      if (validated.accountId !== capturedAccountId) {
+        throw new Error('openai-codex: a request credential refresh cannot change accountId')
+      }
+      credentials[capturedIndex] = validated
+      await this.writeDocument({
+        version: AUTH_FORMAT_VERSION,
+        activeAccountId: activeCredential(document).accountId,
+        credentials: credentials.map(cloneCredential),
+      }, document)
+      return cloneCredential(validated)
+    })
+  }
+
   /** @inheritdoc */
   async list(): Promise<readonly CredentialInfo[]> {
     return await this.readDocument() === undefined
