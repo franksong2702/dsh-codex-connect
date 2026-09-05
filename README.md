@@ -114,6 +114,8 @@ Profiles may also seed the visible subset with `models`; provider order is prese
 
 Omit `models` to show the full catalog. An empty list hides every Codex model from selectors without disabling exact-id routing.
 
+Codex Connect preserves every model supplied by the installed `@earendil-works/pi-ai` Codex catalog. When that catalog predates `gpt-6-astra`, the plugin adds the official Astra metadata as a compatibility fallback; once upstream supplies the same model id, its definition wins unchanged. Catalog discovery does not grant model access: OpenAI evaluates the signed-in ChatGPT account for each request, and an unavailable model fails explicitly without switching to another model.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/model-selector.jpg" alt="OpenAI Codex model group in the English-localized DeepSeek Harness model picker" width="360">
 </p>
@@ -254,7 +256,7 @@ Use `contextWindowOverrides` to opt into a per-model client context budget when 
 
 In Plugin configuration and **Models → More settings**, each model row shows its numeric context budget and keeps its visibility checkbox. **Context → Adjust** opens a synchronized slider and integer input, with the installed catalog default and a configuration ceiling. **Restore default** uses the catalog value even if composition supplies an override. Hiding a model preserves its budget. **Save** applies staged edits; **Discard** abandons them. An empty input is invalid, not a reset.
 
-Configuration ceilings follow the [official Codex catalog snapshot](https://github.com/openai/codex/blob/7625343977154efed8c0dadba956374992a1580b/codex-rs/models-manager/models.json), checked on 2026-08-28: GPT-5.6 Sol/Terra/Luna allow up to 872,000 tokens, GPT-5.4 up to 1,000,000, and GPT-5.5/GPT-5.4 mini up to 272,000. Models without a recorded ceiling, including Spark, are capped at their installed provider default. A provider default newer than and larger than the recorded ceiling also becomes the cap. The UI identifies the source; these values are not fetched from the user's account and are not measured server capacities. Defaults remain unchanged. Going above the default displays a quota and request-failure warning; account and route limits may differ.
+Configuration ceilings follow the [official Codex catalog snapshot](https://github.com/openai/codex/blob/a97cf1b72eaad05aa49847bc81d09ceac9327754/codex-rs/models-manager/models.json), checked on 2026-09-05: GPT-6 Astra and GPT-5.6 Sol/Terra/Luna allow up to 872,000 tokens, GPT-5.4 up to 1,000,000, and GPT-5.5/GPT-5.4 mini up to 272,000. Models without a recorded ceiling, including Spark, are capped at their installed provider default. A provider default newer than and larger than the recorded ceiling also becomes the cap. The UI identifies the source; these values are not fetched from the user's account and are not measured server capacities. Defaults remain unchanged. Going above the default displays a quota and request-failure warning; account and route limits may differ.
 
 ```yaml
 - id: llm-openai-codex

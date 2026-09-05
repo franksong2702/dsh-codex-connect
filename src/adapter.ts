@@ -1,7 +1,7 @@
 /** OpenAI Codex adapter assembled from public dsh-llm-pi-ai extension points. */
 
 import { createModels, defaultProviderAuthContext } from '@earendil-works/pi-ai'
-import type { Context as PiContext, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
+import type { Context as PiContext, Model, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
@@ -15,9 +15,42 @@ import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './model-contract.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 
-/** Return a detached copy of the complete pi-ai Codex model catalog. */
+/** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
+export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
+
+const OPENAI_CODEX_ASTRA_MODEL: Model<'openai-codex-responses'> = {
+  id: OPENAI_CODEX_ASTRA_MODEL_ID,
+  name: 'GPT-6-Astra',
+  api: 'openai-codex-responses',
+  provider: OPENAI_CODEX_PROVIDER,
+  baseUrl: 'https://chatgpt.com/backend-api',
+  reasoning: true,
+  input: ['text', 'image'],
+  // ChatGPT OAuth usage is read from the server; no authoritative token-price schedule is available here.
+  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  contextWindow: 272_000,
+  maxTokens: 128_000,
+  thinkingLevelMap: { minimal: 'low', xhigh: 'xhigh', max: 'max' },
+  compat: {
+    supportsOpenAIGrammarTools: true,
+    supportsAdditionalTools: true,
+    supportsToolSearch: true,
+  },
+}
+
+/** Preserve an upstream Astra entry, or add the official compatibility fallback. */
+export function withOpenAICodexAstra(
+  provider: Provider<'openai-codex-responses'>,
+): Provider<'openai-codex-responses'> {
+  const baseline = provider.getModels()
+  if (baseline.some(model => model.id === OPENAI_CODEX_ASTRA_MODEL_ID)) return provider
+  const models = [OPENAI_CODEX_ASTRA_MODEL, ...baseline]
+  return { ...provider, getModels: () => models }
+}
+
+/** Return a detached copy of the effective Codex model catalog. */
 export function openAICodexModelCatalog(): readonly OpenAICodexModelCatalogEntry[] {
-  return openaiCodexProvider().getModels().map(model => ({
+  return withOpenAICodexAstra(openaiCodexProvider()).getModels().map(model => ({
     id: model.id, name: model.name, contextWindow: model.contextWindow,
     ...openAICodexContextLimit(model.id, model.contextWindow),
   }))
@@ -186,7 +219,7 @@ export function createOpenAICodexAdapter(
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
 ): PiAiAdapter {
-  const provider = openaiCodexProvider()
+  const provider = withOpenAICodexAstra(openaiCodexProvider())
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {

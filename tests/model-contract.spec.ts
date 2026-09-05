@@ -5,6 +5,7 @@ import { decodeOpenAICodexModelCatalog, isValidOpenAICodexContextBudget, openAIC
 
 describe('model-specific configuration ceilings', () => {
   it.each([
+    ['gpt-6-astra', 272_000, 872_000],
     ['gpt-5.6-sol', 272_000, 872_000],
     ['gpt-5.6-terra', 272_000, 872_000],
     ['gpt-5.6-luna', 272_000, 872_000],
