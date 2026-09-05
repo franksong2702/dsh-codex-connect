@@ -6,7 +6,7 @@
 
 bundle patch 只插入 `llm-openai-codex`，不会写入 `agent-default-model` 或 `web.searchProvider`。`enableSearch` 与 `enableImageTool` 默认均为 `false`；关闭时不会注册对应可选服务。
 
-Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。DSH 的 `llm-pi-ai` catalog 持有 `openai-codex` 可配置 provider 目录条目，Codex Connect 只注册实际 adapter，不重复声明该条目。浏览器通过 Harness settings-scope transport 绑定插件 namespace，把账户、额度以及带保存/放弃的能力配置放在现有“插件配置”卡片中。带 revision 防护的逐字段写入不会覆盖无关设置；提交后会即时协调搜索与图片能力的注册状态，且绝不写入默认模型或全局搜索 namespace。
+Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。DSH 的 `llm-pi-ai` catalog 持有 `openai-codex` 可配置 provider 目录条目，Codex Connect 只注册实际 adapter，不重复声明该条目。浏览器通过 Harness settings-scope transport 绑定插件 namespace，把账户、额度以及带保存/放弃的能力配置放在现有“插件配置”卡片中。带 revision 防护的逐字段写入不会覆盖无关设置；提交后会即时协调搜索与图片能力的注册状态。插件绝不写入默认模型设置。保存 `enableSearch` 变更时还会绑定 Host 自有 `web` namespace，并且只修改 `searchProvider`，让现有开关完成搜索设置。
 
 ## OAuth 持久化
 
@@ -18,7 +18,7 @@ Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。
 
 ## 搜索与图片
 
-仅当 `enableSearch: true` 时注册 Codex 独立搜索提供方和不含凭据的请求事件。多 provider 环境仍需显式设置 `web.searchProvider: openai-codex`。仅当 `enableImageTool: true` 且 tools、filesystem、attachments 服务存在时注册 `view_image`。本地文件继续受 Harness 文件系统边界与大小限制；远程图片只允许不含凭据的公共 HTTP(S)，所有 DNS 结果必须是公共单播地址，每次重定向都会重新验证，并把实际连接固定到已验证地址以关闭 DNS rebinding 缺口。
+仅当 `enableSearch: true` 时注册 Codex 独立搜索提供方和不含凭据的请求事件。多 provider 环境仍需显式设置 `web.searchProvider: openai-codex`，因此保存现有开关时会先启用提供方，再写入这条路由。路由写操作携带开始保存时看到的 revision；写入失败时会回滚刚启用的能力，而不是显示保存成功。停用时会先移除显式 Codex 路由；如果 profile composition 仍会选中 Codex，则中止保存。仅当 `enableImageTool: true` 且 tools、filesystem、attachments 服务存在时注册 `view_image`。本地文件继续受 Harness 文件系统边界与大小限制；远程图片只允许不含凭据的公共 HTTP(S)，所有 DNS 结果必须是公共单播地址，每次重定向都会重新验证，并把实际连接固定到已验证地址以关闭 DNS rebinding 缺口。
 
 ## 冲突、诊断与兼容边界
 

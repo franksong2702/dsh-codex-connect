@@ -22,9 +22,14 @@ import {
   OPENAI_CODEX_PROXY_TEST_PATH,
 } from '../proxy-paths.ts'
 import type { OpenAICodexProxyProbeResult } from '../provider-proxy.ts'
+import {
+  OPENAI_CODEX_SEARCH_ROUTE_PROVIDER,
+  type OpenAICodexSearchRouteConfig,
+} from './search-route.ts'
 
 export interface OpenAICodexConfigurationProps {
   scope?: SettingsScope<OpenAICodexSettingsConfig>
+  searchRouteScope?: SettingsScope<OpenAICodexSearchRouteConfig>
   t: (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
   /** Select one settings module from the Plugin page. Omit to show local navigation. */
   activeModule?: OpenAICodexSettingsModule
@@ -102,7 +107,6 @@ const CONFIG_FIELDS = [
   'contextWindowOverrides',
   'enableProxy',
   'proxyUrl',
-  'enableSearch',
   'enableImageTool',
   'enableImageGeneration',
   'autoReviewDisclosureAcknowledged',
@@ -111,6 +115,7 @@ const CONFIG_FIELDS = [
   'searchMode',
   'searchContextSize',
   'searchMaxOutputTokens',
+  'enableSearch',
 ] as const satisfies readonly (keyof OpenAICodexSettingsConfig)[]
 
 interface AutoReviewConsentDialogProps {
@@ -175,7 +180,7 @@ function sameConfig(
 }
 
 /** Edit the Host-owned llm-openai-codex settings section with Save/Discard staging. */
-export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix }: OpenAICodexConfigurationProps) {
+export function OpenAICodexConfiguration({ scope, searchRouteScope, t, activeModule, panelIdPrefix }: OpenAICodexConfigurationProps) {
   const subscribe = useCallback((listener: () => void) => scope?.subscribe(listener) ?? (() => undefined), [scope])
   const getSnapshot = useCallback(() => scope?.getSnapshot() ?? UNAVAILABLE_SNAPSHOT, [scope])
   const snapshot = useSyncExternalStore(
@@ -402,7 +407,31 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
     const desired = { ...draft, searchModel: draft.searchModel.trim() }
     setBusy(true)
     setFeedback('idle')
+    let enabledByThisSave = false
     try {
+      const acceptedBefore = scope.getSnapshot().value
+      const enablingSearch = acceptedBefore?.enableSearch !== true && desired.enableSearch === true
+      const disablingSearch = acceptedBefore?.enableSearch === true && desired.enableSearch !== true
+      const routeBefore = searchRouteScope?.getSnapshot()
+      const routeProviderBefore = routeBefore?.value?.searchProvider
+      const routeChangeRequired = (enablingSearch && routeProviderBefore !== OPENAI_CODEX_SEARCH_ROUTE_PROVIDER)
+        || (disablingSearch && routeProviderBefore === OPENAI_CODEX_SEARCH_ROUTE_PROVIDER)
+      if (routeChangeRequired && (routeBefore?.status !== 'ready' || !routeBefore.writable || routeBefore.revision === undefined)) {
+        throw new Error('Host search route is not writable')
+      }
+      if (disablingSearch && routeProviderBefore === OPENAI_CODEX_SEARCH_ROUTE_PROVIDER) {
+        const userRoute = routeBefore?.user
+        const hasExplicitRoute = typeof userRoute === 'object'
+          && userRoute !== null
+          && Object.hasOwn(userRoute, 'searchProvider')
+        if (!hasExplicitRoute || searchRouteScope === undefined || routeBefore?.revision === undefined) {
+          throw new Error('Codex is selected by the profile composition')
+        }
+        await searchRouteScope.mutate([{ op: 'unset', path: ['searchProvider'] }], routeBefore.revision)
+        if (searchRouteScope.getSnapshot().value?.searchProvider === OPENAI_CODEX_SEARCH_ROUTE_PROVIDER) {
+          throw new Error('Host kept Codex as the search route')
+        }
+      }
       for (const field of CONFIG_FIELDS) {
         const accepted = scope.getSnapshot().value
         if (accepted !== undefined && sameField(field, accepted[field], desired[field])) continue
@@ -415,14 +444,33 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
         if (committed === undefined || !sameField(field, committed[field], desired[field])) {
           throw new Error(`Host refused ${field}`)
         }
+        if (field === 'enableSearch' && enablingSearch) enabledByThisSave = true
       }
       const accepted = scope.getSnapshot().value
       if (!sameConfig(accepted, desired)) throw new Error('Host returned a different configuration')
+      if (enablingSearch && routeProviderBefore !== OPENAI_CODEX_SEARCH_ROUTE_PROVIDER) {
+        if (searchRouteScope === undefined || routeBefore?.revision === undefined) throw new Error('Host search route is unavailable')
+        await searchRouteScope.mutate([{
+          op: 'set',
+          path: ['searchProvider'],
+          value: OPENAI_CODEX_SEARCH_ROUTE_PROVIDER,
+        }], routeBefore.revision)
+        if (searchRouteScope.getSnapshot().value?.searchProvider !== OPENAI_CODEX_SEARCH_ROUTE_PROVIDER) {
+          throw new Error('Host refused the Codex search route')
+        }
+      }
       setDraft(accepted)
       setDirty(false)
       setFeedback('saved')
       clearCurrentProxyCheck()
     } catch {
+      if (enabledByThisSave) {
+        try {
+          await scope.set('enableSearch', false)
+        } catch {
+          // The visible Save failure also covers a failed compensation write.
+        }
+      }
       setFeedback('error')
     } finally {
       setBusy(false)

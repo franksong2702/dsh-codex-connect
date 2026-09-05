@@ -35,6 +35,7 @@ import { OpenAICodexUpdateStore } from './update-store.ts'
 import { CODEX_CONNECT_VERSION } from '../version.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
 import { OpenAICodexModelsCard } from './OpenAICodexModelsCard.tsx'
+import { decodeOpenAICodexSearchRouteConfig } from './search-route.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -64,17 +65,21 @@ export function apply(ctx: ClientContext): void {
     namespace: OPENAI_CODEX_SETTINGS_NAMESPACE,
     decode: decodeOpenAICodexSettings,
   })
+  const searchRouteScope = ctx.settingsScope.bind({
+    namespace: 'web',
+    decode: decodeOpenAICodexSearchRouteConfig,
+  })
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     key: OPENAI_CODEX_SETTINGS_NAMESPACE,
-    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
+    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, searchRouteScope, updater, account }),
   }, OpenAICodexPluginCard))
 
   ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
     name: 'settings.models.footer',
     id: 'dsh-codex-connect-account',
     order: 100,
-    inject: () => ({ t, account, configScope }),
+    inject: () => ({ t, account, configScope, searchRouteScope }),
   }, OpenAICodexModelsCard))
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
