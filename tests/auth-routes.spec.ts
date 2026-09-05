@@ -499,6 +499,24 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     }
   })
 
+  it('keeps an existing account usable when added-account authorization expires', async () => {
+    mocked.login.mockImplementation((interaction: AuthInteraction) => {
+      const pending = abortableLogin(interaction)
+      interaction.notify({ type: 'auth_url', url: 'https://auth.openai.com/authorize' })
+      return pending
+    })
+    mocked.status.mockResolvedValue({ authenticated: true })
+    const auth = new OpenAICodexWebAuth(store, { authorizationTimeoutMs: 20 })
+    try {
+      await auth.signIn()
+      await vi.waitFor(async () => {
+        await expect(auth.status()).resolves.toEqual({ status: 'signed-in', usage: { rateLimits: [] } })
+      }, { timeout: 500, interval: 5 })
+    } finally {
+      await auth.dispose()
+    }
+  })
+
   it('keeps an existing account when cancelling and serializes retry behind provider cleanup', async () => {
     const cleanup = deferred<void>()
     mocked.login.mockImplementation(async (interaction: AuthInteraction) => {

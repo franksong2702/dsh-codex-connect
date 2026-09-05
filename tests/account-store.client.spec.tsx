@@ -5,10 +5,23 @@ import { OpenAICodexAccountStore } from '../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { en, zh } from '../src/client/locales.ts'
-import { OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH } from '../src/auth-paths.ts'
+import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../src/auth-paths.ts'
 
-const t = (key: keyof typeof en) => en[key]
-const json = (value: unknown) => new Response(JSON.stringify(value), { status: 200 })
+const t = (key: keyof typeof en, params: Record<string, unknown> = {}) => Object.entries(params).reduce(
+  (value, [name, replacement]) => value.replace(`{${name}}`, String(replacement)),
+  en[key],
+)
+const ACCOUNT_KEY = `acct_${'a'.repeat(43)}`
+const SECOND_ACCOUNT_KEY = `acct_${'b'.repeat(43)}`
+const ACTIVE_ACCOUNT = { accountKey: ACCOUNT_KEY, active: true, displayName: 'Work account', maskedEmail: 'wo••@example.com', profileSource: 'oauth' }
+const SECOND_ACCOUNT = { accountKey: SECOND_ACCOUNT_KEY, active: false, displayName: 'Personal account', maskedEmail: 'pe••@example.com', profileSource: 'oauth' }
+const rawJson = (value: unknown) => new Response(JSON.stringify(value), { status: 200 })
+const json = (value: unknown) => {
+  const projected = typeof value === 'object' && value !== null && 'status' in value
+    ? { ...value, accounts: value.status === 'signed-in' || value.status === 'reauth-required' ? [ACTIVE_ACCOUNT] : [] }
+    : value
+  return new Response(JSON.stringify(projected), { status: 200 })
+}
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('shared Models and Plugin account state', () => {
@@ -38,11 +51,12 @@ describe('shared Models and Plugin account state', () => {
     const account = new OpenAICodexAccountStore()
     render(<OpenAICodexModelsCard t={t} account={account} />)
     const view = await screen.findByRole('button', { name: en.viewQuota })
+    expect(view.getAttribute('aria-controls')).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     fireEvent.click(view)
     expect(screen.getAllByRole('progressbar')).toHaveLength(4)
     expect(screen.getByRole('progressbar', { name: 'Codex · Weekly limit' }).getAttribute('aria-valuenow')).toBe('92')
-    expect(screen.getAllByText(en.resetAt)).toHaveLength(4)
+    expect(screen.getAllByText(/^Resets /u)).toHaveLength(4)
     expect(screen.getByText(en.quotaUnavailable)).toBeTruthy()
     expect(screen.getAllByText(en.signedIn)).toHaveLength(1)
     expect(screen.queryByText(en.accountHeading)).toBeNull()
@@ -132,6 +146,7 @@ describe('shared Models and Plugin account state', () => {
     let loginRequests = 0
     let statusRequests = 0
     const fetchMock = vi.fn((path: string) => {
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) return Promise.resolve(json({ accounts: [] }))
       if (path === OPENAI_CODEX_AUTH_LOGIN_PATH) {
         loginRequests += 1
         return new Promise<Response>(resolve => {
@@ -183,12 +198,12 @@ describe('shared Models and Plugin account state', () => {
     fireEvent.click(models.getByRole('button', { name: en.viewQuota }))
     expect(models.queryByText(en.accountHeading)).toBeNull()
     expect(models.queryByText(en.usageLimits)).toBeNull()
-    expect(models.getAllByRole('button', { name: en.logout })).toHaveLength(1)
     expect(models.getAllByText(en.signedIn)).toHaveLength(1)
     expect(models.getByText(en.quotaUnavailable)).toBeTruthy()
     expect(models.getByText(en.modelsAccountHelp)).toBeTruthy()
     expect(models.queryByRole('checkbox')).toBeNull()
-    fireEvent.click(models.getByRole('button', { name: en.logout }))
+    fireEvent.click(models.getByRole('button', { name: en.manageAccounts }))
+    fireEvent.click(models.getByRole('button', { name: en.signOutAll }))
     await waitFor(() => { expect(screen.getAllByText(en.signedOut)).toHaveLength(2) })
     expect(fetchMock).toHaveBeenCalledTimes(2)
     view.unmount()
@@ -273,5 +288,132 @@ describe('shared Models and Plugin account state', () => {
     expect(close).toHaveBeenCalled()
     expect(replace).not.toHaveBeenCalled()
     expect(account.getSnapshot().loginUrl).toBeUndefined()
+  })
+
+  it('switches accounts and requires an explicit replacement when removing the active account', async () => {
+    let accounts = [ACTIVE_ACCOUNT, SECOND_ACCOUNT]
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] }, accounts })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { accountKey: string }
+        accounts = accounts.map(account => ({ ...account, active: account.accountKey === body.accountKey }))
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'DELETE') {
+        const body = JSON.parse(String(init.body)) as { accountKey: string; replacementAccountKey?: string }
+        expect(body).toEqual({ accountKey: SECOND_ACCOUNT_KEY, replacementAccountKey: ACCOUNT_KEY })
+        accounts = accounts.filter(account => account.accountKey !== body.accountKey)
+          .map(account => ({ ...account, active: account.accountKey === body.replacementAccountKey }))
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) return rawJson({ accounts })
+      throw new Error(`unexpected request ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await waitFor(() => { expect(account.getSnapshot().accounts).toHaveLength(2) })
+
+    await account.activate(SECOND_ACCOUNT_KEY)
+    expect(account.getSnapshot().accounts.find(candidate => candidate.active)?.accountKey).toBe(SECOND_ACCOUNT_KEY)
+    await account.remove(SECOND_ACCOUNT_KEY, ACCOUNT_KEY)
+    expect(account.getSnapshot().accounts).toEqual([{ ...ACTIVE_ACCOUNT, active: true }])
+    expect(fetchMock.mock.calls.map(([path]) => path)).not.toContain('https://auth.openai.com/account-id')
+    unsubscribe()
+    account.dispose()
+  })
+
+  it('reconciles a successful mutation after its account-list refresh fails', async () => {
+    vi.useFakeTimers()
+    let statusReads = 0
+    const switched = [
+      { ...ACTIVE_ACCOUNT, active: false },
+      { ...SECOND_ACCOUNT, active: true },
+    ]
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        statusReads += 1
+        return rawJson({
+          status: 'signed-in',
+          usage: { rateLimits: [] },
+          accounts: statusReads === 1 ? [ACTIVE_ACCOUNT, SECOND_ACCOUNT] : switched,
+        })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST') {
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) {
+        return new Response(JSON.stringify({ error: 'temporary failure' }), { status: 503 })
+      }
+      throw new Error(`unexpected request ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const account = new OpenAICodexAccountStore()
+    const unsubscribe = account.subscribe(() => {})
+    await vi.advanceTimersByTimeAsync(0)
+    expect(account.getSnapshot().accounts).toHaveLength(2)
+
+    await account.activate(SECOND_ACCOUNT_KEY)
+    expect(account.getSnapshot().operationError).toBe('temporary failure')
+    await vi.advanceTimersByTimeAsync(4_999)
+    expect(statusReads).toBe(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(statusReads).toBe(2)
+    expect(account.getSnapshot().accounts).toEqual(switched)
+    expect(account.getSnapshot().operationError).toBeUndefined()
+    unsubscribe()
+    account.dispose()
+  })
+
+  it('keeps the current account visible while another account authorization is pending', async () => {
+    let resolveLogin!: (value: Response) => void
+    vi.stubGlobal('fetch', vi.fn((path: string) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        return Promise.resolve(rawJson({ status: 'signed-in', usage: { rateLimits: [] }, accounts: [ACTIVE_ACCOUNT] }))
+      }
+      if (path === OPENAI_CODEX_AUTH_LOGIN_PATH) return new Promise<Response>(resolve => { resolveLogin = resolve })
+      throw new Error(`unexpected request ${path}`)
+    }))
+    vi.spyOn(window, 'open').mockReturnValue(null)
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexModelsCard t={t} account={account} />)
+    await screen.findByText('Work account')
+    fireEvent.click(screen.getByRole('button', { name: en.manageAccounts }))
+    fireEvent.click(screen.getByRole('button', { name: en.addAccount }))
+    expect(screen.getAllByText('Work account').length).toBeGreaterThan(0)
+    expect(await screen.findByText(en.addingAccountKeepsCurrent)).toBeTruthy()
+    resolveLogin(rawJson({ url: 'https://auth.openai.com/authorize' }))
+    await waitFor(() => { expect(account.getSnapshot().operation.kind).toBe('waiting-authorization') })
+    account.dispose()
+  })
+
+  it('explains the replacement before removing the active account', async () => {
+    let accounts = [ACTIVE_ACCOUNT, SECOND_ACCOUNT]
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === OPENAI_CODEX_AUTH_STATUS_PATH) {
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] }, accounts })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'DELETE') {
+        const body = JSON.parse(String(init.body)) as { accountKey: string; replacementAccountKey?: string }
+        expect(body).toEqual({ accountKey: ACCOUNT_KEY, replacementAccountKey: SECOND_ACCOUNT_KEY })
+        accounts = [{ ...SECOND_ACCOUNT, active: true }]
+        return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
+      }
+      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) return rawJson({ accounts })
+      throw new Error(`unexpected request ${path}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const account = new OpenAICodexAccountStore()
+    render(<OpenAICodexModelsCard t={t} account={account} />)
+    await screen.findByText('Work account')
+    fireEvent.click(screen.getByRole('button', { name: en.manageAccounts }))
+    fireEvent.click(screen.getAllByRole('button', { name: en.removeAccount })[0]!)
+    expect(screen.getByRole('region', { name: en.removeAccountTitle.replace('{name}', 'Work account') })).toBeTruthy()
+    expect(screen.getByText(en.removeActiveAccountCopy.replace('{name}', 'Personal account'))).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: en.confirmRemove }))
+    await waitFor(() => { expect(account.getSnapshot().accounts).toEqual([{ ...SECOND_ACCOUNT, active: true }]) })
+    account.dispose()
   })
 })

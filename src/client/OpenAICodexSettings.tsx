@@ -1,6 +1,6 @@
 /** Plugin-owned OpenAI Codex account controls used inside Plugin configuration. */
 
-import { useCallback, useState, useSyncExternalStore, useId } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore, useId } from 'react'
 import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexUsage } from '../usage.ts'
@@ -50,6 +50,11 @@ const quotaTitleStyle: CSSProperties = { margin: 0, fontSize: 14, lineHeight: '2
 const quotaLabelStyle: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, lineHeight: '20px', color: 'var(--dsw-alias-label-secondary)' }
 const progressTrackStyle: CSSProperties = { height: 8, overflow: 'hidden', borderRadius: 999, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.08))' }
 const commandStyle: CSSProperties = { margin: 0, padding: '10px 12px', overflowX: 'auto', borderRadius: 8, background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.06))', color: 'var(--dsw-alias-label-primary)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13, lineHeight: '20px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }
+const accountPanelStyle: CSSProperties = { overflow: 'hidden', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 10 }
+const accountRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '12px 14px', borderTop: '1px solid var(--dsw-alias-border-l2)' }
+const accountIdentityStyle: CSSProperties = { minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }
+const accountBadgeStyle: CSSProperties = { display: 'inline-flex', marginLeft: 7, padding: '1px 7px', borderRadius: 999, background: 'var(--dsw-alias-state-success-secondary, rgba(34, 160, 107, 0.12))', color: 'var(--dsw-alias-state-success-primary, #087a41)', fontSize: 11, lineHeight: '18px', fontWeight: 600 }
+const dangerButtonStyle: CSSProperties = { ...buttonStyle, color: 'var(--dsw-alias-state-error-primary, #d92d20)' }
 const moduleTabsStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, paddingTop: 2 }
 const moduleTabStyle: CSSProperties = { ...buttonStyle, minWidth: 0, minHeight: 54, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2, overflowWrap: 'anywhere' }
 const activeModuleTabStyle: CSSProperties = { ...moduleTabStyle, border: '1px solid var(--dsw-alias-button-primary-fill)', background: 'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-layer-1))' }
@@ -202,20 +207,129 @@ export function AccountActions({ t, store, snapshot, compact = false }: {
   snapshot: AccountSnapshot
   compact?: boolean
 }) {
-  const { status, busy } = snapshot
+  const { status, busy, operation } = snapshot
   if (status.status === 'loading' || status.status === 'remote-web-origin-not-trusted') return null
-  if (status.status === 'signed-in') return <button type="button" style={buttonStyle} disabled={busy}
-    onClick={() => { void store.signOut() }}>{busy ? t('working') : t('logout')}</button>
-  if (status.status === 'signing-in') return <div style={rowStyle}>
+  const authorizing = operation.kind === 'starting-authorization'
+    || operation.kind === 'waiting-authorization'
+    || operation.kind === 'cancelling-authorization'
+    || status.status === 'signing-in'
+  if (authorizing) return <div style={rowStyle}>
     <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.signIn() }}>
       {busy ? t('working') : t(compact ? 'continueAuthorization' : 'reopenAuthorization')}
     </button>
     <button type="button" style={buttonStyle} disabled={busy} onClick={() => { void store.cancel() }}>{t('cancelSignIn')}</button>
   </div>
+  if (status.status === 'signed-in') return null
   const retry = status.status === 'error' || status.status === 'reauth-required'
   const action = retry ? t(compact ? 'reauthorize' : 'loginAgain') : t(compact ? 'authorize' : 'login')
   return <button type="button" style={primaryButtonStyle} disabled={busy}
     onClick={() => { void store.signIn() }}>{busy ? t('working') : action}</button>
+}
+
+/** Saved-account summary and explicit account-management actions. */
+export function AccountManager({ t, store, snapshot, quotaExpanded, quotaControlsId, onToggleQuota, compact = false }: {
+  t: OpenAICodexSettingsInjected['t']
+  store: OpenAICodexAccountStore
+  snapshot: AccountSnapshot
+  quotaExpanded?: boolean
+  quotaControlsId?: string
+  onToggleQuota?: () => void
+  compact?: boolean
+}) {
+  const accountsPanelId = useId()
+  const [expanded, setExpanded] = useState(false)
+  const [removeKey, setRemoveKey] = useState<string>()
+  const { accounts, busy, operation, status } = snapshot
+  const active = accounts.find(account => account.active)
+  const removeAccount = accounts.find(account => account.accountKey === removeKey)
+  const replacement = removeAccount?.active === true
+    ? accounts.find(account => account.accountKey !== removeAccount.accountKey)
+    : undefined
+  const authorizing = operation.kind === 'starting-authorization'
+    || operation.kind === 'waiting-authorization'
+    || operation.kind === 'cancelling-authorization'
+    || status.status === 'signing-in'
+
+  useEffect(() => {
+    if (removeKey !== undefined && !accounts.some(account => account.accountKey === removeKey)) setRemoveKey(undefined)
+  }, [accounts, removeKey])
+
+  if (accounts.length === 0) return <AccountActions t={t} store={store} snapshot={snapshot} compact={compact} />
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={rowStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: 10 }}>
+        <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', flex: '0 0 auto', background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.06))', fontWeight: 600 }}>
+          {(active?.displayName.trim()[0] ?? 'C').toUpperCase()}
+        </span>
+        <span style={accountIdentityStyle}>
+          <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{active?.displayName ?? t('accountHeading')}</strong>
+          <span style={bodyStyle}>{active?.maskedEmail === undefined
+            ? t('currentAccountDetail')
+            : `${active.maskedEmail} · ${t('currentAccountDetail')}`}</span>
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {status.status === 'reauth-required' && !authorizing
+          ? <button type="button" style={primaryButtonStyle} disabled={busy} onClick={() => { void store.signIn() }}>{t('reauthorize')}</button>
+          : null}
+        {authorizing ? <AccountActions t={t} store={store} snapshot={snapshot} compact /> : null}
+        {onToggleQuota === undefined || status.status !== 'signed-in' ? null : (
+          <button type="button" style={buttonStyle} aria-expanded={quotaExpanded} aria-controls={quotaControlsId} onClick={onToggleQuota}>
+            {t(quotaExpanded === true ? 'hideQuota' : 'viewQuota')}
+          </button>
+        )}
+        <button type="button" style={buttonStyle} aria-expanded={expanded} aria-controls={accountsPanelId} onClick={() => { setExpanded(!expanded) }}>
+          {t(expanded ? 'hideAccounts' : 'manageAccounts')}
+        </button>
+      </div>
+    </div>
+    {authorizing ? <p style={bodyStyle}>{t('addingAccountKeepsCurrent')}</p> : null}
+    {expanded ? <div id={accountsPanelId} style={accountPanelStyle}>
+      <div style={{ ...rowStyle, padding: '10px 14px', background: 'var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04))' }}>
+        <strong>{t('savedAccounts')} · {accounts.length}</strong>
+        <button type="button" style={primaryButtonStyle} disabled={busy || authorizing} onClick={() => { void store.signIn() }}>
+          {operation.kind === 'starting-authorization' ? t('working') : t('addAccount')}
+        </button>
+      </div>
+      {accounts.map(account => <div key={account.accountKey} style={accountRowStyle}>
+        <span style={accountIdentityStyle}>
+          <strong>{account.displayName}{account.active ? <span style={accountBadgeStyle}>{t('currentAccount')}</span> : null}</strong>
+          <span style={bodyStyle}>{account.maskedEmail === undefined
+            ? t(account.active ? 'currentAccountDetail' : 'savedAccountDetail')
+            : `${account.maskedEmail} · ${t(account.active ? 'currentAccountDetail' : 'savedAccountDetail')}`}</span>
+        </span>
+        <span style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <button type="button" style={buttonStyle} disabled={busy || account.active}
+            onClick={() => { void store.activate(account.accountKey) }}>
+            {operation.kind === 'activating' && operation.accountKey === account.accountKey
+              ? t('working') : t(account.active ? 'usingAccount' : 'useAccount')}
+          </button>
+          <button type="button" style={dangerButtonStyle} disabled={busy} onClick={() => { setRemoveKey(account.accountKey) }}>
+            {t('removeAccount')}
+          </button>
+        </span>
+      </div>)}
+      <div style={{ ...rowStyle, padding: '10px 14px', borderTop: '1px solid var(--dsw-alias-border-l2)' }}>
+        <span style={bodyStyle}>{t('activeAccountHelp')}</span>
+        <button type="button" style={dangerButtonStyle} disabled={busy} onClick={() => { void store.signOut() }}>
+          {operation.kind === 'signing-out' ? t('working') : t('signOutAll')}
+        </button>
+      </div>
+    </div> : null}
+    {removeAccount === undefined ? null : <section role="region" aria-live="polite" aria-label={t('removeAccountTitle', { name: removeAccount.displayName })}
+      style={{ padding: 14, border: '1px solid var(--dsw-alias-state-error-primary, #d92d20)', borderRadius: 10 }}>
+      <strong>{t('removeAccountTitle', { name: removeAccount.displayName })}</strong>
+      <p style={{ ...bodyStyle, marginTop: 5 }}>{accounts.length === 1
+        ? t('removeLastAccountCopy')
+        : replacement === undefined ? t('removeAccountCopy') : t('removeActiveAccountCopy', { name: replacement.displayName })}</p>
+      <div style={{ ...rowStyle, justifyContent: 'flex-end' }}>
+        <button type="button" style={buttonStyle} onClick={() => { setRemoveKey(undefined) }}>{t('cancel')}</button>
+        <button type="button" style={dangerButtonStyle} disabled={busy} onClick={() => {
+          void store.remove(removeAccount.accountKey, replacement?.accountKey)
+        }}>{operation.kind === 'removing' ? t('working') : t('confirmRemove')}</button>
+      </div>
+    </section>}
+  </div>
 }
 
 /** Recovery links, errors and trusted-origin guidance in either account entry. */
@@ -223,7 +337,7 @@ export function AccountFeedback({ t, snapshot }: {
   t: OpenAICodexSettingsInjected['t']
   snapshot: AccountSnapshot
 }) {
-  const { status, loginUrl } = snapshot
+  const { status, loginUrl, operationError } = snapshot
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const trustedOriginCommand = `dsh plugin --profile web exec dsh-codex-connect trust-origin ${window.location.origin}`
@@ -256,6 +370,7 @@ export function AccountFeedback({ t, snapshot }: {
     {status.status === 'error' || status.status === 'reauth-required'
       ? <p style={errorStyle}>{status.message}</p>
       : null}
+    {operationError === undefined ? null : <p style={errorStyle}>{operationError}</p>}
     {status.status === 'remote-web-origin-not-trusted' ? (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <p style={errorStyle}>{t('remoteOriginDescription')}</p>
@@ -341,8 +456,8 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
             <span aria-hidden="true" style={dotStyle(status.status)} />
             <span>{label}</span>
           </div>
-          <AccountActions t={t} store={store} snapshot={snapshot} />
         </div>
+        <AccountManager t={t} store={store} snapshot={snapshot} />
         <AccountFeedback t={t} snapshot={snapshot} />
         {status.status === 'signed-in'
           ? <UsageLimits

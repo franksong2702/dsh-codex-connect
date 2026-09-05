@@ -235,9 +235,9 @@ export class OpenAICodexWebAuth {
         }
         this.state = await this.readStoredStatus()
       },
-      (error: unknown) => {
+      async (error: unknown) => {
         this.rejectChallenge(error)
-        this.state = { status: 'error', message: safeMessage(error) }
+        this.state = await this.statusAfterLoginFailure(error)
       },
     ).finally(() => {
       this.clearChallengeTimer()
@@ -284,6 +284,16 @@ export class OpenAICodexWebAuth {
         return { status: 'reauth-required', message: OPENAI_CODEX_REAUTH_REQUIRED_MESSAGE }
       }
       return { status: 'signed-in', usage: { rateLimits: [] }, quotaError: safeMessage(error) }
+    }
+  }
+
+  private async statusAfterLoginFailure(error: unknown): Promise<OpenAICodexWebAuthStatus> {
+    const failure = { status: 'error', message: safeMessage(error) } as const
+    try {
+      const stored = await this.readStoredStatus()
+      return stored.status === 'signed-out' ? failure : stored
+    } catch {
+      return failure
     }
   }
 
