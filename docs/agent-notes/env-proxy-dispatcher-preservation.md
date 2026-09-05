@@ -1,0 +1,7 @@
+# Preserve Node's environment-proxy dispatcher
+
+Node initializes its built-in `fetch` dispatcher before plugins load. npm Undici 8 uses a newer global symbol and creates a direct `Agent` when that symbol is absent; on Node 24 this initialization also replaces the legacy dispatcher used by built-in `fetch`. Importing Codex Connect could therefore disable `NODE_USE_ENV_PROXY` for unrelated requests even when the plugin proxy was disabled.
+
+Codex Connect now aliases Node's existing `EnvHttpProxyAgent` into Undici 8's current slot before requiring the package. Other legacy dispatchers are not aliased because their handler API may be incompatible with Undici 8; Undici initializes its own current dispatcher for those runtimes. The compatibility loader is the only runtime entry for Undici values used by the plugin; type-only imports remain safe. Codex-scoped proxy operations continue to install the existing `AsyncLocalStorage` dispatcher wrapper and delegate unrelated requests to the inherited dispatcher.
+
+The built-package check starts a fresh Node process with environment-proxy support, imports `lib/index.js`, and requires an `EnvHttpProxyAgent` to remain identical. It also sends an npm Undici request so the Node 22 matrix rejects incompatible legacy/current handler combinations. Running the check after the build guards against bundlers hoisting an Undici import ahead of the compatibility loader.

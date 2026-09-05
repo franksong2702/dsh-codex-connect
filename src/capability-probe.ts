@@ -1,8 +1,8 @@
 /** Bounded, standalone Responses probe; never used by conversation routing. */
 
-import { Agent, ProxyAgent, fetch } from 'undici'
 import type { Dispatcher } from 'undici'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
+import { Agent, ProxyAgent, fetch } from './undici-runtime.ts'
 
 /** Only allowlisted observations leave the network reader. */
 export type ResponsesProbeOutcome = 'completed' | 'http-rejected' | 'transient' | 'incomplete' | 'timeout' | 'network-error'

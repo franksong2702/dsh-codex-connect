@@ -50,7 +50,8 @@
     "check:dsh-install": "node scripts/check-dsh-install.mjs",
     "check:dsh-next": "node scripts/check-dsh-next.mjs",
     "check:release-workflow": "node scripts/check-release-workflow.mjs",
-    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:capability-cli && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "check:env-proxy-import": "node scripts/check-env-proxy-import.mjs",
+    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:env-proxy-import && pnpm run check:capability-cli && pnpm --silent run check:compatibility && pnpm run pack:check",
     "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
   },
   "exports": {

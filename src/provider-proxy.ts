@@ -1,12 +1,13 @@
 /** Explicit Codex-only HTTP(S) proxying, probing, and lifecycle ownership. */
 
 import { AsyncLocalStorage } from 'node:async_hooks'
+import type { Dispatcher, ProxyAgent } from 'undici'
 import {
-  Dispatcher,
-  ProxyAgent,
+  Dispatcher as UndiciDispatcher,
+  ProxyAgent as UndiciProxyAgent,
   getGlobalDispatcher,
   setGlobalDispatcher,
-} from 'undici'
+} from './undici-runtime.ts'
 import {
   isValidOpenAICodexProxyUrl,
   normalizeOpenAICodexProxyUrl,
@@ -53,7 +54,7 @@ export interface OpenAICodexProxyProbeResult {
 const proxyScope = new AsyncLocalStorage<ProxyAgent>()
 const activeOwners = new Set<OpenAICodexProxyManager>()
 
-class ScopedProxyDispatcher extends Dispatcher {
+class ScopedProxyDispatcher extends UndiciDispatcher {
   constructor(private fallback: Dispatcher) {
     super()
   }
@@ -174,7 +175,7 @@ export class OpenAICodexProxyManager {
   private agentFor(proxyUrl: string): ProxyAgent {
     let agent = this.agents.get(proxyUrl)
     if (agent !== undefined) return agent
-    agent = new ProxyAgent({ uri: proxyUrl, proxyTunnel: true })
+    agent = new UndiciProxyAgent({ uri: proxyUrl, proxyTunnel: true })
     this.agents.set(proxyUrl, agent)
     return agent
   }
