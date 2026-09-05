@@ -116,6 +116,8 @@ dsh web
 
 省略 `models` 时显示完整目录；空列表会在选择器中隐藏全部 Codex 模型，但不会禁用精确模型 ID 路由。
 
+Codex Connect 会保留已安装 `@earendil-works/pi-ai` Codex 目录提供的全部模型。当该目录版本早于 `gpt-6-astra` 时，插件会补充官方 Astra 元数据作为兼容回退；上游一旦提供相同模型 ID，就会原样采用上游定义。目录中可发现模型不代表账号获得权限：OpenAI 会在每次请求时按已登录的 ChatGPT 账号判定，模型不可用时会明确失败，不会切换到其他模型。
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/model-selector.jpg" alt="中文 DeepSeek Harness 模型选择器中的 OpenAI Codex 模型分组" width="360">
 </p>
@@ -256,7 +258,7 @@ Codex Connect 默认使用**直连**。代理是可选项，只作用于本插�
 
 在插件配置和“模型 → 更多设置”中，每个模型行显示具体的上下文预算，并保留显示勾选框。“上下文 → 调整”展开双向同步的滑条和整数输入框，同时显示已安装目录的默认值及配置上限。“恢复默认”使用目录值，即使启动配置中有覆盖值也不例外。隐藏模型会保留其预算。“保存”提交暂存修改，“放弃”撤销修改。清空输入框属于无效输入，不等于恢复默认。
 
-配置上限依据于 2026-08-28 核对的 [Codex 官方目录快照](https://github.com/openai/codex/blob/7625343977154efed8c0dadba956374992a1580b/codex-rs/models-manager/models.json)：GPT-5.6 Sol/Terra/Luna 为 872,000 tokens，GPT-5.4 为 1,000,000，GPT-5.5/GPT-5.4 mini 为 272,000。没有已记录上限的模型（包括 Spark）暂以已安装提供方目录的默认值为上限；如果更新后的提供方默认值高于已记录上限，也以该默认值为上限。界面会标明依据；这些数值不是从用户账号动态获取的，也不是实测的服务端容量。默认值保持不变；超过默认值会提示额度消耗及请求失败风险，账号和通道限制可能不同。
+配置上限依据于 2026-09-05 核对的 [Codex 官方目录快照](https://github.com/openai/codex/blob/a97cf1b72eaad05aa49847bc81d09ceac9327754/codex-rs/models-manager/models.json)：GPT-6 Astra 和 GPT-5.6 Sol/Terra/Luna 为 872,000 tokens，GPT-5.4 为 1,000,000，GPT-5.5/GPT-5.4 mini 为 272,000。没有已记录上限的模型（包括 Spark）暂以已安装提供方目录的默认值为上限；如果更新后的提供方默认值高于已记录上限，也以该默认值为上限。界面会标明依据；这些数值不是从用户账号动态获取的，也不是实测的服务端容量。默认值保持不变；超过默认值会提示额度消耗及请求失败风险，账号和通道限制可能不同。
 
 ```yaml
 - id: llm-openai-codex
