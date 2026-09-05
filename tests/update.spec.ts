@@ -128,12 +128,12 @@ describe('Codex Connect update metadata', () => {
     expect(parseOpenAICodexUpdateHighlights({
       schemaVersion: 1,
       releases: [
-        { version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'model-visibility', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'future-kind', 'oauth-history'] },
+        { version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'model-visibility', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'astra-compatibility', 'multi-account', 'search-route', 'future-kind', 'oauth-history'] },
         { version: 'not-a-version', highlights: ['image-generation'] },
       ],
     })).toEqual({
       schemaVersion: 1,
-      releases: [{ version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'model-visibility', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review'] }],
+      releases: [{ version: '0.1.0-alpha.4.14', highlights: ['oauth-history', 'model-visibility', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'astra-compatibility', 'multi-account', 'search-route'] }],
     })
     expect(parseOpenAICodexUpdateHighlights({ schemaVersion: 2, releases: [] })).toBeUndefined()
   })

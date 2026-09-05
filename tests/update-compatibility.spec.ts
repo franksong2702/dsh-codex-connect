@@ -23,6 +23,7 @@ const catalog = {
     { version: '0.1.0-alpha.4.24', verifiedDshVersions: ['0.1.2-alpha.5'] },
     { version: '0.1.0-alpha.4.25', verifiedDshVersions: ['0.1.2-alpha.5'] },
     { version: '0.1.0-alpha.4.26', verifiedDshVersions: ['0.1.2-rc.1'] },
+    { version: '0.1.0-alpha.4.27', verifiedDshVersions: ['0.1.2-rc.1'] },
   ],
 }
 
@@ -70,9 +71,9 @@ describe('Codex Connect verified DSH compatibility', () => {
   })
 
   it('recommends updating DSH when the latest plugin matches the latest verified DSH', () => {
-    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.24', '0.1.0-alpha.4.26', '0.1.2-alpha.2', catalog)).toEqual({
+    expect(evaluateOpenAICodexDshCompatibility('0.1.0-alpha.4.24', '0.1.0-alpha.4.27', '0.1.2-alpha.2', catalog)).toEqual({
       status: 'dsh-update-required',
-      latestPluginVersion: '0.1.0-alpha.4.26',
+      latestPluginVersion: '0.1.0-alpha.4.27',
       latestDshVersion: '0.1.2-rc.1',
     })
   })
