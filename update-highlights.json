@@ -91,7 +91,7 @@
     },
     {
       "version": "0.1.0-alpha.4.27",
-      "highlights": ["astra-compatibility", "multi-account", "search-route"]
+      "highlights": ["astra-compatibility", "multi-account", "search-route", "proxy-connection"]
     }
   ]
 }

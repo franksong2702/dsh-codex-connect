@@ -3,13 +3,13 @@
 import { createModels } from '@earendil-works/pi-ai'
 import type { MutableModels } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
-import { fetch } from 'undici'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
 import { CODEX_AUTO_REVIEW_MODEL } from './auto-review-probe.ts'
 import type { AutoReviewAction, AutoReviewContext } from './auto-review-contract.ts'
+import { fetch } from './undici-runtime.ts'
 
 /** Official Codex review deadline. */
 export const AUTO_REVIEW_TIMEOUT_MS = 90_000
