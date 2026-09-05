@@ -73,6 +73,9 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'context-budget': 'updateHighlightContextBudget',
   'auto-review-probe': 'updateHighlightAutoReviewProbe',
   'auto-review': 'updateHighlightAutoReview',
+  'astra-compatibility': 'updateHighlightAstraCompatibility',
+  'multi-account': 'updateHighlightMultiAccount',
+  'search-route': 'updateHighlightSearchRoute',
 }
 
 const compatibilityTitleKeys: Record<OpenAICodexDshCompatibilityStatus, OpenAICodexSettingsKey> = {

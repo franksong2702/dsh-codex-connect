@@ -6,13 +6,13 @@ import { AccountFeedback, AccountManager, accountStatusLabel, dotStyle, UsageLim
 import { OpenAICodexConfiguration } from './OpenAICodexConfiguration.tsx'
 
 export type OpenAICodexModelsCardInjected = Required<Pick<OpenAICodexSettingsInjected, 't' | 'account'>>
-  & Pick<Partial<OpenAICodexSettingsInjected>, 'configScope' | 'searchRouteScope'>
+  & Pick<Partial<OpenAICodexSettingsInjected>, 'configScope'>
 
 const buttonStyle: CSSProperties = { padding: '6px 14px', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 999, background: 'transparent', color: 'inherit', font: 'inherit', fontSize: 14, cursor: 'pointer' }
 const secondaryStyle: CSSProperties = { fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)' }
 
 /** Native modality contains keyboard focus and restores it to More settings on close. */
-function ConfigurationDialog({ t, configScope, searchRouteScope, onClose }: Pick<OpenAICodexModelsCardInjected, 't' | 'configScope' | 'searchRouteScope'> & { onClose: () => void }) {
+function ConfigurationDialog({ t, configScope, onClose }: Pick<OpenAICodexModelsCardInjected, 't' | 'configScope'> & { onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   useEffect(() => {
@@ -56,12 +56,11 @@ function ConfigurationDialog({ t, configScope, searchRouteScope, onClose }: Pick
     <OpenAICodexConfiguration
       t={t}
       {...configScope === undefined ? {} : { scope: configScope }}
-      {...searchRouteScope === undefined ? {} : { searchRouteScope }}
     />
   </dialog>
 }
 
-export function OpenAICodexModelsCard({ t, account, configScope, searchRouteScope }: OpenAICodexModelsCardInjected) {
+export function OpenAICodexModelsCard({ t, account, configScope }: OpenAICodexModelsCardInjected) {
   const [expanded, setExpanded] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const detailsId = useId()
@@ -90,7 +89,6 @@ export function OpenAICodexModelsCard({ t, account, configScope, searchRouteScop
     {settingsOpen && <ConfigurationDialog
       t={t}
       {...configScope === undefined ? {} : { configScope }}
-      {...searchRouteScope === undefined ? {} : { searchRouteScope }}
       onClose={() => { setSettingsOpen(false) }}
     />}
   </div>

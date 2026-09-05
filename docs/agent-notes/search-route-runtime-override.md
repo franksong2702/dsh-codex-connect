@@ -1,0 +1,7 @@
+# Agent Note: Search route ownership on DSH 0.1.2-rc.1
+
+DSH `0.1.2-rc.1` keeps the WebRuntime provider selection in its initial plugin config and does not register a `web` settings namespace. A browser settings scope therefore cannot persist `web.searchProvider`; treating a mocked writable scope as the Host contract makes Save fail on the real profile before Codex Search is enabled.
+
+Codex Connect already pins that DSH release as an exact peer dependency. While `enableSearch` is true, the plugin now verifies the pinned WebRuntime field, records the provider that was selected when the capability activated, registers the Codex provider, and selects it for the shared `web_search` tool. Disable and disposal restore the recorded provider before unregistering Codex. Restoration is conditional: if another owner changed the selection while Codex Search was active, the plugin preserves that newer route. A runtime without the pinned field rejects activation instead of silently leaving the previous provider selected.
+
+The Host integration test uses the real DSH WebRuntime with a configured DeepSeek provider. It proves that search resolves through DeepSeek before enablement, through Codex after the setting changes, and through DeepSeek again after disablement. Unit coverage pins idempotent restoration, preservation of a later third-party change, and rejection of an unsupported runtime. Browser coverage remains responsible only for staging and saving the existing capability switch; it no longer invents a Host-owned `web` settings scope.

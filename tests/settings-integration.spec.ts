@@ -41,7 +41,7 @@ afterEach(async () => {
 })
 
 describe('OpenAI Codex Host settings integration', () => {
-  it('exposes OpenAI Codex and applies optional capabilities without changing routes', async () => {
+  it('exposes OpenAI Codex, applies optional capabilities, and owns the search route while enabled', async () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-settings-'))
     vi.stubEnv('DSH_HOME', root)
     const workspace = join(root, 'workspace')
@@ -49,7 +49,12 @@ describe('OpenAI Codex Host settings integration', () => {
     context = ctx
     await ctx.plugin(LlmRuntime)
     const piAi = await ctx.plugin(PiAiRuntime, {})
-    await ctx.plugin(WebRuntime)
+    await ctx.plugin(WebRuntime, { searchProvider: 'deepseek-official' })
+    ctx.web.registerSearchProvider({
+      id: 'deepseek-official',
+      available: () => true,
+      search: () => Promise.resolve({ content: 'DeepSeek search', sources: [], truncated: false }),
+    })
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime, { mode: 'native' })
     await ctx.plugin(LocalFileSystem, { cwd: workspace })
@@ -75,7 +80,7 @@ describe('OpenAI Codex Host settings integration', () => {
       agent: approvalAgent,
       toolName: 'fixture',
     }, async () => 'allowed-once')).resolves.toBe('allowed-once')
-    await expect(ctx.web.search({ query: 'disabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
+    await expect(ctx.web.search({ query: 'disabled' })).resolves.toMatchObject({ content: 'DeepSeek search' })
 
     await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, {
       models: [fullCatalog[1]!.id, fullCatalog[0]!.id, fullCatalog[1]!.id],
@@ -91,7 +96,9 @@ describe('OpenAI Codex Host settings integration', () => {
       expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeDefined()
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeDefined()
     })
-    await expect(ctx.web.search({ query: 'enabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
+    await vi.waitFor(async () => {
+      await expect(ctx.web.search({ query: 'enabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
+    })
     await expect(ctx.llm.listModels(OpenAICodex.OPENAI_CODEX_PROVIDER)).resolves.toEqual([
       fullCatalog[0],
       fullCatalog[1],
@@ -109,7 +116,7 @@ describe('OpenAI Codex Host settings integration', () => {
       expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
     })
-    await expect(ctx.web.search({ query: 'disabled again' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_UNAVAILABLE' })
+    await expect(ctx.web.search({ query: 'disabled again' })).resolves.toMatchObject({ content: 'DeepSeek search' })
     expect(ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value)
       .toMatchObject({ oauthTimeoutMs: 120_000 })
 

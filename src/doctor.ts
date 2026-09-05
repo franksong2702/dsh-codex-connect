@@ -41,7 +41,7 @@ export interface OpenAICodexDiagnosticReport {
     imageTool: boolean
     imageGeneration: boolean
     changesHarnessDefaultModel: false
-    changesHarnessSearchRoute: false
+    changesHarnessSearchRoute: boolean
   }
   providerConflict: boolean
   compatibility: CompatibilityReport
@@ -111,7 +111,7 @@ export async function diagnoseOpenAICodex(
       imageTool: options.enableImageTool === true,
       imageGeneration: options.enableImageGeneration === true,
       changesHarnessDefaultModel: false,
-      changesHarnessSearchRoute: false,
+      changesHarnessSearchRoute: options.enableSearch === true,
     },
     providerConflict,
     compatibility,

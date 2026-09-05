@@ -28,6 +28,9 @@ export type OpenAICodexUpdateHighlightKind =
   | 'context-budget'
   | 'auto-review-probe'
   | 'auto-review'
+  | 'astra-compatibility'
+  | 'multi-account'
+  | 'search-route'
 
 export interface OpenAICodexUpdateHighlight {
   version: string
@@ -85,6 +88,9 @@ const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'context-budget',
   'auto-review-probe',
   'auto-review',
+  'astra-compatibility',
+  'multi-account',
+  'search-route',
 ]
 
 function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {
