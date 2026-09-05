@@ -1,8 +1,8 @@
 /** Fixed, standalone probe for the hidden Codex approval reviewer. */
 
-import { Agent, ProxyAgent, fetch } from 'undici'
 import type { Dispatcher } from 'undici'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
+import { Agent, ProxyAgent, fetch } from './undici-runtime.ts'
 
 /** Hidden reviewer route selected by the first-party Codex catalog. */
 export const CODEX_AUTO_REVIEW_MODEL = 'codex-auto-review'
