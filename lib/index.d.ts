@@ -46,6 +46,13 @@ declare class OpenAICodexCredentialStore implements CredentialStore {
   private writeDocument;
   /** @inheritdoc */
   read(providerId: string): Promise<Credential | undefined>;
+  /**
+   * Capture the current account for one request's complete auth resolution.
+   * Refreshes through the returned store update only that captured account and
+   * never change the user's current account selection.
+   */
+  captureActiveAccount(): Promise<CredentialStore>;
+  private modifyCapturedAccount;
   /** @inheritdoc */
   list(): Promise<readonly CredentialInfo[]>;
   /** List browser-safe account summaries without exposing provider account ids. */

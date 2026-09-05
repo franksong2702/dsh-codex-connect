@@ -148,7 +148,29 @@ describe('OpenAICodexCredentialStore', () => {
     await auth.activate(accounts[0]!.accountKey)
     expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'provider-account-one' })
     expect((await auth.accounts()).map(account => account.active)).toEqual([true, false])
+    const restarted = new OpenAICodexCredentialStore(auth.filename)
+    expect(await restarted.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'provider-account-one' })
     await expect(auth.activate('acct_0000000000000000000000000000000000000000000')).rejects.toThrow(/account not found/u)
+  })
+
+  it('refreshes a captured request account without switching or overwriting the current account', async () => {
+    const auth = await store()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('one', 'account-1')))
+    const captured = await auth.captureActiveAccount()
+    await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('two', 'account-2')))
+
+    const refreshed = await captured.modify(OPENAI_CODEX_PROVIDER, async current => {
+      expect(current).toMatchObject({ access: 'one', accountId: 'account-1' })
+      return credential('one-refreshed', 'account-1')
+    })
+
+    expect(refreshed).toMatchObject({ access: 'one-refreshed', accountId: 'account-1' })
+    expect(await captured.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'one-refreshed', accountId: 'account-1' })
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'two', accountId: 'account-2' })
+    const accounts = await auth.accounts()
+    expect(accounts.map(account => account.active)).toEqual([false, true])
+    await auth.activate(accounts[0]!.accountKey)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ access: 'one-refreshed', accountId: 'account-1' })
   })
 
   it('requires an explicit replacement when removing the active account', async () => {
