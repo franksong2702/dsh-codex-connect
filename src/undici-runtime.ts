@@ -15,7 +15,11 @@ function isDispatcher(value: unknown): value is { dispatch: (...args: unknown[])
 }
 
 const inheritedDispatcher = Reflect.get(globalThis, LEGACY_GLOBAL_DISPATCHER)
-if (Reflect.get(globalThis, CURRENT_GLOBAL_DISPATCHER) === undefined && isDispatcher(inheritedDispatcher)) {
+const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '', 10)
+const isNodeEnvironmentProxy = nodeMajor >= 24
+  && isDispatcher(inheritedDispatcher)
+  && inheritedDispatcher.constructor.name === 'EnvHttpProxyAgent'
+if (Reflect.get(globalThis, CURRENT_GLOBAL_DISPATCHER) === undefined && isNodeEnvironmentProxy) {
   Reflect.defineProperty(globalThis, CURRENT_GLOBAL_DISPATCHER, {
     value: inheritedDispatcher,
     writable: true,

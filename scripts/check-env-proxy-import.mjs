@@ -8,15 +8,34 @@ const child = spawnSync(process.execPath, [
   '--eval',
   `const symbol = Symbol.for('undici.globalDispatcher.1')
 const before = globalThis[symbol]
-if (before === undefined || typeof before.dispatch !== 'function') {
-  throw new Error('Node did not initialize a usable global fetch dispatcher')
+if (before !== undefined && typeof before.dispatch !== 'function') {
+  throw new Error('Node initialized an unusable global fetch dispatcher')
 }
+const beforeName = before?.constructor?.name
+const nodeMajor = Number.parseInt(process.versions.node.split('.')[0] ?? '', 10)
 await import(process.argv[1])
 const after = globalThis[symbol]
-if (after !== before) {
-  throw new Error(\`package import replaced Node global dispatcher: \${before.constructor?.name ?? 'unknown'} -> \${after?.constructor?.name ?? 'undefined'}\`)
+if (nodeMajor >= 24 && before === undefined) {
+  throw new Error('Node did not initialize an environment-proxy dispatcher')
 }
-process.stdout.write(JSON.stringify({ node: process.version, dispatcher: before.constructor?.name ?? 'unknown' }))`,
+if (nodeMajor >= 24 && after !== before) {
+  throw new Error(\`package import replaced Node global dispatcher: \${beforeName} -> \${after?.constructor?.name ?? 'undefined'}\`)
+}
+const { fetch } = await import('undici')
+try {
+  await fetch('http://127.0.0.1:65534', { signal: AbortSignal.timeout(2_000) })
+} catch (error) {
+  let cause = error
+  while (typeof cause === 'object' && cause !== null) {
+    if (cause.code === 'UND_ERR_INVALID_ARG') throw cause
+    cause = cause.cause
+  }
+}
+process.stdout.write(JSON.stringify({
+  node: process.version,
+  dispatcher: beforeName ?? 'none',
+  preserved: before === undefined ? undefined : after === before,
+}))`,
   packageEntry,
 ], {
   encoding: 'utf8',
