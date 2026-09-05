@@ -98,7 +98,7 @@ Fresh installations register the model provider and leave every additional capab
     enableAutoReview: false
 ```
 
-Edit these options under **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Most settings affect only this plugin; saving a changed Codex Search switch also updates the profile-wide search route.
+Edit these options under **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Most settings affect only this plugin; enabling Codex Search also selects it as the active profile-wide search route.
 
 ### Proxy
 
@@ -106,7 +106,7 @@ Direct connection is the default. An enabled credential-free HTTP(S) proxy appli
 
 ### Search and image tools
 
-- `enableSearch: true` registers Codex as an available search provider. Saving the switch also selects `web.searchProvider: openai-codex`; disabling it removes that explicit route before unregistering the provider.
+- `enableSearch: true` registers Codex as an available search provider and selects it for profile-wide searches. Disabling it unregisters the provider and restores the route that was active before Codex Search was enabled.
 - `enableImageTool: true` registers `view_image` on vision-capable models. Remote reads accept credential-free public HTTP(S) only and revalidate DNS and redirects.
 - `enableImageGeneration: true` registers prompt-only GPT Image generation. Use the image generation capability included with your current GPT subscription. Availability, dimensions, and quota remain account- and service-controlled.
 
@@ -122,7 +122,7 @@ Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; th
 
 ## Routing and configuration
 
-Installing Codex Connect does not select a default model or search provider. Saving the enabled Codex Search switch selects the search provider; select a default model separately only when intended. The equivalent configuration is:
+Installing Codex Connect does not select a default model or search provider. Enabling Codex Search selects it while the capability remains enabled; select a default model separately only when intended. The equivalent configuration is:
 
 ```yaml
 - id: agent-default-model
@@ -136,9 +136,6 @@ Installing Codex Connect does not select a default model or search provider. Sav
     searchMode: live
     searchContextSize: medium
 
-- id: web
-  config:
-    searchProvider: openai-codex
 ```
 
 The main plugin options are:

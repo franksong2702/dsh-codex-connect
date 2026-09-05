@@ -98,7 +98,7 @@ GPT Codex 对话的 Composer 会显示两个会话级控件：
     enableAutoReview: false
 ```
 
-请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑这些选项。修改会暂存到点击 **保存更改** 为止。大多数设置只影响本插件；如果 Codex 搜索开关发生变化，保存时还会更新整个 profile 的搜索路由。
+请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑这些选项。修改会暂存到点击 **保存更改** 为止。大多数设置只影响本插件；启用 Codex 搜索还会把它选为整个 profile 当前使用的搜索路由。
 
 ### 代理
 
@@ -106,7 +106,7 @@ GPT Codex 对话的 Composer 会显示两个会话级控件：
 
 ### 搜索与图片工具
 
-- `enableSearch: true` 将 Codex 注册为可用搜索提供方。保存这个开关时还会选择 `web.searchProvider: openai-codex`；关闭时会先移除这条显式路由，再注销提供方。
+- `enableSearch: true` 将 Codex 注册为可用搜索提供方，并用于整个 profile 的搜索。关闭时会注销该提供方，并恢复启用 Codex 搜索之前的路由。
 - `enableImageTool: true` 为具备视觉能力的模型注册 `view_image`。远程读取只接受不带凭据的公网 HTTP(S)，并重新检查 DNS 与重定向。
 - `enableImageGeneration: true` 注册只接受提示词的 GPT Image 图片生成。使用你当前 GPT 订阅计划提供的图片生成能力。可用性、尺寸和额度仍由账户及服务端控制。
 
@@ -122,7 +122,7 @@ GPT Codex 对话的 Composer 会显示两个会话级控件：
 
 ## 路由与配置
 
-安装 Codex Connect 不会选定默认模型或搜索提供方。保存已启用的 Codex 搜索开关会选择搜索提供方；默认模型仍需在确实需要时另行选择。等价配置如下：
+安装 Codex Connect 不会选定默认模型或搜索提供方。启用 Codex 搜索后，插件会在该能力保持开启期间选中它；默认模型仍需在确实需要时另行选择。等价配置如下：
 
 ```yaml
 - id: agent-default-model
@@ -136,9 +136,6 @@ GPT Codex 对话的 Composer 会显示两个会话级控件：
     searchMode: live
     searchContextSize: medium
 
-- id: web
-  config:
-    searchProvider: openai-codex
 ```
 
 主要插件选项如下：

@@ -5,7 +5,6 @@ import type { CSSProperties } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexUsage } from '../usage.ts'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
-import type { OpenAICodexSearchRouteConfig } from './search-route.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
 import type { AccountStatus, AccountSnapshot } from './account-store.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
@@ -20,8 +19,6 @@ export interface OpenAICodexSettingsInjected {
   t: (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
   /** Host-owned optional capability settings. */
   configScope: SettingsScope<OpenAICodexSettingsConfig>
-  /** Host-owned profile-wide web search route synchronized by the existing Save action. */
-  searchRouteScope?: SettingsScope<OpenAICodexSearchRouteConfig>
   /** Shared browser update state used by the global overlay and this card. */
   updater?: OpenAICodexUpdateStore
   /** Shared across Models and Plugin settings by the browser-plugin owner. */
@@ -391,7 +388,7 @@ export function AccountFeedback({ t, snapshot }: {
 }
 
 /** OpenAI Codex account status and OAuth actions. */
-export function OpenAICodexSettings({ t, configScope, searchRouteScope, updater, account, embedded = false, accountOnly = false }: OpenAICodexSettingsProps) {
+export function OpenAICodexSettings({ t, configScope, updater, account, embedded = false, accountOnly = false }: OpenAICodexSettingsProps) {
   if (t === undefined) throw new Error('OpenAI Codex settings requires its translation function')
   const [localAccount] = useState(() => new OpenAICodexAccountStore())
   const store = account ?? localAccount
@@ -476,7 +473,6 @@ export function OpenAICodexSettings({ t, configScope, searchRouteScope, updater,
           activeModule={activeModule}
           panelIdPrefix={panelIdPrefix}
           {...configScope === undefined ? {} : { scope: configScope }}
-          {...searchRouteScope === undefined ? {} : { searchRouteScope }}
         />}
       </div>
     </section>

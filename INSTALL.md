@@ -95,7 +95,7 @@ The value is a full `http://` or `https://` origin including its port, not a bar
 
 ## Optional configuration
 
-Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all four default to `false`. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Saving an enabled search switch registers the provider and selects `web.searchProvider: openai-codex`; disabling removes that explicit route before unregistering the provider. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
+Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all four default to `false`. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers the provider and selects it while the capability remains enabled; disabling restores the previous provider before unregistering Codex Search. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
 
 Apply only requested choices and preserve unrelated keys:
 
@@ -108,17 +108,13 @@ Apply only requested choices and preserve unrelated keys:
     enableAutoReview: false
     searchMode: live
 
-- id: web
-  config:
-    searchProvider: openai-codex
-
 - id: agent-default-model
   config:
     provider: openai-codex
     model: gpt-5.6-sol
 ```
 
-The `web` row is the persisted result of enabling Codex Search in the UI; do not add it independently unless the user requested search. Do not add the `agent-default-model` row unless the user separately requested that default.
+Do not add a separate `web` row for this UI action. Do not add the `agent-default-model` row unless the user separately requested that default.
 
 ## Conflict handling
 

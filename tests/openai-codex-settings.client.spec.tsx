@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { formatOpenAICodexResetAt, OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { OpenAICodexConfiguration } from '../src/client/OpenAICodexConfiguration.tsx'
-import type { OpenAICodexSearchRouteConfig } from '../src/client/search-route.ts'
 import { en, zh } from '../src/client/locales.ts'
 import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../src/settings-contract.ts'
@@ -96,60 +95,6 @@ function settingsScopeFixture(
       set,
       mutate: vi.fn(async () => { throw new Error('This fixture supports single-field settings writes only.') }),
       unset: vi.fn(async () => undefined),
-    },
-  }
-}
-
-function searchRouteScopeFixture(
-  baseProvider: string | undefined,
-  writable = true,
-): {
-  scope: SettingsScope<OpenAICodexSearchRouteConfig>
-  mutate: ReturnType<typeof vi.fn>
-} {
-  const base = baseProvider === undefined ? {} : { searchProvider: baseProvider }
-  let snapshot: SettingsScopeSnapshot<OpenAICodexSearchRouteConfig> = {
-    status: 'ready',
-    value: { ...base },
-    base,
-    user: undefined,
-    revision: 0,
-    writable,
-    mode: 'host',
-  }
-  const listeners = new Set<() => void>()
-  const mutate = vi.fn(async (ops: readonly { op: 'set' | 'unset'; path: string[]; value?: unknown }[], expectedRevision?: number) => {
-    if (expectedRevision !== snapshot.revision) throw new Error('stale settings revision')
-    let user = typeof snapshot.user === 'object' && snapshot.user !== null
-      ? { ...snapshot.user as Record<string, unknown> }
-      : {}
-    for (const op of ops) {
-      if (op.path.length !== 1 || op.path[0] !== 'searchProvider') throw new Error('unexpected route operation')
-      if (op.op === 'set') user.searchProvider = op.value
-      else delete user.searchProvider
-    }
-    const value = Object.hasOwn(user, 'searchProvider')
-      ? { searchProvider: user.searchProvider as string }
-      : { ...base }
-    snapshot = {
-      ...snapshot,
-      value,
-      user: Object.keys(user).length === 0 ? undefined : user,
-      revision: (snapshot.revision ?? 0) + 1,
-    }
-    for (const listener of listeners) listener()
-  })
-  return {
-    mutate,
-    scope: {
-      getSnapshot: () => snapshot,
-      subscribe(listener) {
-        listeners.add(listener)
-        return () => { listeners.delete(listener) }
-      },
-      set: vi.fn(async () => { throw new Error('Use revision-fenced mutate') }),
-      unset: vi.fn(async () => { throw new Error('Use revision-fenced mutate') }),
-      mutate,
     },
   }
 }
@@ -395,10 +340,9 @@ describe('OpenAI Codex Plugin configuration card', () => {
       ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }, { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))
       : json({ status: 'signed-out' }))
     const { scope, set } = settingsScopeFixture()
-    const route = searchRouteScopeFixture('deepseek')
     vi.stubGlobal('fetch', fetchMock)
 
-    render(<OpenAICodexSettings t={t} configScope={scope} searchRouteScope={route.scope} embedded />)
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     fireEvent.click(screen.getByRole('tab', { name: en.capabilitiesModule }))
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
@@ -456,82 +400,12 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(set).toHaveBeenCalledWith('enableImageGeneration', true)
     expect(set).toHaveBeenCalledWith('autoReviewDisclosureAcknowledged', true)
     expect(set).toHaveBeenCalledWith('enableAutoReview', true)
-    expect(route.mutate).toHaveBeenCalledWith([{
-      op: 'set', path: ['searchProvider'], value: 'openai-codex',
-    }], 0)
-
     fireEvent.click(enableAutoReview)
     fireEvent.click(save)
     expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
     fireEvent.click(enableAutoReview)
     expect(enableAutoReview.checked).toBe(true)
     expect(screen.queryByRole('dialog')).toBeNull()
-  })
-
-  it('uses the existing Save flow to select Codex as the profile-wide search route', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
-    const config = settingsScopeFixture()
-    const route = searchRouteScopeFixture('deepseek')
-
-    render(<OpenAICodexConfiguration t={t} scope={config.scope} searchRouteScope={route.scope} activeModule="capabilities" />)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }))
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-
-    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
-    expect(route.mutate).toHaveBeenCalledWith([{
-      op: 'set', path: ['searchProvider'], value: 'openai-codex',
-    }], 0)
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
-
-  it('rolls back a newly enabled provider when the route write fails', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
-    const config = settingsScopeFixture()
-    const route = searchRouteScopeFixture('deepseek')
-    route.scope.mutate = vi.fn(async () => { throw new Error('Host refused the write') })
-
-    render(<OpenAICodexConfiguration t={t} scope={config.scope} searchRouteScope={route.scope} activeModule="capabilities" />)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }))
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-
-    expect(await screen.findByText(en.settingsSaveFailed)).toBeTruthy()
-    expect(config.set).toHaveBeenCalledWith('enableSearch', true)
-    expect(config.set).toHaveBeenLastCalledWith('enableSearch', false)
-    expect(route.scope.getSnapshot().value?.searchProvider).toBe('deepseek')
-  })
-
-  it('removes the explicit Codex route before disabling the provider', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
-    const config = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableSearch: true })
-    const route = searchRouteScopeFixture('deepseek')
-    await route.scope.mutate([{
-      op: 'set', path: ['searchProvider'], value: 'openai-codex',
-    }], 0)
-    route.mutate.mockClear()
-
-    render(<OpenAICodexConfiguration t={t} scope={config.scope} searchRouteScope={route.scope} activeModule="capabilities" />)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }))
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-
-    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
-    expect(route.mutate).toHaveBeenCalledWith([{ op: 'unset', path: ['searchProvider'] }], 1)
-    expect(config.set).toHaveBeenCalledWith('enableSearch', false)
-    expect(route.scope.getSnapshot().value?.searchProvider).toBe('deepseek')
-  })
-
-  it('keeps the provider enabled when profile composition still selects Codex', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
-    const config = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableSearch: true })
-    const route = searchRouteScopeFixture('openai-codex')
-
-    render(<OpenAICodexConfiguration t={t} scope={config.scope} searchRouteScope={route.scope} activeModule="capabilities" />)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }))
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-
-    expect(await screen.findByText(en.settingsSaveFailed)).toBeTruthy()
-    expect(config.set).not.toHaveBeenCalled()
-    expect(route.mutate).not.toHaveBeenCalled()
-    expect(config.scope.getSnapshot().value?.enableSearch).toBe(true)
   })
 
   it('stages model visibility in provider order and saves it with the other plugin settings', async () => {

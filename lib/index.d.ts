@@ -305,7 +305,7 @@ interface OpenAICodexDiagnosticReport {
     imageTool: boolean;
     imageGeneration: boolean;
     changesHarnessDefaultModel: false;
-    changesHarnessSearchRoute: false;
+    changesHarnessSearchRoute: boolean;
   };
   providerConflict: boolean;
   compatibility: CompatibilityReport;

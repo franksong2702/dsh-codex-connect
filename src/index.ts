@@ -40,6 +40,7 @@ import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
+import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -361,16 +362,32 @@ export function apply(ctx: Context, config: Config): void {
     searchRegistration = undefined
     if (previous !== undefined) await previous.dispose()
     if (stopped || nextRegistration === undefined) return
-    const fiber = ctx.inject(['web'], webCtx => webCtx.web.registerSearchProvider(new OpenAICodexSearchProvider({
-      credentials,
-      model: nextRegistration.model,
-      mode: nextRegistration.mode,
-      contextSize: nextRegistration.contextSize,
-      maxOutputTokens: nextRegistration.maxOutputTokens,
-      resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
-      proxyManager,
-      resolveProxyUrl: resolveProviderProxyUrl,
-    })))
+    const fiber = ctx.inject(['web'], (webCtx) => {
+      const provider = new OpenAICodexSearchProvider({
+        credentials,
+        model: nextRegistration.model,
+        mode: nextRegistration.mode,
+        contextSize: nextRegistration.contextSize,
+        maxOutputTokens: nextRegistration.maxOutputTokens,
+        resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
+        proxyManager,
+        resolveProxyUrl: resolveProviderProxyUrl,
+      })
+      const unregister = webCtx.web.registerSearchProvider(provider)
+      try {
+        const restoreRoute = selectOpenAICodexSearchRoute(webCtx.web, provider.id)
+        return () => {
+          try {
+            restoreRoute()
+          } finally {
+            unregister()
+          }
+        }
+      } catch (error) {
+        unregister()
+        throw error
+      }
+    })
     searchFiber = fiber
     searchRegistration = nextRegistration
     void Promise.resolve(fiber).catch((error: unknown) => {

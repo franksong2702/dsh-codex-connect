@@ -6,7 +6,7 @@
 
 bundle patch 只插入 `llm-openai-codex`，不会写入 `agent-default-model` 或 `web.searchProvider`。`enableSearch` 与 `enableImageTool` 默认均为 `false`；关闭时不会注册对应可选服务。
 
-Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。DSH 的 `llm-pi-ai` catalog 持有 `openai-codex` 可配置 provider 目录条目，Codex Connect 只注册实际 adapter，不重复声明该条目。浏览器通过 Harness settings-scope transport 绑定插件 namespace，把账户、额度以及带保存/放弃的能力配置放在现有“插件配置”卡片中。带 revision 防护的逐字段写入不会覆盖无关设置；提交后会即时协调搜索与图片能力的注册状态。插件绝不写入默认模型设置。保存 `enableSearch` 变更时还会绑定 Host 自有 `web` namespace，并且只修改 `searchProvider`，让现有开关完成搜索设置。
+Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。DSH 的 `llm-pi-ai` catalog 持有 `openai-codex` 可配置 provider 目录条目，Codex Connect 只注册实际 adapter，不重复声明该条目。浏览器通过 Harness settings-scope transport 绑定插件 namespace，把账户、额度以及带保存/放弃的能力配置放在现有“插件配置”卡片中。带 revision 防护的逐字段写入不会覆盖无关设置；提交后会即时协调搜索与图片能力的注册状态。插件绝不写入默认模型设置。
 
 ## OAuth 持久化
 
@@ -18,10 +18,10 @@ Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。
 
 ## 搜索与图片
 
-仅当 `enableSearch: true` 时注册 Codex 独立搜索提供方和不含凭据的请求事件。多 provider 环境仍需显式设置 `web.searchProvider: openai-codex`，因此保存现有开关时会先启用提供方，再写入这条路由。路由写操作携带开始保存时看到的 revision；写入失败时会回滚刚启用的能力，而不是显示保存成功。停用时会先移除显式 Codex 路由；如果 profile composition 仍会选中 Codex，则中止保存。仅当 `enableImageTool: true` 且 tools、filesystem、attachments 服务存在时注册 `view_image`。本地文件继续受 Harness 文件系统边界与大小限制；远程图片只允许不含凭据的公共 HTTP(S)，所有 DNS 结果必须是公共单播地址，每次重定向都会重新验证，并把实际连接固定到已验证地址以关闭 DNS rebinding 缺口。
+仅当 `enableSearch: true` 时注册 Codex 独立搜索提供方和不含凭据的请求事件。DSH `0.1.2-rc.1` 没有通过 settings 服务开放 WebRuntime 的 provider 选择，因此兼容适配器会先核对该版本的运行时字段，记录此前的提供方，并仅在能力开启期间选择 Codex。关闭能力或卸载插件时会恢复此前的提供方；如果另一个 owner 已经选择了更新的路由，则不会覆盖它。不支持的运行时会让能力启用失败，不会谎报路由已经变化。仅当 `enableImageTool: true` 且 tools、filesystem、attachments 服务存在时注册 `view_image`。本地文件继续受 Harness 文件系统边界与大小限制；远程图片只允许不含凭据的公共 HTTP(S)，所有 DNS 结果必须是公共单播地址，每次重定向都会重新验证，并把实际连接固定到已验证地址以关闭 DNS rebinding 缺口。
 
 ## 冲突、诊断与兼容边界
 
 注册前检查现有 provider id；发现 `openai-codex` 已被占用时，给出旧 bundle 或手动 provider 配置的定向迁移提示。boot-free CLI doctor 只报告包/运行时版本、OAuth 路径元数据、能力默认值和安全提示。
 
-Alpha 4.26 固定使用 Harness `0.1.2-rc.1` 开发依赖，并跟随其 pi-ai 版本范围 `^0.84.2`。Node.js 支持范围仍为 `^22.19.0 || >=24.0.0`。keyed `settings.plugin.item` 集成保持不变，客户端类型继续从 Session Controller、Settings、Store 和 Renderer 的所属包导入。已发布兼容性记录列出 Alpha 4.26 与 DSH `0.1.2-rc.1` 的精确组合。资格、额度、模型、服务端上下文容量和后端协议仍由上游控制。测试仅使用临时 OAuth 文档和模拟网络响应，CI 不执行真实认证。
+Alpha 4.27 固定使用 Harness `0.1.2-rc.1` 开发依赖，并跟随其 pi-ai 版本范围 `^0.84.2`。Node.js 支持范围仍为 `^22.19.0 || >=24.0.0`。keyed `settings.plugin.item` 集成保持不变，客户端类型继续从 Session Controller、Settings、Store 和 Renderer 的所属包导入。已发布兼容性记录列出 Alpha 4.27 与 DSH `0.1.2-rc.1` 的精确组合。资格、额度、模型、服务端上下文容量和后端协议仍由上游控制。测试仅使用临时 OAuth 文档和模拟网络响应，CI 不执行真实认证。
