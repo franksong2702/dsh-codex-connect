@@ -325,8 +325,9 @@ export class OpenAICodexAccountStore {
     this.stopPolling()
     this.publish({ ...this.snapshot, busy: true, operation: { kind: 'cancelling-authorization' } })
     try {
-      const status = parseStatus(await request(OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST'))
-      this.publish({ status, busy: false, accounts: this.snapshot.accounts, operation: { kind: 'idle' } })
+      await request(OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST')
+      const { status, accounts } = await this.readServerState()
+      this.publish({ status, busy: false, accounts, operation: { kind: 'idle' } })
     } catch (error: unknown) {
       this.publish(this.snapshot.accounts.length === 0
         ? { status: this.failure(error), busy: false, accounts: [], operation: { kind: 'idle' } }

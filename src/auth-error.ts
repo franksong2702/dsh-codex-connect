@@ -2,6 +2,7 @@
 const REQUEST_AUTH_MESSAGES = {
   MISSING_CREDENTIAL: 'OpenAI Codex request account is unavailable. Please select an account or sign in again.',
   AUTH_FAILED: 'OpenAI Codex operation failed. Please try again.',
+  REAUTH_REQUIRED: 'OpenAI Codex authorization must be renewed',
   ABORTED: 'OpenAI Codex request cancelled.',
 } as const
 

@@ -3,10 +3,10 @@
  * @module dsh-codex-connect/auth
  */
 
-import { createModels } from '@earendil-works/pi-ai'
+import { createModels, ModelsError } from '@earendil-works/pi-ai'
 import type { AuthInteraction, CredentialStore } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
-import { openaiCodexOAuth } from '../vendor/pi-ai-oauth/auth/oauth/openai-codex.js'
+import { openaiCodexOAuth, OpenAICodexRefreshRejectedError } from '../vendor/pi-ai-oauth/auth/oauth/openai-codex.js'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from './store.ts'
 import { OpenAICodexRequestAuthError } from './auth-error.ts'
 
@@ -78,7 +78,8 @@ export async function readOpenAICodexRequestAuth(
     signal?.throwIfAborted()
     const credentials = await store.captureActiveAccount()
     const models = createModels({ credentials })
-    models.setProvider(openaiCodexProvider())
+    const provider = openaiCodexProvider()
+    models.setProvider({ ...provider, auth: { ...provider.auth, oauth: openaiCodexOAuth } })
     const auth = await models.getAuth(OPENAI_CODEX_PROVIDER, signal === undefined ? undefined : { signal })
     const access = auth?.auth.apiKey
     const credential = await credentials.read(OPENAI_CODEX_PROVIDER)
@@ -91,6 +92,9 @@ export async function readOpenAICodexRequestAuth(
   } catch (error: unknown) {
     if (signal?.aborted) throw new OpenAICodexRequestAuthError('ABORTED')
     if (error instanceof OpenAICodexRequestAuthError) throw error
+    if (error instanceof ModelsError && error.code === 'oauth' && error.cause instanceof OpenAICodexRefreshRejectedError) {
+      throw new OpenAICodexRequestAuthError('REAUTH_REQUIRED')
+    }
     throw new OpenAICodexRequestAuthError('AUTH_FAILED')
   }
 }

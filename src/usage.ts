@@ -1,6 +1,7 @@
 /** Live ChatGPT Codex rate-limit usage for the browser account page. */
 
 import { readOpenAICodexRequestAuth } from './auth.ts'
+import { OpenAICodexRequestAuthError } from './auth-error.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
@@ -224,7 +225,12 @@ export async function readOpenAICodexRateLimits(
   store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>,
 ): Promise<OpenAICodexUsage> {
   const signal = AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)
-  const auth = await readOpenAICodexRequestAuth(store, signal)
+  const auth = await readOpenAICodexRequestAuth(store, signal).catch((error: unknown) => {
+    if (error instanceof OpenAICodexRequestAuthError && error.code === 'REAUTH_REQUIRED') {
+      throw new OpenAICodexReauthRequiredError()
+    }
+    throw error
+  })
   const access = auth?.access
   const accountId = auth?.accountId
   if (access === undefined || access.length === 0 || typeof accountId !== 'string' || accountId.length === 0) {
