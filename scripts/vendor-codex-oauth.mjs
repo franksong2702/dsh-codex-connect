@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Reproduce the small, login-only source copy; do not modify the host's pi-ai.
+// Reproduce the pinned OAuth copy and its local patches without modifying host dependencies.
 const root = fileURLToPath(new URL('../', import.meta.url))
 const source = resolve(dirname(fileURLToPath(import.meta.resolve('@earendil-works/pi-ai'))), '..')
 const metadata = JSON.parse(await readFile(resolve(source, 'package.json'), 'utf8'))
@@ -19,6 +19,30 @@ for (const file of files) {
                     server.closeAllConnections();
                 }),`)
     body = body.replace('        server.close();\n    }\n}', '        await server.close();\n    }\n}')
+    const tokenReader = 'async function readTokenResponse(response, operation) {'
+    if (body.split(tokenReader).length !== 2) throw new Error('Unexpected upstream token response reader')
+    body = body.replace(tokenReader, `/** A structured refresh rejection, without response text or credential data. */
+export class OpenAICodexRefreshRejectedError extends Error {
+    constructor() {
+        super("OpenAI Codex refresh authorization was rejected");
+        this.name = "OpenAICodexRefreshRejectedError";
+    }
+}
+${tokenReader}`)
+    const errorBody = '        const text = await response.text().catch(() => "");'
+    if (body.split(errorBody).length !== 2) throw new Error('Unexpected upstream token error body reader')
+    body = body.replace(errorBody, `${errorBody}
+        if (operation === "refresh" && (response.status === 400 || response.status === 401)) {
+            let failure;
+            try {
+                failure = JSON.parse(text);
+            } catch {
+                // Non-JSON failures do not establish that this grant has been revoked.
+            }
+            if (failure !== null && typeof failure === "object" && failure.error === "invalid_grant") {
+                throw new OpenAICodexRefreshRejectedError();
+            }
+        }`)
   }
   const target = resolve(root, 'vendor/pi-ai-oauth', file)
   if (!process.argv.includes('--write')) {
@@ -28,4 +52,4 @@ for (const file of files) {
     await writeFile(target, body)
   }
 }
-console.log('Pinned OAuth source and callback cleanup patch verified')
+console.log('Pinned OAuth source, callback cleanup and refresh rejection patches verified')

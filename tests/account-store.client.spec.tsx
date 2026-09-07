@@ -5,7 +5,7 @@ import { OpenAICodexAccountStore } from '../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { en, zh } from '../src/client/locales.ts'
-import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../src/auth-paths.ts'
+import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH, OPENAI_CODEX_AUTH_CANCEL_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../src/auth-paths.ts'
 
 const t = (key: keyof typeof en, params: Record<string, unknown> = {}) => Object.entries(params).reduce(
   (value, [name, replacement]) => value.replace(`{${name}}`, String(replacement)),
@@ -358,7 +358,7 @@ describe('shared Models and Plugin account state', () => {
     account.dispose()
   })
 
-  it('reconciles a successful mutation after its status snapshot refresh fails', async () => {
+  it.each(['activate', 'cancel'])('reconciles a successful %s after its status snapshot refresh fails', async action => {
     vi.useFakeTimers()
     let statusReads = 0
     const switched = [
@@ -375,7 +375,7 @@ describe('shared Models and Plugin account state', () => {
           accounts: statusReads === 1 ? [ACTIVE_ACCOUNT, SECOND_ACCOUNT] : switched,
         })
       }
-      if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST') {
+      if (path === OPENAI_CODEX_AUTH_CANCEL_PATH || (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH && init?.method === 'POST')) {
         return rawJson({ status: 'signed-in', usage: { rateLimits: [] } })
       }
       if (path === OPENAI_CODEX_AUTH_ACCOUNTS_PATH) {
@@ -389,7 +389,8 @@ describe('shared Models and Plugin account state', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(account.getSnapshot().accounts).toHaveLength(2)
 
-    await account.activate(SECOND_ACCOUNT_KEY)
+    if (action === 'cancel') await account.cancel()
+    else await account.activate(SECOND_ACCOUNT_KEY)
     expect(account.getSnapshot().operationError).toBe('temporary failure')
     await vi.advanceTimersByTimeAsync(4_999)
     expect(statusReads).toBe(2)

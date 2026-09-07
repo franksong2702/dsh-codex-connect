@@ -93,9 +93,27 @@ async function fetchWithLoginCancellation(input, init) {
         throw error;
     }
 }
+/** A structured refresh rejection, without response text or credential data. */
+export class OpenAICodexRefreshRejectedError extends Error {
+    constructor() {
+        super("OpenAI Codex refresh authorization was rejected");
+        this.name = "OpenAICodexRefreshRejectedError";
+    }
+}
 async function readTokenResponse(response, operation) {
     if (!response.ok) {
         const text = await response.text().catch(() => "");
+        if (operation === "refresh" && (response.status === 400 || response.status === 401)) {
+            let failure;
+            try {
+                failure = JSON.parse(text);
+            } catch {
+                // Non-JSON failures do not establish that this grant has been revoked.
+            }
+            if (failure !== null && typeof failure === "object" && failure.error === "invalid_grant") {
+                throw new OpenAICodexRefreshRejectedError();
+            }
+        }
         throw new Error(`OpenAI Codex token ${operation} failed (${response.status}): ${text || response.statusText}`);
     }
     const rawJson = await response.json();

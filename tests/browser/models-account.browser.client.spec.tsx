@@ -10,7 +10,7 @@ import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfigurat
 import { OpenAICodexAccountStore } from '../../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../../src/client/OpenAICodexSettings.tsx'
-import { en } from '../../src/client/locales.ts'
+import { en, zh } from '../../src/client/locales.ts'
 import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH, OPENAI_CODEX_AUTH_CANCEL_PATH, OPENAI_CODEX_AUTH_LOGIN_PATH, OPENAI_CODEX_AUTH_LOGOUT_PATH, OPENAI_CODEX_AUTH_STATUS_PATH } from '../../src/auth-paths.ts'
 
 let root: Root | undefined
@@ -20,6 +20,33 @@ afterEach(() => { root?.unmount(); host?.remove(); account?.dispose(); vi.unstub
 const t = (key: keyof typeof en) => en[key]
 
 describe('Models account navigation', () => {
+  it.each([['English', en], ['Chinese', zh]] as const)('reconciles the active label and quota after cancellation in %s', async (_locale, messages) => {
+    const first = { accountKey: `acct_${'a'.repeat(43)}`, active: true, displayName: 'Work account', profileSource: 'oauth' }
+    const second = { accountKey: `acct_${'b'.repeat(43)}`, active: true, displayName: 'Personal account', profileSource: 'oauth' }
+    let current = first
+    const usage = () => ({ rateLimits: [{ id: 'codex', name: 'Codex', windows: [{ windowSeconds: 18_000, remainingPercent: current === first ? 83 : 27 }] }] })
+    const popup = vi.spyOn(window, 'open').mockReturnValue(null)
+    vi.stubGlobal('fetch', async (path: string) => {
+      if (path === OPENAI_CODEX_AUTH_LOGIN_PATH) return Response.json({ url: 'https://auth.openai.com/authorize' })
+      if (path === OPENAI_CODEX_AUTH_CANCEL_PATH) return Response.json({ status: 'signed-in', usage: usage() })
+      return Response.json({ status: 'signed-in', usage: usage(), accounts: [current] })
+    })
+    account = new OpenAICodexAccountStore()
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+    root.render(<OpenAICodexModelsCard t={key => messages[key]} account={account} />)
+    try {
+      await expect.element(page.getByText('Work account', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: messages.viewQuota, exact: true }).click()
+      await expect.element(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '83')
+      await account.signIn()
+      current = second
+      await page.getByRole('button', { name: messages.cancelSignIn, exact: true }).click()
+      await expect.element(page.getByText('Personal account', { exact: true })).toBeVisible()
+      await expect.element(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '27')
+    } finally { popup.mockRestore() }
+  })
   it('shares saved configuration with the plugin entry, discards modal drafts and contains keyboard focus', async () => {
     let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
       status: 'ready', value: { ...DEFAULT_OPENAI_CODEX_SETTINGS }, base: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
