@@ -6,6 +6,7 @@ import {
 } from '../update.ts'
 import type { OpenAICodexDshCompatibilityAdvice, OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
 import { OPENAI_CODEX_RUNTIME_PATH, OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
+import { requestJson } from './request-json.ts'
 
 export const OPENAI_CODEX_REPOSITORY_URL = 'https://github.com/franksong2702/dsh-codex-connect'
 export const OPENAI_CODEX_UPDATE_CACHE_KEY = 'dsh-codex-connect:update-check'
@@ -145,13 +146,12 @@ export class OpenAICodexUpdateStore {
     let currentDshVersion: string | undefined
     this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedNotice === undefined ? {} : { dismissedNotice: this.snapshot.dismissedNotice } })
     try {
-      const runtimeResponse = await fetch(OPENAI_CODEX_RUNTIME_PATH, {
+      const { response: runtimeResponse, value: runtimeValue } = await requestJson(OPENAI_CODEX_RUNTIME_PATH, {
         method: 'GET',
         headers: { accept: 'application/json' },
         credentials: 'same-origin',
         signal: controller.signal,
       })
-      const runtimeValue: unknown = await runtimeResponse.json().catch(() => undefined)
       const runtimeRecord = typeof runtimeValue === 'object' && runtimeValue !== null && !Array.isArray(runtimeValue)
         ? runtimeValue as Record<string, unknown>
         : undefined
@@ -171,13 +171,12 @@ export class OpenAICodexUpdateStore {
           return
         }
       }
-      const response = await fetch(OPENAI_CODEX_UPDATE_PATH, {
+      const { response, value } = await requestJson(OPENAI_CODEX_UPDATE_PATH, {
         method: 'GET',
         headers: { accept: 'application/json' },
         credentials: 'same-origin',
         signal: controller.signal,
       })
-      const value: unknown = await response.json().catch(() => undefined)
       const result = response.ok ? parseOpenAICodexUpdateResult(value) : undefined
       const safeResult = result ?? {
         status: 'unavailable' as const,

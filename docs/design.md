@@ -16,11 +16,15 @@ Browser account routes expose deterministic plugin-derived keys, local display l
 
 The settings routes and CLI reuse the existing OAuth path and route names for migration compatibility. Only an explicit login operation emits an authorization URL or code. Browser requests are accepted by default only from loopback; a remote request must use an exact effective HTTP(S) origin in the current sidecar, must not carry cross-site Fetch Metadata, and must match any supplied Origin exactly. The sidecar is re-read for every request, and unknown fields or modes fail closed. A login challenge accepts only credential-free HTTPS URLs and fails closed after 30 seconds or when the provider finishes without a URL; logout and disposal cancel pending waiters. Status responses are redacted. Doctor uses `lstat` metadata and never opens the document.
 
+Browser account and update requests have a 45-second deadline covering response headers and JSON bodies. A timed-out account mutation is not retried automatically: while the account view is observed, the browser reads server state again because the mutation may already have committed. Failed state reads retry after five seconds, including when no account is stored. Plugin disposal aborts browser waits without logging out the server account.
+
 ## Search and images
 
 When `enableSearch: true`, the plugin registers its standalone search provider. It does not append a plugin-owned required-on-read Session event because an external package cannot guarantee that its `@deepseek-ai/dsh-session` module instance owns the Host persistence vocabulary; the standard web Tool call and result remain in the Session log. DSH `0.1.2-rc.1` does not expose the WebRuntime provider selection through its settings service, so the compatibility adapter verifies that release's runtime field, records the previous provider, and selects Codex only while the capability is active. Disable and disposal restore the recorded provider unless another owner has selected a newer route. An unsupported runtime fails activation instead of reporting a route change that did not occur. Search responses are mapped to Harness text and citation records.
 
 When `enableImageTool: true`, `view_image` is registered only after tools, filesystem, and attachment services are available. Local files remain bounded by the Harness filesystem surface. Remote images allow only credential-free public HTTP(S): all DNS answers must be public unicast, each redirect is revalidated, and each socket is pinned to the validated address to close DNS-rebinding gaps. The tool also checks bounded bytes, accepted media signatures, and current-model image support before saving a Harness attachment.
+
+Each remote-image redirect hop has one 30-second deadline covering DNS, connection, and body consumption. Cancellation settles the caller's wait immediately; an operating-system DNS lookup may still finish later, but its result cannot start a new HTTP request after cancellation or timeout.
 
 ## Conflicts and diagnostics
 

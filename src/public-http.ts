@@ -113,6 +113,44 @@ function abortError(signal: AbortSignal): Error {
     : new Error(signal.reason === undefined ? 'remote image request aborted' : String(signal.reason))
 }
 
+async function runPublicHttpHop<T>(
+  signal: AbortSignal,
+  operation: (hopSignal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  if (signal.aborted) throw abortError(signal)
+  const controller = new AbortController()
+  return new Promise<T>((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      const error = new Error(`remote image request exceeded ${String(PUBLIC_HTTP_HOP_TIMEOUT_MS)}ms`)
+      controller.abort(error)
+      finish({ ok: false, error })
+    }, PUBLIC_HTTP_HOP_TIMEOUT_MS)
+    const cleanup = (): void => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', onAbort)
+    }
+    const finish = (result: { ok: true; value: T } | { ok: false; error: unknown }): void => {
+      if (settled) return
+      settled = true
+      cleanup()
+      if (result.ok) resolve(result.value)
+      else reject(result.error)
+    }
+    const onAbort = (): void => {
+      const error = abortError(signal)
+      controller.abort(signal.reason)
+      finish({ ok: false, error })
+    }
+    timer.unref()
+    signal.addEventListener('abort', onAbort, { once: true })
+    void operation(controller.signal).then(
+      value => { finish({ ok: true, value }) },
+      error => { finish({ ok: false, error }) },
+    )
+  })
+}
+
 function assertTargetUrl(url: URL): void {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error('view_image URL must use http or https')
@@ -261,11 +299,14 @@ export async function fetchPublicHttpResource(
   assertTargetUrl(url)
   for (let redirects = 0; ; redirects += 1) {
     if (signal.aborted) throw abortError(signal)
-    const addresses = await runtime.resolve(url.hostname, signal)
-    if (addresses.length === 0 || addresses.some(candidate => !isPublicNetworkAddress(candidate.address))) {
-      throw new Error(`remote image host ${JSON.stringify(url.hostname)} must resolve only to public network addresses`)
-    }
-    const hop = await runtime.get(url, addresses[0]!, maxBytes, signal)
+    const hop = await runPublicHttpHop(signal, async hopSignal => {
+      const addresses = await runtime.resolve(url.hostname, hopSignal)
+      if (hopSignal.aborted) throw abortError(hopSignal)
+      if (addresses.length === 0 || addresses.some(candidate => !isPublicNetworkAddress(candidate.address))) {
+        throw new Error(`remote image host ${JSON.stringify(url.hostname)} must resolve only to public network addresses`)
+      }
+      return runtime.get(url, addresses[0]!, maxBytes, hopSignal)
+    })
     if (hop.status >= 300 && hop.status < 400) {
       if (redirects >= PUBLIC_HTTP_MAX_REDIRECTS) {
         throw new Error(`remote image exceeded ${String(PUBLIC_HTTP_MAX_REDIRECTS)} redirects`)
