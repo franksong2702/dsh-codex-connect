@@ -32,7 +32,7 @@ The command below is the verified public pairing for DSH `0.1.2-rc.1`. Check `ds
 ### 1. Install one exact version
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.28
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29
 ```
 
 Replace `web` with your existing profile name. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. Installation must leave the profile's default model and search route unchanged.

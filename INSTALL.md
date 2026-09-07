@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-Alpha 4.28 is verified with DSH `0.1.2-rc.1` and its declared pi-ai range `^0.84.2`.
+Alpha 4.29 is verified with DSH `0.1.2-rc.1` and its declared pi-ai range `^0.84.2`.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
@@ -23,14 +23,14 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.0-rc.7` | `0.1.0-alpha.4.14` |
 | `0.1.1-rc.2` | `0.1.0-alpha.4.21` |
 | `0.1.2-alpha.2` | `0.1.0-alpha.4.23` |
-| `0.1.2-rc.1` | `0.1.0-alpha.4.28` |
+| `0.1.2-rc.1` | `0.1.0-alpha.4.29` |
 | `0.1.2-alpha.5` | `0.1.0-alpha.4.25` |
 
 If your exact DSH version is unknown or not listed, stop and verify the combination before installing. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-Alpha 4.28's verified contract is DSH plugin API packages `0.1.2-rc.1`, `@earendil-works/pi-ai` `^0.84.2`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Upgrading DSH is a separate decision: upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility` for the selected combination.
+Alpha 4.29's verified contract is DSH plugin API packages `0.1.2-rc.1`, `@earendil-works/pi-ai` `^0.84.2`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Upgrading DSH is a separate decision: upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility` for the selected combination.
 
-The Alpha 4.28 row reflects a fresh isolated installation and runtime probe. Historical rows remain the repository's existing verification record. This guidance does not change upstream DSH behavior or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
+The Alpha 4.29 row reflects a fresh isolated installation and runtime probe. Historical rows remain the repository's existing verification record. This guidance does not change upstream DSH behavior or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
 
 ### Install the selected version and validate
 
@@ -53,10 +53,10 @@ The Alpha 4.28 row reflects a fresh isolated installation and runtime probe. His
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.23
    ```
 
-   For DSH `0.1.2-rc.1`, use Alpha 4.28:
+   For DSH `0.1.2-rc.1`, use Alpha 4.29:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.28
+   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -65,7 +65,7 @@ The Alpha 4.28 row reflects a fresh isolated installation and runtime probe. His
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.25
    ```
 
-   If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.28'` only for the DSH `0.1.2-rc.1` combination.
+   If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.29'` only for the DSH `0.1.2-rc.1` combination.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.

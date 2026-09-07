@@ -32,7 +32,7 @@ Codex Connect 为 DeepSeek Harness 添加 ChatGPT OAuth 和 `openai-codex` 模�
 ### 1. 安装一个精确版本
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.28
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29
 ```
 
 将 `web` 替换为你正在使用的 profile 名。从 DeepSeek Harness 源码 checkout 执行时，请在命令前加 `pnpm`。安装后，profile 的默认模型和搜索路由必须保持不变。
