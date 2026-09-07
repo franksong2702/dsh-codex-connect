@@ -6,86 +6,56 @@ English | [中文](docs/README.zh.md)
 
 Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
-</p>
+Community Alpha — not affiliated with or endorsed by OpenAI, ChatGPT, Codex, DeepSeek, or DeepSeek Harness.
 
-Codex Connect adds ChatGPT OAuth and the `openai-codex` model provider to DeepSeek Harness. The selected model still runs inside the normal Harness agent loop, so Harness continues to own tools, permissions, approval prompts, attachments, session persistence, compaction, and recovery.
-
-The plugin is additive: installing it does not replace the default model or global search provider. Search, `view_image`, GPT Image generation, and Auto-review are all opt-in. It does not turn a ChatGPT subscription into an OpenAI Platform API key.
-
-## Highlights
-
-- Sign in with ChatGPT from **Settings → Models**, manage up to 16 locally stored accounts, and choose the account used by subsequent requests.
-- Discover the installed upstream Codex catalog. If that catalog does not yet include `gpt-6-astra`, Codex Connect supplies compatible metadata; the upstream definition wins as soon as it exists.
-- Show conversation-scoped Fast Mode and server-reported `5h` and `7d` quota windows for GPT Codex conversations.
-- Compare the installed DSH/plugin pair with the public compatibility record and show update guidance without running an upgrade.
-- Optionally add Codex search, secure local or public-image viewing, GPT Image generation, and Codex Auto-review.
-- Diagnose the installation without printing credentials or starting OAuth.
-
-Model discovery is not an entitlement check. OpenAI evaluates the selected account on every request; an unavailable model fails explicitly and Codex Connect does not silently switch models or accounts.
+Codex Connect adds the `openai-codex` model provider to the normal Harness agent loop. Harness continues to manage tools, permissions, approvals, attachments, session persistence, compaction, and recovery. Installing the plugin does not change your default model or search route, and it does not turn a ChatGPT subscription into an OpenAI Platform API key.
 
 ## Quick start
 
-The command below is the verified public pairing for DSH `0.1.2-rc.1`. Check `dsh --version` and use [INSTALL.md](INSTALL.md) if you run another DSH version. `alpha` is a moving npm tag, not a compatibility guarantee. This README describes current `main`; changes merged after the displayed package version remain source-only until the next Alpha release.
+This guide describes the published pairing below. Check `dsh --version` first; for another DSH version, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
 
-### 1. Install one exact version
+| Requirement | Verified pairing |
+|---|---|
+| Codex Connect | `0.1.0-alpha.4.29` |
+| DeepSeek Harness | `0.1.2-rc.1` |
+| Node.js | `^22.19.0 \|\| >=24.0.0` |
+| Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
+
+### 1. Install
 
 ```sh
 dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29
-```
-
-Replace `web` with your existing profile name. From a DeepSeek Harness source checkout, prefix commands with `pnpm`. Installation must leave the profile's default model and search route unchanged.
-
-### 2. Start Harness and authorize
-
-```sh
 dsh web
 ```
 
-Open **Settings → Models → Openai-Codex** and select **Authorize**. Complete the approval yourself in the browser. If an embedded window is blocked, use **Open ChatGPT sign-in page** to continue in the system browser.
+Replace `web` with your existing profile name; use that same profile when starting Harness. From a DSH source checkout, prefix commands with `pnpm`. See [INSTALL.md](INSTALL.md) for other profiles and installation checks.
 
-Never paste an authorization URL, code, token, or account identifier into an issue, log, chat, or configuration file.
+### 2. Authorize and select a model
 
-### 3. Select a model
+Open **Settings → Models → Openai-Codex → Authorize**, then complete approval yourself in the browser. If an embedded window is blocked, select **Open ChatGPT sign-in page**. Choose an `openai-codex` model in the normal Harness model picker.
 
-Choose an `openai-codex` model in the normal Harness model picker. Model names remain canonical in every UI language. To shorten the catalog, use **More settings → Models**; hiding a model affects discovery only and does not disable exact-id routing.
+Never paste an authorization URL, code, token, or account identifier into an issue, log, chat, or configuration file. For a browser on another device, follow [Remote browser authorization](docs/reference.md#remote-browser-authorization).
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/model-selector.jpg" alt="OpenAI Codex models in the DeepSeek Harness model picker" width="360">
-</p>
-
-### 4. Verify the installation
+### 3. Check the installation
 
 ```sh
-dsh --profile web --dump-config
 dsh plugin --profile web exec dsh-codex-connect status --json
 dsh plugin --profile web exec dsh-codex-connect doctor --json
 ```
 
-The effective configuration should contain exactly one `llm-openai-codex` row. A signed-in `status --json` exits `0`; a signed-out status exits `1` without starting OAuth. `doctor --json` prints one secret-free diagnostic document.
+`status --json` exits `0` when signed in and `1` when signed out, without starting OAuth. `doctor --json` reports local installation diagnostics without a network request or raw credentials. A passing diagnostic is not proof of model access; verify that with an actual request.
 
-## Accounts, models, and quota
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/hero.jpg" alt="Codex Connect — ChatGPT OAuth for DeepSeek Harness" width="100%">
+</p>
 
-The Models card and the Plugin configuration page share the same account state. **Manage accounts** can add, select, or remove accounts. Browser responses expose only plugin-generated account keys and masked labels, never OAuth tokens or raw OpenAI account ids.
+## Core capabilities
 
-- Adding an account leaves the current account usable while authorization is pending.
-- Cancelling or timing out a new authorization preserves every existing account and closes accepted callback connections, including incomplete HTTP requests. After cancellation, the browser reads account labels and quota together before updating the view. Pending authorization expires after 10 minutes by default; `oauthTimeoutMs` accepts 1,000–1,800,000 milliseconds and is applied when the plugin loads.
-- Switching accounts affects subsequent requests. A request captures its account before resolving authentication, so a concurrent switch cannot mix credentials. If that account becomes unavailable during authentication, the request fails and requires an explicit retry with the selected account.
-- Quota, search, image generation and Auto-review keep that same account through token refresh. Each quota response pairs its usage and account labels from one snapshot; a concurrent switch may leave an older snapshot visible until the next refresh, but does not relabel its quota as another account's.
-- Removing the active account requires selecting a replacement when another account remains. Removing the last account signs out; **Sign out all accounts** deletes all locally stored Codex credentials.
-- Codex Connect does not rotate accounts automatically or fail over when a request is rejected.
-
-Credential changes wait up to 20 seconds for the writer lock, allowing an in-progress token refresh to finish. A lock timeout fails the operation without deleting another writer's lock or changing stored accounts. A lock left behind by a crashed process requires operator recovery after confirming that no writer is running.
-
-Request authentication failures use fixed messages without upstream response bodies or nested provider errors. A failed refresh preserves the stored credentials.
-
-An explicit OAuth `invalid_grant` rejection during refresh shows the reauthorization prompt. Network failures, timeouts and server errors keep the account selected and show a quota error so you can retry; they do not delete credentials or start a new login.
-
-For GPT Codex conversations, the Composer shows two session controls:
-
-- **Fast Mode** requests the faster `1.5×` mode for that conversation only. It is off by default and does not change the model.
-- **Quota bars** show only the `5h` and `7d` windows returned by the server, with the exact remaining percentage and reset time. `gpt-5.3-codex-spark` uses its separate Spark bucket. Codex Connect never invents missing windows or suppresses returned windows based on a plan name.
+- **Accounts:** save up to 16 accounts on the DSH host and manually select the active account for subsequent requests. Account selection is not a per-session binding. Requests keep their captured account; the plugin does not rotate accounts or silently fail over.
+- **Models:** discover the installed upstream Codex catalog. If it lacks `gpt-6-astra`, the plugin supplies compatible metadata until the upstream definition exists. Model discovery is not an entitlement check; an unavailable model fails explicitly.
+- **Fast Mode:** request priority service for one conversation, off by default. Actual speed and quota consumption depend on the service; no fixed speed multiplier is guaranteed.
+- **Quota:** show the server-returned `5h` and `7d` windows and reset times, normally refreshed every 60 seconds while signed in. Missing windows are not invented; Spark uses its separate quota bucket.
+- **Update guidance:** compare the installed DSH/plugin pair with the public verification record without installing an upgrade.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="Fast Mode and quota controls in the DeepSeek Harness Composer" width="820">
@@ -93,135 +63,65 @@ For GPT Codex conversations, the Composer shows two session controls:
 
 ## Optional capabilities
 
-Fresh installations register the model provider and leave every additional capability disabled:
+All options below are off on a fresh installation. Edit them in **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**, then select **Save changes**. A conflict or failed save preserves your draft.
 
-```yaml
-- id: llm-openai-codex
-  config:
-    enableProxy: false
-    enableSearch: false
-    enableImageTool: false
-    enableImageGeneration: false
-    enableAutoReview: false
-```
+| Capability | Enable with | Important behavior |
+|---|---|---|
+| Proxy | `enableProxy` | Credential-free HTTP(S), scoped to this plugin's traffic. A failed proxy request does not silently retry directly. |
+| Codex Search | `enableSearch` | Selects Codex for the entire profile's search route; disabling restores the previously active route. |
+| Image viewing | `enableImageTool` | Adds `view_image` to vision-capable models for local files and validated public HTTP(S) images. |
+| GPT Image generation | `enableImageGeneration` | Prompt-only generation; availability, dimensions, and quota remain account- and service-controlled. |
+| Auto-review | `enableAutoReview` | Sends bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`, with confirmation on first enablement. Failures return to human approval. |
 
-Edit these options under **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Saving commits edited fields together and preserves concurrent changes to untouched fields. A conflicting edit or failed save keeps your draft; discard it to reload the latest settings. Most settings affect only this plugin; enabling Codex Search also selects it as the active profile-wide search route.
+Use the image generation capability included with your current GPT subscription. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
 
-### Proxy
+Auto-review operates after Harness policy requires approval; it does not bypass that policy. See [Auto-review behavior](docs/auto-review.md) before enabling it.
 
-Disabling the proxy or unloading the plugin gives active proxy operations one second to finish, then destroys this instance's pools with a further one-second completion limit. New proxy operations are rejected during shutdown; interrupted requests are not retried directly. Arbitrary application callbacks cannot be forcibly terminated by the proxy manager. The scoped dispatcher remains until late callbacks settle, so they cannot bypass their destroyed proxy; unrelated traffic still uses the host dispatcher.
+## FAQ and important limits
 
-Direct connection is the default. An enabled credential-free HTTP(S) proxy applies only to this plugin's model, OAuth, refresh, quota, search, image, and Auto-review traffic. Detection checks standard proxy environment variables and documented loopback candidates without making a model call, consuming quota, or saving settings. A failed proxy request never silently retries through a direct connection. Loading Codex Connect does not replace Node's environment-proxy dispatcher, so unrelated Harness requests continue using the process's existing proxy policy.
+### Where are my credentials stored?
 
-### Search and image tools
+OAuth credentials are stored on the host running DSH and used there to authenticate and send requests to OpenAI. Normal browser account responses return account summaries, not raw tokens. A remote browser device is not necessarily the DSH host.
 
-- `enableSearch: true` registers Codex as an available search provider and selects it for profile-wide searches. Disabling it unregisters the provider and restores the route that was active before Codex Search was enabled.
-- Search has a 30-second total deadline covering authentication, response headers and body reading. Responses larger than 1 MiB are rejected, and unfinished response bodies are cancelled on failure. Caller cancellation can end a search sooner.
-- `enableImageTool: true` registers `view_image` on vision-capable models. Remote reads accept credential-free public HTTP(S) only and revalidate DNS and redirects.
-- `enableImageGeneration: true` registers prompt-only GPT Image generation. Use the image generation capability included with your current GPT subscription. Availability, dimensions, and quota remain account- and service-controlled.
+### Does uninstalling sign me out?
 
-Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; the conversation receives a separate DSH attachment preview. The result card reports dimensions and file sizes and can download either representation. Originals are owner-only, integrity-checked, and available only to the creating session and forks that inherited the result. Disabling or uninstalling the plugin does not delete those files automatically.
+No. OAuth state is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default). The plugin does not copy or modify `~/.codex/auth.json`. Use **Sign out all accounts**, or `logout` before uninstalling, only when deleting credentials is intentional.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="GPT Image result with prompt, download actions, and image details" width="780">
-</p>
+### Can I switch accounts for different conversations?
 
-### Auto-review
+Subsequent Codex requests use the selected active account; conversations do not bind their own accounts. Fast Mode is conversation-scoped. Cancelling a new authorization preserves existing accounts; an explicit revoked-refresh response asks for reauthorization, while temporary failures preserve the account for retry. See [Account behavior](docs/reference.md#accounts-models-and-quota).
 
-`enableAutoReview: true` lets the Codex reviewer assess eligible Harness approval requests after DSH policy has determined that approval is required. First enablement requires confirmation because bounded recent approval context, tool arguments, working directory, and the planned action are sent to `chatgpt.com`. Hidden reasoning and stored credentials are excluded. Only a complete structured allow result authorizes one execution; ambiguity, malformed output, transport failure, and timeout return to human approval. See [Auto-review](docs/auto-review.md) for the full decision and retry rules.
+### Why does a listed model fail?
 
-## Routing and configuration
+Account permissions, plugin/host compatibility, and network conditions all affect availability. Access on another client does not guarantee this integration will work. OpenAI controls model access, quota, context capacity, and service behavior; catalog entries are not proof of entitlement.
 
-Installing Codex Connect does not select a default model or search provider. Enabling Codex Search selects it while the capability remains enabled; select a default model separately only when intended. The equivalent configuration is:
+### Can I keep the original `dsh-codex` plugin installed?
 
-```yaml
-- id: agent-default-model
-  config:
-    provider: openai-codex
-    model: gpt-5.6-sol
+Not in the same effective configuration: both register `openai-codex`. Follow [MIGRATION.md](MIGRATION.md); remove only the confirmed conflicting entry, not credentials or unrelated providers.
 
-- id: llm-openai-codex
-  config:
-    enableSearch: true
-    searchMode: live
-    searchContextSize: medium
+### What do diagnostics prove?
 
-```
+`doctor` is local. Capability and reviewer probes may make network requests and consume quota when their preconditions are met. `auto-review-probe` checks only the reviewer route and structured response, not the full Harness approval integration or execution of the reviewed action. Commands, limits, and exit codes are in the [diagnostics reference](docs/reference.md#capability-probes).
 
-The main plugin options are:
+A missing entry in [verified-compatibility.json](verified-compatibility.json) means a DSH/plugin combination is unverified, not known to be broken. Do not infer support for newer hosts from an older pairing.
 
-| Field | Default | Meaning |
-|---|---:|---|
-| `models` | full catalog | Visible Codex model ids; an empty array hides all entries |
-| `enableProxy` | `false` | Use `proxyUrl` for Codex Connect traffic |
-| `proxyUrl` | `http://127.0.0.1:7890` | Credential-free HTTP(S) proxy origin; inactive until enabled |
-| `contextWindowOverrides` | none | Per-model client context-budget overrides |
-| `enableSearch` | `false` | Register Codex search and select it when the setting is saved |
-| `enableImageTool` | `false` | Register `view_image` |
-| `enableImageGeneration` | `false` | Register GPT Image generation |
-| `enableAutoReview` | `false` | Review eligible approval requests with Codex |
-| `searchModel` | `gpt-5.6-sol` | Model used by standalone search |
-| `searchMode` | `cached` | `cached`, `indexed`, or `live` |
-| `searchContextSize` | `medium` | `low`, `medium`, or `high` |
-| `searchMaxOutputTokens` | `10000` | Positive integer output budget for search |
-
-`contextWindowOverrides` changes the client budget, not OpenAI's server capacity. Unknown model ids and values above the plugin's documented configuration ceiling fail explicitly. Use `null` for the whole field to mask inherited overrides, or `null` for one model to restore its catalog default while preserving other entries. Leave room for output and protocol overhead, and treat larger values as deployment-specific experiments rather than entitlement evidence. [Alpha design](docs/design.md) documents the ownership and persistence rules.
-
-## Diagnostics and recovery
-
-### Capability probes
-
-The local report performs no network request. Adding `--probe` sends one fixed short request and may consume quota:
-
-```sh
-dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
-dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
-dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
-```
-
-Probes use a direct connection unless `--proxy <http(s)-origin>` is supplied. `--timeout-ms <1..60000>` overrides the 30-second deadline. They do not follow redirects or retry, cap responses at 64 KiB, and do not refresh credentials. Results label each check `supported`, `rejected`, or `unknown`; a catalog entry alone never proves entitlement. Exit `0` means the command's required checks were supported, `1` means at least one was rejected, and `2` means evidence was unknown or the invocation was invalid. Reports omit credentials, account ids, paths, proxy origins, response ids, headers, and generated text.
-
-### Remote browser authorization
-
-OAuth routes accept loopback browsers by default. If DSH runs on another device in a trusted network, add the exact origin from the browser address bar on the DSH host:
-
-```sh
-dsh plugin --profile web exec dsh-codex-connect trust-origin http://192.168.1.20:3080
-dsh plugin --profile web exec dsh-codex-connect trusted-origins
-dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.20:3080
-```
-
-Include the scheme and port, never a path, query, or fragment. Do not expose the OAuth route to the public Internet; use an SSH tunnel when the network is not trusted. The Web client displays these commands but never edits the allowlist.
-
-### Migration and conflicts
-
-If startup reports an `openai-codex` collision, inspect the effective configuration and remove only the confirmed legacy `dsh-codex` bundle or manual provider row. Do not delete credentials or unrelated providers. See [MIGRATION.md](MIGRATION.md) for package migration and repair of Alpha 4.10 search histories.
-
-OAuth is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default); `~/.codex/auth.json` is never copied or modified. Removing the package does not remove OAuth state. Run `logout` only when deleting credentials is intentional.
-
-## Compatibility and security
-
-- [verified-compatibility.json](verified-compatibility.json) is the authority for exact DSH/plugin pairs. Follow [INSTALL.md](INSTALL.md); do not infer future compatibility from a current row.
-- A missing compatibility record means the pair is unverified, not known to be broken. Update notices explain the recorded path but never install anything automatically.
-- ChatGPT plan eligibility, model access, quotas, backend context capacity, and service behavior are controlled by OpenAI and may change.
-- Harness remains responsible for shell, filesystem, skills, MCP, subagents, approvals, permissions, attachments, session persistence, compaction, and recovery.
-- Install, build, tests, `doctor`, and package validation require no real OAuth operation.
-- This is a community Alpha. It is not affiliated with or endorsed by OpenAI, ChatGPT, Codex, DeepSeek, or DeepSeek Harness.
-
-## Project documentation
+## Documentation and development
 
 - [Installation and upgrades](INSTALL.md)
+- [Configuration, diagnostics, and recovery](docs/reference.md)
 - [Migration from `dsh-codex`](MIGRATION.md)
 - [Architecture and security details](docs/design.md)
 - [Auto-review behavior](docs/auto-review.md)
-- [Alpha release runbook](RELEASING.md)
-
-## Development
+- [Release runbook](RELEASING.md), [Contributing](CONTRIBUTING.md), and [Security policy](SECURITY.md)
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm run check
+pnpm run test:browser
+pnpm run check:dsh-install
 ```
+
+`check` covers static checks, unit tests, build, compatibility, and packaging. Browser regression and isolated DSH installation are separate commands. These checks use no real OAuth authorization and do not replace real-account acceptance.
 
 ## License and acknowledgements
 

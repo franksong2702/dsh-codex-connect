@@ -6,86 +6,56 @@
 
 通过 OAuth 把你的 ChatGPT 订阅接入 DeepSeek Harness，并提供可选的 GPT Image 图片生成、由用户控制的默认设置、Harness 原生审批、诊断与可靠的会话恢复。
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/hero.jpg" alt="Codex Connect — 为 DeepSeek Harness 接入 ChatGPT OAuth" width="100%">
-</p>
+社区 Alpha 项目——与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。
 
-Codex Connect 为 DeepSeek Harness 添加 ChatGPT OAuth 和 `openai-codex` 模型提供方。所选模型仍运行在标准 Harness agent loop 中，因此工具、权限、审批提示、附件、会话持久化、压缩与恢复继续由 Harness 管理。
-
-插件采用增量安装：不会替换默认模型或全局搜索提供方。搜索、`view_image`、GPT Image 图片生成和自动审查均需显式开启。它不会把 ChatGPT 订阅变成 OpenAI Platform API Key。
-
-## 主要能力
-
-- 从 **设置 → 模型** 登录 ChatGPT，管理最多 16 个本地保存的账户，并选择后续请求使用的账户。
-- 读取已安装的上游 Codex 模型目录；如果目录尚未包含 `gpt-6-astra`，Codex Connect 会补充兼容元数据，上游一旦提供同名模型便原样优先使用上游定义。
-- 为 GPT Codex 对话显示会话级 Fast Mode，以及服务端返回的 `5h` 和 `7d` 额度窗口。
-- 将当前 DSH/plugin 组合与公开兼容性记录比较，只给出更新指引，不执行升级。
-- 可选接入 Codex 搜索、安全的本地或公网图片查看、GPT Image 图片生成和 Codex 自动审查。
-- 无需打印凭据或启动 OAuth 即可诊断安装状态。
-
-发现模型不等于账户获得权限。OpenAI 会在每次请求时判断所选账户能否使用该模型；无权限时请求会明确失败，Codex Connect 不会静默切换模型或账户。
+Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方。工具、权限、审批、附件、会话持久化、压缩与恢复继续由 Harness 管理。安装插件不会改变默认模型或搜索路由，也不会把 ChatGPT 订阅变成 OpenAI Platform API Key。
 
 ## 快速开始
 
-下面的命令是 DSH `0.1.2-rc.1` 已验证的公开组合。请先运行 `dsh --version`；其他 DSH 版本请查阅 [INSTALL.md](../INSTALL.md)。`alpha` 是会移动的 npm tag，不代表兼容性保证。本 README 描述当前 `main`；在所示包版本之后合入的改动，要等下一次 Alpha 发布才会进入公开包。
+本指南介绍下方已发布的组合。请先运行 `dsh --version`；其他 DSH 版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
 
-### 1. 安装一个精确版本
+| 要求 | 已验证组合 |
+|---|---|
+| Codex Connect | `0.1.0-alpha.4.29` |
+| DeepSeek Harness | `0.1.2-rc.1` |
+| Node.js | `^22.19.0 \|\| >=24.0.0` |
+| 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
+
+### 1. 安装
 
 ```sh
 dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29
-```
-
-将 `web` 替换为你正在使用的 profile 名。从 DeepSeek Harness 源码 checkout 执行时，请在命令前加 `pnpm`。安装后，profile 的默认模型和搜索路由必须保持不变。
-
-### 2. 启动 Harness 并授权
-
-```sh
 dsh web
 ```
 
-打开 **设置 → 模型 → Openai-Codex**，点击 **授权**，然后亲自在浏览器中完成批准。如果内嵌窗口被拦截，请用 **打开 ChatGPT 登录页面** 在系统浏览器中继续。
+将 `web` 替换为正在使用的 profile 名，启动 Harness 时也使用同一个 profile。从 DSH 源码 checkout 执行时，请在命令前加 `pnpm`。其他 profile 的用法和安装检查见 [INSTALL.md](../INSTALL.md)。
 
-不要把授权 URL、code、token 或账户标识粘贴到 issue、日志、聊天或配置文件中。
+### 2. 授权并选择模型
 
-### 3. 选择模型
+打开 **设置 → 模型 → Openai-Codex → 授权**，然后亲自在浏览器中完成批准。如果内嵌窗口被拦截，请用 **打开 ChatGPT 登录页面**。在 Harness 的常规模型选择器中选择一个 `openai-codex` 模型。
 
-在 Harness 的常规模型选择器中选择一个 `openai-codex` 模型。所有界面语言均保留模型的规范名称。若要缩短列表，请打开 **更多设置 → 模型**；隐藏模型只影响发现，不会禁用按精确 ID 路由。
+不要把授权 URL、code、token 或账户标识粘贴到 issue、日志、聊天或配置文件中。在另一台设备上使用浏览器时，请遵循[远程浏览器授权](reference.zh.md#远程浏览器授权)说明。
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/model-selector.jpg" alt="DeepSeek Harness 模型选择器中的 OpenAI Codex 模型" width="360">
-</p>
-
-### 4. 验证安装
+### 3. 检查安装
 
 ```sh
-dsh --profile web --dump-config
 dsh plugin --profile web exec dsh-codex-connect status --json
 dsh plugin --profile web exec dsh-codex-connect doctor --json
 ```
 
-有效配置应当恰好包含一条 `llm-openai-codex`。已登录时 `status --json` 返回 `0`；未登录时返回 `1`，但不会启动 OAuth。`doctor --json` 输出一份不含敏感信息的诊断文档。
+`status --json` 在已登录时返回 `0`，未登录时返回 `1`，不会启动 OAuth。`doctor --json` 输出本地安装诊断，不发送网络请求，也不包含原始凭据。诊断通过不代表账户具有模型权限；实际可用性仍需通过真实请求验证。
 
-## 账户、模型与额度
+<p align="center">
+  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/hero.jpg" alt="Codex Connect — 为 DeepSeek Harness 接入 ChatGPT OAuth" width="100%">
+</p>
 
-“模型”卡片和“插件配置”页面共享同一份账户状态。**管理账户**可以添加、选择或移除账户。浏览器响应只会包含插件生成的账户 key 和脱敏标签，不会暴露 OAuth token 或原始 OpenAI account id。
+## 核心能力
 
-- 添加账户期间，当前账户仍可继续使用。
-- 取消新的授权或等待超时，不会删除任何已有账户，并会关闭已接受的回调连接，包括未完成的 HTTP 请求。取消后，浏览器会一起读取账户标签与额度，再更新显示。待处理授权默认 10 分钟后过期；`oauthTimeoutMs` 接受 1,000–1,800,000 毫秒，并在插件加载时应用。
-- 切换账户只影响后续请求。每个请求会在解析认证前固定当前账户，因此并发切换不会混用凭据。如果该账户在认证过程中变得不可用，请求会失败，需要使用所选账户显式重试。
-- 额度、搜索、图片生成和自动审查会在 token 刷新期间保持同一请求账户。每次额度响应的用量与账户标签来自同一快照；并发切换时，旧快照可能显示到下次刷新，但不会把它的额度标为另一个账户的。
-- 如果还有其他账户，移除当前账户时必须选择替代账户；移除最后一个账户即退出登录；**退出所有账户**会删除本地保存的全部 Codex 凭据。
-- 请求被拒绝时，Codex Connect 不会自动轮换账户或进行故障切换。
-
-凭据修改最多等待写锁 20 秒，以便正在进行的 token 刷新完成。等待超时会使操作失败，但不会删除其他写入者的锁或更改已保存的账户。进程崩溃遗留的锁需要操作者确认没有写入者运行后再恢复。
-
-请求认证失败时使用固定提示，不包含上游响应正文或嵌套的提供方异常。刷新失败会保留已保存的凭据。
-
-刷新时收到明确的 OAuth `invalid_grant` 拒绝，会显示重新授权提示。网络故障、超时和服务端错误会保留当前账户并显示额度查询错误，供你重试；不会删除凭据或启动新的登录。
-
-GPT Codex 对话的 Composer 会显示两个会话级控件：
-
-- **Fast Mode** 只为当前对话请求更快的 `1.5×` 模式。默认关闭，也不会更换模型。
-- **额度条**只显示服务端实际返回的 `5h` 和 `7d` 窗口，并显示精确剩余百分比与重置时间。`gpt-5.3-codex-spark` 使用独立的 Spark 额度桶。Codex Connect 不会虚构缺失窗口，也不会根据套餐名称隐藏已返回窗口。
+- **账户：**在 DSH 主机上保存最多 16 个账户，手动选择后续请求使用的活动账户，不按会话绑定。请求保持已固定的账户，插件不会自动轮换或静默故障切换。
+- **模型：**读取已安装的上游 Codex 目录。如果目录尚未包含 `gpt-6-astra`，插件会补充兼容元数据，直到上游提供同名定义。发现模型不等于获得权限；不可用的模型会明确失败。
+- **Fast Mode：**为单个对话请求优先服务，默认关闭。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
+- **额度：**显示服务端返回的 `5h`、`7d` 窗口及重置时间，已登录时通常每 60 秒刷新一次。不虚构缺失窗口；Spark 使用独立额度桶。
+- **更新指引：**将已安装的 DSH/plugin 组合与公开验证记录比较，但不会自动执行升级。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中的 Fast Mode 与额度控件" width="820">
@@ -93,135 +63,65 @@ GPT Codex 对话的 Composer 会显示两个会话级控件：
 
 ## 可选能力
 
-新安装只注册模型提供方，其他能力全部保持关闭：
+以下选项在新安装时全部关闭。请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑，再点击 **保存更改**。发生冲突或保存失败时会保留草稿。
 
-```yaml
-- id: llm-openai-codex
-  config:
-    enableProxy: false
-    enableSearch: false
-    enableImageTool: false
-    enableImageGeneration: false
-    enableAutoReview: false
-```
+| 能力 | 启用字段 | 重要行为 |
+|---|---|---|
+| 代理 | `enableProxy` | 不带凭据的 HTTP(S)，只作用于本插件流量。代理请求失败不会静默改走直连。 |
+| Codex 搜索 | `enableSearch` | 将整个 profile 的搜索路由切换为 Codex；关闭后恢复之前的路由。 |
+| 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
+| GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
+| 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
 
-请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑这些选项。修改会暂存到点击 **保存更改** 为止。保存会一次提交所有已编辑字段，并保留其他页面对未编辑字段的修改。发生编辑冲突或保存失败时会保留草稿；放弃草稿可重新加载最新设置。大多数设置只影响本插件；启用 Codex 搜索还会把它选为整个 profile 当前使用的搜索路由。
+使用你当前 GPT 订阅计划提供的图片生成能力。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 
-### 代理
+自动审查在 Harness 策略判定需要审批后执行，不会绕过该策略。启用前请阅读[自动审查行为](auto-review.zh.md)。
 
-关闭代理或卸载插件时，先给活动代理操作一秒收尾，再销毁本实例的连接池，最多再等待一秒完成。关闭期间拒绝新的代理操作；被中断的请求不会改走直连重试。代理管理器无法强制终止任意应用回调。作用域 dispatcher 会保留至迟到回调结束，防止它们绕过已销毁的代理；无关流量仍使用宿主 dispatcher。
+## 常见问题与重要限制
 
-默认使用直连。启用后，不带凭据的 HTTP(S) proxy 只应用于本插件的模型、OAuth、刷新、额度、搜索、图片和自动审查流量。检测只检查标准代理环境变量和文档列出的 loopback 候选地址，不调用模型、不消耗额度，也不保存设置。代理请求失败时，绝不会静默改走直连。加载 Codex Connect 不会替换 Node 的环境代理 dispatcher，因此其他 Harness 请求会继续使用进程已有的代理策略。
+### 凭据保存在哪里？
 
-### 搜索与图片工具
+OAuth 凭据保存在运行 DSH 的主机上，由该主机用于向 OpenAI 认证和发起请求。正常浏览器账户响应只返回账户摘要，不返回原始 token。远程浏览器设备不一定是 DSH 主机。
 
-- `enableSearch: true` 将 Codex 注册为可用搜索提供方，并用于整个 profile 的搜索。关闭时会注销该提供方，并恢复启用 Codex 搜索之前的路由。
-- 搜索从认证开始到读完响应共用 30 秒总期限。超过 1 MiB 的响应会被拒绝，失败时会取消尚未读完的响应体。调用方也可以提前取消搜索。
-- `enableImageTool: true` 为具备视觉能力的模型注册 `view_image`。远程读取只接受不带凭据的公网 HTTP(S)，并重新检查 DNS 与重定向。
-- `enableImageGeneration: true` 注册只接受提示词的 GPT Image 图片生成。使用你当前 GPT 订阅计划提供的图片生成能力。可用性、尺寸和额度仍由账户及服务端控制。
+### 卸载插件会退出登录吗？
 
-生成的原文件保存在 `$DSH_HOME/dsh-codex-connect/images/v1`；对话会收到另一份 DSH 附件预览。结果卡片会报告尺寸和文件大小，并可下载任一版本。原文件仅允许所有者访问，下载前会校验完整性，并且只对创建会话及继承了该结果的 fork 开放。关闭能力或卸载插件不会自动删除这些文件。
+不会。OAuth 状态单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`），插件不会复制或修改 `~/.codex/auth.json`。只有确实要删除凭据时，才使用 **退出所有账户**，或在卸载前运行 `logout`。
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="包含提示词、下载操作与图片详情的 GPT Image 结果" width="780">
-</p>
+### 可以给不同对话分别切换账户吗？
 
-### 自动审查
+后续 Codex 请求使用所选活动账户，每个对话不会各自绑定账户。Fast Mode 才是会话级设置。取消新的授权会保留已有账户；明确的刷新凭据撤销响应会提示重新授权，临时故障则保留账户供重试。详见[账户行为](reference.zh.md#账户模型与额度)。
 
-`enableAutoReview: true` 允许 Codex reviewer 在 DSH 策略已经判定需要审批后，评估符合条件的 Harness 审批请求。每个 profile 首次启用时都需要确认，因为有界的近期审批上下文、工具参数、工作目录和待执行动作会发送到 `chatgpt.com`；隐藏推理和已保存凭据不会发送。只有完整、结构化的允许结果才能授权一次执行；歧义、格式错误、传输失败和超时都会交还人工审批。完整决策与重试规则见[自动审查](auto-review.zh.md)。
+### 为什么列表中的模型调用失败？
 
-## 路由与配置
+账户权限、插件与宿主兼容性、网络条件都会影响可用性。其他客户端可以使用，不代表此集成一定可用。OpenAI 控制模型权限、额度、上下文容量和服务行为；目录条目不是账户权限证明。
 
-安装 Codex Connect 不会选定默认模型或搜索提供方。启用 Codex 搜索后，插件会在该能力保持开启期间选中它；默认模型仍需在确实需要时另行选择。等价配置如下：
+### 可以保留原来的 `dsh-codex` 插件吗？
 
-```yaml
-- id: agent-default-model
-  config:
-    provider: openai-codex
-    model: gpt-5.6-sol
+不能在同一份有效配置中并存：两者都会注册 `openai-codex`。请遵循 [MIGRATION.md](../MIGRATION.md)，只移除已经确认冲突的条目，不删除凭据或无关提供方。
 
-- id: llm-openai-codex
-  config:
-    enableSearch: true
-    searchMode: live
-    searchContextSize: medium
+### 诊断能证明什么？
 
-```
+`doctor` 只做本地检查。能力与 reviewer 探针在满足前置条件时可能联网并消耗额度。`auto-review-probe` 只检查 reviewer 路由和结构化响应，不验证完整 Harness 审批集成，也不执行被审查的动作。命令、限制与退出码见[诊断参考](reference.zh.md#能力探针)。
 
-主要插件选项如下：
+[verified-compatibility.json](../verified-compatibility.json) 缺少某个 DSH/plugin 组合，只表示尚未验证，不表示已知不可运行。不要根据旧组合推断新版宿主支持情况。
 
-| 字段 | 默认值 | 含义 |
-|---|---:|---|
-| `models` | 完整目录 | 可见的 Codex model id；空数组隐藏全部条目 |
-| `enableProxy` | `false` | Codex Connect 流量是否使用 `proxyUrl` |
-| `proxyUrl` | `http://127.0.0.1:7890` | 不带凭据的 HTTP(S) proxy origin；启用前不生效 |
-| `contextWindowOverrides` | 无 | 按模型设置客户端上下文预算 |
-| `enableSearch` | `false` | 注册 Codex 搜索，并在保存时将它选为搜索提供方 |
-| `enableImageTool` | `false` | 注册 `view_image` |
-| `enableImageGeneration` | `false` | 注册 GPT Image 图片生成 |
-| `enableAutoReview` | `false` | 使用 Codex 审查符合条件的审批请求 |
-| `searchModel` | `gpt-5.6-sol` | 独立搜索使用的模型 |
-| `searchMode` | `cached` | `cached`、`indexed` 或 `live` |
-| `searchContextSize` | `medium` | `low`、`medium` 或 `high` |
-| `searchMaxOutputTokens` | `10000` | 搜索使用的正整数输出预算 |
-
-`contextWindowOverrides` 修改的是客户端预算，不是 OpenAI 服务端容量。未知模型 ID 或超过插件文档配置上限的值会明确失败。将整个字段设为 `null` 可屏蔽继承的全部覆盖值；将单个模型设为 `null` 可恢复其目录默认值，同时保留其他条目。请为输出和协议开销预留空间，并把更大的数值视为特定部署的实验，不能当作账户权限证据。所有权与持久化规则见 [Alpha 设计](design.zh.md)。
-
-## 诊断与恢复
-
-### 能力探针
-
-本地报告不发送网络请求。增加 `--probe` 后会发送一条固定短请求，并可能消耗额度：
-
-```sh
-dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --json
-dsh plugin --profile web exec dsh-codex-connect capabilities --model gpt-5.6-sol --probe --json
-dsh plugin --profile web exec dsh-codex-connect auto-review-probe --json
-```
-
-除非传入 `--proxy <http(s)-origin>`，探针使用直连。`--timeout-ms <1..60000>` 可覆盖 30 秒期限。命令不跟随重定向、不重试，把响应限制在 64 KiB，并且不会刷新凭据。每项结果标为 `supported`、`rejected` 或 `unknown`；仅有模型目录条目不能证明账户权限。返回 `0` 表示该命令要求的检查均为可用，`1` 表示至少一项被拒绝，`2` 表示证据未知或调用无效。报告会省略凭据、account id、路径、proxy origin、response id、header 和生成文本。
-
-### 远程浏览器授权
-
-OAuth 路由默认只接受 loopback 浏览器。如果 DSH 运行在可信网络中的另一台设备，请在 DSH 主机上添加浏览器地址栏中的精确 origin：
-
-```sh
-dsh plugin --profile web exec dsh-codex-connect trust-origin http://192.168.1.20:3080
-dsh plugin --profile web exec dsh-codex-connect trusted-origins
-dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.20:3080
-```
-
-必须包含协议和端口，不能包含路径、query 或 fragment。不要把 OAuth 路由暴露到公网；网络不可信时请使用 SSH tunnel。Web 客户端只显示这些命令，不会自行修改 allowlist。
-
-### 迁移与冲突
-
-如果启动报告 `openai-codex` 冲突，请检查有效配置，只移除已经确认的旧 `dsh-codex` bundle 或手动 provider 条目。不要删除凭据或无关 provider。包迁移及 Alpha 4.10 搜索历史修复见 [MIGRATION.md](../MIGRATION.md)。
-
-OAuth 单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）；`~/.codex/auth.json` 绝不会被复制或修改。移除包不会删除 OAuth 状态。只有确实要删除凭据时才运行 `logout`。
-
-## 兼容性与安全
-
-- [verified-compatibility.json](../verified-compatibility.json) 是精确 DSH/plugin 组合的权威记录。请遵循 [INSTALL.md](../INSTALL.md)，不要根据当前记录推断未来兼容性。
-- 缺少兼容性记录只表示组合尚未验证，不表示已知不可运行。更新提醒会说明已有升级路径，但绝不会自动安装。
-- ChatGPT 套餐资格、模型权限、额度、服务端上下文容量和服务行为均由 OpenAI 控制，并可能变化。
-- shell、文件系统、skills、MCP、subagents、审批、权限、附件、会话持久化、压缩和恢复继续由 Harness 负责。
-- 安装、构建、测试、`doctor` 和包验证均不需要执行真实 OAuth。
-- 这是社区 Alpha 项目，与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。
-
-## 项目文档
+## 文档与开发
 
 - [安装与升级](../INSTALL.md)
+- [配置、诊断与恢复](reference.zh.md)
 - [从 `dsh-codex` 迁移](../MIGRATION.md)
 - [架构与安全细节](design.zh.md)
 - [自动审查行为](auto-review.zh.md)
-- [Alpha 发布运行手册](../RELEASING.md)
-
-## 开发
+- [发布运行手册](../RELEASING.md)、[贡献指南](../CONTRIBUTING.md)和[安全政策](../SECURITY.md)
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm run check
+pnpm run test:browser
+pnpm run check:dsh-install
 ```
+
+`check` 包含静态检查、单元测试、构建、兼容性和打包检查；浏览器回归与隔离 DSH 安装是另外两个命令。这些检查不使用真实 OAuth 授权，也不能替代真实账户验收。
 
 ## 许可证与致谢
 
