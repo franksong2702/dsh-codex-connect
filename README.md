@@ -16,7 +16,7 @@ This guide describes the published pairing below. Check `dsh --version` first; f
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.30` |
+| Codex Connect | `0.1.0-alpha.4.31` |
 | DeepSeek Harness | `0.1.2-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
@@ -24,7 +24,7 @@ This guide describes the published pairing below. Check `dsh --version` first; f
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.30
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.31
 dsh web
 ```
 
