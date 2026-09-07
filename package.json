@@ -38,7 +38,9 @@
     "dsh-codex-connect": "lib/bin.js"
   },
   "scripts": {
-    "lint": "node scripts/lint.mjs",
+    "lint": "pnpm run lint:metadata && pnpm run lint:source",
+    "lint:metadata": "node scripts/lint.mjs",
+    "lint:source": "eslint src --max-warnings=0 && node scripts/check-source-lint.mjs",
     "build": "tsdown",
     "test": "vitest run",
     "test:browser": "vitest run --config vitest.browser.config.ts",
@@ -198,12 +200,14 @@
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.1",
     "@vitest/browser-playwright": "4.1.11",
+    "eslint": "^10.10.0",
     "jsdom": "29.1.1",
     "playwright": "1.62.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsdown": "^0.22.2",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0",
     "vitest": "^4.1.8"
   }
 }
