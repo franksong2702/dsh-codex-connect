@@ -121,7 +121,7 @@ pnpm run test:browser
 pnpm run check:dsh-install
 ```
 
-`check` 包含静态检查、单元测试、构建、兼容性和打包检查；浏览器回归与隔离 DSH 安装是另外两个命令。这些检查不使用真实 OAuth 授权，也不能替代真实账户验收。
+`check` 包含静态检查、单元测试、构建、兼容性和打包检查。`lint:metadata` 检查包元数据与发布规则；`lint:source` 检查宿主与浏览器 TypeScript 中未处理或误用的 Promise、无效 await、重复 case 和不可达代码。浏览器回归与隔离 DSH 安装是另外两个命令。这些检查不使用真实 OAuth 授权，也不能替代真实账户验收。
 
 ## 许可证与致谢
 

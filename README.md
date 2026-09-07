@@ -121,7 +121,7 @@ pnpm run test:browser
 pnpm run check:dsh-install
 ```
 
-`check` covers static checks, unit tests, build, compatibility, and packaging. Browser regression and isolated DSH installation are separate commands. These checks use no real OAuth authorization and do not replace real-account acceptance.
+`check` covers static checks, unit tests, build, compatibility, and packaging. `lint:metadata` checks package and release rules; `lint:source` checks host and browser TypeScript for unhandled or misused promises, invalid awaits, duplicate cases, and unreachable code. Browser regression and isolated DSH installation are separate commands. These checks use no real OAuth authorization and do not replace real-account acceptance.
 
 ## License and acknowledgements
 
