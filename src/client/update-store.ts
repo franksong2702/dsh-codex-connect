@@ -11,10 +11,13 @@ export const OPENAI_CODEX_REPOSITORY_URL = 'https://github.com/franksong2702/dsh
 export const OPENAI_CODEX_UPDATE_CACHE_KEY = 'dsh-codex-connect:update-check'
 export const OPENAI_CODEX_UPDATE_DISMISSED_KEY = 'dsh-codex-connect:update-dismissed'
 export const OPENAI_CODEX_UPDATE_CACHE_TTL_MS = 24 * 60 * 60 * 1_000
+/** Unconfirmed compatibility is rechecked while the page remains open. */
+export const OPENAI_CODEX_COMPATIBILITY_RECHECK_MS = 5 * 60 * 1_000
 
 export type OpenAICodexUpdateSnapshot = {
   status: 'idle' | 'checking' | OpenAICodexUpdateResult['status']
   currentVersion: string
+  checkedAt?: number
   currentDshVersion?: string
   latestVersion?: string
   versionsBehind?: number
@@ -70,6 +73,7 @@ export class OpenAICodexUpdateStore {
   private readonly listeners = new Set<() => void>()
   private request: AbortController | undefined
   private disposed = false
+  private recheckTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(readonly currentVersion: string) {
     this.snapshot = { status: 'idle', currentVersion }
@@ -97,30 +101,45 @@ export class OpenAICodexUpdateStore {
     }
   }
 
-  private readCached(): OpenAICodexUpdateResult | undefined {
+  private readCached(): { result: OpenAICodexUpdateResult; checkedAt: number } | undefined {
     try {
       const raw = storage()?.getItem(OPENAI_CODEX_UPDATE_CACHE_KEY)
       if (raw === null || raw === undefined) return undefined
       const cached = JSON.parse(raw) as CachedUpdate
-      if (!Number.isSafeInteger(cached.checkedAt) || Date.now() - cached.checkedAt > OPENAI_CODEX_UPDATE_CACHE_TTL_MS) return undefined
-      return parseOpenAICodexUpdateResult(cached.result)
+      if (!Number.isSafeInteger(cached.checkedAt) || cached.checkedAt > Date.now() || Date.now() - cached.checkedAt > OPENAI_CODEX_UPDATE_CACHE_TTL_MS) return undefined
+      const result = parseOpenAICodexUpdateResult(cached.result)
+      // A missing verification record can change without either installed version changing.
+      if (result === undefined || result.status === 'unavailable' || result.compatibility.status !== 'compatible') return undefined
+      return { result, checkedAt: cached.checkedAt }
     } catch {
       return undefined
     }
   }
 
-  private writeCached(result: OpenAICodexUpdateResult): void {
-    if (result.status === 'unavailable') return
+  private writeCached(result: OpenAICodexUpdateResult, checkedAt: number): void {
     try {
-      storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result }))
+      if (result.status === 'unavailable') storage()?.removeItem(OPENAI_CODEX_UPDATE_CACHE_KEY)
+      else storage()?.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt, result }))
     } catch {
       // A blocked or full browser storage should not disable the reminder.
     }
   }
 
-  /** Check once per day by default; force=true is used by the settings button. */
+  private acceptResult(result: OpenAICodexUpdateResult): void {
+    if (this.disposed) return
+    const checkedAt = Date.now()
+    this.writeCached(result, checkedAt)
+    this.setSnapshot({ ...resultSnapshot(result, this.dismissedNotice()), checkedAt })
+    if (result.status === 'unavailable' || result.compatibility.status !== 'compatible') {
+      this.recheckTimer = setTimeout(() => { void this.refresh(true) }, OPENAI_CODEX_COMPATIBILITY_RECHECK_MS)
+    }
+  }
+
+  /** Reuse verified results for one day; force bypasses that cache for manual checks. */
   async refresh(force = false): Promise<void> {
     if (this.disposed || this.request !== undefined) return
+    clearTimeout(this.recheckTimer)
+    this.recheckTimer = undefined
     const controller = new AbortController()
     this.request = controller
     let currentDshVersion: string | undefined
@@ -146,9 +165,9 @@ export class OpenAICodexUpdateStore {
       if (!force) {
         const cached = this.readCached()
         if (cached !== undefined
-          && cached.currentVersion === this.currentVersion
-          && cached.currentDshVersion === currentDshVersion) {
-          this.setSnapshot(resultSnapshot(cached, this.dismissedNotice()))
+          && cached.result.currentVersion === this.currentVersion
+          && cached.result.currentDshVersion === currentDshVersion) {
+          this.setSnapshot({ ...resultSnapshot(cached.result, this.dismissedNotice()), checkedAt: cached.checkedAt })
           return
         }
       }
@@ -166,8 +185,7 @@ export class OpenAICodexUpdateStore {
         ...currentDsh,
         reason: 'registry-unavailable' as const,
       }
-      this.writeCached(safeResult)
-      this.setSnapshot(resultSnapshot(safeResult, this.dismissedNotice()))
+      this.acceptResult(safeResult)
     } catch {
       if (!controller.signal.aborted && !this.disposed) {
         const unavailable: OpenAICodexUpdateResult = {
@@ -176,8 +194,7 @@ export class OpenAICodexUpdateStore {
           ...currentDshVersion === undefined ? {} : { currentDshVersion },
           reason: 'registry-unavailable',
         }
-        this.writeCached(unavailable)
-        this.setSnapshot(resultSnapshot(unavailable, this.dismissedNotice()))
+        this.acceptResult(unavailable)
       }
     } finally {
       if (this.request === controller) this.request = undefined
@@ -195,6 +212,7 @@ export class OpenAICodexUpdateStore {
 
   dispose(): void {
     this.disposed = true
+    clearTimeout(this.recheckTimer)
     this.request?.abort()
     this.request = undefined
     this.listeners.clear()
