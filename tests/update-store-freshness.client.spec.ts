@@ -23,6 +23,19 @@ beforeEach(() => {
 })
 afterEach(() => { updater.dispose(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
+it('leaves checking after a stalled runtime read and allows a later retry', async () => {
+  vi.stubGlobal('fetch', () => new Promise<Response>(() => {}))
+  let finished = false
+  void updater.refresh().then(() => { finished = true })
+  await vi.advanceTimersByTimeAsync(45_000)
+  expect(finished).toBe(true)
+  expect(updater.getSnapshot().status).toBe('unavailable')
+  vi.stubGlobal('fetch', async (path: string) => Response.json(path === OPENAI_CODEX_RUNTIME_PATH
+    ? { currentDshVersion: dsh } : result('compatible')))
+  await updater.refresh(true)
+  expect(updater.getSnapshot().compatibility?.status).toBe('compatible')
+})
+
 it('rechecks a cached negative verdict for an unchanged installed pair before exposing it', async () => {
   localStorage.setItem(OPENAI_CODEX_UPDATE_CACHE_KEY, JSON.stringify({ checkedAt: Date.now(), result: result('not-yet-compatible') }))
   let resolveUpdate!: (value: Response) => void
