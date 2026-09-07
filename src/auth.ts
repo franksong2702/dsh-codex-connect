@@ -8,6 +8,7 @@ import type { AuthInteraction, CredentialStore } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { openaiCodexOAuth } from '../vendor/pi-ai-oauth/auth/oauth/openai-codex.js'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from './store.ts'
+import { OpenAICodexRequestAuthError } from './auth-error.ts'
 
 /** Non-secret login state shown by the launcher. */
 export interface OpenAICodexAuthStatus {
@@ -65,19 +66,31 @@ export async function openAICodexAuthStatus(
     : { authenticated: false }
 }
 
-/** Resolve one captured account, including refresh, without rereading the active selection. */
+/**
+ * Resolve a nonempty token and identity from one captured account, including refresh.
+ * Missing credentials and authentication failures throw safe errors without upstream causes.
+ */
 export async function readOpenAICodexRequestAuth(
   store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>,
   signal?: AbortSignal,
-): Promise<{ access: string; accountId: string } | undefined> {
-  signal?.throwIfAborted()
-  const credentials = await store.captureActiveAccount()
-  const models = createModels({ credentials })
-  models.setProvider(openaiCodexProvider())
-  const auth = await models.getAuth(OPENAI_CODEX_PROVIDER, signal === undefined ? undefined : { signal })
-  const access = auth?.auth.apiKey
-  const credential = await credentials.read(OPENAI_CODEX_PROVIDER)
-  if (credential?.type !== 'oauth' || credential.access !== access || !access
-    || typeof credential.accountId !== 'string' || credential.accountId.length === 0) return undefined
-  return { access, accountId: credential.accountId }
+): Promise<{ access: string; accountId: string }> {
+  try {
+    signal?.throwIfAborted()
+    const credentials = await store.captureActiveAccount()
+    const models = createModels({ credentials })
+    models.setProvider(openaiCodexProvider())
+    const auth = await models.getAuth(OPENAI_CODEX_PROVIDER, signal === undefined ? undefined : { signal })
+    const access = auth?.auth.apiKey
+    const credential = await credentials.read(OPENAI_CODEX_PROVIDER)
+    signal?.throwIfAborted()
+    if (credential?.type !== 'oauth' || credential.access !== access || !access
+      || typeof credential.accountId !== 'string' || credential.accountId.length === 0) {
+      throw new OpenAICodexRequestAuthError('MISSING_CREDENTIAL')
+    }
+    return { access, accountId: credential.accountId }
+  } catch (error: unknown) {
+    if (signal?.aborted) throw new OpenAICodexRequestAuthError('ABORTED')
+    if (error instanceof OpenAICodexRequestAuthError) throw error
+    throw new OpenAICodexRequestAuthError('AUTH_FAILED')
+  }
 }

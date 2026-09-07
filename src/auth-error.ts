@@ -1,5 +1,20 @@
 /** Public diagnostics never include arbitrary provider messages or nested causes. */
+const REQUEST_AUTH_MESSAGES = {
+  MISSING_CREDENTIAL: 'OpenAI Codex request account is unavailable. Please select an account or sign in again.',
+  AUTH_FAILED: 'OpenAI Codex operation failed. Please try again.',
+  ABORTED: 'OpenAI Codex request cancelled.',
+} as const
+
+/** Safe request-authentication failure with no upstream message or nested cause. */
+export class OpenAICodexRequestAuthError extends Error {
+  constructor(readonly code: keyof typeof REQUEST_AUTH_MESSAGES) {
+    super(REQUEST_AUTH_MESSAGES[code])
+    this.name = code === 'ABORTED' ? 'AbortError' : 'OpenAICodexRequestAuthError'
+  }
+}
+
 const PUBLIC_MESSAGES = new Set([
+  ...Object.values(REQUEST_AUTH_MESSAGES),
   'ChatGPT authorization expired. Please sign in again.',
   'OpenAI Codex sign-in cancelled',
   'OpenAI Codex plugin disposed',

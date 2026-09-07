@@ -71,12 +71,14 @@ The Models card and the Plugin configuration page share the same account state. 
 
 - Adding an account leaves the current account usable while authorization is pending.
 - Cancelling or timing out a new authorization preserves every existing account and closes accepted callback connections, including incomplete HTTP requests. Pending authorization expires after 10 minutes by default; `oauthTimeoutMs` accepts 1,000–1,800,000 milliseconds and is applied when the plugin loads.
-- Switching accounts affects subsequent requests. A request captures its account before resolving authentication, so a concurrent switch cannot mix credentials.
+- Switching accounts affects subsequent requests. A request captures its account before resolving authentication, so a concurrent switch cannot mix credentials. If that account becomes unavailable during authentication, the request fails and requires an explicit retry with the selected account.
 - Quota, search, image generation and Auto-review keep that same account through token refresh. Each quota response pairs its usage and account labels from one snapshot; a concurrent switch may leave an older snapshot visible until the next refresh, but does not relabel its quota as another account's.
 - Removing the active account requires selecting a replacement when another account remains. Removing the last account signs out; **Sign out all accounts** deletes all locally stored Codex credentials.
 - Codex Connect does not rotate accounts automatically or fail over when a request is rejected.
 
 Credential changes wait up to 20 seconds for the writer lock, allowing an in-progress token refresh to finish. A lock timeout fails the operation without deleting another writer's lock or changing stored accounts. A lock left behind by a crashed process requires operator recovery after confirming that no writer is running.
+
+Request authentication failures use fixed messages without upstream response bodies or nested provider errors. A failed refresh preserves the stored credentials.
 
 For GPT Codex conversations, the Composer shows two session controls:
 
