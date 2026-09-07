@@ -4,6 +4,7 @@
  */
 
 import { readOpenAICodexRequestAuth } from './auth.ts'
+import { OpenAICodexRequestAuthError } from './auth-error.ts'
 import { WebError } from '@deepseek-ai/dsh-web'
 import type {
   WebSearchProvider,
@@ -285,6 +286,9 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
     } catch (error: unknown) {
       throwIfSearchAborted(signal)
       if (isAbortError(error)) throw searchAborted(signal, error)
+      if (error instanceof OpenAICodexRequestAuthError && error.code === 'MISSING_CREDENTIAL') {
+        throw new WebError('OpenAI Codex search is signed out; run "dsh openai-codex login"', 'WEB_PROVIDER_CREDENTIAL_MISSING')
+      }
       throw new WebError('OpenAI Codex search credential resolution failed', 'WEB_PROVIDER_ERROR', { cause: error })
     }
     const access = auth?.access

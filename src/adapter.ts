@@ -1,7 +1,7 @@
 /** OpenAI Codex adapter assembled from public dsh-llm-pi-ai extension points. */
 
-import { createModels, defaultProviderAuthContext } from '@earendil-works/pi-ai'
-import type { Context as PiContext, Model, MutableModels, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
+import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-works/pi-ai'
+import type { Context as PiContext, Model, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
@@ -9,6 +9,7 @@ import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { OpenAICodexCredentialStore } from './store.ts'
+import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
@@ -244,15 +245,11 @@ export function createOpenAICodexAdapter(
   return new OpenAICodexAdapter({
     profiles: currentProfiles,
     resolveApiKey: async () => {
-      const operation = async () => {
-        const requestCredentials = await credentials.captureActiveAccount()
-        const requestModels: MutableModels = createModels({ credentials: requestCredentials })
-        requestModels.setProvider(provider)
-        return (await requestModels.getAuth(OPENAI_CODEX_PROVIDER))?.auth.apiKey
-      }
+      const operation = async () => (await readOpenAICodexRequestAuth(credentials)).access
       return proxyManager?.run(resolveProxyUrl?.(), operation) ?? operation()
     },
-    auth: { credentials, authContext: defaultProviderAuthContext() },
+    // Host-side auth accepts only the explicit bearer token resolved above.
+    auth: { credentials: new InMemoryCredentialStore(), authContext: defaultProviderAuthContext() },
     resolveAttachments,
   })
 }

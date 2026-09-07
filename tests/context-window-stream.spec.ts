@@ -52,7 +52,7 @@ describe('context-window request snapshots', () => {
   it('streams a prepared call with its captured window while new calls use the updated window and unchanged output budget', async () => {
     vi.stubGlobal('fetch', () => { throw new Error('Network is forbidden in this test') })
     const credentials = {
-      read: async () => ({ type: 'oauth', access: 'offline-test-access', refresh: 'offline-test-refresh', expires: Date.now() + 3_600_000 }),
+      read: async () => ({ type: 'oauth', accountId: 'offline-account', access: 'offline-test-access', refresh: 'offline-test-refresh', expires: Date.now() + 3_600_000 }),
     } as unknown as OpenAICodexCredentialStore
     credentials.captureActiveAccount = async () => credentials
     const overrides = { 'gpt-5.6-sol': 350_000 }
