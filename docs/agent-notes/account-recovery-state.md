@@ -6,4 +6,4 @@ The pinned OAuth implementation retains an explicit HTTP 400/401 `invalid_grant`
 
 The vendored implementation now supplies login and refresh through pi-ai's public OAuth provider methods. pi-ai still schedules refresh and the credential store still serializes it and commits only a successful result. This preserves structured errors before upstream formatting discards their fields; it does not parse arbitrary exception messages. Vendor generation verifies both patches against pi-ai 0.84.4. Remove a patch only after the upstream behavior passes its corresponding regression.
 
-Regression tests use two independent account stores against the real account routes and temporary credential files, and real pi-ai refresh resolution with fixture HTTP responses. No real account or authorization is required. JWT base64url decoding remains a separate follow-up.
+Regression tests use two independent account stores against the real account routes and temporary credential files, and real pi-ai refresh resolution with fixture HTTP responses. No real account or authorization is required. JWT payload decoding is covered by the [OAuth decoding note](oauth-jwt-decoding.md).

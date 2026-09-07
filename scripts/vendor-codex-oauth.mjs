@@ -12,6 +12,12 @@ for (const file of files) {
   let body = await readFile(resolve(source, 'dist', file), 'utf8')
   body = body.replace(/^\/\/# sourceMappingURL=.*\n?/gm, '')
   if (file === files[0]) {
+    const jwtDecode = '        const decoded = atob(payload);'
+    if (body.split(jwtDecode).length !== 2) throw new Error('Unexpected upstream JWT decoder')
+    body = body.replace(jwtDecode, `        if (!/^[A-Za-z0-9_-]+={0,2}$/.test(payload)) return null;
+        const binary = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+        const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+        const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);`)
     const original = 'close: () => server.close(),'
     if (body.split(original).length !== 2) throw new Error('Unexpected upstream server close implementation')
     body = body.replace(original, `close: () => new Promise((resolve) => {
@@ -52,4 +58,4 @@ ${tokenReader}`)
     await writeFile(target, body)
   }
 }
-console.log('Pinned OAuth source, callback cleanup and refresh rejection patches verified')
+console.log('Pinned OAuth source, JWT decoding, callback cleanup and refresh rejection patches verified')

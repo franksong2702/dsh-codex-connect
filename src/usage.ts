@@ -9,6 +9,15 @@ export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usag
 
 const USAGE_REQUEST_TIMEOUT_MS = 15_000
 
+/** Release a discarded response without replacing the HTTP failure with a cancellation error. */
+async function cancelDiscardedResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel()
+  } catch {
+    // Body cancellation is best effort; the response status remains the useful error.
+  }
+}
+
 /** Stable public discriminant for an expired or revoked Codex OAuth session. */
 export const OPENAI_CODEX_REAUTH_REQUIRED_CODE = 'OPENAI_CODEX_REAUTH_REQUIRED' as const
 
@@ -249,6 +258,7 @@ export async function readOpenAICodexRateLimits(
     signal,
   })
   if (!response.ok) {
+    await cancelDiscardedResponseBody(response)
     if (response.status === 401 || response.status === 403) {
       throw new OpenAICodexReauthRequiredError()
     }

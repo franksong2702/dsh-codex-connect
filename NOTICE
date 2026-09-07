@@ -16,5 +16,5 @@ under the Apache License, Version 2.0 included in LICENSE.
 
 This product also includes OAuth login and refresh code from earendil-works/pi
 (@earendil-works/pi-ai 0.84.4), under the MIT license reproduced in
-docs/licenses/pi-ai-oauth.txt. Callback connection cleanup and structured
-refresh rejection handling are modified.
+docs/licenses/pi-ai-oauth.txt. JWT payload decoding, callback connection cleanup
+and structured refresh rejection handling are modified.
