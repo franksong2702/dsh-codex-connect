@@ -2,8 +2,8 @@ import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { en } from '../../src/client/locales.ts'
-import { OpenAICodexUpdateSettings } from '../../src/client/OpenAICodexUpdateNotice.tsx'
+import { en, zh } from '../../src/client/locales.ts'
+import { OpenAICodexUpdateOverlay, OpenAICodexUpdateSettings } from '../../src/client/OpenAICodexUpdateNotice.tsx'
 import {
   OPENAI_CODEX_UPDATE_CACHE_KEY,
   OPENAI_CODEX_UPDATE_DISMISSED_KEY,
@@ -49,6 +49,38 @@ afterEach(() => {
 })
 
 describe('Codex Connect update card in Chromium', () => {
+  it.each([['English', en], ['Chinese', zh]] as const)('rechecks a negative overlay through failure and recovery in %s', async (_language, locale) => {
+    const currentVersion = '0.1.0-alpha.4.29'
+    const currentDshVersion = '0.1.2-rc.1'
+    let state: 'not-yet-compatible' | 'offline' | 'compatible' = 'not-yet-compatible'
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      if (String(input) === OPENAI_CODEX_RUNTIME_PATH) return json({ currentDshVersion })
+      if (state === 'offline') throw new Error('offline')
+      return json({ status: 'up-to-date', currentVersion, currentDshVersion, latestVersion: currentVersion,
+        compatibility: { status: state, latestPluginVersion: currentVersion, latestDshVersion: currentDshVersion } })
+    }))
+    updater = new OpenAICodexUpdateStore(currentVersion)
+    await updater.refresh()
+    root.render(createElement(OpenAICodexUpdateOverlay, {
+      updater,
+      t: (key, params = {}) => Object.entries(params).reduce((value, [name, replacement]) => value.replace(`{${name}}`, String(replacement)), locale[key]),
+      useSessions: vi.fn() as never, useWorkspaces: vi.fn() as never, useSessionPendingInteraction: vi.fn() as never,
+    }))
+    const overlay = page.getByRole('status', { name: locale.updateHeading })
+    await vi.waitFor(() => expect(overlay.element().textContent).toContain(locale.compatibilityNotReadyTitle))
+    expect(overlay.element().textContent).toContain(locale.updateLastChecked.split('{time}')[0])
+    await page.viewport(360, 800)
+    expect(overlay.element().getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+    state = 'offline'
+    await page.getByRole('button', { name: locale.checkForUpdates }).click()
+    await vi.waitFor(() => expect(overlay.element().textContent).toContain(locale.updateCheckUnavailable))
+    expect(overlay.element().textContent).not.toContain(locale.compatibilityNotReadyTitle)
+    state = 'compatible'
+    await page.getByRole('button', { name: locale.checkForUpdates }).click()
+    await vi.waitFor(() => expect(host.querySelector('[role="status"]')).toBeNull())
+    expect(updater.getSnapshot().compatibility?.status).toBe('compatible')
+  })
+
   it('checks updates, shows each installed version once, and stays inside desktop and narrow viewports', async () => {
     const currentVersion = '0.1.0-alpha.4.16'
     const currentDshVersion = '0.1.1-rc.2'

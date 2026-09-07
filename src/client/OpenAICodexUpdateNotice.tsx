@@ -251,7 +251,8 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
   const noticeKey = latestVersion === undefined
     ? undefined
     : `${snapshot.currentVersion}:${latestVersion}:${snapshot.currentDshVersion ?? 'unknown'}:${compatibility?.latestDshVersion ?? 'unknown'}:${compatibility?.status ?? 'none'}:${compatibility?.reportCompatibilityGap === true ? 'report' : 'no-report'}`
-  if (overlay && ((!compatibilityWarning && snapshot.status !== 'update-available') || noticeKey === undefined || snapshot.dismissedNotice === noticeKey)) return null
+  const pendingRecheck = recheckRequested && (snapshot.status === 'checking' || snapshot.status === 'unavailable' || compatibility?.status === 'unverified')
+  if (overlay && !pendingRecheck && ((!compatibilityWarning && snapshot.status !== 'update-available') || noticeKey === undefined || snapshot.dismissedNotice === noticeKey)) return null
   const available = snapshot.status === 'update-available'
   const technicalDetails = available && technicalDetailsOpen
   const highlights = snapshot.highlights ?? []
@@ -270,7 +271,7 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
           ? t('updateHeading')
           : available ? t('newVersionAvailable', { version: snapshot.latestVersion }) : t('updateHeading')}</strong>
         {overlay ? (
-          <button type="button" style={buttonStyle} aria-label={t('dismissUpdate')} onClick={() => { if (noticeKey !== undefined) updater.dismiss(noticeKey) }}>
+          <button type="button" style={buttonStyle} aria-label={t('dismissUpdate')} onClick={() => { setRecheckRequested(false); if (noticeKey !== undefined) updater.dismiss(noticeKey) }}>
             {t('dismissUpdate')}
           </button>
         ) : null}
@@ -352,9 +353,12 @@ function UpdateContents({ updater, t, overlay }: OpenAICodexUpdateNoticeInjected
                     : renderReleaseNotes(snapshot.releaseNotes, t)
                 ) : null}
               </>}
-      {!overlay ? (
+      {snapshot.checkedAt === undefined ? null : <p style={bodyStyle}>
+        {t('updateLastChecked', { time: new Date(snapshot.checkedAt).toLocaleString() })}
+      </p>}
+      {(!overlay || !available) ? (
         <div style={{ ...rowStyle, justifyContent: 'flex-end' }}>
-          <button type="button" style={buttonStyle} disabled={snapshot.status === 'checking'} onClick={() => { void updater.refresh(true) }}>
+          <button type="button" style={buttonStyle} disabled={snapshot.status === 'checking'} onClick={() => { setRecheckRequested(true); void updater.refresh(true) }}>
             {snapshot.status === 'checking' ? t('checkingForUpdates') : t('checkForUpdates')}
           </button>
         </div>
