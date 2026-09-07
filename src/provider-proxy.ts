@@ -128,19 +128,29 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
 }
 
-function errorCode(error: unknown): string | undefined {
-  if (typeof error !== 'object' || error === null) return undefined
+function errorDetails(error: unknown, seen = new Set<object>()): Array<{ code?: string; name?: string }> {
+  if (typeof error !== 'object' || error === null || seen.has(error)) return []
+  seen.add(error)
   const record = error as Record<string, unknown>
-  return typeof record['code'] === 'string'
-    ? record['code']
-    : errorCode(record['cause'])
+  const name = typeof record['name'] === 'string' ? record['name'] : undefined
+  const code = typeof record['code'] === 'string' ? record['code'] : undefined
+  return [{
+    ...name === undefined ? {} : { name },
+    ...code === undefined ? {} : { code },
+  }, ...errorDetails(record['cause'], seen)]
 }
 
 function classifyProbeError(error: unknown): OpenAICodexProxyProbeClassification {
-  const code = errorCode(error)
+  const details = errorDetails(error)
+  const first = details[0]
+  if (first?.name === 'AbortError' || first?.code === 'ABORT_ERR' || first?.code === 'UND_ERR_ABORTED') {
+    return 'connect-failure'
+  }
+  if (details.some(detail => detail.name === 'TimeoutError')) return 'timeout'
+  const code = details.find(detail => detail.code !== undefined)?.code
   if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'dns-failure'
   if (code === 'ECONNREFUSED') return 'connection-refused'
-  if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT' || code === 'ABORT_ERR') return 'timeout'
+  if (code === 'ETIMEDOUT' || code === 'UND_ERR_CONNECT_TIMEOUT') return 'timeout'
   if (code === 'ERR_TLS_CERT_ALTNAME_INVALID'
     || code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'
     || code === 'DEPTH_ZERO_SELF_SIGNED_CERT'
