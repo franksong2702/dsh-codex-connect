@@ -1,11 +1,13 @@
 import { readFile, stat } from 'node:fs/promises'
 import './vendor-codex-oauth.mjs'
+import { isAlphaReleaseVersion, validateReadmeInstallation, validateUpdateHighlights } from './release-metadata.mjs'
+import './release-metadata.test.mjs'
 
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 const failures = []
 
 if (packageJson.name !== 'dsh-codex-connect') failures.push('package name must be dsh-codex-connect')
-if (!/^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u.test(packageJson.version)) failures.push('package version must be a 0.1.0 alpha release')
+if (!isAlphaReleaseVersion(packageJson.version)) failures.push('package version must be a numeric Alpha release without build metadata')
 if (packageJson.publishConfig?.tag !== 'alpha') failures.push('publishConfig.tag must be alpha')
 if (packageJson.displayName !== 'Codex Connect') failures.push('displayName mismatch')
 if (packageJson.description !== 'ChatGPT OAuth and Codex models for DeepSeek Harness.') failures.push('description mismatch')
@@ -39,15 +41,6 @@ for (const filename of productFiles) {
 }
 
 const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8')
-const fullDescription = 'Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.'
-if (!readme.startsWith(`# Codex Connect\n\n[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)\n\nEnglish | [中文](docs/README.zh.md)\n\n${fullDescription}\n`)) {
-  failures.push('README opening description mismatch')
-}
-const quickStartInstall = 'dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.29'
-if (!readme.includes(quickStartInstall)) failures.push('README must use the verified Alpha 4.29 install command')
-if (!(await readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')).includes(quickStartInstall)) {
-  failures.push('Chinese README must use the verified Alpha 4.29 install command')
-}
 if (!readme.includes('Use the image generation capability included with your current GPT subscription.')) {
   failures.push('README must describe image generation with the approved subscription copy')
 }
@@ -57,38 +50,14 @@ if (!chineseReadme.includes('使用你当前 GPT 订阅计划提供的图片生�
 }
 
 try {
+  const compatibility = JSON.parse(await readFile(new URL('../verified-compatibility.json', import.meta.url), 'utf8'))
+  failures.push(...validateReadmeInstallation([readme, chineseReadme], compatibility, packageJson.version))
+} catch {
+  failures.push('verified-compatibility.json must be readable JSON')
+}
+try {
   const manifest = JSON.parse(await readFile(new URL('../update-highlights.json', import.meta.url), 'utf8'))
-  const validKinds = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'astra-compatibility', 'multi-account', 'search-route'])
-  const versionPattern = /^0\.1\.0-alpha\.[1-9]\d*(?:\.\d+)?$/u
-  if (manifest?.schemaVersion !== 1 || !Array.isArray(manifest?.releases) || manifest.releases.length > 256) {
-    failures.push('update-highlights.json must use schemaVersion 1 with at most 256 releases')
-  } else {
-    const seen = new Set()
-    const seenVersions = new Set()
-    const releaseVersions = []
-    for (const release of manifest.releases) {
-      if (typeof release?.version !== 'string' || !versionPattern.test(release.version) || !Array.isArray(release.highlights) || release.highlights.length > 32) {
-        failures.push('update-highlights.json contains an invalid release entry')
-        continue
-      }
-      if (seenVersions.has(release.version)) failures.push(`update-highlights.json contains a duplicate release: ${release.version}`)
-      seenVersions.add(release.version)
-      releaseVersions.push(release.version)
-      for (const kind of release.highlights) {
-        if (typeof kind !== 'string' || !validKinds.has(kind)) failures.push(`update-highlights.json contains an unknown highlight kind: ${String(kind)}`)
-        const key = `${release.version}:${kind}`
-        if (seen.has(key)) failures.push(`update-highlights.json contains a duplicate highlight: ${key}`)
-        seen.add(key)
-      }
-    }
-    const currentMatch = /^0\.1\.0-alpha\.4\.(\d+)$/u.exec(packageJson.version)
-    const expectedVersions = currentMatch === null
-      ? []
-      : Array.from({ length: Number(currentMatch[1]) - 4 }, (_, index) => `0.1.0-alpha.4.${index + 5}`)
-    if (releaseVersions.join('\n') !== expectedVersions.join('\n')) {
-      failures.push('update-highlights.json must contain every Alpha 4 release from 4.5 through the package version in order')
-    }
-  }
+  failures.push(...validateUpdateHighlights(manifest, packageJson.version))
 } catch {
   failures.push('update-highlights.json must be valid JSON')
 }

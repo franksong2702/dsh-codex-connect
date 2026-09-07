@@ -75,6 +75,7 @@
     "docs",
     "!docs/design/codex-connect-images-v4.md",
     "INSTALL.md",
+    "VERSIONING.md",
     "MIGRATION.md",
     "NOTICE"
   ],

@@ -35,9 +35,13 @@ build (`pnpm run build`); do not hand-edit generated files.
 
 ## Update summaries
 
+Follow [VERSIONING.md](VERSIONING.md) for release numbering, channels, and the
+distinction between verified candidates and published installation recommendations.
+
 When a release adds a user-facing capability, record its version and highlight
 kind in `update-highlights.json` after checking the version diff and README.
-Leave documentation-only and internal maintenance releases out of the list.
+Leave new documentation-only and internal maintenance releases out of the list;
+preserve existing history, including empty highlight entries.
 The update notice filters this catalog for each user's installed-to-latest
 version range; it does not show the whole catalog to every user.
 
