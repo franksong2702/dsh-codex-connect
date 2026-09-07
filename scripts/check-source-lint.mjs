@@ -2,7 +2,12 @@ import assert from 'node:assert/strict'
 import { ESLint } from 'eslint'
 
 // Use existing host and browser file identities so the same typed configuration is exercised.
-const eslint = new ESLint()
+// lintText replaces file contents repeatedly; CI's immutable-program optimization reads disk instead.
+const eslint = new ESLint({
+  overrideConfig: {
+    languageOptions: { parserOptions: { disallowAutomaticSingleRunInference: true } },
+  },
+})
 for (const filePath of ['src/version.ts', 'src/client/account-store.ts']) {
   for (const [code, rule] of [
     ['export function broken(): void { Promise.resolve(1) }', '@typescript-eslint/no-floating-promises'],
