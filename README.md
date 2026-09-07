@@ -52,7 +52,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 ## Core capabilities
 
 - **Accounts:** save up to 16 accounts on the DSH host and manually select the active account for subsequent requests. Account selection is not a per-session binding. Requests keep their captured account; the plugin does not rotate accounts or silently fail over.
-- **Models:** discover the installed upstream Codex catalog. If it lacks `gpt-6-astra`, the plugin supplies compatible metadata until the upstream definition exists. Model discovery is not an entitlement check; an unavailable model fails explicitly.
+- **Models:** use the Codex model catalog bundled with the installed `@earendil-works/pi-ai` package. The currently supported version does not include `gpt-6-astra`, so the plugin supplies its model definition. When the dependency catalog includes the same model ID, its definition takes precedence. A model appearing in the list does not mean the current account has permission to use it.
 - **Fast Mode:** request priority service for one conversation, off by default. Actual speed and quota consumption depend on the service; no fixed speed multiplier is guaranteed.
 - **Quota:** show the server-returned `5h` and `7d` windows and reset times, normally refreshed every 60 seconds while signed in. Missing windows are not invented; Spark uses its separate quota bucket.
 - **Update guidance:** compare the installed DSH/plugin pair with the public verification record without installing an upgrade.
