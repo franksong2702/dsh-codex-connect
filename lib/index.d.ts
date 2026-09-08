@@ -230,7 +230,8 @@ declare const PI_AI_PACKAGE = "@earendil-works/pi-ai";
 declare const DSH_PLUGIN_API_PACKAGES: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
 declare const COMPATIBILITY_PACKAGES: readonly ["@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@earendil-works/pi-ai"];
 type CompatibilityPackageName = (typeof COMPATIBILITY_PACKAGES)[number];
-type CompatibilityStatus = 'compatible' | 'incompatible' | 'unknown';
+/** Version metadata proves a declared match, not behavioral failure for an untested package. */
+type CompatibilityStatus = 'compatible' | 'unverified' | 'incompatible' | 'unknown';
 interface CompatibilityEntry {
   supported: string;
   installed: string | null;
@@ -625,24 +626,13 @@ interface OpenAICodexUpdateHighlight {
   version: string;
   kind: OpenAICodexUpdateHighlightKind;
 }
-type OpenAICodexDshCompatibilityStatus = 'compatible' | 'plugin-update-required' | 'dsh-update-required' | 'not-yet-compatible' | 'unverified';
-interface OpenAICodexDshCompatibilityAdvice {
-  status: OpenAICodexDshCompatibilityStatus;
-  latestPluginVersion: string;
-  latestDshVersion?: string;
-  reportCompatibilityGap?: true;
-  trackerUrl?: string;
-}
 type OpenAICodexUpdateResult = {
   status: 'up-to-date';
   currentVersion: string;
-  currentDshVersion?: string;
   latestVersion: string;
-  compatibility: OpenAICodexDshCompatibilityAdvice;
 } | {
   status: 'update-available';
   currentVersion: string;
-  currentDshVersion?: string;
   latestVersion: string;
   releaseUrl: string;
   highlights: OpenAICodexUpdateHighlight[];
@@ -650,11 +640,9 @@ type OpenAICodexUpdateResult = {
   releaseName?: string;
   releaseNotes?: string;
   publishedAt?: string;
-  compatibility: OpenAICodexDshCompatibilityAdvice;
 } | {
   status: 'unavailable';
   currentVersion: string;
-  currentDshVersion?: string;
   reason: 'invalid-current-version' | 'registry-unavailable' | 'invalid-registry-response';
 };
 interface ParsedVersion {
@@ -665,7 +653,6 @@ interface ParsedVersion {
 }
 interface UpdateCheckOptions {
   currentVersion: string;
-  currentDshVersion?: string;
   fetchImpl?: FetchImpl;
   timeoutMs?: number;
 }

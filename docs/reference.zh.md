@@ -112,6 +112,12 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 
 ## 诊断与恢复
 
+### 本地安装诊断
+
+运行 `dsh plugin --profile web exec dsh-codex-connect doctor --json` 可检查本地安装元数据，不会联网。兼容性状态含义：`compatible` 表示符合声明的版本要求，不是行为测试通过；`unverified` 表示包版本超出声明的支持集合；`unknown` 表示缺少必要版本元数据或无法读取；`incompatible` 表示 Node 版本不满足声明的 engine 要求。汇总状态依次优先采用 `incompatible`、`unknown`、`unverified`。任何非 compatible 结果或不安全的凭据文件元数据都会让 doctor 返回 `1`，但这并不授权或建议更改 DSH。
+
+常规更新卡片只检查 Codex Connect 发布版本。插件版本检查成功后最多缓存 24 小时，页面挂载期间每五分钟重试不可用的检查；手动检查会绕过缓存。它不会查询宿主兼容性，也不会建议升级或降级宿主。未列入记录的 DSH/plugin 组合需要验证，不能据此认定无法运行。
+
 ### 能力探针
 
 本地能力报告不发送网络请求。本地凭据有效且调用受支持时，`capabilities --probe` 会发送一条固定短请求，并可能消耗额度。`auto-review-probe` 只检查 OAuth reviewer 路由及结构化响应，不验证完整 Harness 审批集成，也不执行被审查的动作；满足前置条件时，它也可能发起请求并消耗额度：

@@ -32,7 +32,8 @@ export const COMPATIBILITY_PACKAGES = [
 ] as const
 
 export type CompatibilityPackageName = (typeof COMPATIBILITY_PACKAGES)[number]
-export type CompatibilityStatus = 'compatible' | 'incompatible' | 'unknown'
+/** Version metadata proves a declared match, not behavioral failure for an untested package. */
+export type CompatibilityStatus = 'compatible' | 'unverified' | 'incompatible' | 'unknown'
 
 export interface CompatibilityEntry {
   supported: string
@@ -87,16 +88,16 @@ interface PackageJson {
 const PACKAGE_JSON_SEARCH_DEPTH = 8
 
 function compareVersion(left: string, right: string): CompatibilityStatus {
-  return left === right ? 'compatible' : 'incompatible'
+  return left === right ? 'compatible' : 'unverified'
 }
 
 function piAiVersionStatus(value: string): CompatibilityStatus {
   const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(value.trim())
-  if (match === null) return 'incompatible'
+  if (match === null) return 'unverified'
   const major = Number(match[1])
   const minor = Number(match[2])
   const patch = Number(match[3])
-  return major === 0 && minor === 84 && patch >= 2 ? 'compatible' : 'incompatible'
+  return major === 0 && minor === 84 && patch >= 2 ? 'compatible' : 'unverified'
 }
 
 function parseNodeVersion(value: string): [number, number, number] | undefined {
@@ -143,6 +144,7 @@ function nodeEntry(installed: string | null | undefined): CompatibilityEntry {
 function aggregateStatus(entries: readonly CompatibilityEntry[]): CompatibilityStatus {
   if (entries.some(entry => entry.status === 'incompatible')) return 'incompatible'
   if (entries.some(entry => entry.status === 'unknown')) return 'unknown'
+  if (entries.some(entry => entry.status === 'unverified')) return 'unverified'
   return 'compatible'
 }
 
