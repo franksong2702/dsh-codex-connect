@@ -409,7 +409,7 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
       ? t('modelsModuleDefault')
       : t('modelsModuleSelected', { count: config.models.length })
     if (module === 'network') return t(config?.enableProxy === true ? 'networkModuleProxy' : 'networkModuleDirect')
-    const count = config === undefined ? 0 : [config.enableSearch, config.enableImageTool, config.enableImageGeneration, config.enableAutoReview].filter(Boolean).length
+    const count = config === undefined ? 0 : [config.enableSearch, config.enableImageTool, config.enableImageGeneration, config.enableAutoReview, config.enableReasoningUpdates].filter(Boolean).length
     return t('capabilitiesModuleEnabled', { count })
   }
 

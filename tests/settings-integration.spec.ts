@@ -75,6 +75,7 @@ describe('OpenAI Codex Host settings integration', () => {
     expect(fullCatalog.length).toBeGreaterThan(2)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
     expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
+    expect(ctx.tools.get(OpenAICodex.ASTRA_REASONING_TOOL_NAME)).toBeUndefined()
     const approvalAgent = { id: 'settings-approval-fixture' } as unknown as Agent
     await expect(ctx.waterfall('approval/request', {
       agent: approvalAgent,
@@ -87,6 +88,7 @@ describe('OpenAI Codex Host settings integration', () => {
       enableSearch: true,
       enableImageTool: true,
       enableImageGeneration: true,
+      enableReasoningUpdates: true,
       searchModel: 'gpt-search-settings-test',
       searchMode: 'live',
       searchContextSize: 'high',
@@ -95,6 +97,7 @@ describe('OpenAI Codex Host settings integration', () => {
     await vi.waitFor(() => {
       expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeDefined()
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeDefined()
+      expect(ctx.tools.get(OpenAICodex.ASTRA_REASONING_TOOL_NAME)).toBeDefined()
     })
     await vi.waitFor(async () => {
       await expect(ctx.web.search({ query: 'enabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
@@ -111,10 +114,12 @@ describe('OpenAI Codex Host settings integration', () => {
       enableSearch: false,
       enableImageTool: false,
       enableImageGeneration: false,
+      enableReasoningUpdates: false,
     })
     await vi.waitFor(() => {
       expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
       expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
+      expect(ctx.tools.get(OpenAICodex.ASTRA_REASONING_TOOL_NAME)).toBeUndefined()
     })
     await expect(ctx.web.search({ query: 'disabled again' })).resolves.toMatchObject({ content: 'DeepSeek search' })
     expect(ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value)

@@ -4,6 +4,7 @@ import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-w
 import type { Context as PiContext, Model, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -15,6 +16,7 @@ import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './model-contract.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { AstraReasoningRequestScope } from './reasoning-update-provider.ts'
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -220,7 +222,8 @@ export function createOpenAICodexAdapter(
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
 ): PiAiAdapter {
-  const provider = withOpenAICodexAstra(openaiCodexProvider())
+  const reasoningScope = new AstraReasoningRequestScope()
+  const provider = reasoningScope.wrapProvider(withOpenAICodexAstra(openaiCodexProvider()))
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {
@@ -234,6 +237,15 @@ export function createOpenAICodexAdapter(
     return profiles
   }
   class OpenAICodexAdapter extends PiAiAdapter {
+    override async prepareCall(providerId: string, modelId: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
+      const prepared = await super.prepareCall(providerId, modelId, signal)
+      return { ...prepared, stream: options => reasoningScope.stream(options, () => prepared.stream(options)) }
+    }
+
+    override stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+      return reasoningScope.stream(options, () => super.stream(options))
+    }
+
     override async listModels(providerId: string) {
       const catalog = await super.listModels(providerId)
       const configured = visibleModelIds?.()

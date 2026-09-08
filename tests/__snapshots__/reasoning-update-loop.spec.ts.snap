@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`runs real loop tool confirmation, then replays the recorded request (approved=false) 1`] = `
+[
+  {
+    "role": "user",
+    "type": "message",
+  },
+  {
+    "role": undefined,
+    "type": "function_call",
+  },
+  {
+    "output": "No reasoning change was approved.",
+    "type": "function_call_output",
+  },
+]
+`;
+
+exports[`runs real loop tool confirmation, then replays the recorded request (approved=true) 1`] = `
+[
+  {
+    "role": "user",
+    "type": "message",
+  },
+  {
+    "role": undefined,
+    "type": "function_call",
+  },
+  {
+    "output": "The user approved high. It becomes effective when the queued notice enters the next request; cancellation may discard pending context. The original model-selector level remains low.",
+    "type": "function_call_output",
+  },
+  {
+    "reasoning": {
+      "effort": "high",
+    },
+    "type": "configuration_update",
+  },
+  {
+    "role": "user",
+    "type": "message",
+  },
+]
+`;

@@ -72,6 +72,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
 | GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
+| 实验性 Astra 推理档位调整 | `enableReasoningUpdates` | 每次调整均须你回答，只影响当前会话。暂不支持压缩或切换模型，选择器保留初始档位。见[测试指南](astra-reasoning.zh.md)。 |
 
 使用你当前 GPT 订阅计划提供的图片生成能力。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 

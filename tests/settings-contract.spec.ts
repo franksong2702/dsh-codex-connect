@@ -14,6 +14,7 @@ describe('OpenAI Codex proxy settings contract', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.autoReviewDisclosureAcknowledged).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableAutoReview).toBe(false)
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableReasoningUpdates).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
     const legacy = decodeOpenAICodexSettings({
       enableSearch: false,
@@ -27,10 +28,12 @@ describe('OpenAI Codex proxy settings contract', () => {
     expect(legacy?.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
     expect(legacy?.autoReviewDisclosureAcknowledged).toBe(false)
     expect(legacy?.enableAutoReview).toBe(false)
+    expect(legacy?.enableReasoningUpdates).toBe(false)
     expect(resolveOpenAICodexProxyUrl(legacy ?? {})).toBeUndefined()
   })
 
   it('rejects non-boolean Auto-review settings while preserving the default-off legacy value', () => {
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, enableReasoningUpdates: 'yes' })).toBeUndefined()
     expect(decodeOpenAICodexSettings({
       ...DEFAULT_OPENAI_CODEX_SETTINGS,
       enableAutoReview: 'yes',

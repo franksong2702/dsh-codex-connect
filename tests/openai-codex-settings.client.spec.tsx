@@ -359,6 +359,23 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(scope.getSnapshot().value).toMatchObject({ searchModel: 'remote-model', enableImageGeneration: true })
   })
 
+  it('saves and disables experimental reasoning proposals without enabling Auto-review', async () => {
+    const { scope, mutate } = settingsScopeFixture()
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-6-astra', name: 'GPT-6 Astra' }]))))
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const toggle = await screen.findByRole('checkbox', { name: /Experimental Astra reasoning changes/u }) as HTMLInputElement
+    expect(toggle.checked).toBe(false)
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaved)
+    expect(mutate).toHaveBeenCalledWith([{ op: 'set', path: ['enableReasoningUpdates'], value: true }], expect.any(Number))
+    expect(scope.getSnapshot().value).toMatchObject({ enableReasoningUpdates: true, enableAutoReview: false })
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaved)
+    expect(scope.getSnapshot().value).toMatchObject({ enableReasoningUpdates: false, enableAutoReview: false })
+  })
+
   it('publishes all edited fields in one revision and one notification', async () => {
     const { scope, mutate, set } = settingsScopeFixture()
     const observed: unknown[] = []
