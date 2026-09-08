@@ -6,13 +6,10 @@ export const OPENAI_CODEX_RELEASE_API_BASE = 'https://api.github.com/repos/frank
 export const OPENAI_CODEX_RELEASE_PAGE_BASE = 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v'
 export const OPENAI_CODEX_UPDATE_HIGHLIGHTS_URL = 'https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/update-highlights.json'
 export const OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL = 'https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/verified-compatibility.json'
-export const OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL = 'https://api.github.com/search/issues'
 export const OPENAI_CODEX_UPDATE_TIMEOUT_MS = 8_000
 export const OPENAI_CODEX_UPDATE_MAX_METADATA_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_HIGHLIGHTS_BYTES = 64 * 1024
-export const OPENAI_CODEX_UPDATE_MAX_COMPATIBILITY_BYTES = 64 * 1024
 export const OPENAI_CODEX_UPDATE_MAX_RELEASE_BYTES = 32 * 1024
-export const OPENAI_CODEX_UPDATE_MAX_TRACKER_BYTES = 32 * 1024
 
 export type OpenAICodexUpdateHighlightKind =
   | 'trusted-origins'
@@ -45,21 +42,6 @@ export interface OpenAICodexUpdateCatalogRelease {
 export interface OpenAICodexUpdateCatalog {
   schemaVersion: 1
   releases: OpenAICodexUpdateCatalogRelease[]
-}
-
-export type OpenAICodexDshCompatibilityStatus =
-  | 'compatible'
-  | 'plugin-update-required'
-  | 'dsh-update-required'
-  | 'not-yet-compatible'
-  | 'unverified'
-
-export interface OpenAICodexDshCompatibilityAdvice {
-  status: OpenAICodexDshCompatibilityStatus
-  latestPluginVersion: string
-  latestDshVersion?: string
-  reportCompatibilityGap?: true
-  trackerUrl?: string
 }
 
 export interface OpenAICodexVerifiedPluginVersion {
@@ -123,14 +105,11 @@ export type OpenAICodexUpdateResult =
   | {
       status: 'up-to-date'
       currentVersion: string
-      currentDshVersion?: string
       latestVersion: string
-      compatibility: OpenAICodexDshCompatibilityAdvice
     }
   | {
       status: 'update-available'
       currentVersion: string
-      currentDshVersion?: string
       latestVersion: string
       releaseUrl: string
       highlights: OpenAICodexUpdateHighlight[]
@@ -138,12 +117,10 @@ export type OpenAICodexUpdateResult =
       releaseName?: string
       releaseNotes?: string
       publishedAt?: string
-      compatibility: OpenAICodexDshCompatibilityAdvice
     }
   | {
       status: 'unavailable'
       currentVersion: string
-      currentDshVersion?: string
       reason: 'invalid-current-version' | 'registry-unavailable' | 'invalid-registry-response'
     }
 
@@ -156,7 +133,6 @@ interface ParsedVersion {
 
 interface UpdateCheckOptions {
   currentVersion: string
-  currentDshVersion?: string
   fetchImpl?: FetchImpl
   timeoutMs?: number
 }
@@ -251,46 +227,6 @@ export function parseOpenAICodexVerifiedCompatibility(value: unknown): OpenAICod
     pluginVersions.push({ version, verifiedDshVersions })
   }
   return { schemaVersion: 1, checkedAt, latestDshVersion, pluginVersions }
-}
-
-/** Combine installed, published, and repository-verified versions into one user decision. */
-export function evaluateOpenAICodexDshCompatibility(
-  currentVersion: string,
-  latestPluginVersion: string,
-  currentDshVersion?: string,
-  catalog?: OpenAICodexVerifiedCompatibilityCatalog,
-): OpenAICodexDshCompatibilityAdvice {
-  if (catalog === undefined) return { status: 'unverified', latestPluginVersion }
-  if (currentDshVersion === undefined) {
-    return { status: 'unverified', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
-  }
-  const verified = (version: string): boolean => catalog.pluginVersions.some(plugin => (
-    plugin.version === version && plugin.verifiedDshVersions.includes(currentDshVersion)
-  ))
-  if (verified(currentVersion)) {
-    return { status: 'compatible', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
-  }
-  if (latestPluginVersion !== currentVersion && verified(latestPluginVersion)) {
-    return { status: 'plugin-update-required', latestPluginVersion, latestDshVersion: catalog.latestDshVersion }
-  }
-  const latestPairVerified = catalog.pluginVersions.some(plugin => (
-    plugin.version === latestPluginVersion
-    && plugin.verifiedDshVersions.includes(catalog.latestDshVersion)
-  ))
-  if (latestPairVerified && compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) < 0) {
-    return {
-      status: 'dsh-update-required',
-      latestPluginVersion,
-      latestDshVersion: catalog.latestDshVersion,
-    }
-  }
-  const currentDshAtOrBeyondLatest = compareOpenAICodexVersions(currentDshVersion, catalog.latestDshVersion) >= 0
-  return {
-    status: currentDshAtOrBeyondLatest ? 'not-yet-compatible' : 'unverified',
-    latestPluginVersion,
-    latestDshVersion: catalog.latestDshVersion,
-    ...currentDshAtOrBeyondLatest ? { reportCompatibilityGap: true as const } : {},
-  }
 }
 
 function boundedText(value: string, maxBytes: number): string {
@@ -437,88 +373,11 @@ async function releaseDetails(
   }
 }
 
-async function dshCompatibilityAdvice(
-  currentVersion: string,
-  latestPluginVersion: string,
-  currentDshVersion: string | undefined,
-  fetchImpl: FetchImpl,
-  timeoutMs: number,
-): Promise<OpenAICodexDshCompatibilityAdvice> {
-  let catalog: OpenAICodexVerifiedCompatibilityCatalog | undefined
-  try {
-    const { response, text } = await fetchBounded(
-      fetchImpl,
-      OPENAI_CODEX_VERIFIED_COMPATIBILITY_URL,
-      OPENAI_CODEX_UPDATE_MAX_COMPATIBILITY_BYTES,
-      timeoutMs,
-      { accept: 'application/json' },
-    )
-    if (response.ok) catalog = parseOpenAICodexVerifiedCompatibility(JSON.parse(text) as unknown)
-  } catch {
-    catalog = undefined
-  }
-  const advice = evaluateOpenAICodexDshCompatibility(currentVersion, latestPluginVersion, currentDshVersion, catalog)
-  if (advice.reportCompatibilityGap !== true || currentDshVersion === undefined) return advice
-  const trackerUrl = await findOpenAICodexCanaryTracker(currentDshVersion, fetchImpl, timeoutMs)
-  return trackerUrl === undefined ? advice : { ...advice, trackerUrl }
-}
-
-function canaryTrackerSearchUrl(version: string): string {
-  const params = new URLSearchParams({
-    q: `repo:franksong2702/dsh-codex-connect is:issue in:title "compatibility: track DSH ${version}"`,
-    per_page: '5',
-  })
-  return `${OPENAI_CODEX_CANARY_TRACKER_SEARCH_API_URL}?${params.toString()}`
-}
-
-function validCanaryTrackerUrl(value: unknown): value is string {
-  return typeof value === 'string'
-    && /^https:\/\/github\.com\/franksong2702\/dsh-codex-connect\/issues\/[1-9]\d*$/u.test(value)
-}
-
-async function findOpenAICodexCanaryTracker(
-  version: string,
-  fetchImpl: FetchImpl,
-  timeoutMs: number,
-): Promise<string | undefined> {
-  try {
-    const { response, text } = await fetchBounded(
-      fetchImpl,
-      canaryTrackerSearchUrl(version),
-      OPENAI_CODEX_UPDATE_MAX_TRACKER_BYTES,
-      timeoutMs,
-      { accept: 'application/vnd.github+json' },
-    )
-    if (!response.ok) return undefined
-    const value = JSON.parse(text) as unknown
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
-    const items = (value as Record<string, unknown>)['items']
-    if (!Array.isArray(items) || items.length > 5) return undefined
-    const expectedTitle = `compatibility: track DSH ${version}`
-    const expectedMarker = `<!-- dsh-canary:${version} -->`
-    for (const item of items) {
-      if (typeof item !== 'object' || item === null || Array.isArray(item)) continue
-      const issue = item as Record<string, unknown>
-      if (issue['title'] === expectedTitle
-        && typeof issue['body'] === 'string'
-        && issue['body'].includes(expectedMarker)
-        && issue['pull_request'] === undefined
-        && validCanaryTrackerUrl(issue['html_url'])) {
-        return issue['html_url']
-      }
-    }
-    return undefined
-  } catch {
-    return undefined
-  }
-}
-
 /** Check npm's public dist-tags and enrich an available update with public release notes. */
 export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Promise<OpenAICodexUpdateResult> {
-  const { currentVersion, currentDshVersion } = options
-  const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
+  const { currentVersion } = options
   if (parseOpenAICodexVersion(currentVersion) === undefined) {
-    return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'invalid-current-version' }
+    return { status: 'unavailable', currentVersion, reason: 'invalid-current-version' }
   }
   const fetchImpl = options.fetchImpl ?? fetch
   const timeoutMs = options.timeoutMs ?? OPENAI_CODEX_UPDATE_TIMEOUT_MS
@@ -531,36 +390,31 @@ export async function checkForOpenAICodexUpdate(options: UpdateCheckOptions): Pr
       timeoutMs,
       { accept: 'application/json' },
     )
-    if (!response.ok) return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'registry-unavailable' }
+    if (!response.ok) return { status: 'unavailable', currentVersion, reason: 'registry-unavailable' }
     metadata = JSON.parse(text) as unknown
   } catch (error: unknown) {
     return {
       status: 'unavailable',
       currentVersion,
-      ...currentDsh,
       reason: error instanceof SyntaxError || error instanceof RangeError ? 'invalid-registry-response' : 'registry-unavailable',
     }
   }
   const candidates = registryCandidates(metadata)
-  if (candidates.length === 0) return { status: 'unavailable', currentVersion, ...currentDsh, reason: 'invalid-registry-response' }
+  if (candidates.length === 0) return { status: 'unavailable', currentVersion, reason: 'invalid-registry-response' }
   const latestVersion = candidates.reduce((best, candidate) => compareOpenAICodexVersions(candidate, best) > 0 ? candidate : best)
   if (compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) {
-    const compatibility = await dshCompatibilityAdvice(currentVersion, currentVersion, currentDshVersion, fetchImpl, timeoutMs)
-    return { status: 'up-to-date', currentVersion, ...currentDsh, latestVersion: currentVersion, compatibility }
+    return { status: 'up-to-date', currentVersion, latestVersion: currentVersion }
   }
-  const [highlightResult, details, compatibility] = await Promise.all([
+  const [highlightResult, details] = await Promise.all([
     releaseHighlights(currentVersion, latestVersion, fetchImpl, timeoutMs),
     releaseDetails(latestVersion, fetchImpl, timeoutMs),
-    dshCompatibilityAdvice(currentVersion, latestVersion, currentDshVersion, fetchImpl, timeoutMs),
   ])
   return {
     status: 'update-available',
     currentVersion,
-    ...currentDsh,
     latestVersion,
     releaseUrl: releaseUrl(latestVersion),
     highlights: highlightResult.highlights,
-    compatibility,
     ...highlightResult.versionsBehind === undefined ? {} : { versionsBehind: highlightResult.versionsBehind },
     ...details,
   }
@@ -572,27 +426,16 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   const record = value as Record<string, unknown>
   const currentVersion = record['currentVersion']
   if (typeof currentVersion !== 'string' || parseOpenAICodexVersion(currentVersion) === undefined) return undefined
-  const rawCurrentDshVersion = record['currentDshVersion']
-  const currentDshVersion = rawCurrentDshVersion === undefined
-    ? undefined
-    : typeof rawCurrentDshVersion === 'string' && parseOpenAICodexVersion(rawCurrentDshVersion) !== undefined
-      ? rawCurrentDshVersion
-      : undefined
-  if (rawCurrentDshVersion !== undefined && currentDshVersion === undefined) return undefined
-  const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
   if (record['status'] === 'unavailable') {
     const reason = record['reason']
     return reason === 'invalid-current-version' || reason === 'registry-unavailable' || reason === 'invalid-registry-response'
-      ? { status: 'unavailable', currentVersion, ...currentDsh, reason }
+      ? { status: 'unavailable', currentVersion, reason }
       : undefined
   }
   const latestVersion = record['latestVersion']
   if (typeof latestVersion !== 'string' || parseOpenAICodexVersion(latestVersion) === undefined) return undefined
-  const compatibility = parseOpenAICodexDshCompatibilityAdvice(record['compatibility'], latestVersion)
-  if (compatibility === undefined) return undefined
-  if (currentDshVersion === undefined && compatibility.status !== 'unverified') return undefined
   if (record['status'] === 'up-to-date') {
-    return { status: 'up-to-date', currentVersion, ...currentDsh, latestVersion, compatibility }
+    return { status: 'up-to-date', currentVersion, latestVersion }
   }
   if (record['status'] !== 'update-available' || compareOpenAICodexVersions(latestVersion, currentVersion) <= 0) return undefined
   const expectedUrl = releaseUrl(latestVersion)
@@ -627,44 +470,12 @@ export function parseOpenAICodexUpdateResult(value: unknown): OpenAICodexUpdateR
   return {
     status: 'update-available',
     currentVersion,
-    ...currentDsh,
     latestVersion,
     releaseUrl: expectedUrl,
     highlights,
-    compatibility,
     ...versionsBehind === undefined ? {} : { versionsBehind },
     ...releaseName === undefined ? {} : { releaseName },
     ...releaseNotes === undefined ? {} : { releaseNotes },
     ...publishedAt === undefined ? {} : { publishedAt },
-  }
-}
-
-function parseOpenAICodexDshCompatibilityAdvice(
-  value: unknown,
-  latestPluginVersion: string,
-): OpenAICodexDshCompatibilityAdvice | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
-  const record = value as Record<string, unknown>
-  const status = record['status']
-  if (status !== 'compatible' && status !== 'plugin-update-required' && status !== 'dsh-update-required' && status !== 'not-yet-compatible' && status !== 'unverified') return undefined
-  if (record['latestPluginVersion'] !== latestPluginVersion) return undefined
-  const latestDshVersion = record['latestDshVersion']
-  const reportCompatibilityGap = record['reportCompatibilityGap']
-  const trackerUrl = record['trackerUrl']
-  if (reportCompatibilityGap !== undefined && reportCompatibilityGap !== true) return undefined
-  if (reportCompatibilityGap === true && status !== 'not-yet-compatible') return undefined
-  if (trackerUrl !== undefined && (reportCompatibilityGap !== true || !validCanaryTrackerUrl(trackerUrl))) return undefined
-  if (status === 'unverified') {
-    if (latestDshVersion === undefined) return { status, latestPluginVersion }
-    if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
-    return { status, latestPluginVersion, latestDshVersion }
-  }
-  if (typeof latestDshVersion !== 'string' || parseOpenAICodexVersion(latestDshVersion) === undefined) return undefined
-  return {
-    status,
-    latestPluginVersion,
-    latestDshVersion,
-    ...reportCompatibilityGap === true ? { reportCompatibilityGap: true as const } : {},
-    ...trackerUrl === undefined ? {} : { trackerUrl },
   }
 }

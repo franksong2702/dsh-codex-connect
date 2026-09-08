@@ -55,7 +55,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - **模型与 Astra 支持：**当前已验证的 DSH 与插件组合已支持 `gpt-6-astra`。插件补充缺失的模型定义，提供 Low、Medium、High、Xhigh 和 Max 五档推理强度；Default 保持提供方默认值。已保存的 Off/Minimal 选择需要[明确更新](../MIGRATION.md#astra-reasoning-selections)。未来使用的依赖目录包含 Astra 时，插件会优先采用其原生定义。模型出现在列表中，不代表当前账户具有调用权限；新依赖版本的整体兼容性仍需单独验证。
 - **Fast Mode：**为单个对话请求优先服务，默认关闭。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
 - **额度：**显示服务端返回的 `5h`、`7d` 窗口及重置时间，已登录时通常每 60 秒刷新一次。不虚构缺失窗口；Spark 使用独立额度桶。
-- **更新指引：**将已安装的 DSH/plugin 组合与公开验证记录比较，但不会自动执行升级。
+- **插件更新：**检查 Codex Connect 新版本，不自动安装，也不建议更改 DSH。宿主兼容性信息通过主动运行的本地诊断查看。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中的 Fast Mode 与额度控件" width="820">

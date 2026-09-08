@@ -28,13 +28,13 @@ describe('compatibility contract', () => {
     })
   })
 
-  it('marks a known version mismatch incompatible', () => {
+  it('marks a declared package mismatch unverified rather than incompatible', () => {
     const report = evaluateCompatibility({
       nodeVersion: 'v24.0.0',
       packageVersions: { ...compatiblePackages, '@earendil-works/pi-ai': '0.82.2' },
     })
-    expect(report.status).toBe('incompatible')
-    expect(report.packages['@earendil-works/pi-ai']).toMatchObject({ installed: '0.82.2', status: 'incompatible' })
+    expect(report.status).toBe('unverified')
+    expect(report.packages['@earendil-works/pi-ai']).toMatchObject({ installed: '0.82.2', status: 'unverified' })
   })
 
   it('accepts stable pi-ai patch releases in the DSH caret range only', () => {
@@ -45,11 +45,11 @@ describe('compatibility contract', () => {
     expect(evaluateCompatibility({
       nodeVersion: 'v24.0.0',
       packageVersions: { ...compatiblePackages, '@earendil-works/pi-ai': '0.85.0' },
-    }).status).toBe('incompatible')
+    }).status).toBe('unverified')
     expect(evaluateCompatibility({
       nodeVersion: 'v24.0.0',
       packageVersions: { ...compatiblePackages, '@earendil-works/pi-ai': '0.84.5-beta.1' },
-    }).status).toBe('incompatible')
+    }).status).toBe('unverified')
   })
 
   it('keeps missing metadata unknown rather than claiming compatibility', () => {
@@ -57,6 +57,13 @@ describe('compatibility contract', () => {
     expect(report.status).toBe('unknown')
     expect(report.node.status).toBe('unknown')
     expect(report.packages['@deepseek-ai/dsh-llm'].installed).toBeNull()
+  })
+
+  it('keeps a newer DSH unverified and prioritizes missing metadata or a known engine mismatch', () => {
+    const packageVersions = { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.1.3-alpha.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.3-alpha.1' }
+    expect(evaluateCompatibility({ nodeVersion: 'v24.18.0', packageVersions }).status).toBe('unverified')
+    expect(evaluateCompatibility({ nodeVersion: 'unknown', packageVersions }).status).toBe('unknown')
+    expect(evaluateCompatibility({ nodeVersion: 'v20.0.0', packageVersions }).status).toBe('incompatible')
   })
 
   it('supports injected package metadata without reading paths or credentials', async () => {

@@ -1,25 +1,21 @@
 /** Browser-owned cache and observable state for the global update reminder. */
 
-import {
-  parseOpenAICodexVersion,
-  parseOpenAICodexUpdateResult,
-} from '../update.ts'
-import type { OpenAICodexDshCompatibilityAdvice, OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
-import { OPENAI_CODEX_RUNTIME_PATH, OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
+import { parseOpenAICodexUpdateResult } from '../update.ts'
+import type { OpenAICodexUpdateHighlight, OpenAICodexUpdateResult } from '../update.ts'
+import { OPENAI_CODEX_UPDATE_PATH } from '../update-paths.ts'
 import { requestJson } from './request-json.ts'
 
 export const OPENAI_CODEX_REPOSITORY_URL = 'https://github.com/franksong2702/dsh-codex-connect'
 export const OPENAI_CODEX_UPDATE_CACHE_KEY = 'dsh-codex-connect:update-check'
 export const OPENAI_CODEX_UPDATE_DISMISSED_KEY = 'dsh-codex-connect:update-dismissed'
 export const OPENAI_CODEX_UPDATE_CACHE_TTL_MS = 24 * 60 * 60 * 1_000
-/** Unconfirmed compatibility is rechecked while the page remains open. */
-export const OPENAI_CODEX_COMPATIBILITY_RECHECK_MS = 5 * 60 * 1_000
+/** Retry transient update-check failures while the page remains open. */
+export const OPENAI_CODEX_UPDATE_RECHECK_MS = 5 * 60 * 1_000
 
 export type OpenAICodexUpdateSnapshot = {
   status: 'idle' | 'checking' | OpenAICodexUpdateResult['status']
   currentVersion: string
   checkedAt?: number
-  currentDshVersion?: string
   latestVersion?: string
   versionsBehind?: number
   highlights?: OpenAICodexUpdateHighlight[]
@@ -27,7 +23,6 @@ export type OpenAICodexUpdateSnapshot = {
   releaseName?: string
   releaseNotes?: string
   publishedAt?: string
-  compatibility?: OpenAICodexDshCompatibilityAdvice
   dismissedNotice?: string
 }
 
@@ -48,9 +43,8 @@ function resultSnapshot(result: OpenAICodexUpdateResult, dismissedNotice?: strin
   return {
     status: result.status,
     currentVersion: result.currentVersion,
-    ...result.currentDshVersion === undefined ? {} : { currentDshVersion: result.currentDshVersion },
     ...result.status === 'up-to-date' || result.status === 'update-available'
-      ? { latestVersion: result.latestVersion, compatibility: result.compatibility }
+      ? { latestVersion: result.latestVersion }
       : {},
     ...result.status === 'update-available' && result.versionsBehind !== undefined
       ? { versionsBehind: result.versionsBehind }
@@ -109,8 +103,7 @@ export class OpenAICodexUpdateStore {
       const cached = JSON.parse(raw) as CachedUpdate
       if (!Number.isSafeInteger(cached.checkedAt) || cached.checkedAt > Date.now() || Date.now() - cached.checkedAt > OPENAI_CODEX_UPDATE_CACHE_TTL_MS) return undefined
       const result = parseOpenAICodexUpdateResult(cached.result)
-      // A missing verification record can change without either installed version changing.
-      if (result === undefined || result.status === 'unavailable' || result.compatibility.status !== 'compatible') return undefined
+      if (result === undefined || result.status === 'unavailable') return undefined
       return { result, checkedAt: cached.checkedAt }
     } catch {
       return undefined
@@ -131,42 +124,24 @@ export class OpenAICodexUpdateStore {
     const checkedAt = Date.now()
     this.writeCached(result, checkedAt)
     this.setSnapshot({ ...resultSnapshot(result, this.dismissedNotice()), checkedAt })
-    if (result.status === 'unavailable' || result.compatibility.status !== 'compatible') {
-      this.recheckTimer = setTimeout(() => { void this.refresh(true) }, OPENAI_CODEX_COMPATIBILITY_RECHECK_MS)
+    if (result.status === 'unavailable') {
+      this.recheckTimer = setTimeout(() => { void this.refresh(true) }, OPENAI_CODEX_UPDATE_RECHECK_MS)
     }
   }
 
-  /** Reuse verified results for one day; force bypasses that cache for manual checks. */
+  /** Reuse plugin-version results for one day; force bypasses the cache. */
   async refresh(force = false): Promise<void> {
     if (this.disposed || this.request !== undefined) return
     clearTimeout(this.recheckTimer)
     this.recheckTimer = undefined
     const controller = new AbortController()
     this.request = controller
-    let currentDshVersion: string | undefined
     this.setSnapshot({ status: 'checking', currentVersion: this.currentVersion, ...this.snapshot.dismissedNotice === undefined ? {} : { dismissedNotice: this.snapshot.dismissedNotice } })
     try {
-      const { response: runtimeResponse, value: runtimeValue } = await requestJson(OPENAI_CODEX_RUNTIME_PATH, {
-        method: 'GET',
-        headers: { accept: 'application/json' },
-        credentials: 'same-origin',
-        signal: controller.signal,
-      })
-      const runtimeRecord = typeof runtimeValue === 'object' && runtimeValue !== null && !Array.isArray(runtimeValue)
-        ? runtimeValue as Record<string, unknown>
-        : undefined
-      const rawCurrentDshVersion = runtimeRecord?.['currentDshVersion']
-      currentDshVersion = runtimeResponse.ok
-        && typeof rawCurrentDshVersion === 'string'
-        && parseOpenAICodexVersion(rawCurrentDshVersion) !== undefined
-        ? rawCurrentDshVersion
-        : undefined
-      const currentDsh = currentDshVersion === undefined ? {} : { currentDshVersion }
       if (!force) {
         const cached = this.readCached()
         if (cached !== undefined
-          && cached.result.currentVersion === this.currentVersion
-          && cached.result.currentDshVersion === currentDshVersion) {
+          && cached.result.currentVersion === this.currentVersion) {
           this.setSnapshot({ ...resultSnapshot(cached.result, this.dismissedNotice()), checkedAt: cached.checkedAt })
           return
         }
@@ -181,7 +156,6 @@ export class OpenAICodexUpdateStore {
       const safeResult = result ?? {
         status: 'unavailable' as const,
         currentVersion: this.currentVersion,
-        ...currentDsh,
         reason: 'registry-unavailable' as const,
       }
       this.acceptResult(safeResult)
@@ -190,7 +164,6 @@ export class OpenAICodexUpdateStore {
         const unavailable: OpenAICodexUpdateResult = {
           status: 'unavailable',
           currentVersion: this.currentVersion,
-          ...currentDshVersion === undefined ? {} : { currentDshVersion },
           reason: 'registry-unavailable',
         }
         this.acceptResult(unavailable)

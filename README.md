@@ -55,7 +55,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - **Models and Astra support:** the currently verified DSH and plugin combination supports `gpt-6-astra`. The plugin supplies its missing model definition with Low, Medium, High, Xhigh, and Max reasoning levels; Default preserves the provider default. Saved Off/Minimal selections require an [explicit update](MIGRATION.md#astra-reasoning-selections). When the installed dependency catalog includes Astra, the plugin prefers its native definition. A model appearing in the list does not mean the current account has permission to use it; overall compatibility with new dependency versions still requires separate verification.
 - **Fast Mode:** request priority service for one conversation, off by default. Actual speed and quota consumption depend on the service; no fixed speed multiplier is guaranteed.
 - **Quota:** show the server-returned `5h` and `7d` windows and reset times, normally refreshed every 60 seconds while signed in. Missing windows are not invented; Spark uses its separate quota bucket.
-- **Update guidance:** compare the installed DSH/plugin pair with the public verification record without installing an upgrade.
+- **Plugin updates:** check for newer Codex Connect releases without installing anything or recommending changes to DSH. Host compatibility is available through explicit local diagnostics.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="Fast Mode and quota controls in the DeepSeek Harness Composer" width="820">

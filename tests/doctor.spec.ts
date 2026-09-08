@@ -53,10 +53,10 @@ describe('Codex Connect doctor', () => {
       .resolves.toMatchObject({ providerConflict: true })
   })
 
-  it('reports incompatible dependencies and gives a non-mutating repair hint', async () => {
+  it('reports an incompatible Node engine without recommending a DSH downgrade', async () => {
     const report = await diagnoseOpenAICodex({
       compatibilityOptions: {
-        nodeVersion: 'v22.19.0',
+        nodeVersion: 'v20.0.0',
         packageVersions: {
           '@deepseek-ai/dsh-llm': '0.1.1-rc.2',
           '@deepseek-ai/dsh-llm-pi-ai': '0.1.0-rc.6',
@@ -65,7 +65,23 @@ describe('Codex Connect doctor', () => {
       },
     })
     expect(report.compatibility.status).toBe('incompatible')
-    expect(report.hints.join('\n')).toMatch(/@earendil-works\/pi-ai \^0\.84\.2/)
+    expect(report.hints.join('\n')).toMatch(/Node version does not satisfy/)
+    expect(report.hints.join('\n')).toMatch(/does not recommend changing the DSH version/)
+  })
+
+  it('reports DSH and pi-ai mismatches as unverified', async () => {
+    const report = await diagnoseOpenAICodex({
+      compatibilityOptions: {
+        nodeVersion: 'v24.0.0',
+        packageVersions: {
+          '@deepseek-ai/dsh-llm': '0.1.1-rc.2',
+          '@deepseek-ai/dsh-llm-pi-ai': '0.1.0-rc.6',
+          '@earendil-works/pi-ai': '0.82.1',
+        },
+      },
+    })
+    expect(report.compatibility.status).toBe('unverified')
+    expect(report.hints.join('\n')).toMatch(/unverified, not proven broken/)
   })
 
   it('reports unknown compatibility without pretending it is supported', async () => {

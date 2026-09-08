@@ -95,7 +95,9 @@ export async function diagnoseOpenAICodex(
   if (providerConflict) hints.push(openAICodexConflictMessage())
   if (!providerConflict) hints.push('If Harness reports a duplicate openai-codex adapter, remove the legacy bundle or manual provider row.')
   if (compatibility.status === 'incompatible') {
-    hints.push('Compatibility mismatch: install the declared DSH plugin API versions with @earendil-works/pi-ai ^0.84.2, then run doctor again; no files are changed automatically.')
+    hints.push('The installed Node version does not satisfy the declared engine requirement. This diagnostic does not recommend changing the DSH version.')
+  } else if (compatibility.status === 'unverified') {
+    hints.push('Dependency versions are outside the declared supported set. This combination is unverified, not proven broken. Keep the current DSH installation; investigate specific failures or consult the maintainer before changing versions.')
   } else if (compatibility.status === 'unknown') {
     hints.push('Compatibility is unknown: verify the declared DSH plugin API and @earendil-works/pi-ai versions, then run doctor again.')
   }

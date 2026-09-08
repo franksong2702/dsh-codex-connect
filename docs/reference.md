@@ -112,6 +112,12 @@ The main plugin options are:
 
 ## Diagnostics and recovery
 
+### Local installation diagnostics
+
+Run `dsh plugin --profile web exec dsh-codex-connect doctor --json` to inspect local installation metadata without a network request. Compatibility statuses mean: `compatible` matches the declared version requirements, not a behavioral test; `unverified` identifies package versions outside the declared support set; `unknown` means required version metadata is missing or unreadable; `incompatible` identifies a Node version outside the declared engine requirement. The aggregate prioritizes `incompatible`, then `unknown`, then `unverified`. Doctor exits `1` for any non-compatible result or unsafe credential-file metadata; this does not authorize or recommend changing DSH.
+
+The normal update card checks only Codex Connect releases. It reuses successful plugin-version checks for up to 24 hours and retries unavailable checks every five minutes while mounted; a manual check bypasses the cache. It neither queries host compatibility nor recommends host upgrades or downgrades. An unlisted DSH/plugin combination requires verification, not an assumption of failure.
+
 ### Capability probes
 
 The local capability report performs no network request. With valid local credentials and a supported invocation, `capabilities --probe` sends one fixed short request and may consume quota. `auto-review-probe` checks the OAuth reviewer route and its structured response only; it does not exercise the full Harness approval integration or execute the reviewed action. It may also send a request and consume quota when its preconditions are met:

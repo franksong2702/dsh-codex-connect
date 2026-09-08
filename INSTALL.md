@@ -26,9 +26,9 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.2-rc.1` | `0.1.0-alpha.4.32` |
 | `0.1.2-alpha.5` | `0.1.0-alpha.4.25` |
 
-If your exact DSH version is unknown or not listed, stop and verify the combination before installing. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
+If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-Alpha 4.32's verified contract is DSH plugin API packages `0.1.2-rc.1`, `@earendil-works/pi-ai` `^0.84.2`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Upgrading DSH is a separate decision: upgrade the DSH API packages and pi-ai together, then rerun `dsh-codex-connect doctor --json` and `pnpm --silent run check:compatibility` for the selected combination.
+Alpha 4.32's verified contract is DSH plugin API packages `0.1.2-rc.1`, `@earendil-works/pi-ai` `^0.84.2`, and Node.js `^22.19.0 || >=24.0.0`. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
 
 The Alpha 4.32 row reflects a fresh isolated installation and runtime probe. Historical rows remain the repository's existing verification record. This guidance does not change upstream DSH behavior or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
 
@@ -121,6 +121,8 @@ Do not add a separate `web` row for this UI action. Do not add the `agent-defaul
 `openai-codex` can have only one adapter. If startup reports a collision, inspect the effective config and remove only the old `dsh-codex` bundle or manual `openai-codex` provider row after confirming it is the conflicting owner. Do not delete auth files or unrelated providers.
 
 ## Update and removal
+
+The update card checks Codex Connect releases only. It does not assess the installed host or recommend a DSH upgrade or downgrade. Run `doctor --json` explicitly for local dependency diagnostics; an `unverified` result (and its nonzero exit code) means the installed combination is outside the declared support set, not that it is known to fail. See the [diagnostic statuses](docs/reference.md#local-installation-diagnostics).
 
 Before updating, repeat the exact-version selection above. Use `@alpha` only after verifying that the version it currently resolves to is compatible with the installed DSH; otherwise pin the selected version in the update command.
 
