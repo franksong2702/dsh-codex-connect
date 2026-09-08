@@ -4,6 +4,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-user-questions'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -69,6 +70,32 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
   const lifetime = new AbortController()
   const busy = new WeakSet<Agent>()
   const operations = new Set<Promise<unknown>>()
+
+  // Pre-step additions enter the ordinary durable message surface before dispatch.
+  ctx.on('agent/pre-step', async ({ agent }, next) => {
+    const decision = await next()
+    if (decision.kind !== 'enter' || !enabled() || lifetime.signal.aborted
+      || !ctx.get('agents')?.roots().includes(agent)) return decision
+    const header = agent.session.requestHeader()
+    const selected = agent.session.snapshotEvents().findLast(event => event.type === 'model/selection')?.data
+    const config = selected ?? header?.config ?? agent.options
+    if (config.provider !== 'openai-codex' || config.model !== 'gpt-6-astra') return decision
+    const history = agent.session.deriveMessages()
+    const messages = [...history, ...decision.messages]
+    const explicit = isAstraReasoningEffort(config.reasoningEffort)
+      && !(selected === undefined && header?.adapterDefaults?.reasoningEffort === true)
+    const plan = explicit ? planReasoningUpdates({ provider: config.provider, model: config.model, reasoningEffort: ReasoningEffortId(config.reasoningEffort!), messages, sessionId: agent.id }) : undefined
+    const text = explicit
+      ? `Astra reasoning state: original request-level effort ${config.reasoningEffort}; effective effort for this request ${plan?.effectiveEffort ?? config.reasoningEffort}. The selector retains the original level. Assess whether the upcoming work warrants a change and use codex_connect_set_reasoning_effort to propose it when justified; the user decides.`
+      : 'Astra reasoning state: no explicit initial effort is selected. Do not propose a reasoning update until the user explicitly selects an initial Astra effort; do not infer it from Default.'
+    const previous = history.findLast(message => message.source.kind === 'plugin'
+      && message.source.plugin === 'dsh-codex-connect' && message.source.form === 'notice' && message.source.summary === 'Astra reasoning state')
+    if (previous?.content[0]?.type === 'text' && previous.content[0].text === text) return decision
+    return { ...decision, messages: [...decision.messages, createUserMessage({
+      source: { kind: 'plugin', plugin: 'dsh-codex-connect', form: 'notice', summary: 'Astra reasoning state' },
+      content: [{ type: 'text', text }],
+    })] }
+  })
 
   function selection(agent: Agent): Selection {
     if (!enabled() || lifetime.signal.aborted) reasoningUpdateError('Astra reasoning updates are disabled.')
@@ -148,7 +175,7 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
 
   ctx.tools.register(defineTool({
     name: ASTRA_REASONING_TOOL_NAME,
-    description: 'Propose a different Astra reasoning level when the task warrants it. This tool asks the user and changes only this conversation after explicit confirmation. Do not interpret approval in ordinary text as authorization. Requires an explicit initial Astra level and an uncompacted main-agent conversation; no defaults or other conversations are changed.',
+    description: 'You are responsible for assessing whether the current effective Astra reasoning effort remains appropriate as the task develops. Proactively use this tool, without waiting for the user to name it, when upcoming work gives a concrete reason to increase or decrease effort. Difficult analysis may warrant an increase; routine follow-up may warrant a decrease. Tool use alone is not a reason to increase effort. Keeping the current level is valid: do not manufacture changes, promise quality or quota savings, or repeatedly ask after a refusal unless the task materially changes. Explain the task-specific reason and requested level. This tool asks the user; only their explicit confirmation authorizes a change in this conversation. Ordinary text and Auto-review cannot authorize it. Read the logged Astra reasoning state and approved notices, not the selector alone. Requires an explicit initial Astra level and an uncompacted main-agent conversation; no defaults or other conversations are changed.',
     parameters: {
       effort: { type: 'string', enum: ASTRA_REASONING_EFFORTS, required: true, description: 'Requested reasoning level.' },
       reason: { type: 'string', required: true, description: 'Brief task-specific reason for increasing or decreasing reasoning effort.' },

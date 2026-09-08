@@ -7,9 +7,13 @@ This feature is default-off and intended for testing. It uses Astra `configurati
 1. Install the PR build in a test DSH profile. This PR is not an npm release; keep the normal profile unchanged.
 2. In Settings → Plugins → Plugin configuration → Codex Connect, enable **Experimental Astra reasoning changes** and save. The corresponding plugin config is `enableReasoningUpdates: true`.
 3. Start a new GPT-6 Astra conversation and explicitly choose `low`, `medium`, `high`, `xhigh`, or `max`; do not use Default.
-4. Ask the agent to call `codex_connect_set_reasoning_effort`, for example: “Propose changing this conversation to high before solving the next proof.”
-5. Choose **Change to high** in the native user question. A text message saying “approved” is not sufficient. Auto-review does not answer this question.
-6. The tool reports a queued change. The approved notice enters the next model request, immediately after its `configuration_update`. Subsequent requests replay that pair at its original position. The model selector still displays the original level.
+4. Discuss an ordinary requirement, then progress naturally into a difficult design or diagnosis and finally routine wrap-up. Do not mention reasoning levels or name the tool: the model receives the proactive recommendation guidance itself.
+5. Observe whether Astra proposes a justified change at a useful moment, avoids repetitive questions, and respects refusal. Approve or decline a proposal through the native question. A change is not mandatory: retaining the current level can be appropriate. Judge the recommendation, not the number of calls.
+6. After approval, continue the task and later resume the same conversation. The tool reports a queued change; the approved notice enters the next request after its configuration update. The model selector still displays the original level. Request evidence is needed to verify actual wire effort; UI behavior alone does not establish service-side execution.
+
+Developer-only smoke tests may explicitly request `codex_connect_set_reasoning_effort`. They verify the confirmation/replay plumbing, not autonomous recommendation quality, and are not the main user acceptance test.
+
+Astra is instructed to proactively assess increases and decreases as the task develops, without treating tool use as an escalation trigger or repeatedly pressing a rejected proposal. Harness does not score difficulty or decide a level. A logged state notice supplies the explicit original and effective effort on initial admission and when that state changes. Restored history retains these notices; unchanged state is not repeatedly appended. Default is reported as lacking an explicit initial selection, not guessed.
 
 Declining makes no change. Canceling before admission can discard the queued notice. Disabling the option removes new proposals and cancels pending questions; already admitted approvals continue to replay. It does not reset an existing conversation's effective effort. To reset without another confirmed update, start a new conversation.
 

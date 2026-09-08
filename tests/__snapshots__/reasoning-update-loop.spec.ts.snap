@@ -7,6 +7,10 @@ exports[`runs real loop tool confirmation, then replays the recorded request (ap
     "type": "message",
   },
   {
+    "role": "user",
+    "type": "message",
+  },
+  {
     "role": undefined,
     "type": "function_call",
   },
@@ -24,6 +28,10 @@ exports[`runs real loop tool confirmation, then replays the recorded request (ap
     "type": "message",
   },
   {
+    "role": "user",
+    "type": "message",
+  },
+  {
     "role": undefined,
     "type": "function_call",
   },
@@ -36,6 +44,10 @@ exports[`runs real loop tool confirmation, then replays the recorded request (ap
       "effort": "high",
     },
     "type": "configuration_update",
+  },
+  {
+    "role": "user",
+    "type": "message",
   },
   {
     "role": "user",

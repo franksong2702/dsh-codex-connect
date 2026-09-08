@@ -34,7 +34,7 @@ function response(output: Record<string, unknown>[]): Response {
   return new Response([...events, { type: 'response.completed', response: { id: 'resp_fixture', status: 'completed', output, usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 } } }].map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
 }
 
-async function setup(enabled = true) {
+async function setup(enabled = true, initialEffort: 'low' | 'default' = 'low') {
   root = await mkdtemp(join(tmpdir(), 'codex-reasoning-loop-'))
   vi.stubEnv('DSH_HOME', root)
   const store = new OpenAICodexCredentialStore(join(root, '.openai-codex-auth.json'))
@@ -51,7 +51,7 @@ async function setup(enabled = true) {
   await context.plugin(UserQuestions)
   const plugin = await context.plugin(CodexConnect, { enableReasoningUpdates: enabled })
   await context.plugin(AgentLoop, { agents: [] })
-  const handle = await context.agents.create({ sessionId: SessionId('reasoning-loop'), meta: { cwd: root }, agentOptions: { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('low') } })
+  const handle = await context.agents.create({ sessionId: SessionId('reasoning-loop'), meta: { cwd: root }, agentOptions: { provider: 'openai-codex', model: 'gpt-6-astra', ...(initialEffort === 'low' ? { reasoningEffort: ReasoningEffortId('low') } : {}) } })
   return { context, agent: handle.agent, plugin }
 }
 
@@ -70,15 +70,23 @@ it.each([true, false])('runs real loop tool confirmation, then replays the recor
   await agent.whenIdle()
   expect(questions).toHaveBeenCalledTimes(1)
   expect(wires).toHaveLength(2)
+  expect(JSON.stringify(wires[0]!.input)).toContain('effective effort for this request low')
+  expect(JSON.stringify(wires[0]!.tools)).toContain('Proactively use this tool, without waiting for the user to name it')
+  expect(JSON.stringify(wires[0]!.tools)).toContain('Tool use alone is not a reason')
   const input = wires[1]!.input as Record<string, unknown>[]
   expect(input.filter(item => item.type === 'configuration_update')).toEqual(approved ? [{ type: 'configuration_update', reasoning: { effort: 'high' } }] : [])
   expect(wires.map(wire => wire.reasoning)).toEqual([{ effort: 'low', summary: 'auto' }, { effort: 'low', summary: 'auto' }])
   const restored = Session.create(agent.id, JSON.parse(JSON.stringify(agent.session.snapshotEvents())))
   const messages = restored.deriveMessages()
+  const stateNotices = messages.filter(message => message.source.kind === 'plugin'
+    && message.source.form === 'notice' && message.source.summary === 'Astra reasoning state')
+  expect(stateNotices).toHaveLength(approved ? 2 : 1)
+  expect(JSON.stringify(stateNotices.at(-1))).toContain(`effective effort for this request ${approved ? 'high' : 'low'}`)
   expect(messages.filter(message => readReasoningUpdate(message) !== undefined)).toHaveLength(approved ? 1 : 0)
   const prepared = await context.llm.prepareCall({ provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('low') })
   for await (const _ of prepared.stream({ ...prepared.config, sessionId: agent.id, messages })) { /* Drain the real adapter replay. */ }
   const replay = wires[2]!.input as Record<string, unknown>[]
+  expect(JSON.stringify(replay)).toContain(`effective effort for this request ${approved ? 'high' : 'low'}`)
   expect(replay.filter(item => item.type === 'configuration_update')).toEqual(input.filter(item => item.type === 'configuration_update'))
   if (approved) expect(replay.findIndex(item => item.type === 'configuration_update')).toBe(input.findIndex(item => item.type === 'configuration_update'))
   expect(planReasoningUpdates({ ...prepared.config, sessionId: agent.id, messages })?.effectiveEffort).toBe(approved ? 'high' : undefined)
@@ -98,6 +106,22 @@ it.each([true, false])('runs real loop tool confirmation, then replays the recor
 it('does not register the experimental tool by default', async () => {
   const { context } = await setup(false)
   expect(context.tools.get(CodexConnect.ASTRA_REASONING_TOOL_NAME)).toBeUndefined()
+})
+
+it('reports Default as non-explicit and does not duplicate unchanged state across turns', async () => {
+  const { agent } = await setup(true, 'default')
+  const wires: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init: RequestInit) => {
+    wires.push(new Headers(init.headers).get('content-encoding') === 'zstd' ? zstdDecompressSync(init.body as Uint8Array).toString('utf8') : String(init.body))
+    return response([{ type: 'message', id: `msg_${wires.length}`, role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: 'Ready.', annotations: [] }] }])
+  }))
+  for (const text of ['Discuss the requirement.', 'Summarize it.']) {
+    agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }))
+    await agent.whenIdle()
+  }
+  expect(wires).toHaveLength(2)
+  for (const wire of wires) expect(JSON.stringify(JSON.parse(wire).input)).toContain('no explicit initial effort is selected')
+  expect(agent.session.deriveMessages().filter(message => message.source.kind === 'plugin' && message.source.form === 'notice' && message.source.summary === 'Astra reasoning state')).toHaveLength(1)
 })
 
 it.each(['cancel', 'unload', 'model-change', 'decline'] as const)('leaves no queued or admitted update after %s during confirmation', async action => {
