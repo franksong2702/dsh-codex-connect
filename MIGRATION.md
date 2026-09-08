@@ -11,6 +11,19 @@
 
 Rollback is the inverse package swap. Do not delete or copy the separate OAuth file during either direction. If Harness reports a duplicate `openai-codex` adapter, the old bundle or a manual provider row is still active; resolve that one row instead of changing credentials.
 
+## Astra reasoning selections
+
+The plugin's Astra fallback definition offers `low`, `medium`, `high`, `xhigh`, and `max`. An omitted `reasoningEffort` preserves the provider default; it does not select Low or disable reasoning. The native dependency definition still takes precedence when present.
+
+Before using Astra with a saved `minimal` or `off` selection, update the selected conversation and, if applicable, the default model setting:
+
+| Saved value | Selection preserving its effective request behavior |
+| --- | --- |
+| `minimal` | Select `Low` (`reasoningEffort: low`); both send `low`. |
+| `off` | Select `Default` (provider default), omitting `reasoningEffort`; both omit wire `reasoning`. This never guaranteed disabled reasoning. |
+
+Other valid explicit efforts remain unchanged. A saved `minimal`, `off`, or unsupported `none` request is rejected with `UNSUPPORTED_REASONING_EFFORT` before authentication or model traffic; the plugin does not silently change it. `none` has no supported prior behavior to preserve: choose a valid effort or `Default` explicitly. The plugin does not rewrite settings or historical Session events. Use the conversation model selector for an existing Session; changing only the default model does not replace that Session's explicit selection. OAuth credentials do not need migration.
+
 ## Repairing search history written by Alpha 4.10
 
 Alpha 4.10 briefly wrote `web/openai-codex-search-llm-request` as a required private Session event. Because an external plugin cannot extend the Host persistence vocabulary across independent module instances, a newer Harness can refuse to read those histories after the event writer is removed.

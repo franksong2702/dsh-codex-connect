@@ -31,7 +31,7 @@ const OPENAI_CODEX_ASTRA_MODEL: Model<'openai-codex-responses'> = {
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   contextWindow: 272_000,
   maxTokens: 128_000,
-  thinkingLevelMap: { minimal: 'low', xhigh: 'xhigh', max: 'max' },
+  thinkingLevelMap: { off: null, minimal: null, xhigh: 'xhigh', max: 'max' },
   compat: {
     supportsOpenAIGrammarTools: true,
     supportsAdditionalTools: true,
