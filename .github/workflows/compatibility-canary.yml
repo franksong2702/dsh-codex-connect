@@ -15,7 +15,7 @@ jobs:
       matrix:
         node-version: ['22.19.0', '24.x']
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,6 +30,4 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
       - run: pnpm --silent run check:compatibility
-      - run: pnpm --silent run check:dsh-install
-        env:
-          DSH_VERSION: 0.1.2-alpha.5
+      - run: pnpm --silent run check:dsh-matrix

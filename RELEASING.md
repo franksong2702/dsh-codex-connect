@@ -18,9 +18,9 @@ this runbook does not authorize a numbering or phase migration.
    pair until the new version is available; a candidate record is not publication
    evidence. Update this runbook when the release procedure changes.
 2. Before merging, run `pnpm install --frozen-lockfile`, `pnpm run check`,
-   `pnpm run test:browser`, and `pnpm run check:dsh-install`, then review
+   `pnpm run test:browser`, and `pnpm run check:dsh-matrix`, then review
    `npm pack --dry-run`. `check` includes build and package checks, but not the
-   browser or isolated-install suites. Regenerate the lockfile only for dependency
+   browser or isolated-install suites. The matrix checks every exact declared DSH target and requires identical packed artifact hashes; it does not replace account acceptance. Regenerate the lockfile only for dependency
    changes. The packed files must include the
    root `README.md` and Chinese document under `docs/`, with no localized README
    beside the root README.

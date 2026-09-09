@@ -17,7 +17,7 @@ import { OPENAI_CODEX_PROVIDER } from '../src/store.ts'
 import { Config } from '../src/index.ts'
 
 describe('OpenAI Codex rc.2 adapter profile', () => {
-  it('adds Astra exactly once while preserving upstream ownership when it appears', () => {
+  it('preserves upstream Astra metadata while retaining calibrated reasoning choices', () => {
     const provider = openaiCodexProvider()
     const withoutAstra = {
       ...provider,
@@ -35,11 +35,13 @@ describe('OpenAI Codex rc.2 adapter profile', () => {
       maxTokens: 128_000,
     })])
 
-    const upstreamAstra = { ...astra[0]!, name: 'Upstream Astra', contextWindow: 300_000 }
+    const upstreamAstra = { ...astra[0]!, name: 'Upstream Astra', contextWindow: 300_000, thinkingLevelMap: { minimal: 'minimal' as const } }
     const upstreamProvider = { ...provider, getModels: () => [upstreamAstra, ...withoutAstra.getModels()] }
     const preserved = withOpenAICodexAstra(upstreamProvider)
-    expect(preserved).toBe(upstreamProvider)
-    expect(preserved.getModels()[0]).toBe(upstreamAstra)
+    expect(preserved.getModels()[0]).toEqual({ ...upstreamAstra, thinkingLevelMap: { off: null, minimal: null, xhigh: 'xhigh', max: 'max' } })
+    expect(upstreamAstra.thinkingLevelMap).toEqual({ minimal: 'minimal' })
+    expect(preserved.getModels().slice(1)).toEqual(withoutAstra.getModels())
+    expect(preserved.getModels().filter(model => model.id === OPENAI_CODEX_ASTRA_MODEL_ID)).toHaveLength(1)
   })
 
   it('distinguishes an omitted model list from an explicitly empty list', () => {
