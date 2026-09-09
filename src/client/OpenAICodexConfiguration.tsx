@@ -106,6 +106,7 @@ const CONFIG_FIELDS = [
   'enableImageGeneration',
   'autoReviewDisclosureAcknowledged',
   'enableAutoReview',
+  'enableReasoningUpdates',
   'searchModel',
   'searchMode',
   'searchContextSize',
@@ -780,6 +781,17 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             <span style={toggleCopyStyle}>
               <span style={labelStyle}>{t('enableImageGeneration')}</span>
               <span style={bodyStyle}>{t('enableImageGenerationHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableReasoningUpdates}
+              onChange={event => { update('enableReasoningUpdates', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableReasoningUpdates')}</span>
+              <span style={bodyStyle}>{t('enableReasoningUpdatesHelp')}</span>
             </span>
           </label>
           <label style={toggleRowStyle}>

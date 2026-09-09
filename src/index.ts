@@ -41,6 +41,7 @@ import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
+import { registerReasoningUpdateGuard, registerReasoningUpdateTool } from './reasoning-update-tool.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -52,6 +53,7 @@ declare module '@deepseek-ai/cordis' {
 
 export { VIEW_IMAGE_TOOL_NAME } from './view-image.ts'
 export { IMAGE_GENERATE_TOOL_NAME } from './image-tool.ts'
+export { ASTRA_REASONING_TOOL_NAME } from './reasoning-update-tool.ts'
 export {
   assertNoOpenAICodexProviderConflict,
   diagnoseOpenAICodex,
@@ -256,6 +258,8 @@ export interface Config {
   autoReviewDisclosureAcknowledged?: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview?: boolean
+  /** Offer user-confirmed Astra effort changes for uncompacted conversations; does not change defaults. */
+  enableReasoningUpdates?: boolean
   /** Model used for auxiliary standalone searches. */
   searchModel?: string
   /** Cached, indexed, or live web access. */
@@ -280,6 +284,7 @@ export const Config: z<Config> = z.object({
   enableImageGeneration: z.boolean().default(false),
   autoReviewDisclosureAcknowledged: z.boolean().default(false),
   enableAutoReview: z.boolean().default(false),
+  enableReasoningUpdates: z.boolean().default(false),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),
   searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE),
@@ -310,6 +315,7 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  registerReasoningUpdateGuard(ctx)
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl)
   registerOpenAICodexAutoReview(
@@ -347,6 +353,8 @@ export function apply(ctx: Context, config: Config): void {
   let imageTail = Promise.resolve()
   let imageGenerationFiber: Fiber | undefined
   let imageGenerationTail = Promise.resolve()
+  let reasoningFiber: Fiber | undefined
+  let reasoningTail = Promise.resolve()
 
   const reconcileSearch = async (): Promise<void> => {
     if (stopped) return
@@ -443,7 +451,28 @@ export function apply(ctx: Context, config: Config): void {
     })
   }
 
+  const reconcileReasoningTool = async (): Promise<void> => {
+    if (stopped) return
+    const enabled = current().enableReasoningUpdates === true
+    if (enabled === (reasoningFiber !== undefined)) return
+    const previous = reasoningFiber
+    reasoningFiber = undefined
+    if (previous !== undefined) await previous.dispose()
+    if (stopped || !enabled) return
+    const fiber = ctx.inject(['tools'], toolCtx => registerReasoningUpdateTool(toolCtx, () => current().enableReasoningUpdates === true))
+    reasoningFiber = fiber
+    void Promise.resolve(fiber).catch((error: unknown) => {
+      if (reasoningFiber === fiber) reasoningFiber = undefined
+      ctx.logger.error('dsh-codex-connect: reasoning update tool failed to activate')
+      ctx.logger.error(error)
+    })
+  }
+
   const scheduleCapabilities = (): void => {
+    reasoningTail = reasoningTail.then(reconcileReasoningTool, reconcileReasoningTool).catch((error: unknown) => {
+      ctx.logger.error('dsh-codex-connect: could not apply reasoning update configuration')
+      ctx.logger.error(error)
+    })
     searchTail = searchTail.then(reconcileSearch, reconcileSearch).catch((error: unknown) => {
       ctx.logger.error('dsh-codex-connect: could not apply the updated search configuration')
       ctx.logger.error(error)
@@ -460,17 +489,20 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
-    await Promise.all([searchTail, imageTail, imageGenerationTail])
+    await Promise.all([searchTail, imageTail, imageGenerationTail, reasoningTail])
     const search = searchFiber
     const image = imageFiber
     const imageGeneration = imageGenerationFiber
+    const reasoning = reasoningFiber
     searchFiber = undefined
     imageFiber = undefined
     imageGenerationFiber = undefined
+    reasoningFiber = undefined
     await Promise.allSettled([
       search?.dispose() ?? Promise.resolve(),
       image?.dispose() ?? Promise.resolve(),
       imageGeneration?.dispose() ?? Promise.resolve(),
+      reasoning?.dispose() ?? Promise.resolve(),
     ])
     await proxyManager.dispose()
   }, 'dsh-codex-connect: optional capability lifecycle')

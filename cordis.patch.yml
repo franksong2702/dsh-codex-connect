@@ -9,3 +9,4 @@
         enableImageTool: false
         enableImageGeneration: false
         enableAutoReview: false
+        enableReasoningUpdates: false

@@ -72,6 +72,7 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 | Image viewing | `enableImageTool` | Adds `view_image` to vision-capable models for local files and validated public HTTP(S) images. |
 | GPT Image generation | `enableImageGeneration` | Prompt-only generation; availability, dimensions, and quota remain account- and service-controlled. |
 | Auto-review | `enableAutoReview` | Sends bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`, with confirmation on first enablement. Failures return to human approval. |
+| Experimental Astra reasoning changes (unreleased PR build) | `enableReasoningUpdates` | Agent proposals require your confirmation and apply only to this conversation. Manual choices take priority; the selector follows the effective request level. No compaction or model switching. Not included in published Alpha 4.33; see the [test guide](docs/astra-reasoning.md). |
 
 Use the image generation capability included with your current GPT subscription. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
 

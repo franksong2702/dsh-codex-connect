@@ -19,7 +19,7 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
-      || ['enableProxy', 'enableSearch', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
+      || ['enableProxy', 'enableSearch', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview', 'enableReasoningUpdates'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1
       || report.runtime.reasoningModelCount !== report.runtime.modelCount) {
       throw new Error('DSH matrix contains an incomplete or mismatched install report')
