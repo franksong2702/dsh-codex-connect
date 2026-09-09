@@ -1,10 +1,26 @@
 /** Request-local Astra configuration conversion over the public pi-ai payload hook. */
 
 import { AsyncLocalStorage } from 'node:async_hooks'
-import type { Provider } from '@earendil-works/pi-ai'
+import type { Context, Provider } from '@earendil-works/pi-ai'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { applyReasoningUpdates, planReasoningUpdates } from './reasoning-update.ts'
+import { applyReasoningUpdates, planReasoningUpdates, reasoningUpdateError } from './reasoning-update.ts'
 import type { AstraReasoningPlan } from './reasoning-update.ts'
+
+/**
+ * Account for a leading system message moved out of history by the host adapter.
+ * @param plan - Validated approvals in the original Harness message sequence.
+ * @param context - The actual converted pi-ai context before wire serialization.
+ * @returns A request-local plan whose positions refer to the converted user messages.
+ */
+export function projectReasoningPlan(plan: AstraReasoningPlan, context: Context): AstraReasoningPlan {
+  const userCount = context.messages.filter(message => message.role === 'user').length
+  if (userCount === plan.userCount) return plan
+  if (plan.leadingSystemText === undefined || userCount !== plan.userCount - 1
+    || context.systemPrompt !== (plan.leadingSystemText || undefined)) {
+    reasoningUpdateError('The Astra context conversion did not preserve its user-message positions or leading system prompt.')
+  }
+  return { ...plan, userCount, updates: plan.updates.map(update => ({ ...update, userIndex: update.userIndex - 1 })) }
+}
 
 /** Captures each stream independently, including prepared calls and concurrent sessions. */
 export class AstraReasoningRequestScope {
@@ -17,8 +33,9 @@ export class AstraReasoningRequestScope {
     return {
       ...provider,
       streamSimple(model, context, options) {
-        const plan = current.getStore()
-        if (plan === undefined) return streamSimple.call(provider, model, context, options)
+        const captured = current.getStore()
+        if (captured === undefined) return streamSimple.call(provider, model, context, options)
+        const plan = projectReasoningPlan(captured, context)
         const previous = options?.onPayload
         return streamSimple.call(provider, model, context, {
           ...options,

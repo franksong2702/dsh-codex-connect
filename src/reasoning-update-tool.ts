@@ -3,7 +3,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
-import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, UserMessage } from '@deepseek-ai/dsh-llm'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-user-questions'
@@ -47,10 +47,11 @@ function pendingSelection(session: Session) {
 }
 
 /** Reject dropped updates and auxiliary/model-switch requests even outside the Codex adapter. */
-export function assertReasoningUpdateSession(options: GenerateOptions, session: Session | undefined, pending: boolean): void {
+export function assertReasoningUpdateSession(options: GenerateOptions, session: Session | undefined, pending: boolean, proposed: readonly UserMessage[] = []): void {
   const recorded = session?.snapshotEvents().filter(event => event.type === 'user/message'
     && readReasoningUpdate(event.data) !== undefined) ?? []
-  if (recorded.length === 0 && !pending) {
+  const proposedUpdates = proposed.filter(message => readReasoningUpdate(message) !== undefined)
+  if (recorded.length === 0 && proposedUpdates.length === 0 && !pending) {
     planReasoningUpdates(options)
     return
   }
@@ -63,18 +64,33 @@ export function assertReasoningUpdateSession(options: GenerateOptions, session: 
       reasoningUpdateError('A confirmed Astra reasoning update is missing from this request history. Keep the original history or start a new conversation.')
     }
   }
+  for (const message of proposedUpdates) {
+    if (!ids.has(message.id)) reasoningUpdateError('A confirmed Astra reasoning update was removed before request admission. No model request was sent.')
+  }
   planReasoningUpdates(options)
 }
 
 /** Guards remain installed when new proposals are disabled, so existing approvals still replay. */
 export function registerReasoningUpdateGuard(ctx: Context): void {
-  ctx.on('agent/request', async ({ agent, signal }, next) => {
+  // New hosts prepare config before admitting this batch; old hosts admit it first.
+  const steps = new WeakMap<Agent, { turn: number; step: number; signal: AbortSignal; messages: readonly UserMessage[] }>()
+  ctx.on('agent/pre-step', async ({ agent, turn, step, signal }, next) => {
+    steps.delete(agent)
+    const decision = await next()
+    if (decision.kind === 'enter' && !signal.aborted) steps.set(agent, { turn, step, signal, messages: decision.messages })
+    return decision
+  }, { prepend: true })
+  ctx.on('agent/request', async ({ agent, turn, step, signal }, next) => {
     const config = await next()
     signal.throwIfAborted()
-    const messages = agent.session.deriveMessages()
+    const history = agent.session.deriveMessages()
+    const prepared = steps.get(agent)
+    const proposed = prepared?.turn === turn && prepared.step === step && prepared.signal === signal ? prepared.messages : []
+    const admitted = new Set(history.map(message => message.id))
+    const messages = [...history, ...proposed.filter(message => !admitted.has(message.id))]
     const base = messages.map(readReasoningUpdate).find(update => update !== undefined)?.baseEffort
     const options = { ...config, ...(base === undefined ? {} : { reasoningEffort: ReasoningEffortId(base) }), sessionId: agent.session.id, messages }
-    assertReasoningUpdateSession(options, agent.session, pendingUpdates(agent))
+    assertReasoningUpdateSession(options, agent.session, pendingUpdates(agent), proposed)
     const plan = planReasoningUpdates(options)
     if (plan === undefined) return config
     const pending = pendingSelection(agent.session)
@@ -87,9 +103,12 @@ export function registerReasoningUpdateGuard(ctx: Context): void {
   ctx.on('llm/stream', (options, next) => {
     const session = options.sessionId === undefined ? undefined : ctx.get('sessions')?.get(options.sessionId)
     const agent = options.sessionId === undefined ? undefined : ctx.get('agents')?.get(options.sessionId)
-    assertReasoningUpdateSession(options, session, agent !== undefined && pendingUpdates(agent))
+    const prepared = agent === undefined ? undefined : steps.get(agent)
+    assertReasoningUpdateSession(options, session, agent !== undefined && pendingUpdates(agent), prepared?.signal.aborted === false ? prepared.messages : [])
     return next()
   }, { prepend: true })
+  ctx.on('agent/error', ({ agent }) => { steps.delete(agent) })
+  ctx.on('agent/turn-stopping', ({ agent }) => { steps.delete(agent) })
 }
 
 interface Selection {

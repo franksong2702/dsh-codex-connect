@@ -22,6 +22,8 @@ export interface AstraReasoningPlan {
   requestEffort: AstraReasoningEffort
   effectiveEffort: AstraReasoningEffort
   userCount: number
+  /** Leading history prompt eligible for promotion to the provider's system prompt. */
+  leadingSystemText?: string
   updates: ReadonlyArray<{ userIndex: number; text: string; effort: AstraReasoningEffort }>
 }
 
@@ -120,7 +122,11 @@ export function planReasoningUpdates(options: GenerateOptions): AstraReasoningPl
   if (![first.baseEffort, previousEffort, effectiveEffort].includes(options.reasoningEffort)) {
     reasoningUpdateError('The selected reasoning level does not match the confirmed Astra history.')
   }
-  return { baseEffort: first.baseEffort, requestEffort: options.reasoningEffort, effectiveEffort, userCount, updates }
+  const leading = options.messages[0]
+  const leadingSystemText = options.system === undefined && leading?.role === 'system'
+    ? leading.content.filter(block => block.type === 'text').map(block => block.text).join('') : undefined
+  return { baseEffort: first.baseEffort, requestEffort: options.reasoningEffort, effectiveEffort, userCount, updates,
+    ...(leadingSystemText === undefined ? {} : { leadingSystemText }) }
 }
 
 function record(value: unknown): value is Record<string, unknown> {

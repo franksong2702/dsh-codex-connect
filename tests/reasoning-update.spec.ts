@@ -82,4 +82,6 @@ it('rejects duplicate, missing, reordered and preconverted notices', () => {
   session.append('user/message', first, { surfaceOp: 'append' })
   expect(() => assertReasoningUpdateSession(options([]), session, false)).toThrow(/missing/)
   expect(() => assertReasoningUpdateSession({ ...options([]), purpose: 'compaction' }, undefined, true)).toThrow(/Compaction/)
+  expect(() => assertReasoningUpdateSession(options([]), undefined, false, [first])).toThrow(/removed before request admission/)
+  expect(() => assertReasoningUpdateSession(options([first]), undefined, false, [first])).not.toThrow()
 })

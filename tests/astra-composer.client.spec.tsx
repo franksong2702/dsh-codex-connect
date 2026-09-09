@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import * as React from 'react'
 import * as jsx from 'react/jsx-runtime'
+import * as reactDom from 'react-dom'
 import * as cordis from '@deepseek-ai/cordis'
 import * as stores from '@deepseek-ai/dsh-client-store'
 import type { ModelDirectory, ModelSelectInjected } from '@deepseek-ai/dsh-client-ui-model-selection/client'
@@ -19,9 +20,10 @@ it('renders the effective recorded level in the installed DSH Composer and after
   const modules: Record<string, unknown> = {
     '@deepseek-ai/cordis': cordis,
     '@deepseek-ai/dsh-client-store': stores,
-    '@deepseek-ai/dsh-client-ui-primitives': Object.fromEntries(['IconCheckOutline16', 'IconChevronDownOutline14', 'IconChevronRightOutline14', 'IconWarningOutline16', 'Toast'].map(name => [name, () => null])),
+    '@deepseek-ai/dsh-client-ui-primitives': Object.fromEntries(['IconCheckOutline16', 'IconChevronDownOutline14', 'IconChevronRightOutline14', 'IconDataOutline16', 'IconWarningOutline16', 'Toast'].map(name => [name, () => null])),
     react: React,
     'react/jsx-runtime': jsx,
+    'react-dom': reactDom,
   }
   runInNewContext(readFileSync(new URL(import.meta.resolve('@deepseek-ai/dsh-client-ui-model-selection/client')), 'utf8'), {
     window: { __ModuleLoader__: { load(entry: { factory: (require: (id: string) => unknown) => typeof runtime }) {
