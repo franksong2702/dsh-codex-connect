@@ -56,7 +56,7 @@ V1 亮点条目按 SemVer 递增排列，版本唯一，能力类别必须已知
 pnpm install --frozen-lockfile
 pnpm run check
 pnpm run test:browser
-pnpm run check:dsh-install
+pnpm run check:dsh-matrix
 npm pack --dry-run
 ```
 

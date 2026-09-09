@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 import { buildCanaryTrackingIssue } from './canary-tracking.mjs'
+import { validateDshMatrix } from './check-dsh-matrix.mjs'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/upstream-dsh-canary.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
@@ -17,6 +18,7 @@ const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'))
 const installCheck = readFileSync(installCheckPath, 'utf8')
 const nextCheck = readFileSync(nextCheckPath, 'utf8')
 const canaryEnvironment = readFileSync(canaryEnvironmentPath, 'utf8')
+const declaredWorkflow = readFileSync(new URL('../.github/workflows/compatibility-canary.yml', import.meta.url), 'utf8')
 
 const failures = []
 let assertionCount = 0
@@ -24,6 +26,31 @@ let assertionCount = 0
 function assertContract(name, condition) {
   assertionCount += 1
   if (!condition) failures.push(name)
+}
+
+assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
+assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
+const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1']
+const matrixReports = matrixVersions.map(dshVersion => ({
+  schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
+  pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
+  capabilities: { enableProxy: false, enableSearch: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
+  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, disposalVerified: true },
+}))
+validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
+for (const [name, change] of [
+  ['missing host', reports => reports.pop()],
+  ['different package bytes', reports => { reports[1].pluginArtifactSha256 = 'b'.repeat(64) }],
+  ['wrong host version', reports => { reports[1].dshVersion = reports[0].dshVersion }],
+  ['wrong plugin version', reports => { reports[1].pluginVersion = '0.1.0-alpha.4.32' }],
+  ['failed disposal', reports => { reports[1].runtime.disposalVerified = false }],
+  ['changed optional default', reports => { reports[1].capabilities.enableSearch = true }],
+]) {
+  const reports = structuredClone(matrixReports)
+  change(reports)
+  let rejected = false
+  try { validateDshMatrix(reports, matrixVersions, '0.1.0-alpha.4.33') } catch { rejected = true }
+  assertContract(`declared matrix rejects ${name}`, rejected)
 }
 
 assertContract('workflow runs daily', /^\s+schedule:\s*\n\s+- cron: ["']0 3 \* \* \*["']/m.test(workflow))
@@ -141,7 +168,7 @@ assertContract('candidate classification is driven by fail-closed exit codes', /
 assertContract('registry and candidate subprocesses have explicit timeouts', /REGISTRY_TIMEOUT_MS\s*=\s*60 \* 1000[\s\S]*?CANDIDATE_CHECK_TIMEOUT_MS\s*=\s*25 \* 60 \* 1000/.test(nextCheck) && /timeoutMs:\s*COMMAND_TIMEOUT_MS/.test(installCheck))
 assertContract('candidate subprocesses receive a scrubbed environment', /scrubCanaryEnvironment\(process\.env\)/.test(nextCheck) && /allowUndeclaredCanaryVersion[\s\S]*?scrubCanaryEnvironment\(process\.env\)/.test(installCheck))
 assertContract('credential-bearing environment names are filtered', /AUTH\|BEARER\|COOKIE\|CREDENTIAL\|JWT\|KEY\|PASS\|SECRET\|SESSION\|TOKEN/.test(canaryEnvironment))
-assertContract('undeclared candidates install the packed artifact', /allowUndeclaredCanaryVersion[\s\S]*?npm[\s\S]*?'pack'[\s\S]*?pluginSpec = `file:/.test(installCheck))
+assertContract('declared and undeclared checks install a hashed packed artifact', /'pack'[\s\S]*?pluginSpec = `file:[\s\S]*?createHash\('sha256'\)/u.test(installCheck) && !/link:\$\{REPO_ROOT\}/u.test(installCheck))
 assertContract(
   'candidate checks boot the installed model runtime',
   /check-installed-runtime/.test(installCheck) && /installed runtime contract/.test(installCheck),

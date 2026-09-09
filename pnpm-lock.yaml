@@ -213,6 +213,9 @@ importers:
       jsdom:
         specifier: 29.1.1
         version: 29.1.1
+      pi-ai-oauth-source:
+        specifier: npm:@earendil-works/pi-ai@0.84.4
+        version: '@earendil-works/pi-ai@0.84.4(ws@8.21.3)(zod@4.4.3)'
       playwright:
         specifier: 1.62.1
         version: 1.62.1

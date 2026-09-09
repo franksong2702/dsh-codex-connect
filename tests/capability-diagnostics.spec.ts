@@ -33,6 +33,19 @@ function fixture() {
 }
 
 describe('capability evidence', () => {
+  it('allows the complete alpha pair but blocks mixed host versions before credential reads', async () => {
+    const f = fixture()
+    f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
+      '@deepseek-ai/dsh-llm': '0.1.5-alpha.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-alpha.1', '@earendil-works/pi-ai': '0.85.1',
+    } })
+    f.readVersion.mockResolvedValue('0.1.5-alpha.1')
+    expect((await f.diagnostics.inspect({ ...f.request, probe: false })).checks.runtime.status).toBe('supported')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.2-rc.1' : '0.1.5-alpha.1')
+    expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
+    expect(f.read).not.toHaveBeenCalled()
+    expect(f.probe).not.toHaveBeenCalled()
+  })
+
   it('treats file metadata and catalog membership as unknown without reading credentials or probing', async () => {
     const f = fixture()
     const report = await f.diagnostics.inspect({ ...f.request, probe: false })

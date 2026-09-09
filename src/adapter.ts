@@ -39,13 +39,16 @@ const OPENAI_CODEX_ASTRA_MODEL: Model<'openai-codex-responses'> = {
   },
 }
 
-/** Preserve an upstream Astra entry, or add the official compatibility fallback. */
+/** Preserve native Astra metadata with calibrated effort choices, or add the fallback. */
 export function withOpenAICodexAstra(
   provider: Provider<'openai-codex-responses'>,
 ): Provider<'openai-codex-responses'> {
   const baseline = provider.getModels()
-  if (baseline.some(model => model.id === OPENAI_CODEX_ASTRA_MODEL_ID)) return provider
-  const models = [OPENAI_CODEX_ASTRA_MODEL, ...baseline]
+  const models = baseline.some(model => model.id === OPENAI_CODEX_ASTRA_MODEL_ID)
+    ? baseline.map(model => model.id === OPENAI_CODEX_ASTRA_MODEL_ID
+      ? { ...model, thinkingLevelMap: { ...model.thinkingLevelMap, ...OPENAI_CODEX_ASTRA_MODEL.thinkingLevelMap } }
+      : model)
+    : [OPENAI_CODEX_ASTRA_MODEL, ...baseline]
   return { ...provider, getModels: () => models }
 }
 

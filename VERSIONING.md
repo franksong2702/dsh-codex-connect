@@ -56,7 +56,7 @@ Follow [RELEASING.md](RELEASING.md) for the complete procedure. Run the frozen i
 pnpm install --frozen-lockfile
 pnpm run check
 pnpm run test:browser
-pnpm run check:dsh-install
+pnpm run check:dsh-matrix
 npm pack --dry-run
 ```
 
