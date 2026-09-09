@@ -1,5 +1,7 @@
 # Experimental Astra reasoning changes
 
+This experiment is available only in the reviewed PR #167 build, not published Alpha 4.33. Use an isolated test profile with DSH `0.1.2-rc.1` / pi-ai `0.84.4` or DSH `0.1.5-alpha.1` / pi-ai `0.85.1`; do not mix the host package versions. The PR identifies the exact install commit and its validation results.
+
 This feature is default-off and intended for testing. It uses Astra `configuration_update` input items to change effort for later requests without changing the original request-level effort. Cache reuse, output quality, subscription usage, and account availability are not guaranteed.
 
 ## Try it

@@ -5,6 +5,7 @@
   },
   "dshPluginApi": {
     "version": "0.1.2-rc.1",
+    "versions": ["0.1.2-rc.1", "0.1.5-alpha.1"],
     "packages": [
       "@deepseek-ai/dsh-agent",
       "@deepseek-ai/dsh-atomic-write",
@@ -24,6 +25,6 @@
   },
   "piAi": {
     "package": "@earendil-works/pi-ai",
-    "version": "^0.84.2"
+    "version": "^0.84.2 || 0.85.1"
   }
 }

@@ -84,7 +84,8 @@ describe('Codex Connect update route', () => {
       })
       return json({ body: 'Global update reminder', name: 'Alpha 4.15', published_at: '2026-08-21T12:00:00Z' })
     })
-    const route = capture(fetchMock)
+    const resolveCurrentDshVersion = vi.fn(async () => '0.1.1-rc.2')
+    const route = capture(fetchMock, resolveCurrentDshVersion)
     const res = response()
     await route.handler(request(), res)
 
@@ -92,43 +93,16 @@ describe('Codex Connect update route', () => {
     expect(JSON.parse(res.observed.body ?? 'null')).toEqual({
       status: 'update-available',
       currentVersion: '0.1.0-alpha.4.14',
-      currentDshVersion: '0.1.1-rc.2',
       latestVersion: '0.1.0-alpha.4.15',
       releaseUrl: 'https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.15',
       highlights: [],
-      compatibility: {
-        status: 'plugin-update-required',
-        latestPluginVersion: '0.1.0-alpha.4.15',
-        latestDshVersion: '0.1.1-rc.2',
-      },
       releaseName: 'Alpha 4.15',
       releaseNotes: 'Global update reminder',
       publishedAt: '2026-08-21T12:00:00Z',
     })
     expect(JSON.parse(res.observed.body ?? 'null')).not.toHaveProperty('credential')
     expect(fetchMock).toHaveBeenCalledWith(OPENAI_CODEX_RELEASE_API_BASE + '0.1.0-alpha.4.15', expect.anything())
-  })
-
-  it('evaluates a historical DSH version against its exact plugin record', async () => {
-    const fetchMock = vi.fn(async (url: string): Promise<Response> => url === OPENAI_CODEX_NPM_METADATA_URL
-      ? json({ alpha: '0.1.0-alpha.4.14' })
-      : json({
-          schemaVersion: 1,
-          checkedAt: '2026-08-23',
-          latestDshVersion: '0.1.1-rc.2',
-          pluginVersions: [{ version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] }],
-        }))
-    const route = capture(fetchMock, async () => '0.1.0-rc.7')
-    const res = response()
-    await route.handler(request(), res)
-
-    expect(JSON.parse(res.observed.body ?? 'null')).toMatchObject({
-      currentDshVersion: '0.1.0-rc.7',
-      compatibility: {
-        status: 'compatible',
-        latestDshVersion: '0.1.1-rc.2',
-      },
-    })
+    expect(resolveCurrentDshVersion).not.toHaveBeenCalled()
   })
 
   it('reports the running DSH version without public network access', async () => {

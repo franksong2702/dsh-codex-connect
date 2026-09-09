@@ -10,7 +10,7 @@ OAuth 凭据保存在运行 DSH 的主机上，由该主机用于向 OpenAI 认�
 
 在 Harness 的常规模型选择器中选择一个 `openai-codex` 模型。所有界面语言均保留模型的规范名称。**更多设置 → 模型** 控制发现列表中显示哪些模型；隐藏模型不会禁用按精确 ID 路由。
 
-Codex 目录来自已安装的 `@earendil-works/pi-ai` 包，不是实时查询账户可用模型的结果。已验证的 DSH `0.1.2-rc.1` 与 Codex Connect `0.1.0-alpha.4.29` 组合使用 `pi-ai@0.84.4`，其中尚无 `gpt-6-astra`，因此由 Codex Connect 补充定义。上游 [pi-ai `0.85.1`](https://github.com/earendil-works/pi/releases/tag/v0.85.1) 已包含 Astra，但超出了对应 DSH 适配器和本插件声明的 `^0.84.2` 范围。用户无需单独升级 pi-ai 即可选择 Astra。采用新依赖需要验证兼容性并更新依赖声明；安装的目录提供 Astra 后，插件会保留该定义，不再补入自己的定义。两种来源的目录条目都不能证明账户具有调用权限。
+Codex 目录来自已安装的 `@earendil-works/pi-ai` 包，不是实时查询账户可用模型的结果。DSH `0.1.2-rc.1` 使用 pi-ai `^0.84.2`，其中尚无 `gpt-6-astra`，因此由 Codex Connect 补充定义。Alpha 4.33 也已验证 DSH `0.1.5-alpha.1` 与 pi-ai `0.85.1` 的组合；混装的宿主包以及其他 DSH/pi-ai 组合仍属未验证。遇到原生 Astra 条目时，插件保留其元数据，并维持 Low、Medium、High、Xhigh 和 Max 推理选择，不修改已安装的目录。用户无需单独升级 pi-ai 即可选择 Astra。发布说明记录了准确的已验证组合和验收限制；依赖声明本身不代表已验证。两种来源的目录条目都不能证明账户具有调用权限。
 
 - 添加账户期间，当前账户仍可继续使用。
 - 取消新的授权或等待超时，不会删除任何已有账户，并会关闭已接受的回调连接，包括未完成的 HTTP 请求。取消后，浏览器会一起读取账户标签与额度，再更新显示。待处理授权默认 10 分钟后过期；`oauthTimeoutMs` 接受 1,000–1,800,000 毫秒，并在插件加载时应用。
@@ -112,6 +112,12 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 
 ## 诊断与恢复
 
+### 本地安装诊断
+
+运行 `dsh plugin --profile web exec dsh-codex-connect doctor --json` 可检查本地安装元数据，不会联网。兼容性状态含义：`compatible` 表示符合声明的版本要求，不是行为测试通过；`unverified` 表示包版本超出声明的支持集合；`unknown` 表示缺少必要版本元数据或无法读取；`incompatible` 表示 Node 版本不满足声明的 engine 要求。汇总状态依次优先采用 `incompatible`、`unknown`、`unverified`。任何非 compatible 结果或不安全的凭据文件元数据都会让 doctor 返回 `1`，但这并不授权或建议更改 DSH。
+
+常规更新卡片只检查 Codex Connect 发布版本。插件版本检查成功后最多缓存 24 小时，页面挂载期间每五分钟重试不可用的检查；手动检查会绕过缓存。它不会查询宿主兼容性，也不会建议升级或降级宿主。未列入记录的 DSH/plugin 组合需要验证，不能据此认定无法运行。
+
 ### 能力探针
 
 本地能力报告不发送网络请求。本地凭据有效且调用受支持时，`capabilities --probe` 会发送一条固定短请求，并可能消耗额度。`auto-review-probe` 只检查 OAuth reviewer 路由及结构化响应，不验证完整 Harness 审批集成，也不执行被审查的动作；满足前置条件时，它也可能发起请求并消耗额度：
@@ -135,6 +141,15 @@ dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.
 ```
 
 必须包含协议和端口，不能包含路径、query 或 fragment。不要把 OAuth 路由暴露到公网；网络不可信时请使用 SSH tunnel。Web 客户端只显示这些命令，不会自行修改 allowlist。
+
+origin allowlist 只控制访问 DSH 的权限，不会把 OpenAI 跳转到浏览器设备的 localhost 回调转发给 DSH 主机。不转发 1455 端口时，可这样完成当前登录：
+
+1. 在模型或插件账户设置中点击 **授权**（或 **添加账户**），在打开的浏览器标签页中完成批准。
+2. 跳转到 `http://localhost:1455/auth/callback` 后，远程浏览器可能显示连接错误。复制**地址栏中的完整 URL**，包括 query string。不要复制初始授权链接，也不要只复制 code。
+3. 返回同一个 DSH 账户界面，展开可选的手动回调表单，将 URL 粘贴到回调 URL 输入框并提交。表单默认收起；原有自动回调登录行为不变。
+4. 等待账户状态更新。URL 无效不会取消当前登录，可粘贴本次授权的正确回调并重试。若授权过期或已取消，请重新开始，并使用新流程的回调。刷新 DSH 页面后，可点击 **继续授权** 重新加入仍在等待的登录。
+
+回调必须匹配当前流程的 redirect URI 和 OAuth state；仅 code、缺少或不匹配的 state、重复参数及重复使用的回调都会被拒绝。提交使用现有同源／可信 origin 检查以及大小受限的 JSON POST。插件不会访问、记录或持久化粘贴的 URL，提交时会清空输入。token 仍保存在 DSH 主机上。只应粘贴到此专用输入框：URL 包含短期凭据，不能分享至聊天、issue、日志或配置中。网络不可信时请使用 SSH tunnel；手动回调不代表可以安全地公开无认证的 DSH 服务，也不会放宽 origin 策略。
 
 ### 迁移与冲突
 

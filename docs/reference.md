@@ -10,7 +10,7 @@ OAuth credentials are stored on the DSH host and used there to authenticate and 
 
 Choose an `openai-codex` model in the normal Harness model picker. Model names remain canonical in every UI language. **More settings → Models** controls which models appear in discovery; hiding a model does not disable routing by its exact id.
 
-The Codex catalog comes from the installed `@earendil-works/pi-ai` package, not a live query of the account's available models. The verified DSH `0.1.2-rc.1` and Codex Connect `0.1.0-alpha.4.29` combination uses `pi-ai@0.84.4`, which lacks `gpt-6-astra`; Codex Connect supplies that definition. Upstream [pi-ai `0.85.1`](https://github.com/earendil-works/pi/releases/tag/v0.85.1) includes Astra, but it is outside the `^0.84.2` range declared by the corresponding DSH adapter and this plugin. Users do not need to upgrade pi-ai separately to select Astra. Adopting newer dependencies requires compatibility verification and updated dependency declarations; once the installed catalog supplies Astra, the plugin preserves that definition instead of adding its own. Neither catalog entry proves account access.
+The Codex catalog comes from the installed `@earendil-works/pi-ai` package, not a live query of the account's available models. DSH `0.1.2-rc.1` uses pi-ai `^0.84.2`, which lacks `gpt-6-astra`; Codex Connect supplies that definition. Alpha 4.33 is also verified with DSH `0.1.5-alpha.1` and pi-ai `0.85.1`. Mixed host package versions and other DSH/pi-ai combinations remain unverified. With a native Astra entry, the plugin preserves its metadata and retains Low, Medium, High, Xhigh, and Max reasoning choices without modifying the installed catalog. Users do not need to upgrade pi-ai separately to select Astra. The exact verified pairs and acceptance limits are recorded in the release notes; dependency declarations alone do not establish verification. Neither catalog source proves account access.
 
 - Adding an account leaves the current account usable while authorization is pending.
 - Cancelling or timing out a new authorization preserves every existing account and closes accepted callback connections, including incomplete HTTP requests. After cancellation, the browser reads account labels and quota together before updating the view. Pending authorization expires after 10 minutes by default; `oauthTimeoutMs` accepts 1,000–1,800,000 milliseconds and is applied when the plugin loads.
@@ -112,6 +112,12 @@ The main plugin options are:
 
 ## Diagnostics and recovery
 
+### Local installation diagnostics
+
+Run `dsh plugin --profile web exec dsh-codex-connect doctor --json` to inspect local installation metadata without a network request. Compatibility statuses mean: `compatible` matches the declared version requirements, not a behavioral test; `unverified` identifies package versions outside the declared support set; `unknown` means required version metadata is missing or unreadable; `incompatible` identifies a Node version outside the declared engine requirement. The aggregate prioritizes `incompatible`, then `unknown`, then `unverified`. Doctor exits `1` for any non-compatible result or unsafe credential-file metadata; this does not authorize or recommend changing DSH.
+
+The normal update card checks only Codex Connect releases. It reuses successful plugin-version checks for up to 24 hours and retries unavailable checks every five minutes while mounted; a manual check bypasses the cache. It neither queries host compatibility nor recommends host upgrades or downgrades. An unlisted DSH/plugin combination requires verification, not an assumption of failure.
+
 ### Capability probes
 
 The local capability report performs no network request. With valid local credentials and a supported invocation, `capabilities --probe` sends one fixed short request and may consume quota. `auto-review-probe` checks the OAuth reviewer route and its structured response only; it does not exercise the full Harness approval integration or execute the reviewed action. It may also send a request and consume quota when its preconditions are met:
@@ -135,6 +141,15 @@ dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.
 ```
 
 Include the scheme and port, never a path, query, or fragment. Do not expose the OAuth route to the public Internet; use an SSH tunnel when the network is not trusted. The Web client displays these commands but never edits the allowlist.
+
+The origin allowlist controls access to DSH; it does not forward OpenAI's localhost callback from your browser device to the DSH host. To finish a pending login without forwarding port 1455:
+
+1. Start **Authorize** (or **Add account**) in the Models or plugin account settings and complete approval in the opened browser tab.
+2. When redirected to `http://localhost:1455/auth/callback`, the remote browser may show a connection error. Copy the **complete URL from its address bar**, including the query string. Do not copy the initial authorization link or only the code.
+3. Return to the same DSH account view, expand the optional manual callback form, paste the URL into its callback URL field, and submit it. The form is collapsed by default; normal automatic callback login is unchanged.
+4. Wait for the account status to update. An invalid URL does not cancel the pending login; paste the correct current callback and retry. If authorization expired or was cancelled, start again and use the new flow's callback. After reloading the DSH page, use **Continue authorization** to rejoin a still-pending login.
+
+The callback must match the pending flow's redirect URI and OAuth state; code-only input, missing or mismatched state, duplicate parameters, and reused callbacks are rejected. Submission uses the existing same-origin/trusted-origin checks and a bounded JSON POST. The pasted URL is not fetched, logged, or persisted by the plugin, and the input is cleared on submission. Tokens remain on the DSH host. Only paste into this dedicated field: the URL contains a short-lived credential and must not be shared in chat, issues, logs, or configuration. Use an SSH tunnel for untrusted networks; manual callback entry does not make an unauthenticated public DSH deployment safe or relax its origin policy.
 
 ### Migration and conflicts
 

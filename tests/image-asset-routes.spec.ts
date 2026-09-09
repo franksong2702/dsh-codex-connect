@@ -107,14 +107,17 @@ describe('OpenAI Codex original image download route', () => {
       expect(Buffer.from(res.body as Uint8Array)).toEqual(Buffer.from(PNG_1X1))
     }
 
-    const restored = Session.fromRestore(
-      grandchild.id,
-      JSON.parse(JSON.stringify(grandchild.snapshotEvents())),
-      JSON.parse(JSON.stringify(grandchild.header)),
-      grandchild.inheritedEventCount,
-    )
+    // rc.1 names persistence ownership; alpha names the detached seed's aliasing state.
+    const restoredOptions = {
+      seed: JSON.parse(JSON.stringify(grandchild.snapshotEvents())),
+      meta: JSON.parse(JSON.stringify(grandchild.header)),
+      inheritedEventCount: grandchild.inheritedEventCount,
+      seedSource: 'persistence' as const,
+      eventState: 'detached' as const,
+    }
     await ctx.fiber.dispose()
     const reopened = await sessionContext()
+    const restored = reopened.sessions.prepare(grandchild.id, restoredOptions)
     reopened.sessions.enter(restored)
     reopened.sessions.announce(restored)
     expect(reopened.sessions.get(parent.id)).toBeUndefined()

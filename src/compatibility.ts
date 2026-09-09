@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url'
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.2-rc.1'
-export const SUPPORTED_PI_AI_RANGE = '^0.84.2'
+export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION, '0.1.5-alpha.1'] as const
+export const SUPPORTED_DSH_PLUGIN_API_RANGE = SUPPORTED_DSH_PLUGIN_API_VERSIONS.join(' || ')
+export const SUPPORTED_PI_AI_RANGE = '^0.84.2 || 0.85.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 
 export const DSH_PLUGIN_API_PACKAGES = [
@@ -32,7 +34,8 @@ export const COMPATIBILITY_PACKAGES = [
 ] as const
 
 export type CompatibilityPackageName = (typeof COMPATIBILITY_PACKAGES)[number]
-export type CompatibilityStatus = 'compatible' | 'incompatible' | 'unknown'
+/** Version metadata proves a declared match, not behavioral failure for an untested package. */
+export type CompatibilityStatus = 'compatible' | 'unverified' | 'incompatible' | 'unknown'
 
 export interface CompatibilityEntry {
   supported: string
@@ -74,6 +77,7 @@ export const COMPATIBILITY_CONTRACT = {
   engines: { node: SUPPORTED_NODE_RANGE },
   dshPluginApi: {
     version: SUPPORTED_DSH_PLUGIN_API_VERSION,
+    versions: SUPPORTED_DSH_PLUGIN_API_VERSIONS,
     packages: DSH_PLUGIN_API_PACKAGES,
   },
   piAi: { package: PI_AI_PACKAGE, version: SUPPORTED_PI_AI_RANGE },
@@ -86,17 +90,18 @@ interface PackageJson {
 
 const PACKAGE_JSON_SEARCH_DEPTH = 8
 
-function compareVersion(left: string, right: string): CompatibilityStatus {
-  return left === right ? 'compatible' : 'incompatible'
+/** Whether the API version is one of the explicitly targeted host versions. */
+export function isSupportedDshPluginApiVersion(value: string): boolean {
+  return SUPPORTED_DSH_PLUGIN_API_VERSIONS.some(version => version === value)
 }
 
 function piAiVersionStatus(value: string): CompatibilityStatus {
   const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(value.trim())
-  if (match === null) return 'incompatible'
+  if (match === null) return 'unverified'
   const major = Number(match[1])
   const minor = Number(match[2])
   const patch = Number(match[3])
-  return major === 0 && minor === 84 && patch >= 2 ? 'compatible' : 'incompatible'
+  return major === 0 && ((minor === 84 && patch >= 2) || (minor === 85 && patch === 1)) ? 'compatible' : 'unverified'
 }
 
 function parseNodeVersion(value: string): [number, number, number] | undefined {
@@ -121,7 +126,7 @@ function nodeStatus(value: string | null | undefined): CompatibilityStatus {
 function packageEntry(
   supported: string,
   installed: string | null | undefined,
-  status: (value: string) => CompatibilityStatus = value => compareVersion(value, supported),
+  status: (value: string) => CompatibilityStatus,
 ): CompatibilityEntry {
   return {
     supported,
@@ -143,6 +148,7 @@ function nodeEntry(installed: string | null | undefined): CompatibilityEntry {
 function aggregateStatus(entries: readonly CompatibilityEntry[]): CompatibilityStatus {
   if (entries.some(entry => entry.status === 'incompatible')) return 'incompatible'
   if (entries.some(entry => entry.status === 'unknown')) return 'unknown'
+  if (entries.some(entry => entry.status === 'unverified')) return 'unverified'
   return 'compatible'
 }
 
@@ -151,14 +157,19 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
   const installedNode = input.nodeVersion ?? input.node ?? input.installed?.node
   const suppliedPackages = input.packageVersions ?? input.packages ?? input.installed?.packages ?? {}
   const packages = {
-    '@deepseek-ai/dsh-llm': packageEntry(SUPPORTED_DSH_PLUGIN_API_VERSION, suppliedPackages['@deepseek-ai/dsh-llm']),
-    '@deepseek-ai/dsh-llm-pi-ai': packageEntry(SUPPORTED_DSH_PLUGIN_API_VERSION, suppliedPackages['@deepseek-ai/dsh-llm-pi-ai']),
+    '@deepseek-ai/dsh-llm': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-llm'], value => isSupportedDshPluginApiVersion(value) ? 'compatible' : 'unverified'),
+    '@deepseek-ai/dsh-llm-pi-ai': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-llm-pi-ai'], value => isSupportedDshPluginApiVersion(value) ? 'compatible' : 'unverified'),
     [PI_AI_PACKAGE]: packageEntry(SUPPORTED_PI_AI_RANGE, suppliedPackages[PI_AI_PACKAGE], piAiVersionStatus),
   } as Record<CompatibilityPackageName, CompatibilityEntry>
   const node = nodeEntry(installedNode)
+  const status = aggregateStatus([node, ...Object.values(packages)])
+  const dshVersion = packages['@deepseek-ai/dsh-llm'].installed
+  const piVersion = packages[PI_AI_PACKAGE].installed
+  const matchedPair = dshVersion === packages['@deepseek-ai/dsh-llm-pi-ai'].installed
+    && (dshVersion === SUPPORTED_DSH_PLUGIN_API_VERSION ? piVersion?.startsWith('0.84.') === true : piVersion === '0.85.1')
   return {
     schemaVersion: COMPATIBILITY_SCHEMA_VERSION,
-    status: aggregateStatus([node, ...Object.values(packages)]),
+    status: status === 'compatible' && !matchedPair ? 'unverified' : status,
     node,
     packages,
   }

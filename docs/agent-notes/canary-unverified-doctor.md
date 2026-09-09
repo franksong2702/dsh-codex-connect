@@ -1,0 +1,9 @@
+# Unverified candidate diagnostics
+
+Issues #164 and #169 stopped at the installed doctor before runtime validation. PR #168 changed out-of-range dependencies from `incompatible` to `unverified` while retaining doctor exit code 1. The candidate checker still classified that exit as a compatibility failure, so a version outside declared support could receive a bug tracker without runtime evidence.
+
+Only explicit undeclared-candidate checks accept a validated `unverified` report with exit code 1 and continue to the existing runtime check. Required package metadata, exact installed DSH candidate versions, compatible Node, credential checks, privacy checks, network classification, and unexpected process failures remain enforced. Declared checks, doctor behavior, supported dependencies, and the verification catalog are unchanged. Passing this bounded check still requires full test-profile validation before support can be declared.
+
+The checker regression reproduces the candidate warning and rejects missing or unknown dependencies, incorrect installed versions, Node mismatch, credential failures, private paths, unexpected exits, and network failures. Existing subprocess and tracker checks retain actual compatibility and infrastructure failure classifications.
+
+Validation on Node 26.5.0: the regression first failed on the valid unverified candidate, then `pnpm run check:canary-workflow` passed 49 workflow and 59 checker assertions. `pnpm run check` passed 715 tests, lint, typechecking, build, CLI checks, declared compatibility, and package checks; the final additional rejection cases passed the focused checker rerun. Real isolated checks of DSH `0.1.5-alpha.1` and `0.1.3-alpha.2` each passed with eight models, eight reasoning-model projections, unchanged defaults, and verified disposal. No model-provider request or real-account OAuth validation was performed.

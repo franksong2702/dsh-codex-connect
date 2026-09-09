@@ -38,7 +38,7 @@ export default [
     // Keep dispatcher preservation ahead of external providers' initialization.
     outputOptions: {
       codeSplitting: {
-        groups: [{ name: 'undici-runtime', test: /\/src\/undici-runtime\.ts$/u }],
+        groups: [{ name: 'undici-runtime', test: /[\\/]src[\\/]undici-runtime\.ts$/u }],
       },
     },
     define: {

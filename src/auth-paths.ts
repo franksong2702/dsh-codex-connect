@@ -4,6 +4,8 @@
 export const OPENAI_CODEX_AUTH_STATUS_PATH = '/plugins/dsh-openai-codex/auth/status'
 /** Plugin-owned browser-login endpoint consumed by its browser half. */
 export const OPENAI_CODEX_AUTH_LOGIN_PATH = '/plugins/dsh-openai-codex/auth/login'
+/** Submit the complete OAuth redirect URL to the pending browser login. */
+export const OPENAI_CODEX_AUTH_CALLBACK_PATH = '/plugins/dsh-openai-codex/auth/callback'
 /** Plugin-owned logout endpoint consumed by its browser half. */
 export const OPENAI_CODEX_AUTH_LOGOUT_PATH = '/plugins/dsh-openai-codex/auth/logout'
 /** Cancel only the pending authorization; never delete a stored credential. */

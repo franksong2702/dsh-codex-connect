@@ -332,10 +332,42 @@ export function AccountManager({ t, store, snapshot, quotaExpanded, quotaControl
   </div>
 }
 
+/** Mounted only for an idle pending authorization; disclosure and secrets stay local. */
+function ManualCallbackForm({ t, store }: { t: OpenAICodexSettingsInjected['t']; store: OpenAICodexAccountStore }) {
+  const [expanded, setExpanded] = useState(false)
+  const [callbackUrl, setCallbackUrl] = useState('')
+  const id = useId()
+  return <>
+    <button type="button" style={buttonStyle} aria-expanded={expanded} aria-controls={id}
+      onClick={() => { setCallbackUrl(''); setExpanded(!expanded) }}>{t('manualCallbackToggle')}</button>
+    {expanded ? <form id={id} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', flexBasis: '100%', minWidth: 0, gap: 10 }}
+      onSubmit={event => {
+        event.preventDefault()
+        if (!callbackUrl.trim() || store.getSnapshot().busy) return
+        void store.submitCallback(callbackUrl)
+        setCallbackUrl('')
+        setExpanded(false)
+      }}>
+      <p id={`${id}-help`} style={bodyStyle}>{t('manualCallbackHelp')}</p>
+      <p style={bodyStyle}>{t('manualCallbackPrivacy')}</p>
+      <label htmlFor={`${id}-input`} style={bodyStyle}>{t('manualCallbackLabel')}</label>
+      <input id={`${id}-input`} type="text" value={callbackUrl} autoComplete="off" spellCheck={false}
+        autoCapitalize="none" aria-describedby={`${id}-help`}
+        style={{ ...buttonStyle, width: '100%', borderRadius: 8, cursor: 'text' }}
+        onChange={event => { setCallbackUrl(event.target.value) }} />
+      <div style={rowStyle}>
+        <button type="submit" style={primaryButtonStyle} disabled={!callbackUrl.trim()}>{t('manualCallbackSubmit')}</button>
+        <button type="button" style={buttonStyle} onClick={() => { setCallbackUrl(''); setExpanded(false) }}>{t('cancel')}</button>
+      </div>
+    </form> : null}
+  </>
+}
+
 /** Recovery links, errors and trusted-origin guidance in either account entry. */
-export function AccountFeedback({ t, snapshot }: {
+export function AccountFeedback({ t, snapshot, store }: {
   t: OpenAICodexSettingsInjected['t']
   snapshot: AccountSnapshot
+  store: OpenAICodexAccountStore
 }) {
   const { status, loginUrl, operationError } = snapshot
   const [copied, setCopied] = useState(false)
@@ -354,19 +386,25 @@ export function AccountFeedback({ t, snapshot }: {
   }
 
   return <>
-    {loginUrl === undefined ? null : (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-        <p style={bodyStyle}>{t('authorizationHelp')}</p>
-        <a
+    {loginUrl === undefined ? null : <p style={bodyStyle}>{t('authorizationHelp')}</p>}
+    {loginUrl !== undefined || snapshot.operation.kind === 'waiting-authorization' && !snapshot.busy ? (
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+        {loginUrl === undefined ? null : <a
           href={loginUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{ ...primaryButtonStyle, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
         >
           {t('openLoginInBrowser')}
-        </a>
+        </a>}
+        {snapshot.operation.kind === 'waiting-authorization' && !snapshot.busy
+          ? <ManualCallbackForm key={snapshot.authorizationRevision ?? 0} t={t} store={store} /> : null}
       </div>
-    )}
+    ) : null}
+    {snapshot.callbackFeedback === undefined ? null : <p role="status"
+      style={snapshot.callbackFeedback === 'callbackAccepted' || snapshot.callbackFeedback === 'callbackUnconfirmed' ? bodyStyle : errorStyle}>
+      {t(snapshot.callbackFeedback)}
+    </p>}
     {status.status === 'error' || status.status === 'reauth-required'
       ? <p style={errorStyle}>{status.message}</p>
       : null}
@@ -458,7 +496,7 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
           </div>
         </div>
         <AccountManager t={t} store={store} snapshot={snapshot} />
-        <AccountFeedback t={t} snapshot={snapshot} />
+        <AccountFeedback t={t} snapshot={snapshot} store={store} />
         {status.status === 'signed-in'
           ? <UsageLimits
               usage={status.usage}

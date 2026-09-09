@@ -16,15 +16,15 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.32` |
-| DeepSeek Harness | `0.1.2-rc.1` |
+| Codex Connect | `0.1.0-alpha.4.33` |
+| DeepSeek Harness | `0.1.2-rc.1` 或 `0.1.5-alpha.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.32
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.33
 dsh web
 ```
 
@@ -34,7 +34,7 @@ dsh web
 
 打开 **设置 → 模型 → Openai-Codex → 授权**，然后亲自在浏览器中完成批准。如果内嵌窗口被拦截，请用 **打开 ChatGPT 登录页面**。在 Harness 的常规模型选择器中选择一个 `openai-codex` 模型。
 
-不要把授权 URL、code、token 或账户标识粘贴到 issue、日志、聊天或配置文件中。在另一台设备上使用浏览器时，请遵循[远程浏览器授权](reference.zh.md#远程浏览器授权)说明。
+不要把授权 URL、code、token 或账户标识粘贴到 issue、日志、聊天或配置文件中。在另一台设备上使用浏览器时，可通过默认收起的手动回调表单完成当前登录，无需转发 localhost 回调端口；请遵循[远程浏览器授权](reference.zh.md#远程浏览器授权)说明。
 
 ### 3. 检查安装
 
@@ -52,10 +52,10 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 ## 核心能力
 
 - **账户：**在 DSH 主机上保存最多 16 个账户，手动选择后续请求使用的活动账户，不按会话绑定。请求保持已固定的账户，插件不会自动轮换或静默故障切换。
-- **模型与 Astra 支持：**当前已验证的 DSH 与插件组合已支持 `gpt-6-astra`。插件补充缺失的模型定义，提供 Low、Medium、High、Xhigh 和 Max 五档推理强度；Default 保持提供方默认值。已保存的 Off/Minimal 选择需要[明确更新](../MIGRATION.md#astra-reasoning-selections)。未来使用的依赖目录包含 Astra 时，插件会优先采用其原生定义。模型出现在列表中，不代表当前账户具有调用权限；新依赖版本的整体兼容性仍需单独验证。
+- **模型与 Astra 支持：**当前已验证的 DSH 与插件组合已支持 `gpt-6-astra`。插件补充缺失的模型定义，提供 Low、Medium、High、Xhigh 和 Max 五档推理强度；Default 保持提供方默认值。已保存的 Off/Minimal 选择需要[明确更新](../MIGRATION.md#astra-reasoning-selections)。安装的依赖目录包含 Astra 时，插件保留其原生元数据，同时维持这五档已校准的推理选择。模型出现在列表中，不代表当前账户具有调用权限；新依赖版本的整体兼容性仍需单独验证。
 - **Fast Mode：**为单个对话请求优先服务，默认关闭。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
 - **额度：**显示服务端返回的 `5h`、`7d` 窗口及重置时间，已登录时通常每 60 秒刷新一次。不虚构缺失窗口；Spark 使用独立额度桶。
-- **更新指引：**将已安装的 DSH/plugin 组合与公开验证记录比较，但不会自动执行升级。
+- **插件更新：**检查 Codex Connect 新版本，不自动安装，也不建议更改 DSH。宿主兼容性信息通过主动运行的本地诊断查看。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中的 Fast Mode 与额度控件" width="820">
@@ -72,7 +72,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
 | GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
-| 实验性 Astra 推理档位调整 | `enableReasoningUpdates` | 每次调整均须你回答，只影响当前会话。下一次请求记录后，选择器同步显示生效档位。暂不支持压缩或切换模型。见[测试指南](astra-reasoning.zh.md)。 |
+| 实验性 Astra 推理档位调整（未发布的 PR 构建） | `enableReasoningUpdates` | Agent 的提议须经你确认，只影响当前会话。手动选择优先；选择器随请求显示生效档位。暂不支持压缩或切换模型。已发布的 Alpha 4.33 不含此功能；见[测试指南](astra-reasoning.zh.md)。 |
 
 使用你当前 GPT 订阅计划提供的图片生成能力。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 

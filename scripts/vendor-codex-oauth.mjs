@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 // Reproduce the pinned OAuth copy and its local patches without modifying host dependencies.
 const root = fileURLToPath(new URL('../', import.meta.url))
-const source = resolve(dirname(fileURLToPath(import.meta.resolve('@earendil-works/pi-ai'))), '..')
+const source = resolve(dirname(fileURLToPath(import.meta.resolve('pi-ai-oauth-source'))), '..')
 const metadata = JSON.parse(await readFile(resolve(source, 'package.json'), 'utf8'))
 if (metadata.version !== '0.84.4') throw new Error('Review the upstream OAuth diff before changing the vendor pin')
 const files = ['auth/oauth/openai-codex.js', 'auth/oauth/device-code.js', 'auth/oauth/oauth-page.js', 'auth/oauth/pkce.js', 'utils/provider-env.js']

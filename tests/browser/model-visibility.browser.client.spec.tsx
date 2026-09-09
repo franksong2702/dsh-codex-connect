@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { modelCatalogFixture } from '../model-catalog-fixture.ts'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
-import { en } from '../../src/client/locales.ts'
+import { en, zh } from '../../src/client/locales.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
 import {
   OPENAI_CODEX_PROXY_DETECT_PATH,
@@ -78,6 +78,37 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it.each([['English', en], ['Chinese', zh]] as const)('stages, discards, saves and disables Astra reasoning changes in %s', async (_language, messages) => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-6-astra', name: 'GPT-6 Astra' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    const translate = (key: keyof typeof en, params: Record<string, unknown> = {}) => Object.entries(params).reduce(
+      (value, [name, replacement]) => value.replace(`{${name}}`, String(replacement)), messages[key])
+    const draw = () => createElement(OpenAICodexConfiguration, { scope, t: translate, activeModule: 'capabilities' })
+    root.render(draw())
+    const toggle = page.getByRole('checkbox', { name: new RegExp(`^${messages.enableReasoningUpdates}`, 'u') })
+    await expect.element(toggle).not.toBeChecked()
+    await toggle.click()
+    await expect.element(toggle).toBeChecked()
+    expect(mutate).not.toHaveBeenCalled()
+    expect(scope.getSnapshot().value?.enableReasoningUpdates).toBe(false)
+    await page.getByRole('button', { name: messages.discard, exact: true }).click()
+    await expect.element(toggle).not.toBeChecked()
+
+    await toggle.click()
+    await page.getByRole('button', { name: messages.save, exact: true }).click()
+    await expect.element(page.getByText(messages.settingsSaved, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['enableReasoningUpdates'], value: true }], 0)
+    root.unmount()
+    root = createRoot(host)
+    root.render(draw())
+    await expect.element(toggle).toBeChecked()
+    await toggle.click()
+    await page.getByRole('button', { name: messages.save, exact: true }).click()
+    await expect.element(page.getByText(messages.settingsSaved, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['enableReasoningUpdates'], value: false }], 1)
+    expect(scope.getSnapshot().value?.enableAutoReview).toBe(false)
+  })
+
   it('keeps staged changes and actions while switching settings modules', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, mutate } = settingsScopeFixture()

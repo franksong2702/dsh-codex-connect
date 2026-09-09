@@ -13,10 +13,26 @@ import { SessionStore } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import UserQuestions from '@deepseek-ai/dsh-user-questions'
+import SettingsProvider from '@deepseek-ai/dsh-settings'
+import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import { afterEach, expect, it, vi } from 'vitest'
 import * as CodexConnect from '../src/index.ts'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from '../src/store.ts'
 import { planReasoningUpdates, readReasoningUpdate } from '../src/reasoning-update.ts'
+
+class MemorySettings extends SettingsProvider {
+  readonly writable = true
+  private storedDocument: Record<string, unknown> = {}
+
+  protected load(): Promise<Record<string, unknown>> {
+    return Promise.resolve(structuredClone(this.storedDocument))
+  }
+
+  protected persist(ns: SettingsNamespace, section: Record<string, unknown>): Promise<void> {
+    this.storedDocument[ns] = structuredClone(section)
+    return Promise.resolve()
+  }
+}
 
 let ctx: Context | undefined
 let root: string | undefined
@@ -50,6 +66,7 @@ async function setup(enabled = true, initialEffort: 'low' | 'default' = 'low', s
   await context.plugin(SystemPrompt)
   await context.plugin(ToolRuntime, { mode: 'native' })
   await context.plugin(UserQuestions)
+  await context.plugin(MemorySettings)
   const saveDefault = vi.fn()
   context.provide('agentDefaultModel', { saveSelection: saveDefault })
   const plugin = await context.plugin(CodexConnect, { enableReasoningUpdates: enabled })
@@ -140,7 +157,7 @@ it('reports Default as non-explicit and does not duplicate unchanged state acros
   expect(agent.session.deriveMessages().filter(message => message.source.kind === 'plugin' && message.source.form === 'notice' && message.source.summary === 'Astra reasoning state')).toHaveLength(1)
 })
 
-it.each(['cancel', 'unload', 'model-change', 'decline'] as const)('leaves no queued or admitted update after %s during confirmation', async action => {
+it.each(['cancel', 'unload', 'disable', 'model-change', 'decline'] as const)('leaves no queued or admitted update after %s during confirmation', async action => {
   const { context, agent, plugin } = await setup()
   vi.stubGlobal('fetch', vi.fn(async () => response([{ type: 'message', id: 'msg_initial', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: 'Ready.', annotations: [] }] }])))
   agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Start.' }] }))
@@ -161,6 +178,10 @@ it.each(['cancel', 'unload', 'model-change', 'decline'] as const)('leaves no que
   await vi.waitFor(() => expect(answer).toBeDefined())
   if (action === 'cancel') controller.abort(new Error('Canceled by fixture user'))
   if (action === 'unload') await plugin.dispose()
+  if (action === 'disable') {
+    await context.settings.update(CodexConnect.OPENAI_CODEX_SETTINGS_NS, { enableReasoningUpdates: false })
+    await vi.waitFor(() => expect(context.tools.get(CodexConnect.ASTRA_REASONING_TOOL_NAME)).toBeUndefined())
+  }
   if (action === 'model-change') agent.session.append('model/selection', { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('medium') })
   answer!({ answers: [{ id: 'astra-reasoning-effort', selected: [action === 'decline' ? 'Keep current effort' : 'Change to high'] }] })
   await settled
@@ -201,6 +222,16 @@ it('records high then medium, resumes at medium and never changes defaults', asy
   await agent.whenIdle()
   expect(agent.session.requestHeader()?.config.reasoningEffort).toBe('medium')
   expect(wires).toHaveLength(5)
+
+  await context.settings.update(CodexConnect.OPENAI_CODEX_SETTINGS_NS, { enableReasoningUpdates: false })
+  await vi.waitFor(() => expect(context.tools.get(CodexConnect.ASTRA_REASONING_TOOL_NAME)).toBeUndefined())
+  agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Continue with proposals disabled.' }] }))
+  await agent.whenIdle()
+  expect(wires).toHaveLength(6)
+  expect(agent.session.requestHeader()?.config.reasoningEffort).toBe('medium')
+  expect((wires[5]!.input as Record<string, unknown>[]).filter(item => item.type === 'configuration_update')).toEqual((wires[2]!.input as Record<string, unknown>[]).filter(item => item.type === 'configuration_update'))
+  expect(wires[5]!.tools ?? []).not.toContainEqual(expect.objectContaining({ name: CodexConnect.ASTRA_REASONING_TOOL_NAME }))
+  expect(saveDefault).not.toHaveBeenCalled()
 })
 
 it.each(['before-admission', 'before-header', 'manual-selection', 'late-unmatched-header'] as const)('does not publish a new effective level after %s', async stage => {
@@ -230,7 +261,7 @@ it.each(['before-admission', 'before-header', 'manual-selection', 'late-unmatche
   expect(saveDefault).not.toHaveBeenCalled()
 })
 
-it.each(['legacy', 'current', 'manual-low', 'manual-medium', 'manual-max'] as const)('continues a JSON-restored session in a fresh loop (%s)', async scenario => {
+it.each(['legacy', 'current', 'disabled', 'manual-low', 'manual-medium', 'manual-max'] as const)('continues a JSON-restored session in a fresh loop (%s)', async scenario => {
   const legacy = scenario !== 'current'
   const first = await setup()
   first.context.on('user-questions/request', async () => ({ answers: [{ id: 'astra-reasoning-effort', selected: ['Change to high'] }] }))
@@ -250,7 +281,8 @@ it.each(['legacy', 'current', 'manual-low', 'manual-medium', 'manual-max'] as co
   }
   await first.context.fiber.dispose()
   await rm(root!, { recursive: true, force: true })
-  const resumed = await setup(true, 'low', saved)
+  const resumed = await setup(scenario !== 'disabled', 'low', saved)
+  if (scenario === 'disabled') expect(resumed.context.tools.get(CodexConnect.ASTRA_REASONING_TOOL_NAME)).toBeUndefined()
   expect(resumed.agent.session.requestHeader()?.config.reasoningEffort).toBe(legacy ? 'low' : 'high')
   const manual = scenario.startsWith('manual-') ? scenario.slice(7) : undefined
   if (manual !== undefined) {

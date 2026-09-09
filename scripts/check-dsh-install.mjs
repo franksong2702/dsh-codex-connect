@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +13,9 @@ const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const COMPATIBILITY = JSON.parse(await readFile(join(REPO_ROOT, 'compatibility.json'), 'utf8'))
+const DECLARED_DSH_VERSIONS = COMPATIBILITY.dshPluginApi.versions
+const DECLARED_DSH_RANGE = DECLARED_DSH_VERSIONS.join(' || ')
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
 const COMMAND_TIMEOUT_MS = 20 * 60 * 1000
 
@@ -98,7 +102,7 @@ function parseOneLineJson(output, label) {
   }
 }
 
-function assertDoctorJson(value, dshHome, repoRoot) {
+function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersion = false, dshVersion = DEFAULT_DSH_VERSION } = {}) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new CompatibilityCheckError('doctor JSON must be an object')
   }
@@ -111,7 +115,8 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   }
   const compatibility = report['compatibility']
   const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai']
-  if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || compatibility?.['status'] !== 'compatible') {
+  const acceptedStatuses = allowUndeclaredCanaryVersion ? ['compatible', 'unverified'] : ['compatible']
+  if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || !acceptedStatuses.includes(compatibility?.['status'])) {
     throw new CompatibilityCheckError('doctor JSON did not report schemaVersion 1 and compatible runtime dependencies')
   }
   if (compatibility?.['node']?.['status'] !== 'compatible') {
@@ -119,9 +124,13 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   }
   for (const name of expectedPackages) {
     const entry = compatibility?.['packages']?.[name]
-    const supported = name === '@earendil-works/pi-ai' ? '^0.84.2' : DEFAULT_DSH_VERSION
-    if (entry?.['supported'] !== supported || typeof entry?.['installed'] !== 'string' || entry?.['status'] !== 'compatible') {
+    const supported = name === '@earendil-works/pi-ai' ? COMPATIBILITY.piAi.version : DECLARED_DSH_RANGE
+    if (entry?.['supported'] !== supported || typeof entry?.['installed'] !== 'string'
+      || entry['installed'].length === 0 || !acceptedStatuses.includes(entry?.['status'])) {
       throw new CompatibilityCheckError(`doctor JSON did not report compatible ${name}`)
+    }
+    if (name !== '@earendil-works/pi-ai' && entry['installed'] !== dshVersion) {
+      throw new CompatibilityCheckError(`doctor JSON did not report the requested DSH version for ${name}`)
     }
   }
   const serialized = JSON.stringify(report)
@@ -130,14 +139,28 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   }
 }
 
+/** Validate the installed doctor's process result before checking the runtime. */
+export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
+  const candidateDiagnostic = options.allowUndeclaredCanaryVersion === true && result.status === 1
+    && commandFailureClassification(result, 'compatibility') !== 'infrastructure'
+  if (!candidateDiagnostic) requireSuccess('plugin doctor', result, 'compatibility')
+  const report = parseOneLineJson(result.stdout, 'plugin doctor')
+  assertDoctorJson(report, dshHome, repoRoot, options)
+  // Only a validated version warning explains the doctor's expected nonzero exit.
+  if (result.status !== 0 && report.compatibility.status !== 'unverified') {
+    requireSuccess('plugin doctor', result, 'compatibility')
+  }
+  return report
+}
+
 async function main() {
   const requestedDshVersion = process.env.DSH_VERSION
   const allowUndeclaredCanaryVersion = process.env.DSH_UNDECLARED_CANARY_VERSION === UNDECLARED_CANARY_MODE
   if (requestedDshVersion !== undefined
     && requestedDshVersion !== ''
-    && requestedDshVersion !== DEFAULT_DSH_VERSION
+    && !DECLARED_DSH_VERSIONS.includes(requestedDshVersion)
     && !allowUndeclaredCanaryVersion) {
-    throw new Error(`check-dsh-install only verifies the declared DSH CLI version ${DEFAULT_DSH_VERSION}`)
+    throw new Error(`check-dsh-install only verifies declared DSH CLI versions: ${DECLARED_DSH_RANGE}`)
   }
   const dshVersion = requestedDshVersion === undefined || requestedDshVersion === ''
     ? DEFAULT_DSH_VERSION
@@ -160,23 +183,22 @@ async function main() {
   }
 
   try {
-    let pluginSpec = `link:${REPO_ROOT}`
-    if (allowUndeclaredCanaryVersion) {
-      const pack = await runCommand('npm', [
-        'pack',
-        '--json',
-        '--ignore-scripts',
-        '--pack-destination', tempRoot,
-      ], { cwd: REPO_ROOT, env })
-      requireSuccess('npm pack', pack)
-      const [manifest] = JSON.parse(pack.stdout)
-      if (typeof manifest?.filename !== 'string'
-        || manifest.filename.length === 0
-        || basename(manifest.filename) !== manifest.filename) {
-        throw new Error('npm pack did not report one package filename')
-      }
-      pluginSpec = `file:${join(tempRoot, manifest.filename)}`
+    const pack = await runCommand('npm', [
+      'pack',
+      '--json',
+      '--ignore-scripts',
+      '--pack-destination', tempRoot,
+    ], { cwd: REPO_ROOT, env })
+    requireSuccess('npm pack', pack)
+    const [manifest] = JSON.parse(pack.stdout)
+    if (typeof manifest?.filename !== 'string'
+      || manifest.filename.length === 0
+      || basename(manifest.filename) !== manifest.filename) {
+      throw new Error('npm pack did not report one package filename')
     }
+    const pluginSpec = `file:${join(tempRoot, manifest.filename)}`
+    const pluginArtifactSha256 = createHash('sha256').update(await readFile(join(tempRoot, manifest.filename))).digest('hex')
+    const pluginVersion = manifest.version
 
     const install = await runCommand('npm', [
       'install',
@@ -225,7 +247,8 @@ async function main() {
       || !/^    enableSearch: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
-      || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
+      || !/^    enableAutoReview: false$/mu.test(pluginBlock)
+      || !/^    enableReasoningUpdates: false$/mu.test(pluginBlock)) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
 
@@ -236,9 +259,7 @@ async function main() {
     const doctor = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'exec', 'dsh-codex-connect', 'doctor', '--json',
     ], { cwd: workspace, env })
-    requireSuccess('plugin doctor', doctor, 'compatibility')
-    const doctorReport = parseOneLineJson(doctor.stdout, 'plugin doctor')
-    assertDoctorJson(doctorReport, dshHome, REPO_ROOT)
+    validateDoctorResult(doctor, dshHome, REPO_ROOT, { allowUndeclaredCanaryVersion, dshVersion })
 
     const runtime = await runCommand(process.execPath, [
       RUNTIME_CHECK,
@@ -261,6 +282,8 @@ async function main() {
       dshVersion: actualDshVersion,
       nodeVersion: process.version,
       plugin: 'dsh-codex-connect',
+      pluginVersion,
+      pluginArtifactSha256,
       defaultsUnchanged: true,
       capabilities: {
         enableProxy: false,
@@ -268,6 +291,7 @@ async function main() {
         enableImageTool: false,
         enableImageGeneration: false,
         enableAutoReview: false,
+        enableReasoningUpdates: false,
       },
       runtime: runtimeReport,
     })}\n`)

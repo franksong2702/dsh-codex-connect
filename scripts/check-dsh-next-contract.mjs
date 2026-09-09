@@ -23,6 +23,7 @@ import {
   InfrastructureCheckError,
   commandFailureClassification,
   installCheckExitCode,
+  validateDoctorResult,
 } from './check-dsh-install.mjs'
 import { validateRuntimeProjection } from './check-installed-runtime.mjs'
 
@@ -215,6 +216,57 @@ assertContract(
     stdout: 'fetch failed: ECONNRESET',
   }, 'compatibility') === 'infrastructure',
 )
+
+const candidateDoctor = {
+  schemaVersion: 1,
+  credentialFile: { state: 'missing' },
+  compatibility: {
+    schemaVersion: 1,
+    status: 'unverified',
+    node: { status: 'compatible' },
+    packages: Object.fromEntries(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai'].map(name => [name, {
+      supported: name === '@earendil-works/pi-ai' ? '^0.84.2 || 0.85.1' : '0.1.2-rc.1 || 0.1.5-alpha.1',
+      installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.6-alpha.1',
+      status: 'unverified',
+    }])),
+  },
+}
+const candidateDoctorOptions = { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.6-alpha.1' }
+function doctorOutcome(report, options = candidateDoctorOptions, status = 1, stderr = '') {
+  try {
+    validateDoctorResult({ status, stdout: JSON.stringify(report), stderr }, '/fixture-home', '/fixture-repo', options)
+    return 'continue-runtime'
+  } catch (error) {
+    return installCheckExitCode(error)
+  }
+}
+assertContract('issue 169: a valid unverified candidate doctor continues to runtime validation', doctorOutcome(candidateDoctor) === 'continue-runtime')
+assertContract('declared installation checks still reject unverified versions', doctorOutcome(candidateDoctor, { dshVersion: '0.1.2-rc.1' }) === 1)
+const declaredDoctor = structuredClone(candidateDoctor)
+declaredDoctor.compatibility.status = 'compatible'
+for (const [name, entry] of Object.entries(declaredDoctor.compatibility.packages)) {
+  entry.installed = name === '@earendil-works/pi-ai' ? '0.84.4' : '0.1.2-rc.1'
+  entry.status = 'compatible'
+}
+assertContract('declared compatible diagnostics still pass', doctorOutcome(declaredDoctor, {}, 0) === 'continue-runtime')
+assertContract('compatible JSON cannot explain a nonzero doctor exit', doctorOutcome(declaredDoctor, { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.2-rc.1' }) === 1)
+assertContract('zero exit does not exempt an unverified report from declared validation', doctorOutcome(candidateDoctor, {}, 0) === 1)
+assertContract('malformed candidate JSON remains a compatibility failure', doctorOutcome(null) === 1)
+for (const [name, mutate] of [
+  ['Node engine mismatch', report => { report.compatibility.node.status = 'incompatible' }],
+  ['missing dependency', report => { delete report.compatibility.packages['@deepseek-ai/dsh-llm'].installed }],
+  ['unknown dependency', report => { report.compatibility.packages['@deepseek-ai/dsh-llm'].status = 'unknown' }],
+  ['incompatible dependency', report => { report.compatibility.packages['@deepseek-ai/dsh-llm'].status = 'incompatible' }],
+  ['wrong installed candidate', report => { report.compatibility.packages['@deepseek-ai/dsh-llm'].installed = '0.1.3-alpha.2' }],
+  ['credential failure', report => { report.credentialFile.state = 'permissions-too-broad' }],
+  ['private credential path', report => { report.credentialFile.path = '/fixture-home/credentials' }],
+]) {
+  const report = structuredClone(candidateDoctor)
+  mutate(report)
+  assertContract(`candidate doctor rejects ${name}`, doctorOutcome(report) === 1)
+}
+assertContract('unverified JSON does not hide an unexpected process exit', doctorOutcome(candidateDoctor, candidateDoctorOptions, 2) === 1)
+assertContract('unverified JSON does not hide a network failure', doctorOutcome(candidateDoctor, candidateDoctorOptions, 1, 'fetch failed: ECONNRESET') === 2)
 
 const runtimeProjection = validateRuntimeProjection(
   [{ id: 'openai-codex', name: 'OpenAI Codex' }],
