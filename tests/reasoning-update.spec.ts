@@ -40,6 +40,18 @@ it('does not treat ordinary text, model text or another plugin as approval', () 
   }
 })
 
+it('keeps the original wire base when DSH records the effective level', () => {
+  const messages = [user('Start'), notice()]
+  const config = { ...options(messages), reasoningEffort: ReasoningEffortId('high') }
+  const plan = planReasoningUpdates(config)!
+  expect(plan).toMatchObject({ baseEffort: 'low', requestEffort: 'high', effectiveEffort: 'high' })
+  const payload = { ...wire(messages), reasoning: { effort: 'high', summary: 'auto' } }
+  const result = applyReasoningUpdates(payload, plan) as typeof payload
+  expect(result.reasoning).toEqual({ effort: 'low', summary: 'auto' })
+  expect(payload.reasoning.effort).toBe('high')
+  expect(result.input).toContainEqual({ type: 'configuration_update', reasoning: { effort: 'high' } })
+})
+
 it.each([
   { version: 2 }, { effort: 'ultra' }, { sessionId: '' }, { unexpected: true }, { previousEffort: 'medium' }, { effort: 'low' }, { sessionId: 'fork' }, { baseEffort: 'medium' },
 ])('rejects damaged or changed durable approval %j', patch => {

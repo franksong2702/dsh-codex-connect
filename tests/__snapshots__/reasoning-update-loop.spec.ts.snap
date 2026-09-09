@@ -21,6 +21,8 @@ exports[`runs real loop tool confirmation, then replays the recorded request (ap
 ]
 `;
 
+exports[`runs real loop tool confirmation, then replays the recorded request (approved=true) > phase-aware reasoning policy delivered to Astra 1`] = `"Assess the current effective Astra reasoning effort at meaningful task transitions, using the next phase's unresolved questions and cost of error, not the difficulty of work already completed. Proactively use this tool, without waiting for the user to name it, when a change is justified. Consider increasing effort for uncertain root causes, competing designs, consequential decisions, or new evidence that invalidates the plan. Explicitly consider decreasing effort once the cause, approach, scope, and acceptance criteria are clear and the remaining work is bounded implementation, routine verification, or follow-up. A written plan alone does not justify decreasing effort: concurrency, security, and data migration may remain difficult during implementation. Do not prescribe fixed levels by phase, such as Max for every plan or High for every implementation. Tool use alone is not a reason to increase effort. Optimize for completing the task reliably, including rework and user time, rather than minimizing tokens in one request; never promise quality or quota savings. Keeping the current level is valid. Do not ask on every tool call, manufacture changes, or reopen a refusal or manual choice without materially changed work or evidence. If no change is warranted, continue the task without asking. Give a brief reason naming the upcoming work, what changed, and why the requested level is appropriate. This tool asks the user; its proposal takes effect only after explicit human confirmation. Ordinary text and Auto-review do not authorize it. Respect the latest explicit manual selection; do not silently override it. Read the logged Astra reasoning state and approved notices, not the selector alone. Requires an explicit initial Astra level and an uncompacted main-agent conversation; this tool changes no defaults or other conversations."`;
+
 exports[`runs real loop tool confirmation, then replays the recorded request (approved=true) 1`] = `
 [
   {
@@ -36,7 +38,7 @@ exports[`runs real loop tool confirmation, then replays the recorded request (ap
     "type": "function_call",
   },
   {
-    "output": "The user approved high. It becomes effective when the queued notice enters the next request; cancellation may discard pending context. The original model-selector level remains low.",
+    "output": "The user approved high. It becomes effective when the queued notice enters the next request; cancellation may discard pending context. The model selector updates with that request.",
     "type": "function_call_output",
   },
   {

@@ -29,6 +29,23 @@ function selectionRevision(session: Session): number {
   return session.snapshotEvents().findLast(event => event.type === 'model/selection')?.seq ?? -1
 }
 
+function pendingSelection(session: Session) {
+  const events = session.snapshotEvents()
+  const selection = events.findLast(event => event.type === 'model/selection')
+  if (selection === undefined) return undefined
+  const admitted = events.some(event => event.seq > selection.seq && event.type === 'user/message'
+    && readReasoningUpdate(event.data) !== undefined
+    && event.data.source.kind === 'plugin' && 'reasoningSelectionSeq' in event.data.source
+    && event.data.source.reasoningSelectionSeq === selection.seq)
+  if (admitted) return undefined
+  // A later in-flight request may still use the old selection; only a matching header consumes the choice.
+  const consumed = events.some(event => event.seq > selection.seq && event.type === 'request/header'
+    && event.data.header.config.provider === selection.data.provider
+    && event.data.header.config.model === selection.data.model
+    && event.data.header.config.reasoningEffort === selection.data.reasoningEffort)
+  return consumed ? undefined : { ...selection.data, seq: selection.seq }
+}
+
 /** Reject dropped updates and auxiliary/model-switch requests even outside the Codex adapter. */
 export function assertReasoningUpdateSession(options: GenerateOptions, session: Session | undefined, pending: boolean): void {
   const recorded = session?.snapshotEvents().filter(event => event.type === 'user/message'
@@ -51,6 +68,22 @@ export function assertReasoningUpdateSession(options: GenerateOptions, session: 
 
 /** Guards remain installed when new proposals are disabled, so existing approvals still replay. */
 export function registerReasoningUpdateGuard(ctx: Context): void {
+  ctx.on('agent/request', async ({ agent, signal }, next) => {
+    const config = await next()
+    signal.throwIfAborted()
+    const messages = agent.session.deriveMessages()
+    const base = messages.map(readReasoningUpdate).find(update => update !== undefined)?.baseEffort
+    const options = { ...config, ...(base === undefined ? {} : { reasoningEffort: ReasoningEffortId(base) }), sessionId: agent.session.id, messages }
+    assertReasoningUpdateSession(options, agent.session, pendingUpdates(agent))
+    const plan = planReasoningUpdates(options)
+    if (plan === undefined) return config
+    const pending = pendingSelection(agent.session)
+    if (pending !== undefined && (pending.provider !== config.provider || pending.model !== config.model
+      || pending.reasoningEffort !== plan.effectiveEffort)) {
+      reasoningUpdateError('The model selection changed outside the confirmed Astra update. Start a new conversation or restore the confirmed level.')
+    }
+    return { ...config, reasoningEffort: ReasoningEffortId(plan.effectiveEffort) }
+  }, { prepend: true })
   ctx.on('llm/stream', (options, next) => {
     const session = options.sessionId === undefined ? undefined : ctx.get('sessions')?.get(options.sessionId)
     const agent = options.sessionId === undefined ? undefined : ctx.get('agents')?.get(options.sessionId)
@@ -74,24 +107,37 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
   // Pre-step additions enter the ordinary durable message surface before dispatch.
   ctx.on('agent/pre-step', async ({ agent }, next) => {
     const decision = await next()
-    if (decision.kind !== 'enter' || !enabled() || lifetime.signal.aborted
+    if (decision.kind !== 'enter' || lifetime.signal.aborted
       || !ctx.get('agents')?.roots().includes(agent)) return decision
     const header = agent.session.requestHeader()
-    const selected = agent.session.snapshotEvents().findLast(event => event.type === 'model/selection')?.data
+    const selected = pendingSelection(agent.session)
     const config = selected ?? header?.config ?? agent.options
     if (config.provider !== 'openai-codex' || config.model !== 'gpt-6-astra') return decision
     const history = agent.session.deriveMessages()
     const messages = [...history, ...decision.messages]
+    const base = messages.map(readReasoningUpdate).find(update => update !== undefined)?.baseEffort
+    if (!enabled() && base === undefined) return decision
+    const additions = [...decision.messages]
+    if (selected !== undefined && base !== undefined && isAstraReasoningEffort(selected.reasoningEffort)) {
+      const previous = planReasoningUpdates({ provider: config.provider, model: config.model, reasoningEffort: ReasoningEffortId(base), messages, sessionId: agent.id })!
+      if (selected.reasoningEffort !== previous.effectiveEffort) {
+        const approved = createReasoningUpdateMessage({ version: 1, sessionId: agent.id, baseEffort: base,
+          previousEffort: previous.effectiveEffort, effort: selected.reasoningEffort })
+        const notice = { ...approved, source: { ...approved.source, reasoningSelectionSeq: selected.seq } }
+        messages.push(notice)
+        additions.push(notice)
+      }
+    }
     const explicit = isAstraReasoningEffort(config.reasoningEffort)
       && !(selected === undefined && header?.adapterDefaults?.reasoningEffort === true)
-    const plan = explicit ? planReasoningUpdates({ provider: config.provider, model: config.model, reasoningEffort: ReasoningEffortId(config.reasoningEffort!), messages, sessionId: agent.id }) : undefined
+    const plan = explicit ? planReasoningUpdates({ provider: config.provider, model: config.model, reasoningEffort: ReasoningEffortId(base ?? config.reasoningEffort!), messages, sessionId: agent.id }) : undefined
     const text = explicit
-      ? `Astra reasoning state: original request-level effort ${config.reasoningEffort}; effective effort for this request ${plan?.effectiveEffort ?? config.reasoningEffort}. The selector retains the original level. Assess whether the upcoming work warrants a change and use codex_connect_set_reasoning_effort to propose it when justified; the user decides.`
+      ? `Astra reasoning state: original request-level effort ${plan?.baseEffort ?? config.reasoningEffort}; effective effort for this request ${plan?.effectiveEffort ?? config.reasoningEffort}. The model selector follows the effective request level. At meaningful task transitions, assess the next phase's uncertainty and failure cost, including whether a lower effort is now sufficient. Follow codex_connect_set_reasoning_effort's guidance; the user decides.`
       : 'Astra reasoning state: no explicit initial effort is selected. Do not propose a reasoning update until the user explicitly selects an initial Astra effort; do not infer it from Default.'
     const previous = history.findLast(message => message.source.kind === 'plugin'
       && message.source.plugin === 'dsh-codex-connect' && message.source.form === 'notice' && message.source.summary === 'Astra reasoning state')
-    if (previous?.content[0]?.type === 'text' && previous.content[0].text === text) return decision
-    return { ...decision, messages: [...decision.messages, createUserMessage({
+    if (previous?.content[0]?.type === 'text' && previous.content[0].text === text) return { ...decision, messages: additions }
+    return { ...decision, messages: [...additions, createUserMessage({
       source: { kind: 'plugin', plugin: 'dsh-codex-connect', form: 'notice', summary: 'Astra reasoning state' },
       content: [{ type: 'text', text }],
     })] }
@@ -113,7 +159,7 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
       || !isAstraReasoningEffort(config.reasoningEffort) || header?.adapterDefaults?.reasoningEffort === true) {
       reasoningUpdateError('Select GPT-6 Astra and an explicit reasoning level before requesting a change; provider Default is not supported by this tool.')
     }
-    const latestSelection = agent.session.snapshotEvents().findLast(event => event.type === 'model/selection')?.data
+    const latestSelection = pendingSelection(agent.session)
     if (latestSelection !== undefined) {
       const selected = latestSelection
       if (selected.provider !== config.provider || selected.model !== config.model || selected.reasoningEffort !== config.reasoningEffort) {
@@ -121,7 +167,7 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
       }
     }
     const plan = planReasoningUpdates({ ...config, messages: agent.session.deriveMessages(), sessionId: agent.session.id })
-    return { baseEffort: config.reasoningEffort, effectiveEffort: plan?.effectiveEffort ?? config.reasoningEffort, revision: selectionRevision(agent.session) }
+    return { baseEffort: plan?.baseEffort ?? config.reasoningEffort, effectiveEffort: plan?.effectiveEffort ?? config.reasoningEffort, revision: selectionRevision(agent.session) }
   }
 
   async function change(agent: Agent, effort: string, reason: string, signal?: AbortSignal) {
@@ -145,7 +191,7 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
           id: 'astra-reasoning-effort',
           header: 'Astra reasoning',
           question: `Change this conversation from ${before.effectiveEffort} to ${effort}?`,
-          detail: `Agent's reason: ${reason}\n\nThis affects later requests in this conversation only. The original level (${before.baseEffort}) stays in the model selector. Cache reuse, response quality, and subscription savings are not guaranteed. Compaction and model switching are not supported while these updates are in the history.`,
+          detail: `Agent's reason: ${reason}\n\nThis affects later requests in this conversation only. The model selector updates when the approved change enters a request. Cache reuse, response quality, and subscription savings are not guaranteed. Compaction and model switching are not supported while these updates are in the history.`,
           options: [
             { label: approve, description: 'Approve this exact change for subsequent requests.' },
             { label: 'Keep current effort', description: 'Continue without changing the reasoning level.' },
@@ -167,7 +213,7 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
       agent.inject(createReasoningUpdateMessage({
         version: 1, sessionId: agent.session.id, baseEffort: before.baseEffort, previousEffort: before.effectiveEffort, effort,
       }))
-      return { status: 'queued', effort, message: `The user approved ${effort}. It becomes effective when the queued notice enters the next request; cancellation may discard pending context. The original model-selector level remains ${before.baseEffort}.` }
+      return { status: 'queued', effort, message: `The user approved ${effort}. It becomes effective when the queued notice enters the next request; cancellation may discard pending context. The model selector updates with that request.` }
     } finally {
       busy.delete(agent)
     }
@@ -175,10 +221,10 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
 
   ctx.tools.register(defineTool({
     name: ASTRA_REASONING_TOOL_NAME,
-    description: 'You are responsible for assessing whether the current effective Astra reasoning effort remains appropriate as the task develops. Proactively use this tool, without waiting for the user to name it, when upcoming work gives a concrete reason to increase or decrease effort. Difficult analysis may warrant an increase; routine follow-up may warrant a decrease. Tool use alone is not a reason to increase effort. Keeping the current level is valid: do not manufacture changes, promise quality or quota savings, or repeatedly ask after a refusal unless the task materially changes. Explain the task-specific reason and requested level. This tool asks the user; only their explicit confirmation authorizes a change in this conversation. Ordinary text and Auto-review cannot authorize it. Read the logged Astra reasoning state and approved notices, not the selector alone. Requires an explicit initial Astra level and an uncompacted main-agent conversation; no defaults or other conversations are changed.',
+    description: 'Assess the current effective Astra reasoning effort at meaningful task transitions, using the next phase\'s unresolved questions and cost of error, not the difficulty of work already completed. Proactively use this tool, without waiting for the user to name it, when a change is justified. Consider increasing effort for uncertain root causes, competing designs, consequential decisions, or new evidence that invalidates the plan. Explicitly consider decreasing effort once the cause, approach, scope, and acceptance criteria are clear and the remaining work is bounded implementation, routine verification, or follow-up. A written plan alone does not justify decreasing effort: concurrency, security, and data migration may remain difficult during implementation. Do not prescribe fixed levels by phase, such as Max for every plan or High for every implementation. Tool use alone is not a reason to increase effort. Optimize for completing the task reliably, including rework and user time, rather than minimizing tokens in one request; never promise quality or quota savings. Keeping the current level is valid. Do not ask on every tool call, manufacture changes, or reopen a refusal or manual choice without materially changed work or evidence. If no change is warranted, continue the task without asking. Give a brief reason naming the upcoming work, what changed, and why the requested level is appropriate. This tool asks the user; its proposal takes effect only after explicit human confirmation. Ordinary text and Auto-review do not authorize it. Respect the latest explicit manual selection; do not silently override it. Read the logged Astra reasoning state and approved notices, not the selector alone. Requires an explicit initial Astra level and an uncompacted main-agent conversation; this tool changes no defaults or other conversations.',
     parameters: {
       effort: { type: 'string', enum: ASTRA_REASONING_EFFORTS, required: true, description: 'Requested reasoning level.' },
-      reason: { type: 'string', required: true, description: 'Brief task-specific reason for increasing or decreasing reasoning effort.' },
+      reason: { type: 'string', required: true, description: 'Briefly name the upcoming work, the changed uncertainty or risk, and why the requested effort is appropriate.' },
     },
     output: {
       schema: { type: 'object', additionalProperties: false, properties: {

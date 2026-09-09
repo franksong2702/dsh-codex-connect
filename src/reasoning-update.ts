@@ -19,6 +19,7 @@ export interface AstraReasoningUpdate {
 /** One immutable request's ordered updates, anchored to ordinary user-message positions. */
 export interface AstraReasoningPlan {
   baseEffort: AstraReasoningEffort
+  requestEffort: AstraReasoningEffort
   effectiveEffort: AstraReasoningEffort
   userCount: number
   updates: ReadonlyArray<{ userIndex: number; text: string; effort: AstraReasoningEffort }>
@@ -39,7 +40,7 @@ export function reasoningUpdateText(update: AstraReasoningUpdate): string {
   return `The user approved changing Astra reasoning effort from ${update.previousEffort} to ${update.effort} for this conversation. The change applies when this message enters the next request. The original request-level effort remains ${update.baseEffort}; other conversations and defaults are unchanged.`
 }
 
-/** Construct only after the DSH human-question provider confirms this exact change. */
+/** Construct after a DSH human answer or a logged explicit model selection. */
 export function createReasoningUpdateMessage(update: AstraReasoningUpdate): UserMessage {
   const source = {
     kind: 'plugin' as const,
@@ -80,7 +81,8 @@ export function readReasoningUpdate(message: Message): AstraReasoningUpdate | un
  * Mixed tool-result/content messages are rejected while updates are active.
  */
 export function planReasoningUpdates(options: GenerateOptions): AstraReasoningPlan | undefined {
-  if (!options.messages.some(message => readReasoningUpdate(message) !== undefined)) return undefined
+  const first = options.messages.map(readReasoningUpdate).find(update => update !== undefined)
+  if (first === undefined) return undefined
   if (options.provider !== 'openai-codex' || options.model !== 'gpt-6-astra' || options.purpose !== undefined) {
     reasoningUpdateError('This conversation contains confirmed Astra reasoning updates. Model switching and auxiliary requests are not supported; use a new conversation.')
   }
@@ -88,18 +90,20 @@ export function planReasoningUpdates(options: GenerateOptions): AstraReasoningPl
     reasoningUpdateError('Confirmed Astra reasoning updates require the original session and an explicit original reasoning level.')
   }
   let userCount = 0
-  let effectiveEffort: AstraReasoningEffort = options.reasoningEffort
+  let effectiveEffort: AstraReasoningEffort = first.baseEffort
+  let previousEffort: AstraReasoningEffort = first.baseEffort
   const updates: Array<{ userIndex: number; text: string; effort: AstraReasoningEffort }> = []
   const ids = new Set<string>()
   for (const message of options.messages) {
     const update = readReasoningUpdate(message)
     if (update !== undefined) {
-      if (update.sessionId !== options.sessionId || update.baseEffort !== options.reasoningEffort
+      if (update.sessionId !== options.sessionId || update.baseEffort !== first.baseEffort
         || update.previousEffort !== effectiveEffort || update.effort === effectiveEffort || ids.has(message.id)) {
         reasoningUpdateError('The Astra reasoning history, original model selection, or session identity changed. Resume the original selection or start a new conversation.')
       }
       ids.add(message.id)
       updates.push({ userIndex: userCount, text: reasoningUpdateText(update), effort: update.effort })
+      previousEffort = effectiveEffort
       effectiveEffort = update.effort
     }
     if (message.role === 'assistant') continue
@@ -112,17 +116,21 @@ export function planReasoningUpdates(options: GenerateOptions): AstraReasoningPl
     }
     userCount++
   }
-  return { baseEffort: options.reasoningEffort, effectiveEffort, userCount, updates }
+  // Old saved headers retain the base; a newly admitted update starts from the prior effective level.
+  if (![first.baseEffort, previousEffort, effectiveEffort].includes(options.reasoningEffort)) {
+    reasoningUpdateError('The selected reasoning level does not match the confirmed Astra history.')
+  }
+  return { baseEffort: first.baseEffort, requestEffort: options.reasoningEffort, effectiveEffort, userCount, updates }
 }
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** Insert updates without changing the request-level effort or any original input item. */
+/** Serialize the original wire effort and position-preserving updates from the effective DSH config. */
 export function applyReasoningUpdates(payload: unknown, plan: AstraReasoningPlan): unknown {
   if (!record(payload) || payload.model !== 'gpt-6-astra' || !Array.isArray(payload.input)
-    || !record(payload.reasoning) || payload.reasoning.effort !== plan.baseEffort) {
+    || !record(payload.reasoning) || payload.reasoning.effort !== plan.requestEffort) {
     reasoningUpdateError('The Astra request does not preserve its original reasoning level.')
   }
   if (payload.context_management !== undefined || (payload.truncation !== undefined && payload.truncation !== 'disabled')
@@ -151,5 +159,6 @@ export function applyReasoningUpdates(payload: unknown, plan: AstraReasoningPlan
   if (userIndex !== plan.userCount || updateIndex !== plan.updates.length) {
     reasoningUpdateError('The Astra request conversion did not preserve its user-message positions.')
   }
-  return { ...payload, input }
+  return { ...payload, input, reasoning: plan.requestEffort === plan.baseEffort
+    ? payload.reasoning : { ...payload.reasoning, effort: plan.baseEffort } }
 }
