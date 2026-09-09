@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+/// <reference types="vitest/jsdom" />
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpenAICodexAccountStore } from '../src/client/account-store.ts'
 import { OpenAICodexModelsCard } from '../src/client/OpenAICodexModelsCard.tsx'
 import { OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
@@ -16,7 +17,11 @@ const signedIn = { status: 'signed-in', usage: { rateLimits: [] }, accounts: [AC
 const stores: OpenAICodexAccountStore[] = []
 function store() { const value = new OpenAICodexAccountStore(); stores.push(value); return value }
 const t = (key: keyof typeof en) => en[key]
-afterEach(() => { cleanup(); stores.forEach(value => value.dispose()); stores.length = 0; vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear() })
+beforeEach(() => {
+  // Vitest aliases window to the Node global, which can already own a different localStorage.
+  vi.stubGlobal('localStorage', jsdom.window.localStorage)
+})
+afterEach(() => { cleanup(); stores.forEach(value => value.dispose()); stores.length = 0; localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('manual callback store', () => {
   it('posts the full URL once with JSON and same-origin credentials; polls acceptance to completion', async () => {
@@ -139,7 +144,7 @@ describe.each(['models', 'settings'] as const)('%s manual callback entry', entry
     return screen.getByRole('textbox', { name: en.manualCallbackLabel }) as HTMLInputElement
   }
   it('requires opt-in, forwards callback, clears submitted input and renders only safe retry feedback', async () => {
-    const writes = vi.spyOn(Storage.prototype, 'setItem')
+    const writes = vi.spyOn(window.Storage.prototype, 'setItem')
     const fetchMock = vi.fn(async (path: string) => path === OPENAI_CODEX_AUTH_CALLBACK_PATH ? Response.json({ error: CALLBACK }, { status: 400 }) : Response.json({ status: 'signing-in', accounts: [] }))
     vi.stubGlobal('fetch', fetchMock)
     const account = store()
