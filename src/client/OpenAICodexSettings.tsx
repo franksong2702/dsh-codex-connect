@@ -337,10 +337,10 @@ function ManualCallbackForm({ t, store }: { t: OpenAICodexSettingsInjected['t'];
   const [expanded, setExpanded] = useState(false)
   const [callbackUrl, setCallbackUrl] = useState('')
   const id = useId()
-  return <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+  return <>
     <button type="button" style={buttonStyle} aria-expanded={expanded} aria-controls={id}
       onClick={() => { setCallbackUrl(''); setExpanded(!expanded) }}>{t('manualCallbackToggle')}</button>
-    {expanded ? <form id={id} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+    {expanded ? <form id={id} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', flexBasis: '100%', minWidth: 0, gap: 10 }}
       onSubmit={event => {
         event.preventDefault()
         if (!callbackUrl.trim() || store.getSnapshot().busy) return
@@ -360,7 +360,7 @@ function ManualCallbackForm({ t, store }: { t: OpenAICodexSettingsInjected['t'];
         <button type="button" style={buttonStyle} onClick={() => { setCallbackUrl(''); setExpanded(false) }}>{t('cancel')}</button>
       </div>
     </form> : null}
-  </div>
+  </>
 }
 
 /** Recovery links, errors and trusted-origin guidance in either account entry. */
@@ -386,21 +386,21 @@ export function AccountFeedback({ t, snapshot, store }: {
   }
 
   return <>
-    {loginUrl === undefined ? null : (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-        <p style={bodyStyle}>{t('authorizationHelp')}</p>
-        <a
+    {loginUrl === undefined ? null : <p style={bodyStyle}>{t('authorizationHelp')}</p>}
+    {loginUrl !== undefined || snapshot.operation.kind === 'waiting-authorization' && !snapshot.busy ? (
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+        {loginUrl === undefined ? null : <a
           href={loginUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{ ...primaryButtonStyle, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
         >
           {t('openLoginInBrowser')}
-        </a>
+        </a>}
+        {snapshot.operation.kind === 'waiting-authorization' && !snapshot.busy
+          ? <ManualCallbackForm key={snapshot.authorizationRevision ?? 0} t={t} store={store} /> : null}
       </div>
-    )}
-    {snapshot.operation.kind === 'waiting-authorization' && !snapshot.busy
-      ? <ManualCallbackForm key={snapshot.authorizationRevision ?? 0} t={t} store={store} /> : null}
+    ) : null}
     {snapshot.callbackFeedback === undefined ? null : <p role="status"
       style={snapshot.callbackFeedback === 'callbackAccepted' || snapshot.callbackFeedback === 'callbackUnconfirmed' ? bodyStyle : errorStyle}>
       {t(snapshot.callbackFeedback)}
