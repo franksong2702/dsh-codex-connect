@@ -34,7 +34,7 @@ Replace `web` with your existing profile name; use that same profile when starti
 
 Open **Settings → Models → Openai-Codex → Authorize**, then complete approval yourself in the browser. If an embedded window is blocked, select **Open ChatGPT sign-in page**. Choose an `openai-codex` model in the normal Harness model picker.
 
-Never paste an authorization URL, code, token, or account identifier into an issue, log, chat, or configuration file. For a browser on another device, follow [Remote browser authorization](docs/reference.md#remote-browser-authorization).
+Never paste an authorization URL, code, token, or account identifier into an issue, log, chat, or configuration file. For a browser on another device, the optional manual callback form can complete the pending login without forwarding the localhost callback port; follow [Remote browser authorization](docs/reference.md#remote-browser-authorization).
 
 ### 3. Check the installation
 

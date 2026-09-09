@@ -1,4 +1,4 @@
 # Bilingual-pair consistency record for the operational reference. Re-record with:
 #   git hash-object docs/reference.md docs/reference.zh.md
-docs/reference.md: 2fb3a716d8f54b3b9de437a521f1457a2a2399d9
-docs/reference.zh.md: 81e470c66e2d36b6029748011d095ac359b67479
+docs/reference.md: b5c180d624bb3a18e34d2c8313b4defb46bf2734
+docs/reference.zh.md: bc323e34bbbb84d6c9a056f0854053b14ee0b519

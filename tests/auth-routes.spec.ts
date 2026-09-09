@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
+  OPENAI_CODEX_AUTH_CALLBACK_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OpenAICodexWebAuth,
   OPENAI_CODEX_AUTH_STATUS_PATH,
@@ -201,6 +202,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     ['login', OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'],
     ['logout', OPENAI_CODEX_AUTH_LOGOUT_PATH, 'POST'],
     ['cancel', OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST'],
+    ['callback', OPENAI_CODEX_AUTH_CALLBACK_PATH, 'POST'],
     ['accounts', OPENAI_CODEX_AUTH_ACCOUNTS_PATH, 'GET'],
   ] as const)('applies the remote-origin boundary to %s', async (_label, path, method) => {
     const route = captureRoutes().find(candidate => candidate.path === path)

@@ -4,6 +4,7 @@ import { BrowserRequestTimeoutError, requestJson } from './request-json.ts'
 import {
   OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_CANCEL_PATH,
+  OPENAI_CODEX_AUTH_CALLBACK_PATH,
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_LOGOUT_PATH,
   OPENAI_CODEX_AUTH_STATUS_PATH,
@@ -42,6 +43,9 @@ export interface AccountSnapshot {
   operation: AccountOperation
   loginUrl?: string
   operationError?: string
+  /** Non-sensitive UI lifecycle marker; never contains callback material. */
+  authorizationRevision?: number
+  callbackFeedback?: 'callbackAccepted' | 'callbackInvalid' | 'callbackNoPending' | 'callbackFailed' | 'callbackUnconfirmed'
 }
 
 class AccountRequestError extends Error {}
@@ -215,7 +219,7 @@ export class OpenAICodexAccountStore {
 
   private publish(snapshot: AccountSnapshot): void {
     if (this.disposed) return
-    this.snapshot = snapshot
+    this.snapshot = { authorizationRevision: this.snapshot.authorizationRevision ?? 0, ...snapshot }
     for (const listener of this.listeners) listener()
   }
 
@@ -278,6 +282,7 @@ export class OpenAICodexAccountStore {
         busy: false,
         operation: server.status.status === 'signing-in' ? { kind: 'waiting-authorization' } : { kind: 'idle' },
         ...server.status.status === 'signing-in' && this.snapshot.loginUrl !== undefined ? { loginUrl: this.snapshot.loginUrl } : {},
+        ...server.status.status === 'signing-in' && this.snapshot.callbackFeedback !== undefined ? { callbackFeedback: this.snapshot.callbackFeedback } : {},
       })
     } catch (error: unknown) {
       if (!controller.signal.aborted) this.publish({
@@ -300,7 +305,7 @@ export class OpenAICodexAccountStore {
     if (popup !== null) popup.opener = null
     const retained = this.snapshot.status.status === 'signed-in' || this.snapshot.status.status === 'reauth-required'
       ? this.snapshot.status : { status: 'signing-in' } as const
-    this.publish({ status: retained, busy: true, accounts: this.snapshot.accounts, operation: { kind: 'starting-authorization' } })
+    this.publish({ status: retained, busy: true, accounts: this.snapshot.accounts, operation: { kind: 'starting-authorization' }, authorizationRevision: (this.snapshot.authorizationRevision ?? 0) + 1 })
     try {
       const challenge = parseChallenge(await this.request(OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'))
       if (this.disposed) { popup?.close(); return }
@@ -325,11 +330,39 @@ export class OpenAICodexAccountStore {
     }
   }
 
+  /** Forward a user-pasted callback once. Only fixed feedback codes enter shared state. */
+  async submitCallback(callbackUrl: string): Promise<void> {
+    if (this.disposed || this.snapshot.busy || this.snapshot.operation.kind !== 'waiting-authorization') return
+    this.stopPolling()
+    const { callbackFeedback: _feedback, operationError: _error, ...retained } = this.snapshot
+    this.publish({ ...retained, busy: true, authorizationRevision: (this.snapshot.authorizationRevision ?? 0) + 1 })
+    let feedback: NonNullable<AccountSnapshot['callbackFeedback']> = 'callbackFailed'
+    try {
+      const pending = requestJson(OPENAI_CODEX_AUTH_CALLBACK_PATH, {
+        method: 'POST', credentials: 'same-origin', signal: this.lifetime.signal,
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({ callbackUrl }),
+      })
+      callbackUrl = ''
+      const { response, value } = await pending
+      feedback = response.ok && isRecord(value) && value['ok'] === true ? 'callbackAccepted'
+        : response.status === 400 ? 'callbackInvalid'
+          : response.status === 409 ? 'callbackNoPending' : 'callbackFailed'
+    } catch (error: unknown) {
+      feedback = error instanceof BrowserRequestTimeoutError ? 'callbackUnconfirmed' : 'callbackFailed'
+    } finally {
+      callbackUrl = ''
+      this.publish({ ...this.snapshot, busy: false, callbackFeedback: feedback })
+      // Acceptance is not completion; a lost reply may also have been accepted.
+      this.schedule()
+    }
+  }
+
   /** Cancel only the pending authorization, preserving an already signed-in account. */
   async cancel(): Promise<void> {
     if (this.disposed || this.snapshot.busy) return
     this.stopPolling()
-    this.publish({ ...this.snapshot, busy: true, operation: { kind: 'cancelling-authorization' } })
+    this.publish({ ...this.snapshot, busy: true, operation: { kind: 'cancelling-authorization' }, authorizationRevision: (this.snapshot.authorizationRevision ?? 0) + 1 })
     try {
       await this.request(OPENAI_CODEX_AUTH_CANCEL_PATH, 'POST')
       const { status, accounts } = await this.readServerState()

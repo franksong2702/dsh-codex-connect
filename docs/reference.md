@@ -142,6 +142,15 @@ dsh plugin --profile web exec dsh-codex-connect untrust-origin http://192.168.1.
 
 Include the scheme and port, never a path, query, or fragment. Do not expose the OAuth route to the public Internet; use an SSH tunnel when the network is not trusted. The Web client displays these commands but never edits the allowlist.
 
+The origin allowlist controls access to DSH; it does not forward OpenAI's localhost callback from your browser device to the DSH host. To finish a pending login without forwarding port 1455:
+
+1. Start **Authorize** (or **Add account**) in the Models or plugin account settings and complete approval in the opened browser tab.
+2. When redirected to `http://localhost:1455/auth/callback`, the remote browser may show a connection error. Copy the **complete URL from its address bar**, including the query string. Do not copy the initial authorization link or only the code.
+3. Return to the same DSH account view, expand the optional manual callback form, paste the URL into its callback URL field, and submit it. The form is collapsed by default; normal automatic callback login is unchanged.
+4. Wait for the account status to update. An invalid URL does not cancel the pending login; paste the correct current callback and retry. If authorization expired or was cancelled, start again and use the new flow's callback. After reloading the DSH page, use **Continue authorization** to rejoin a still-pending login.
+
+The callback must match the pending flow's redirect URI and OAuth state; code-only input, missing or mismatched state, duplicate parameters, and reused callbacks are rejected. Submission uses the existing same-origin/trusted-origin checks and a bounded JSON POST. The pasted URL is not fetched, logged, or persisted by the plugin, and the input is cleared on submission. Tokens remain on the DSH host. Only paste into this dedicated field: the URL contains a short-lived credential and must not be shared in chat, issues, logs, or configuration. Use an SSH tunnel for untrusted networks; manual callback entry does not make an unauthenticated public DSH deployment safe or relax its origin policy.
+
 ### Migration and conflicts
 
 If startup reports an `openai-codex` collision, inspect the effective configuration and remove only the confirmed legacy `dsh-codex` bundle or manual provider row. Do not delete credentials or unrelated providers. See [MIGRATION.md](../MIGRATION.md) for package migration and repair of Alpha 4.10 search histories.

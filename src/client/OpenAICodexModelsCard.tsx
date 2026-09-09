@@ -78,7 +78,7 @@ export function OpenAICodexModelsCard({ t, account, configScope }: OpenAICodexMo
     <div style={{ marginTop: 12 }}>
       <AccountManager t={t} store={account} snapshot={snapshot} compact quotaExpanded={expanded} quotaControlsId={detailsId} onToggleQuota={() => { setExpanded(!expanded) }} />
     </div>
-    <AccountFeedback t={t} snapshot={snapshot} />
+    <AccountFeedback t={t} snapshot={snapshot} store={account} />
     {expanded && status.status === 'signed-in' && <div id={detailsId} style={{ borderTop: '1px solid var(--dsw-alias-border-l2)', marginTop: 12, paddingTop: 12 }}>
       <UsageLimits t={t} usage={status.usage} heading={false} {...status.quotaError === undefined ? {} : { quotaError: status.quotaError }} />
     </div>}
