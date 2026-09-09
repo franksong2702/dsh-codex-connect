@@ -1,6 +1,6 @@
 # Alpha 4.33 dual-DSH release readiness
 
-This is an unpublished candidate, not a compatibility declaration. It depends on PR #172 and includes the merged manual OAuth callback change from PR #171. PR #167 is outside this release scope.
+This is an unpublished candidate, not a compatibility declaration. PR #172 is merged; PR #173 now targets main and includes the merged manual OAuth callback change from PR #171. PR #167 is outside this release scope.
 
 ## Targets
 
@@ -20,7 +20,15 @@ Validation completed on 2026-09-09 with Node `26.5.0`:
 
 The live test used candidate artifact SHA-256 `48ec3ad7fe307b0557ab493a230f8c30b002f2b325ec61bd6d0c7fccbdc264ea`. Later changes affected documentation and development dependency metadata; the runtime implementation was unchanged. This live result is candidate-code evidence, not a claim that the final tarball bytes received live acceptance. The final packed-artifact matrix above is separate evidence. Builds from both dependency environments produced identical runtime chunk bytes.
 
-Fresh OAuth authorization, manual callback and cancellation, enabled optional capabilities, and upgrade acceptance remain unverified. They require evidence or explicit maintainer acceptance of remaining limits before release. The historical verification catalog and public installation recommendation have not been updated. The local checks do not substitute for the CI Node/platform matrix.
+## Follow-up acceptance
+
+PR #172 merged as `fbe05f8323bf88112aa4ea166c2d9c5bd41067cc`. The main merge into PR #173 produced `008e808c6e82eec81e2d4e838bcfd22ea78904fe` with no candidate file changes. All eight reported CI checks passed on that commit, including Node 22.19 and 24, browser regression, Windows contract, dependency review, and CodeQL.
+
+`pnpm run check:canary-workflow` passed 57 workflow and 59 checker assertions after the merge. `pnpm exec vitest run tests/oauth-manual-callback.spec.ts tests/oauth-provider-cancellation.spec.ts tests/oauth-cancel-commit.spec.ts tests/oauth-socket-regression.spec.ts tests/image-asset-routes.spec.ts` exited 0 with 14 tests in five files. These use fixtures, not fresh account authorization.
+
+Isolated upgrade acceptance exited 0 on both exact DSH targets. Each installed published plugin `0.1.0-alpha.4.32`, generated a tool round trip and continuation through the real agent loop with offline model responses, disposed the runtime, and upgraded with the DSH plugin CLI to candidate artifact `847a4ec08a5a31c33a0b771f00d7cee33af6429509cab9c2c1dfef8a11fdf063`. A new process loaded `0.1.0-alpha.4.33`, resumed the persisted session, recovered both expected answer messages, and verified the five calibrated Astra efforts. The profile configuration and fixture credential file were byte-identical after upgrade. No live model requests were made; private fixture data and temporary installations were removed. This proves the isolated fixture upgrade path, not an upgrade of either existing user service or a post-upgrade live account request.
+
+Fresh OAuth authorization, manual callback and cancellation, and enabled optional capabilities remain unverified. They require evidence or explicit maintainer acceptance of remaining limits before release. The historical verification catalog and public installation recommendation have not been updated.
 
 ## Release boundary
 
