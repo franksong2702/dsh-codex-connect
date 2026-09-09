@@ -98,7 +98,7 @@ function parseOneLineJson(output, label) {
   }
 }
 
-function assertDoctorJson(value, dshHome, repoRoot) {
+function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersion = false, dshVersion = DEFAULT_DSH_VERSION } = {}) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new CompatibilityCheckError('doctor JSON must be an object')
   }
@@ -111,7 +111,8 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   }
   const compatibility = report['compatibility']
   const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai']
-  if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || compatibility?.['status'] !== 'compatible') {
+  const acceptedStatuses = allowUndeclaredCanaryVersion ? ['compatible', 'unverified'] : ['compatible']
+  if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || !acceptedStatuses.includes(compatibility?.['status'])) {
     throw new CompatibilityCheckError('doctor JSON did not report schemaVersion 1 and compatible runtime dependencies')
   }
   if (compatibility?.['node']?.['status'] !== 'compatible') {
@@ -120,14 +121,32 @@ function assertDoctorJson(value, dshHome, repoRoot) {
   for (const name of expectedPackages) {
     const entry = compatibility?.['packages']?.[name]
     const supported = name === '@earendil-works/pi-ai' ? '^0.84.2' : DEFAULT_DSH_VERSION
-    if (entry?.['supported'] !== supported || typeof entry?.['installed'] !== 'string' || entry?.['status'] !== 'compatible') {
+    if (entry?.['supported'] !== supported || typeof entry?.['installed'] !== 'string'
+      || entry['installed'].length === 0 || !acceptedStatuses.includes(entry?.['status'])) {
       throw new CompatibilityCheckError(`doctor JSON did not report compatible ${name}`)
+    }
+    if (name !== '@earendil-works/pi-ai' && entry['installed'] !== dshVersion) {
+      throw new CompatibilityCheckError(`doctor JSON did not report the requested DSH version for ${name}`)
     }
   }
   const serialized = JSON.stringify(report)
   for (const forbidden of [dshHome, repoRoot, 'authorization', 'access-token', 'refresh-token', 'account-id']) {
     if (serialized.includes(forbidden)) throw new CompatibilityCheckError(`doctor JSON exposed forbidden text: ${forbidden}`)
   }
+}
+
+/** Validate the installed doctor's process result before checking the runtime. */
+export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
+  const candidateDiagnostic = options.allowUndeclaredCanaryVersion === true && result.status === 1
+    && commandFailureClassification(result, 'compatibility') !== 'infrastructure'
+  if (!candidateDiagnostic) requireSuccess('plugin doctor', result, 'compatibility')
+  const report = parseOneLineJson(result.stdout, 'plugin doctor')
+  assertDoctorJson(report, dshHome, repoRoot, options)
+  // Only a validated version warning explains the doctor's expected nonzero exit.
+  if (result.status !== 0 && report.compatibility.status !== 'unverified') {
+    requireSuccess('plugin doctor', result, 'compatibility')
+  }
+  return report
 }
 
 async function main() {
@@ -236,9 +255,7 @@ async function main() {
     const doctor = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'exec', 'dsh-codex-connect', 'doctor', '--json',
     ], { cwd: workspace, env })
-    requireSuccess('plugin doctor', doctor, 'compatibility')
-    const doctorReport = parseOneLineJson(doctor.stdout, 'plugin doctor')
-    assertDoctorJson(doctorReport, dshHome, REPO_ROOT)
+    validateDoctorResult(doctor, dshHome, REPO_ROOT, { allowUndeclaredCanaryVersion, dshVersion })
 
     const runtime = await runCommand(process.execPath, [
       RUNTIME_CHECK,
