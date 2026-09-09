@@ -148,7 +148,7 @@ assertContract(
 )
 assertContract(
   'candidate checks compose the installed profile before plugin commands',
-  /\['web', '--help'\][\s\S]*?installed profile boot[\s\S]*?plugin doctor/u.test(installCheck),
+  /\['web', '--help'\][\s\S]*?installed profile boot[\s\S]*?validateDoctorResult\(doctor[\s\S]*?installed runtime contract/u.test(installCheck),
 )
 assertContract('publishing and deployment commands are absent', !/npm publish|gh release create|\bdeploy\b|3080|3081/iu.test(workflow))
 assertContract(
