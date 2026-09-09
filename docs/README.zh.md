@@ -16,15 +16,15 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.32` |
-| DeepSeek Harness | `0.1.2-rc.1` |
+| Codex Connect | `0.1.0-alpha.4.33` |
+| DeepSeek Harness | `0.1.2-rc.1` 或 `0.1.5-alpha.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.32
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.33
 dsh web
 ```
 
