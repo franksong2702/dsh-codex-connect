@@ -114,6 +114,8 @@ The main plugin options are:
 
 ### Local installation diagnostics
 
+Published Alpha 4.33 can fail to list or prepare Codex models on DSH `0.1.5-rc.1` with `Cannot read properties of undefined (reading 'get')`. That host requires a per-model error index absent from the older plugin profile. Builds containing [the Issue #178 fix](https://github.com/franksong2702/dsh-codex-connect/issues/178) initialize the index; re-authorizing does not supply it. Choose an exact plugin release verified with your host version, not merely one with the same Alpha series.
+
 Run `dsh plugin --profile web exec dsh-codex-connect doctor --json` to inspect local installation metadata without a network request. Compatibility statuses mean: `compatible` matches the declared version requirements, not a behavioral test; `unverified` identifies package versions outside the declared support set; `unknown` means required version metadata is missing or unreadable; `incompatible` identifies a Node version outside the declared engine requirement. The aggregate prioritizes `incompatible`, then `unknown`, then `unverified`. Doctor exits `1` for any non-compatible result or unsafe credential-file metadata; this does not authorize or recommend changing DSH.
 
 The normal update card checks only Codex Connect releases. It reuses successful plugin-version checks for up to 24 hours and retries unavailable checks every five minutes while mounted; a manual check bypasses the cache. It neither queries host compatibility nor recommends host upgrades or downgrades. An unlisted DSH/plugin combination requires verification, not an assumption of failure.

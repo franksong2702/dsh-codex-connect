@@ -225,7 +225,7 @@ const candidateDoctor = {
     status: 'unverified',
     node: { status: 'compatible' },
     packages: Object.fromEntries(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai'].map(name => [name, {
-      supported: name === '@earendil-works/pi-ai' ? '^0.84.2 || 0.85.1' : '0.1.2-rc.1 || 0.1.5-alpha.1',
+      supported: name === '@earendil-works/pi-ai' ? '^0.84.2 || 0.85.1' : '0.1.2-rc.1 || 0.1.5-alpha.1 || 0.1.5-rc.1',
       installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.6-alpha.1',
       status: 'unverified',
     }])),
