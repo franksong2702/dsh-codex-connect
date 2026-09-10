@@ -28,6 +28,7 @@ export type OpenAICodexUpdateHighlightKind =
   | 'astra-compatibility'
   | 'multi-account'
   | 'search-route'
+  | 'image-model-hint'
 
 export interface OpenAICodexUpdateHighlight {
   version: string
@@ -73,6 +74,7 @@ const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'astra-compatibility',
   'multi-account',
   'search-route',
+  'image-model-hint',
 ]
 
 function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {

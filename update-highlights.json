@@ -104,6 +104,10 @@
     {
       "version": "0.1.0-alpha.4.33",
       "highlights": ["runtime-compatibility"]
+    },
+    {
+      "version": "0.1.0-alpha.4.34",
+      "highlights": ["runtime-compatibility", "image-model-hint"]
     }
   ]
 }
