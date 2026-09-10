@@ -30,7 +30,7 @@ function assertContract(name, condition) {
 
 assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
 assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
-const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1']
+const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2']
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,

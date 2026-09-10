@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "pluginVersion": "0.1.0-alpha.4.34",
+  "sameArtifact": true,
+  "reports": [
+    {
+      "schemaVersion": 1,
+      "dshVersion": "0.1.2-rc.1",
+      "nodeVersion": "v24.19.0",
+      "plugin": "dsh-codex-connect",
+      "pluginVersion": "0.1.0-alpha.4.34",
+      "pluginArtifactSha256": "d9ac135f1a77b9b8e882c25b145624597c1213d6dcde970630818cbd2c405f65",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 8,
+        "reasoningModelCount": 8,
+        "preparedModelCount": 8,
+        "disposalVerified": true
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "dshVersion": "0.1.5-alpha.1",
+      "nodeVersion": "v24.19.0",
+      "plugin": "dsh-codex-connect",
+      "pluginVersion": "0.1.0-alpha.4.34",
+      "pluginArtifactSha256": "d9ac135f1a77b9b8e882c25b145624597c1213d6dcde970630818cbd2c405f65",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 8,
+        "reasoningModelCount": 8,
+        "preparedModelCount": 8,
+        "disposalVerified": true
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "dshVersion": "0.1.5-rc.1",
+      "nodeVersion": "v24.19.0",
+      "plugin": "dsh-codex-connect",
+      "pluginVersion": "0.1.0-alpha.4.34",
+      "pluginArtifactSha256": "d9ac135f1a77b9b8e882c25b145624597c1213d6dcde970630818cbd2c405f65",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 8,
+        "reasoningModelCount": 8,
+        "preparedModelCount": 8,
+        "disposalVerified": true
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "dshVersion": "0.1.5-rc.2",
+      "nodeVersion": "v24.19.0",
+      "plugin": "dsh-codex-connect",
+      "pluginVersion": "0.1.0-alpha.4.34",
+      "pluginArtifactSha256": "d9ac135f1a77b9b8e882c25b145624597c1213d6dcde970630818cbd2c405f65",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 8,
+        "reasoningModelCount": 8,
+        "preparedModelCount": 8,
+        "disposalVerified": true
+      }
+    }
+  ]
+}

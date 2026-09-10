@@ -11,7 +11,7 @@ const PACKAGE_FILE = join(REPO_ROOT, 'package.json')
 const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 const REQUIRED_DSH_VERSION = '0.1.2-rc.1'
-const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.1.5-alpha.1', '0.1.5-rc.1']
+const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2']
 const REQUIRED_DSH_RANGE = REQUIRED_DSH_VERSIONS.join(' || ')
 const REQUIRED_PI_AI_RANGE = '^0.84.2 || 0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
