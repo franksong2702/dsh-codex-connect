@@ -6,6 +6,7 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
 import {
   isValidOpenAICodexContextWindowOverrides,
+  isValidOpenAICodexImageModelHint,
   isValidOpenAICodexProxyUrl,
   normalizeOpenAICodexProxyUrl,
 } from '../settings-contract.ts'
@@ -104,6 +105,7 @@ const CONFIG_FIELDS = [
   'proxyUrl',
   'enableImageTool',
   'enableImageGeneration',
+  'imageModelHint',
   'autoReviewDisclosureAcknowledged',
   'enableAutoReview',
   'searchModel',
@@ -372,6 +374,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
     && Number.isInteger(draft.searchMaxOutputTokens)
     && draft.searchMaxOutputTokens > 0
   const validProxy = draft !== undefined && isValidOpenAICodexProxyUrl(draft.proxyUrl)
+  const validImageModelHint = draft !== undefined && isValidOpenAICodexImageModelHint(draft.imageModelHint)
   const normalizedManualProxy = normalizeOpenAICodexProxyUrl(manualProxyUrl)
   const manualProxyEntered = manualProxyUrl.trim().length > 0
   const testedManualProxy = normalizedManualProxy !== undefined
@@ -389,7 +392,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
       const model = modelCatalog?.find(entry => entry.id === id)
       return model !== undefined && isValidOpenAICodexContextBudget(budget, model.maxContextWindow)
     })
-  const valid = validModel && validTokens && validProxy && validContexts && validProxySelection
+  const valid = validModel && validTokens && validProxy && validImageModelHint && validContexts && validProxySelection
 
   const save = async (): Promise<void> => {
     if (scope === undefined || draft === undefined || !snapshot.writable || !valid) return
@@ -782,6 +785,17 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
               <span style={bodyStyle}>{t('enableImageGenerationHelp')}</span>
             </span>
           </label>
+          <label style={formFieldStyle}>
+            <span style={labelStyle}>{t('imageModelHint')}</span>
+            <input
+              style={controlStyle}
+              value={draft.imageModelHint}
+              placeholder={t('imageModelHintDefault')}
+              aria-invalid={!validImageModelHint}
+              onChange={event => { update('imageModelHint', event.currentTarget.value) }}
+            />
+            <span style={bodyStyle}>{t('imageModelHintHelp')}</span>
+          </label>
           <label style={toggleRowStyle}>
             <input
               type="checkbox"
@@ -819,6 +833,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
       {visibleModule === 'capabilities' && !validModel && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchModel')}</p> : null}
       {visibleModule === 'capabilities' && !validTokens && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidSearchTokens')}</p> : null}
       {visibleModule === 'network' && !validProxy && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidProxyUrl')}</p> : null}
+      {visibleModule === 'capabilities' && !validImageModelHint && draft !== undefined ? <p style={errorStyle} role="alert">{t('invalidImageModelHint')}</p> : null}
       {visibleModule === 'capabilities' ? <p style={bodyStyle}>{t('routingNote')}</p> : null}
       <div style={{ ...actionsStyle, position: 'sticky', bottom: 0, zIndex: 1, padding: '10px 0', background: 'var(--dsw-alias-bg-layer-1, white)' }}>
         <span aria-live="polite">

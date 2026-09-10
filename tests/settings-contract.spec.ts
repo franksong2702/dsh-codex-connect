@@ -3,6 +3,7 @@ import {
   DEFAULT_OPENAI_CODEX_PROXY_URL,
   DEFAULT_OPENAI_CODEX_SETTINGS,
   decodeOpenAICodexSettings,
+  isValidOpenAICodexImageModelHint,
   isValidOpenAICodexContextWindowOverrides,
   resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
@@ -10,6 +11,15 @@ import {
 import { Config } from '../src/index.ts'
 
 describe('OpenAI Codex proxy settings contract', () => {
+  it('validates and defaults the optional image model hint', () => {
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.imageModelHint).toBe('')
+    expect(isValidOpenAICodexImageModelHint('gpt-image-2')).toBe(true)
+    expect(isValidOpenAICodexImageModelHint('')).toBe(true)
+    expect(isValidOpenAICodexImageModelHint('https://evil.example')).toBe(false)
+    expect(isValidOpenAICodexImageModelHint('bad value')).toBe(false)
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, imageModelHint: 'custom_model' })?.imageModelHint).toBe('custom_model')
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, imageModelHint: 'bad value' })).toBeUndefined()
+  })
   it('keeps fresh and legacy settings on direct connection', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.autoReviewDisclosureAcknowledged).toBe(false)

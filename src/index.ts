@@ -103,6 +103,7 @@ import type { OpenAICodexSearchContextSize, OpenAICodexSearchMode } from './sear
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from './store.ts'
 import {
   DEFAULT_OPENAI_CODEX_PROXY_URL,
+  parseOpenAICodexImageModelHint,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
   isValidOpenAICodexProxyUrl,
   resolveOpenAICodexProxyUrl,
@@ -113,7 +114,9 @@ import {
 export {
   decodeOpenAICodexSettings,
   DEFAULT_OPENAI_CODEX_PROXY_URL,
+  DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
   DEFAULT_OPENAI_CODEX_SETTINGS,
+  isValidOpenAICodexImageModelHint,
   isValidOpenAICodexContextWindowOverrides,
   isValidOpenAICodexProxyUrl,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
@@ -252,6 +255,8 @@ export interface Config {
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean
+  /** Optional profile-scoped image route model hint; empty uses the default route hint. */
+  imageModelHint?: string
   /** Record that this profile accepted the Auto-review data disclosure. */
   autoReviewDisclosureAcknowledged?: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
@@ -278,6 +283,7 @@ export const Config: z<Config> = z.object({
   enableSearch: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
+  imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
   autoReviewDisclosureAcknowledged: z.boolean().default(false),
   enableAutoReview: z.boolean().default(false),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
@@ -311,7 +317,7 @@ export function apply(ctx: Context, config: Config): void {
   )
   const fastMode = new FastModeRegistry()
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
-  new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl)
+  new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
   registerOpenAICodexAutoReview(
     ctx,
     credentials,
