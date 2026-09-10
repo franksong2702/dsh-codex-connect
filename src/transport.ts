@@ -10,6 +10,7 @@ import {
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT, parseOpenAICodexImageModelHint } from './settings-contract.ts'
 
 /** Cordis service name owned by the core plugin fiber. */
 export const OPENAI_CODEX_TRANSPORT_SERVICE = 'openaiCodexTransport'
@@ -238,6 +239,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     private readonly credentials: OpenAICodexCredentialStore,
     private readonly proxyManager?: OpenAICodexProxyManager,
     private readonly resolveProxyUrl: () => string | undefined = () => undefined,
+    private readonly resolveImageModelHint: () => string = () => DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
   ) {
     super(ctx, OPENAI_CODEX_TRANSPORT_SERVICE)
   }
@@ -260,6 +262,12 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     }
     if (isAborted(context.signal)) {
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.canceled)
+    }
+    let imageModelHint: string
+    try {
+      imageModelHint = parseOpenAICodexImageModelHint(this.resolveImageModelHint()) || IMAGE_ROUTE_HINT_MODEL
+    } catch {
+      throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.invalidRequest)
     }
 
     const credentials = await this.credentials.captureActiveAccount()
@@ -309,7 +317,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
           accept: 'application/json',
           'user-agent': 'dsh-codex-connect',
         },
-        body: JSON.stringify({ model: IMAGE_ROUTE_HINT_MODEL, prompt: input.prompt }),
+        body: JSON.stringify({ model: imageModelHint, prompt: input.prompt }),
       })
       if (!response.ok) {
         try {

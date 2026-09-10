@@ -62,6 +62,7 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 - 搜索从认证开始到读完响应共用 30 秒总期限。超过 1 MiB 的响应会被拒绝，失败时会取消尚未读完的响应体。调用方也可以提前取消搜索。
 - `enableImageTool: true` 为具备视觉能力的模型注册 `view_image`。远程读取只接受不带凭据的公网 HTTP(S)，并重新检查 DNS 与重定向。
 - `enableImageGeneration: true` 注册只接受提示词的 GPT Image 图片生成。使用你当前 GPT 订阅计划提供的图片生成能力。可用性、尺寸和额度仍由账户及服务端控制。
+- `imageModelHint` 是“插件配置”或 profile config 中的可选设置，按 profile 保存。留空使用 `gpt-image-2`；自定义值接受 1–128 个 ASCII 字母、数字、点、下划线或连字符，且必须以字母或数字开头。保存后会修改后续图片请求的 `model` 字段，仍使用同一固定端点；清空可恢复默认值。工具仍只接受 `prompt`。这是未经验证的路由提示：服务端可能忽略或拒绝，也不保证返回指定模型。
 
 生成的原文件保存在 `$DSH_HOME/dsh-codex-connect/images/v1`；对话会收到另一份 DSH 附件预览。结果卡片会报告尺寸和文件大小，并可下载任一版本。原文件仅允许所有者访问，下载前会校验完整性，并且只对创建会话及继承了该结果的 fork 开放。关闭能力或卸载插件不会自动删除这些文件。
 
@@ -102,6 +103,7 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 | `enableSearch` | `false` | 注册 Codex 搜索，并在保存时将它选为搜索提供方 |
 | `enableImageTool` | `false` | 注册 `view_image` |
 | `enableImageGeneration` | `false` | 注册 GPT Image 图片生成 |
+| `imageModelHint` | 空字符串 | 可选的未验证图片路由提示；留空保持默认请求 |
 | `enableAutoReview` | `false` | 使用 Codex 审查符合条件的审批请求 |
 | `searchModel` | `gpt-5.6-sol` | 独立搜索使用的模型 |
 | `searchMode` | `cached` | `cached`、`indexed` 或 `live` |

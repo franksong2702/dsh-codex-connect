@@ -6,6 +6,22 @@ export const OPENAI_CODEX_SETTINGS_NAMESPACE = 'llm-openai-codex'
 /** Suggested local HTTP proxy shown by the settings UI; it is never enabled by default. */
 export const DEFAULT_OPENAI_CODEX_PROXY_URL = 'http://127.0.0.1:7890'
 
+/** Empty profile setting, which makes image requests use the default route hint. */
+export const DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT = ''
+
+/** Validate an optional bounded ASCII image route model hint. */
+export function isValidOpenAICodexImageModelHint(value: unknown): value is string {
+  return typeof value === 'string' && (value === '' || /^(?=.{1,128}$)[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(value))
+}
+
+/** Parse an image route model hint without exposing malformed input. */
+export function parseOpenAICodexImageModelHint(value: unknown): string {
+  if (!isValidOpenAICodexImageModelHint(value)) {
+    throw new TypeError('OpenAI Codex imageModelHint must be empty or a bounded ASCII model slug')
+  }
+  return value
+}
+
 /**
  * Normalize the credential-free HTTP proxy URL accepted by Codex Connect.
  * Paths, query strings, fragments, and embedded credentials are rejected so
@@ -94,6 +110,8 @@ export interface OpenAICodexSettingsConfig {
   enableSearch: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
+  /** Optional profile-scoped model hint for image generation; empty uses the route default. */
+  imageModelHint: string
   /** Whether this profile accepted the Auto-review data disclosure. */
   autoReviewDisclosureAcknowledged: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
@@ -112,6 +130,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   enableSearch: false,
   enableImageTool: false,
   enableImageGeneration: false,
+  imageModelHint: DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
   autoReviewDisclosureAcknowledged: false,
   enableAutoReview: false,
   searchModel: DEFAULT_OPENAI_CODEX_SEARCH_MODEL,
@@ -133,6 +152,7 @@ export function resolveOpenAICodexSettings(
   if (!isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
   }
+  parseOpenAICodexImageModelHint(resolved.imageModelHint)
   return { ...resolved, contextWindowOverrides: resolveOpenAICodexContextWindowOverrides(resolved.contextWindowOverrides) }
 }
 
@@ -158,6 +178,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const enableSearch = value['enableSearch']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
+  const imageModelHint = value['imageModelHint']
   const autoReviewDisclosureAcknowledged = value['autoReviewDisclosureAcknowledged']
   const enableAutoReview = value['enableAutoReview']
   const searchModel = value['searchModel']
@@ -171,6 +192,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
+  if (imageModelHint !== undefined && !isValidOpenAICodexImageModelHint(imageModelHint)) return undefined
   // Older Host snapshots predate the disclosure acknowledgement; absence requires confirmation.
   if (autoReviewDisclosureAcknowledged !== undefined && typeof autoReviewDisclosureAcknowledged !== 'boolean') return undefined
   // Older Host snapshots predate Auto-review; absence maps to its safe default.
@@ -188,6 +210,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     enableSearch,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,
+    imageModelHint: imageModelHint ?? DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
     autoReviewDisclosureAcknowledged: autoReviewDisclosureAcknowledged ?? false,
     enableAutoReview: enableAutoReview ?? false,
     searchModel,

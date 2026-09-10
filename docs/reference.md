@@ -62,6 +62,7 @@ Direct connection is the default. An enabled credential-free HTTP(S) proxy appli
 - Search has a 30-second total deadline covering authentication, response headers and body reading. Responses larger than 1 MiB are rejected, and unfinished response bodies are cancelled on failure. Caller cancellation can end a search sooner.
 - `enableImageTool: true` registers `view_image` on vision-capable models. Remote reads accept credential-free public HTTP(S) only and revalidate DNS and redirects.
 - `enableImageGeneration: true` registers prompt-only GPT Image generation. Use the image generation capability included with your current GPT subscription. Availability, dimensions, and quota remain account- and service-controlled.
+- `imageModelHint` is an optional profile-scoped setting in Plugin configuration or the profile config. Empty uses `gpt-image-2`; a custom value accepts 1–128 ASCII letters, digits, dots, underscores, or hyphens and must start with a letter or digit. Saving changes the `model` field of subsequent image requests to the same fixed endpoint; clearing restores the default. The tool still accepts only `prompt`. This is an unverified route hint: the service may ignore or reject it, and it does not guarantee the returned model.
 
 Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; the conversation receives a separate DSH attachment preview. The result card reports dimensions and file sizes and can download either representation. Originals are owner-only, integrity-checked, and available only to the creating session and forks that inherited the result. Disabling or uninstalling the plugin does not delete those files automatically.
 
@@ -102,6 +103,7 @@ The main plugin options are:
 | `enableSearch` | `false` | Register Codex search and select it when the setting is saved |
 | `enableImageTool` | `false` | Register `view_image` |
 | `enableImageGeneration` | `false` | Register GPT Image generation |
+| `imageModelHint` | empty | Optional unverified image route hint; empty keeps the default request |
 | `enableAutoReview` | `false` | Review eligible approval requests with Codex |
 | `searchModel` | `gpt-5.6-sol` | Model used by standalone search |
 | `searchMode` | `cached` | `cached`, `indexed`, or `live` |

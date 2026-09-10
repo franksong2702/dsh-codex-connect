@@ -420,6 +420,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.click(screen.getByRole('tab', { name: en.capabilitiesModule }))
     const enableSearch = await screen.findByRole('checkbox', { name: /Enable Codex search provider/u }) as HTMLInputElement
     const enableImageGeneration = screen.getByRole('checkbox', { name: /Enable GPT Image generation/u }) as HTMLInputElement
+    const imageModelHint = screen.getByRole('textbox', { name: /Image route model hint/u }) as HTMLInputElement
     const enableAutoReview = screen.getByRole('checkbox', { name: /Codex Auto-review/u }) as HTMLInputElement
     const model = screen.getByRole('textbox', { name: en.searchModel }) as HTMLInputElement
     const save = screen.getByRole('button', { name: en.save }) as HTMLButtonElement
@@ -427,6 +428,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(save.style.color).toBe('var(--dsw-alias-label-primary-foreground)')
     expect(enableSearch.checked).toBe(false)
     expect(enableImageGeneration.checked).toBe(false)
+    expect(imageModelHint.placeholder).toContain('gpt-image-2')
     expect(enableAutoReview.checked).toBe(false)
     expect(en.enableImageGenerationHelp).toBe('Let GPT models use GPT Image to generate images in conversations.')
     expect(zh.enableImageGeneration).toBe('启用 GPT Image 图片生成')
@@ -455,6 +457,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.change(screen.getByRole('combobox', { name: en.searchMode }), { target: { value: 'live' } })
     fireEvent.change(screen.getByRole('spinbutton', { name: en.searchMaxOutputTokens }), { target: { value: '2048' } })
     fireEvent.click(enableImageGeneration)
+    fireEvent.change(imageModelHint, { target: { value: 'custom-image-route' } })
     fireEvent.click(enableAutoReview)
     expect(screen.getByRole('dialog', { name: en.autoReviewConfirmTitle })).toBeTruthy()
     expect(enableAutoReview.checked).toBe(false)
@@ -472,6 +475,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['searchMode'], value: 'live' }]), expect.any(Number))
     expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['searchMaxOutputTokens'], value: 2048 }]), expect.any(Number))
     expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['enableImageGeneration'], value: true }]), expect.any(Number))
+    expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['imageModelHint'], value: 'custom-image-route' }]), expect.any(Number))
     expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['autoReviewDisclosureAcknowledged'], value: true }]), expect.any(Number))
     expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['enableAutoReview'], value: true }]), expect.any(Number))
     fireEvent.click(enableAutoReview)
@@ -480,6 +484,22 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.click(enableAutoReview)
     expect(enableAutoReview.checked).toBe(true)
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps an invalid image hint staged and disables Save until it is cleared', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, imageModelHint: 'existing-route' })
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const hint = await screen.findByRole('textbox', { name: /Image route model hint/u }) as HTMLInputElement
+    const save = screen.getByRole('button', { name: en.save }) as HTMLButtonElement
+    fireEvent.change(hint, { target: { value: 'https://invalid.example' } })
+    expect(save.disabled).toBe(true)
+    expect(mutate).not.toHaveBeenCalled()
+    fireEvent.change(hint, { target: { value: '' } })
+    expect(save.disabled).toBe(false)
+    fireEvent.click(save)
+    await screen.findByText(en.settingsSaved)
+    expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['imageModelHint'], value: '' }]), expect.any(Number))
   })
 
   it('stages model visibility in provider order and saves it with the other plugin settings', async () => {
