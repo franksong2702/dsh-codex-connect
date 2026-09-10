@@ -43,6 +43,7 @@ Fresh installations register the model provider and leave every additional capab
   config:
     enableProxy: false
     enableSearch: false
+    enableReserveFallback: false
     enableImageTool: false
     enableImageGeneration: false
     enableAutoReview: false
@@ -55,6 +56,22 @@ Edit these options under **Settings → Plugins → Plugin configuration → Cod
 Disabling the proxy or unloading the plugin gives active proxy operations one second to finish, then destroys this instance's pools with a further one-second completion limit. New proxy operations are rejected during shutdown; interrupted requests are not retried directly. Arbitrary application callbacks cannot be forcibly terminated by the proxy manager. The scoped dispatcher remains until late callbacks settle, so they cannot bypass their destroyed proxy; unrelated traffic still uses the host dispatcher.
 
 Direct connection is the default. An enabled credential-free HTTP(S) proxy applies only to this plugin's model, OAuth, refresh, quota, search, image, and Auto-review traffic. Detection checks standard proxy environment variables and documented loopback candidates without making a model call, consuming quota, or saving settings. A failed proxy request never silently retries through a direct connection. Loading Codex Connect does not replace Node's environment-proxy dispatcher, so unrelated Harness requests continue using the process's existing proxy policy.
+
+### Luna Reserve fallback
+
+`enableReserveFallback: true` opts agent requests into backend-authorized Luna Reserve fallback. The plugin performs one authenticated quota `GET` at the start of each opted-in agent step, using the access token and account captured for that step. A matching authorization issues a one-shot permit for the next `gpt-reserve` dispatch in that session and account; dispatch consumes it without a second quota request. Cancellation, replacement, an agent error, or turn stopping revokes an unused permit. Direct, auxiliary, stale, and manually selected Reserve calls have no fresh permit and fail before a model request. With the option disabled, ordinary agent steps do not query Reserve usage, while a session already on Reserve requires an explicitly selected ordinary model.
+
+The access token must contain non-empty `chatgpt_account_id` and `chatgpt_user_id` (or `user_id`) claims under `https://api.openai.com/auth`, and `chatgpt_account_is_fedramp` must be absent or `false`. Missing, partial, FedRAMP, changed, or response-mismatched identity disables fallback for that step. The plugin does not guess identity from an email address or subscription plan.
+
+The plugin routes to the hidden model only when the quota response matches both the captured account and user and supplies a valid Luna Reserve authorization banner for the applicable model. A generic HTTP `429`, a rounded quota percentage, a reset time, or a Reserve model name is not authorization and is never retried as Reserve. This version accepts only the known `gpt-5.6-luna` Reserve metadata; other metadata is not inferred. The server decides eligibility and whether `5h`, weekly, or another backend limit causes Reserve authorization.
+
+Before entering Reserve, the plugin atomically saves the session's ordinary model request controls in a private `codex-connect-reserve/<SHA-256 of session id>.json` file beside the Codex credential file. The record contains a hash of the account/user pair and the ordinary model, reasoning effort, temperature, output limit, and stop sequences; it does not contain a bearer token or raw account and user ids. The Reserve request omits those ordinary controls and uses Luna's own defaults. A later identity-matched quota response must explicitly allow ordinary usage before the complete saved request configuration is restored. A missing, corrupt, oversized, wrong-account, or fork-without-its-own return record is never guessed or inherited: select an ordinary model explicitly to continue.
+
+Reserve is not exposed in model discovery, does not modify profile-wide defaults, and does not grant extra or unlimited quota.
+
+Reserve uses Luna's 272,000-token catalog context window, not the previous model's larger window. This release does not authorize automatic or manual compaction calls through Reserve. Switching a long conversation can therefore exceed Luna's context limit; compact before ordinary usage runs out or configure a separate, available summarization model. The plugin does not claim a cross-host exact token preflight or automatic long-context recovery.
+
+Automated coverage uses synthetic tokens and quota responses. It verifies local routing and restoration rules without contacting a real account, and therefore does not establish live account eligibility, available quota, or current server policy.
 
 ### Search and image tools
 
@@ -101,6 +118,7 @@ The main plugin options are:
 | `proxyUrl` | `http://127.0.0.1:7890` | Credential-free HTTP(S) proxy origin; inactive until enabled |
 | `contextWindowOverrides` | none | Per-model client context-budget overrides |
 | `enableSearch` | `false` | Register Codex search and select it when the setting is saved |
+| `enableReserveFallback` | `false` | Follow identity-matched, backend-authorized Luna Reserve transitions for agent requests |
 | `enableImageTool` | `false` | Register `view_image` |
 | `enableImageGeneration` | `false` | Register GPT Image generation |
 | `imageModelHint` | empty | Optional unverified image route hint; empty keeps the default request |

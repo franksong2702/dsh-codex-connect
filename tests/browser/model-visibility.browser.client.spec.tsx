@@ -216,6 +216,39 @@ describe('Codex model visibility in Chromium', () => {
     await expect.element(page.getByRole('dialog', { name: en.autoReviewConfirmTitle, exact: true })).not.toBeInTheDocument()
   })
 
+  it('saves, stages, discards, and disables Reserve fallback in Chromium', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t }))
+    await page.getByRole('tab', { name: en.capabilitiesModule, exact: true }).click()
+    const reserve = page.getByRole('checkbox', { name: /Automatic Luna Reserve/u })
+
+    await expect.element(reserve).not.toBeChecked()
+    await reserve.click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await vi.waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith([
+        { op: 'set', path: ['enableReserveFallback'], value: true },
+      ], 0)
+      expect(scope.getSnapshot().value?.enableReserveFallback).toBe(true)
+    })
+
+    await reserve.click()
+    await expect.element(reserve).not.toBeChecked()
+    await page.getByRole('button', { name: en.discard, exact: true }).click()
+    await expect.element(reserve).toBeChecked()
+    expect(mutate).toHaveBeenCalledTimes(1)
+
+    await reserve.click()
+    await page.getByRole('button', { name: en.save, exact: true }).click()
+    await vi.waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith([
+        { op: 'set', path: ['enableReserveFallback'], value: false },
+      ], 1)
+      expect(scope.getSnapshot().value?.enableReserveFallback).toBe(false)
+    })
+  })
+
   it('shows the full catalog, saves a subset, and stays inside a narrow viewport', async () => {
     const models = [
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },

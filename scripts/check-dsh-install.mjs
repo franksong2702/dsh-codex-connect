@@ -255,6 +255,7 @@ async function main() {
     const pluginBlock = configBlock(afterDump.stdout, 'llm-openai-codex', 'compatibility')
     if (!/^    enableProxy: false$/mu.test(pluginBlock)
       || !/^    enableSearch: false$/mu.test(pluginBlock)
+      || !/^    enableReserveFallback: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
       || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
@@ -286,6 +287,9 @@ async function main() {
       || runtimeReport?.['disposalVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
+    if (runtimeReport?.['reserveTransitionsVerified'] !== true) {
+      throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
+    }
 
     process.stdout.write(`${JSON.stringify({
       schemaVersion: JSON_SCHEMA_VERSION,
@@ -298,6 +302,7 @@ async function main() {
       capabilities: {
         enableProxy: false,
         enableSearch: false,
+        enableReserveFallback: false,
         enableImageTool: false,
         enableImageGeneration: false,
         enableAutoReview: false,

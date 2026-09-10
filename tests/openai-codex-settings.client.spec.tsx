@@ -409,6 +409,37 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(scope.getSnapshot().value).toMatchObject({ searchModel: 'remote-model', enableImageGeneration: false, enableSearch: false })
   })
 
+  it('stages, saves, reloads, and discards the Reserve fallback opt-in', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    const first = render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const reserve = await screen.findByRole('checkbox', { name: /Automatic Luna Reserve/u }) as HTMLInputElement
+
+    expect(reserve.checked).toBe(false)
+    fireEvent.click(reserve)
+    expect(reserve.checked).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(reserve.checked).toBe(false)
+    expect(mutate).not.toHaveBeenCalled()
+
+    fireEvent.click(reserve)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([
+      { op: 'set', path: ['enableReserveFallback'], value: true },
+    ], 0)
+    expect(scope.getSnapshot().value?.enableReserveFallback).toBe(true)
+
+    first.unmount()
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const reloaded = await screen.findByRole('checkbox', { name: /Automatic Luna Reserve/u }) as HTMLInputElement
+    expect(reloaded.checked).toBe(true)
+    fireEvent.click(reloaded)
+    fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(reloaded.checked).toBe(true)
+    expect(mutate).toHaveBeenCalledTimes(1)
+  })
+
   it('stages, discards, and saves optional capability settings in the same card', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
       ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }, { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))

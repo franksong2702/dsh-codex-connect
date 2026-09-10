@@ -29,6 +29,7 @@ describe('OpenAI Codex proxy settings contract', () => {
   })
   it('keeps fresh and legacy settings on direct connection', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableReserveFallback).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.autoReviewDisclosureAcknowledged).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableAutoReview).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
@@ -41,10 +42,36 @@ describe('OpenAI Codex proxy settings contract', () => {
       searchMaxOutputTokens: 10_000,
     })
     expect(legacy?.enableProxy).toBe(false)
+    expect(legacy?.enableReserveFallback).toBe(false)
     expect(legacy?.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
     expect(legacy?.autoReviewDisclosureAcknowledged).toBe(false)
     expect(legacy?.enableAutoReview).toBe(false)
     expect(resolveOpenAICodexProxyUrl(legacy ?? {})).toBeUndefined()
+  })
+
+  it.each(['yes', 1, {}, []])('rejects a non-boolean Reserve fallback setting: %j', enableReserveFallback => {
+    expect(() => Config({ enableReserveFallback } as never)).toThrow()
+    expect(decodeOpenAICodexSettings({
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      enableReserveFallback,
+    })).toBeUndefined()
+  })
+
+  it('rejects a null Reserve fallback in a decoded browser snapshot', () => {
+    expect(decodeOpenAICodexSettings({
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      enableReserveFallback: null,
+    })).toBeUndefined()
+  })
+
+  it('keeps Reserve fallback opt-in across Host and browser settings', () => {
+    expect(Config({}).enableReserveFallback).toBe(false)
+    expect(resolveOpenAICodexSettings({}).enableReserveFallback).toBe(false)
+    expect(Config({ enableReserveFallback: true }).enableReserveFallback).toBe(true)
+    expect(decodeOpenAICodexSettings({
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      enableReserveFallback: true,
+    })?.enableReserveFallback).toBe(true)
   })
 
   it('rejects non-boolean Auto-review settings while preserving the default-off legacy value', () => {

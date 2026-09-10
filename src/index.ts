@@ -42,6 +42,8 @@ import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
+import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
+import { registerReserveRouting } from './reserve-routing.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -251,6 +253,8 @@ export interface Config {
   contextWindowOverrides?: Record<string, number | null> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
+  /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
+  enableReserveFallback?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
@@ -281,6 +285,7 @@ export const Config: z<Config> = z.object({
     parseOpenAICodexContextWindowOverrides,
   ),
   enableSearch: z.boolean().default(false),
+  enableReserveFallback: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
@@ -316,6 +321,15 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  const reservePermits = new ReserveRequestPermits()
+  registerReserveRouting(ctx, {
+    credentials,
+    returns: new ReserveReturnStore(join(dirname(credentials.filename), 'codex-connect-reserve')),
+    permits: reservePermits,
+    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
+    proxyManager,
+    resolveProxyUrl: resolveProviderProxyUrl,
+  })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
   registerOpenAICodexAutoReview(
@@ -335,6 +349,7 @@ export function apply(ctx: Context, config: Config): void {
       proxyManager,
       resolveProviderProxyUrl,
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
+      reservePermits,
     ),
   )
   ctx.inject(['webServer'], webCtx => {

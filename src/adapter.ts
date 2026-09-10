@@ -15,6 +15,8 @@ import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './model-contract.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { ReserveRequestPermits } from './reserve-state.ts'
+import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -99,6 +101,7 @@ export function withOpenAICodexFastMode(
       const sessionId = options?.sessionId
       const enabled = provider.id === OPENAI_CODEX_PROVIDER
         && model.provider === OPENAI_CODEX_PROVIDER
+        && model.id !== OPENAI_CODEX_RESERVE_MODEL
         && fastMode !== undefined
         && fastMode.isEnabled(sessionId)
       if (!enabled) return streamSimple.call(provider, model, context, options)
@@ -114,6 +117,22 @@ export function withOpenAICodexFastMode(
         },
       }
       return streamSimple.call(provider, model, context, nextOptions)
+    },
+  }
+}
+
+/** Add an internal Luna route whose dispatch requires one fresh agent-request permit. */
+export function withOpenAICodexReserve(provider: Provider, permits: ReserveRequestPermits): Provider {
+  const models = provider.getModels().filter(model => model.id !== OPENAI_CODEX_RESERVE_MODEL)
+  const luna = models.find(model => model.id === OPENAI_CODEX_RESERVE_NORMAL_MODEL)
+  if (luna === undefined) throw new Error('Codex Reserve requires the Luna model catalog')
+  const reserve = { ...luna, id: OPENAI_CODEX_RESERVE_MODEL, name: 'Luna Reserve' }
+  return {
+    ...provider,
+    getModels: () => [...models, reserve],
+    streamSimple(model, context, options) {
+      if (model.id === OPENAI_CODEX_RESERVE_MODEL) permits.consume(options?.sessionId, options?.apiKey)
+      return provider.streamSimple(model, context, options)
     },
   }
 }
@@ -224,8 +243,10 @@ export function createOpenAICodexAdapter(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
+  reservePermits?: ReserveRequestPermits,
 ): PiAiAdapter {
-  const provider = withOpenAICodexAstra(openaiCodexProvider())
+  const baseline = withOpenAICodexAstra(openaiCodexProvider())
+  const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {
@@ -240,7 +261,7 @@ export function createOpenAICodexAdapter(
   }
   class OpenAICodexAdapter extends PiAiAdapter {
     override async listModels(providerId: string) {
-      const catalog = await super.listModels(providerId)
+      const catalog = (await super.listModels(providerId)).filter(model => model.id !== OPENAI_CODEX_RESERVE_MODEL)
       const configured = visibleModelIds?.()
       if (configured === undefined) return catalog
       const visible = new Set(configured)

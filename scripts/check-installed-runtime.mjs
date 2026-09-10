@@ -3,6 +3,7 @@
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { checkInstalledReserve } from './check-installed-reserve.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const PROVIDER_ID = 'openai-codex'
@@ -88,12 +89,15 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       throw new Error(`runtime retained the ${PROVIDER_ID} provider after plugin disposal`)
     }
 
+    const reserveTransitionsVerified = await checkInstalledReserve(specifier => importFromProfile(hostPath, specifier), OpenAICodex)
+
     return {
       schemaVersion: JSON_SCHEMA_VERSION,
       provider: PROVIDER_ID,
       ...projection,
       preparedModelCount: models.length,
       disposalVerified: true,
+      reserveTransitionsVerified,
     }
   } finally {
     await ctx.fiber.dispose()

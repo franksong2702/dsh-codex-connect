@@ -108,6 +108,8 @@ export interface OpenAICodexSettingsConfig {
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined
   enableSearch: boolean
+  /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
+  enableReserveFallback: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -128,6 +130,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
   contextWindowOverrides: undefined,
   enableSearch: false,
+  enableReserveFallback: false,
   enableImageTool: false,
   enableImageGeneration: false,
   imageModelHint: DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
@@ -149,6 +152,9 @@ export function resolveOpenAICodexSettings(
   value: OpenAICodexSettingsInput,
 ): OpenAICodexSettingsConfig {
   const resolved = { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
+  if (typeof resolved.enableReserveFallback !== 'boolean') {
+    throw new TypeError('OpenAI Codex enableReserveFallback must be a boolean')
+  }
   if (!isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
   }
@@ -176,6 +182,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const proxyUrl = value['proxyUrl']
   const contextWindowOverrides = value['contextWindowOverrides']
   const enableSearch = value['enableSearch']
+  const enableReserveFallback = value['enableReserveFallback']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
   const imageModelHint = value['imageModelHint']
@@ -190,6 +197,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (proxyUrl !== undefined && (typeof proxyUrl !== 'string' || !isValidOpenAICodexProxyUrl(proxyUrl))) return undefined
   if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
+  if (enableReserveFallback !== undefined && typeof enableReserveFallback !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
   if (imageModelHint !== undefined && !isValidOpenAICodexImageModelHint(imageModelHint)) return undefined
@@ -208,6 +216,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     proxyUrl: proxyUrl === undefined ? DEFAULT_OPENAI_CODEX_PROXY_URL : normalizeOpenAICodexProxyUrl(proxyUrl)!,
     contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
+    enableReserveFallback: enableReserveFallback ?? false,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,
     imageModelHint: imageModelHint ?? DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
