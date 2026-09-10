@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
+import { readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
@@ -130,7 +131,7 @@ function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersi
       throw new CompatibilityCheckError(`doctor JSON did not report compatible ${name}`)
     }
     if (name !== '@earendil-works/pi-ai' && entry['installed'] !== dshVersion) {
-      throw new CompatibilityCheckError(`doctor JSON did not report the requested DSH version for ${name}`)
+      throw new CompatibilityCheckError(`doctor reported ${String(entry['installed'])} for ${name}; requested DSH ${dshVersion}`)
     }
   }
   const serialized = JSON.stringify(report)
@@ -200,6 +201,14 @@ async function main() {
     const pluginArtifactSha256 = createHash('sha256').update(await readFile(join(tempRoot, manifest.filename))).digest('hex')
     const pluginVersion = manifest.version
 
+    let overrides
+    try {
+      overrides = await resolveExactDshOverrides(dshVersion, readDshRegistryManifest)
+    } catch (error) {
+      throw new InfrastructureCheckError(`exact DSH fixture resolution failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    await mkdir(installRoot, { recursive: true })
+    await writeFile(join(installRoot, 'package.json'), `${JSON.stringify({ private: true, overrides })}\n`)
     const install = await runCommand('npm', [
       'install',
       '--prefix', installRoot,
@@ -207,6 +216,7 @@ async function main() {
       '--no-audit',
       '--no-fund',
       '--package-lock=false',
+      '--save-exact',
       `@deepseek-ai/dsh@${dshVersion}`,
     ], { cwd: workspace, env })
     requireSuccess('npm install', install)
@@ -272,6 +282,7 @@ async function main() {
       || typeof runtimeReport?.['modelCount'] !== 'number'
       || runtimeReport['modelCount'] < 1
       || runtimeReport?.['reasoningModelCount'] !== runtimeReport['modelCount']
+      || runtimeReport?.['preparedModelCount'] !== runtimeReport['modelCount']
       || runtimeReport?.['disposalVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }

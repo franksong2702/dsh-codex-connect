@@ -148,18 +148,18 @@ function requestProvider(
   }
 }
 
-/** Build the immutable profile consumed by the DSH pi-ai adapter. */
+/** Build the pi-ai profile with the model-error index required by DSH 0.1.5-rc.1. */
 export function createOpenAICodexProfile(
   provider: Provider,
   fastMode?: FastModeRegistry,
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: Readonly<Record<string, number>> | undefined,
-): ResolvedPiAiProviderProfile {
+): ResolvedPiAiProviderProfile & { piProvider: Provider } {
   const effectiveProvider = contextWindowOverrides === undefined
     ? provider
     : withOpenAICodexContextWindowOverrides(provider, contextWindowOverrides)
-  return {
+  const profile = {
     provider: OPENAI_CODEX_PROVIDER,
     displayName: 'OpenAI Codex',
     transport: OPENAI_CODEX_TRANSPORT,
@@ -169,8 +169,10 @@ export function createOpenAICodexProfile(
     requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
+    modelErrors: new Map<string, string>(),
     piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl),
   }
+  return profile
 }
 
 /**

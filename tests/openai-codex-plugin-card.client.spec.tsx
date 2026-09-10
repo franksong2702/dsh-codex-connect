@@ -18,6 +18,7 @@ describe('OpenAI Codex Plugin configuration card', () => {
         useSessions={vi.fn() as never}
         useWorkspaces={vi.fn() as never}
         useSessionPendingInteraction={vi.fn() as never}
+        {...{ usePanelInfo: vi.fn() as never }}
       />,
     )
 

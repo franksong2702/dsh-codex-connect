@@ -98,6 +98,16 @@ describe('OpenAI Codex rc.2 adapter profile', () => {
       id: OPENAI_CODEX_ASTRA_MODEL_ID,
     })
   })
+
+  it('resolves every advertised model and prepares its request without accessing credentials', async () => {
+    const adapter = createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined)
+    const listed = await adapter.listModels(OPENAI_CODEX_PROVIDER)
+    expect(listed).toContainEqual(expect.objectContaining({ id: 'gpt-5.6-luna' }))
+    for (const model of listed) {
+      await expect(adapter.resolveModel(OPENAI_CODEX_PROVIDER, model.id)).resolves.toMatchObject({ id: model.id })
+      await expect(adapter.prepareCall(OPENAI_CODEX_PROVIDER, model.id)).resolves.toMatchObject({ model: { id: model.id } })
+    }
+  })
 })
 
 describe('context-window overrides', () => {
