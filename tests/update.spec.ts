@@ -18,6 +18,12 @@ function json(value: unknown, status = 200): Response {
 }
 
 describe('Codex Connect update metadata', () => {
+  it('accepts the image-model-hint highlight kind', () => {
+    expect(parseOpenAICodexUpdateHighlights({
+      schemaVersion: 1,
+      releases: [{ version: '0.1.0-alpha.4.34', highlights: ['image-model-hint'] }],
+    })).toMatchObject({ releases: [{ highlights: ['image-model-hint'] }] })
+  })
   it('compares prerelease versions without treating alpha 10 as alpha 2', () => {
     expect(compareOpenAICodexVersions('0.1.0-alpha.10', '0.1.0-alpha.2')).toBeGreaterThan(0)
     expect(compareOpenAICodexVersions('0.1.0-alpha.4.14', '0.1.0-alpha.4.14')).toBe(0)
