@@ -44,6 +44,7 @@ import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
 import { registerReserveRouting } from './reserve-routing.ts'
+import { OpenAICodexQuotaState } from './quota-state.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -321,14 +322,18 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
-  const reservePermits = new ReserveRequestPermits()
-  registerReserveRouting(ctx, {
+  const quota = new OpenAICodexQuotaState({
     credentials,
+    proxyManager,
+    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
+    resolveProxyUrl: resolveProviderProxyUrl,
+  })
+  const reservePermits = new ReserveRequestPermits()
+  const stopReserveRouting = registerReserveRouting(ctx, {
+    quota,
     returns: new ReserveReturnStore(join(dirname(credentials.filename), 'codex-connect-reserve')),
     permits: reservePermits,
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
-    proxyManager,
-    resolveProxyUrl: resolveProviderProxyUrl,
   })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
@@ -353,7 +358,7 @@ export function apply(ctx: Context, config: Config): void {
     ),
   )
   ctx.inject(['webServer'], webCtx => {
-    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl, config.oauthTimeoutMs)
+    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl, config.oauthTimeoutMs, quota)
     registerOpenAICodexProxyRoutes(webCtx, trustedOrigins, proxyManager)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
@@ -481,6 +486,8 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
+    await stopReserveRouting()
+    await quota.dispose()
     await Promise.all([searchTail, imageTail, imageGenerationTail])
     const search = searchFiber
     const image = imageFiber
@@ -506,6 +513,7 @@ export function apply(ctx: Context, config: Config): void {
       },
       setSource(source) { current = source },
       onChange() {
+        quota.invalidate()
         const proxyIsActive = resolveProviderProxyUrl() !== undefined
         if (proxyWasActive && !proxyIsActive) {
           void proxyManager.deactivate().catch((error: unknown) => {

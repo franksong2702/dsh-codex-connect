@@ -1,16 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import {
-  OPENAI_CODEX_RESERVE_USAGE_MAX_BYTES,
-  parseReserveUsage,
-  readReserveUsage,
-  reserveIdentity,
-} from '../src/reserve-usage.ts'
-import { OPENAI_CODEX_USAGE_URL } from '../src/usage.ts'
+import { parseReserveUsage, reserveIdentity } from '../src/reserve-usage.ts'
+import { OPENAI_CODEX_USAGE_MAX_BYTES, OPENAI_CODEX_USAGE_URL, readOpenAICodexUsageResponse } from '../src/usage.ts'
 import { ordinaryUsage, reserveToken, reserveUsage } from './reserve-fixture.ts'
 
 const access = reserveToken()
 const identity = reserveIdentity(access)!
 afterEach(() => { vi.unstubAllGlobals() })
+
+function readReserveResponse(signal = new AbortController().signal): Promise<unknown> {
+  return readOpenAICodexUsageResponse({ access, accountId: identity.accountId }, signal, true)
+}
 
 describe('Reserve identity and backend authority', () => {
   it('requires complete namespace identity, supports the user_id fallback, and excludes FedRAMP', () => {
@@ -72,10 +71,50 @@ describe('Reserve identity and backend authority', () => {
       .toEqual({ kind: 'unavailable' })
   })
 
+  it('reports Reserve exhaustion for a valid upsell banner without granting recovery', () => {
+    const exhausted = reserveUsage({
+      additional_rate_limits: [{
+        limit_name: 'gpt-reserve',
+        normal_model_slug: 'gpt-5.6-luna',
+        rate_limit: { allowed: false, limit_reached: true },
+      }],
+    })
+    expect(parseReserveUsage(exhausted, identity)).toEqual({ kind: 'exhausted' })
+  })
+
+  it('reports Reserve exhaustion without a banner only when both buckets affirm it', () => {
+    const exhausted = reserveUsage({
+      rate_limit_upsell: null,
+      rate_limit: { allowed: false, limit_reached: true },
+      additional_rate_limits: [{ limit_name: 'gpt-reserve', rate_limit: { allowed: false } }],
+    })
+    expect(parseReserveUsage(exhausted, identity)).toEqual({ kind: 'exhausted' })
+    expect(parseReserveUsage({ ...exhausted, additional_rate_limits: [] }, identity))
+      .toEqual({ kind: 'unavailable' })
+  })
+
+  it('keeps ordinary recovery authoritative when Reserve is exhausted', () => {
+    const ordinary = ordinaryUsage({
+      additional_rate_limits: [{ limit_name: 'gpt-reserve', rate_limit: { allowed: false, limit_reached: true } }],
+    })
+    expect(parseReserveUsage(ordinary, identity)).toEqual({ kind: 'ordinary' })
+  })
+
+  it('does not invent recovery from an unrelated or incomplete additional bucket', () => {
+    expect(parseReserveUsage({
+      account_id: identity.accountId, user_id: identity.userId,
+      rate_limit: { allowed: false }, additional_rate_limits: [{ limit_name: 'other', rate_limit: { allowed: false } }],
+    }, identity)).toEqual({ kind: 'unavailable' })
+    expect(parseReserveUsage({
+      account_id: identity.accountId, user_id: identity.userId,
+      rate_limit: { allowed: false }, additional_rate_limits: [{ limit_name: 'gpt-reserve' }],
+    }, identity)).toEqual({ kind: 'unavailable' })
+  })
+
   it('negotiates only at the fixed usage endpoint with the captured identity and no redirects', async () => {
     const fetch = vi.fn(async () => Response.json(reserveUsage()))
     vi.stubGlobal('fetch', fetch)
-    await expect(readReserveUsage(access, identity, new AbortController().signal)).resolves.toMatchObject({ kind: 'reserve' })
+    await expect(readReserveResponse()).resolves.toEqual(expect.objectContaining({ account_id: identity.accountId }))
     expect(fetch).toHaveBeenCalledOnce()
     expect(fetch).toHaveBeenCalledWith(OPENAI_CODEX_USAGE_URL, expect.objectContaining({
       method: 'GET', redirect: 'error',
@@ -85,17 +124,21 @@ describe('Reserve identity and backend authority', () => {
 
   it.each([401, 403, 429, 500])('does not grant a route or expose an HTTP %i response body', async status => {
     vi.stubGlobal('fetch', async () => new Response('private upstream detail', { status }))
-    await expect(readReserveUsage(access, identity, new AbortController().signal)).rejects.toThrow('Codex Reserve eligibility could not be verified')
+    const error: unknown = await readReserveResponse().catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(error).toMatchObject({ message: status === 401 || status === 403
+      ? 'OpenAI Codex authorization must be renewed' : `OpenAI Codex usage request failed with HTTP ${status}` })
+    expect(error).not.toHaveProperty('cause')
   })
 
   it('rejects oversized and malformed bodies and checks cancellation before network access', async () => {
-    vi.stubGlobal('fetch', async () => new Response('x', { headers: { 'content-length': String(OPENAI_CODEX_RESERVE_USAGE_MAX_BYTES + 1) } }))
-    await expect(readReserveUsage(access, identity, new AbortController().signal)).rejects.toThrow('could not be verified')
+    vi.stubGlobal('fetch', async () => new Response('x', { headers: { 'content-length': String(OPENAI_CODEX_USAGE_MAX_BYTES + 1) } }))
+    await expect(readReserveResponse()).rejects.toThrow('OpenAI Codex returned an unreadable usage response')
     vi.stubGlobal('fetch', async () => new Response('private malformed JSON'))
-    await expect(readReserveUsage(access, identity, new AbortController().signal)).rejects.toThrow('could not be verified')
+    await expect(readReserveResponse()).rejects.toThrow('OpenAI Codex returned an unreadable usage response')
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
-    await expect(readReserveUsage(access, identity, AbortSignal.abort())).rejects.toThrow('aborted')
+    await expect(readReserveResponse(AbortSignal.abort())).rejects.toThrow()
     expect(fetch).not.toHaveBeenCalled()
   })
 })

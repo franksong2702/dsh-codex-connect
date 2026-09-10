@@ -7,7 +7,7 @@ import { zstdDecompressSync } from 'node:zlib'
 /** Exercise the packed plugin's logged Reserve transitions with an exact installed host and synthetic HTTP. */
 export async function checkInstalledReserve(importHost, CodexConnect) {
   const [
-    { Context }, { default: Llm, createUserMessage, ReasoningEffortId },
+    { Context }, { default: Llm, createUserMessage, ReasoningEffortId, QUOTA_EXCEEDED_CODE },
     { default: Sessions, SessionId }, { default: Projections },
     { default: Prompt }, { default: Tools }, { default: Agents }, { default: Loop },
   ] = await Promise.all([
@@ -18,6 +18,9 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
   const directory = await mkdtemp(join(tmpdir(), 'codex-installed-reserve-'))
   const previousHome = process.env.DSH_HOME
   const previousFetch = globalThis.fetch
+  const previousNow = Date.now
+  let now = Date.now()
+  Date.now = () => now
   const ctx = new Context()
   process.env.DSH_HOME = directory
   let ordinary = false
@@ -66,22 +69,43 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
     const agent = await ctx.agentLoop.create(SessionId('installed-reserve-fixture'), selection)
     for (let step = 0; step < 3; step++) {
       ordinary = step === 2
+      if (ordinary) now += 61_000
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture turn' }] }))
       await agent.whenIdle()
       assert.deepEqual(agent.session.requestHeader()?.config, ordinary ? selection : { provider: 'openai-codex', model: 'gpt-reserve' })
     }
-    assert.equal(usageReads, 3)
+    assert.equal(usageReads, 2)
     assert.deepEqual(wires.map(wire => wire.model), ['gpt-reserve', 'gpt-reserve', 'gpt-6-astra'])
     assert.equal(wires[0].reasoning, undefined)
     assert.equal(wires[2].reasoning.effort, 'max')
     const answers = agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')
     assert.deepEqual(answers.map(event => event.data.message.source.model), ['gpt-reserve', 'gpt-reserve', 'gpt-6-astra'])
+    const recovering = await ctx.agentLoop.create(SessionId('installed-reserve-retry-fixture'), selection)
+    ordinary = false
+    let attempts = 0
+    ctx.on('llm/stream', async function* (request, next) {
+      if (request.sessionId === recovering.session.id) {
+        attempts++
+        if (request.model === 'gpt-6-astra') {
+          yield { type: 'finish', reason: { kind: 'error', failure: { code: QUOTA_EXCEEDED_CODE, message: 'Fixture quota exhausted' } } }
+          return
+        }
+      }
+      yield* next()
+    }, { prepend: true })
+    recovering.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture quota recovery' }] }))
+    await recovering.whenIdle()
+    assert.equal(attempts, 2)
+    assert.equal(usageReads, 3)
+    assert.equal(wires.at(-1).model, 'gpt-reserve')
+    assert.equal(recovering.session.snapshotEvents().filter(event => event.type === 'assistant/message').length, 1)
     return true
   } finally {
     try {
       await ctx.fiber.dispose()
     } finally {
       globalThis.fetch = previousFetch
+      Date.now = previousNow
       if (previousHome === undefined) delete process.env.DSH_HOME
       else process.env.DSH_HOME = previousHome
       await rm(directory, { recursive: true, force: true })

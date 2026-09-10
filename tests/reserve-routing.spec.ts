@@ -6,7 +6,7 @@ import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import LlmRuntime, { ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { QUOTA_EXCEEDED_CODE, ReasoningEffortId, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { LlmCallConfig, StreamChunk } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import SessionProjections from '@deepseek-ai/dsh-session-projection'
@@ -16,6 +16,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as CodexConnect from '../src/index.ts'
 import { OPENAI_CODEX_RESERVE_MODEL } from '../src/reserve-usage.ts'
 import { ReserveReturnStore } from '../src/reserve-state.ts'
+import { OpenAICodexQuotaState } from '../src/quota-state.ts'
+import { OpenAICodexWebAuth } from '../src/auth-routes.ts'
 import { ordinaryUsage, reserveToken, reserveUsage } from './reserve-fixture.ts'
 
 let context: Context | undefined
@@ -73,7 +75,7 @@ async function fixture(config: CodexConnect.Config = { enableReserveFallback: tr
   const proposal: LlmCallConfig = { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('max'), maxTokens: 2048 }
   const request = (value: LlmCallConfig = proposal, signal = new AbortController().signal, target: Agent = agent) =>
     ctx.waterfall('agent/request', { agent: target, turn: 1, step: 1, signal }, async () => value)
-  return { ctx, agent, plugin, request, proposal, setAccount }
+  return { ctx, agent, plugin, request, proposal, setAccount, credentials }
 }
 
 async function send(agent: Agent, text: string) {
@@ -82,7 +84,115 @@ async function send(agent: Agent, text: string) {
 }
 
 describe('assembled Reserve agent routing', () => {
+  it('shares the actual routing snapshot with the account UI without exposing private authority', async () => {
+    const original = OpenAICodexQuotaState.prototype.read
+    let shared: OpenAICodexQuotaState | undefined
+    vi.spyOn(OpenAICodexQuotaState.prototype, 'read').mockImplementation(function (this: OpenAICodexQuotaState, ...args) {
+      shared = this
+      return original.apply(this, args)
+    })
+    const { request, credentials } = await fixture()
+    const fetch = vi.fn(async () => Response.json(reserveUsage()))
+    vi.stubGlobal('fetch', fetch)
+    expect((await request()).model).toBe('gpt-reserve')
+    expect(shared).toBeDefined()
+    const auth = new OpenAICodexWebAuth(credentials, { quotaState: shared })
+    const [status, routed] = await Promise.all([auth.status(), request()])
+    expect(status).toEqual({ status: 'signed-in', usage: { rateLimits: [] } })
+    expect(routed.model).toBe('gpt-reserve')
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it('refreshes stale ordinary quota once after a typed quota failure and logs the authorized retry', async () => {
+    const { ctx, agent } = await fixture()
+    let reads = 0
+    const wires: string[] = []
+    vi.stubGlobal('fetch', async (url: unknown, init: RequestInit) => {
+      if (String(url).endsWith('/wham/usage')) return Response.json(++reads === 1 ? ordinaryUsage() : reserveUsage())
+      wires.push(String(wireBody(init).model))
+      return response()
+    })
+    const attempted: string[] = []
+    ctx.on('llm/stream', async function* (request, next) {
+      attempted.push(request.model)
+      if (request.model === 'gpt-6-astra') {
+        yield { type: 'finish', reason: { kind: 'error', failure: { message: 'Fixture usage exhausted', code: QUOTA_EXCEEDED_CODE } } }
+        return
+      }
+      yield* next()
+    }, { prepend: true })
+    await send(agent, 'quota changed after polling')
+    expect(attempted).toEqual(['gpt-6-astra', 'gpt-reserve'])
+    expect(wires).toEqual(['gpt-reserve'])
+    expect(reads).toBe(2)
+    expect(agent.session.requestHeader()?.config.model).toBe('gpt-reserve')
+    expect(agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')).toHaveLength(1)
+  })
+
+  it('does not turn a generic rate failure into a Reserve refresh or retry', async () => {
+    const { ctx, agent } = await fixture()
+    const fetch = vi.fn(async () => Response.json(ordinaryUsage()))
+    vi.stubGlobal('fetch', fetch)
+    ctx.on('llm/stream', async function* () {
+      yield { type: 'finish', reason: { kind: 'error', failure: { message: 'Fixture rate limited', code: 'RATE_LIMIT' } } }
+    }, { prepend: true })
+    await send(agent, 'transient rate limit')
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(agent.session.requestHeader()?.config.model).toBe('gpt-6-astra')
+    expect(agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')).toHaveLength(0)
+  })
+
+  it('recovers from a Reserve quota failure only after a fresh ordinary allowance response', async () => {
+    const { ctx, agent, proposal } = await fixture()
+    let reads = 0
+    let rejectReserve = false
+    const wires: string[] = []
+    vi.stubGlobal('fetch', async (url: unknown, init: RequestInit) => {
+      if (String(url).endsWith('/wham/usage')) return Response.json(++reads === 1 ? reserveUsage() : ordinaryUsage())
+      wires.push(String(wireBody(init).model))
+      return response()
+    })
+    ctx.on('llm/stream', async function* (request, next) {
+      if (rejectReserve && request.model === 'gpt-reserve') {
+        yield { type: 'finish', reason: { kind: 'error', failure: { message: 'Fixture reserve exhausted', code: QUOTA_EXCEEDED_CODE } } }
+        return
+      }
+      yield* next()
+    }, { prepend: true })
+    await send(agent, 'enter reserve')
+    rejectReserve = true
+    await send(agent, 'ordinary allowance has recovered')
+    expect(wires).toEqual(['gpt-reserve', 'gpt-6-astra'])
+    expect(reads).toBe(2)
+    expect(agent.session.requestHeader()?.config).toEqual(proposal)
+  })
+
+  it('bounds quota recovery to one transition per turn even if the retry also fails', async () => {
+    const { ctx, agent } = await fixture()
+    let reads = 0
+    let attempts = 0
+    vi.stubGlobal('fetch', async () => Response.json(++reads === 1 ? ordinaryUsage() : reserveUsage()))
+    ctx.on('llm/stream', async function* () {
+      attempts++
+      yield { type: 'finish', reason: { kind: 'error', failure: { message: 'Fixture quota exhausted', code: QUOTA_EXCEEDED_CODE } } }
+    }, { prepend: true })
+    await send(agent, 'both attempts fail')
+    expect(reads).toBe(2)
+    expect(attempts).toBe(2)
+    expect(agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')).toHaveLength(0)
+  })
+
+  it('stops when both ordinary and Reserve allowances are exhausted', async () => {
+    const { request } = await fixture()
+    vi.stubGlobal('fetch', async () => Response.json(reserveUsage({ additional_rate_limits: [{
+      metered_feature: 'reserve', limit_name: 'gpt-reserve', rate_limit: { allowed: false, limit_reached: true },
+    }] })))
+    await expect(request()).rejects.toThrow('Ordinary Codex usage and Luna Reserve are exhausted')
+  })
+
   it('logs and streams Reserve with Luna defaults, then restores the exact ordinary selection on recovery', async () => {
+    let now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
     const { ctx, agent, proposal } = await fixture({ enableReserveFallback: true, contextWindowOverrides: { 'gpt-6-astra': 500_000 } })
     let usage = reserveUsage()
     const wires: Record<string, unknown>[] = []
@@ -114,7 +224,11 @@ describe('assembled Reserve agent routing', () => {
     usage = ordinaryUsage()
     await send(agent, 'second')
     expect(wires).toHaveLength(2)
-    expect(wires[1]).toMatchObject({ model: 'gpt-6-astra', reasoning: { effort: 'max' } })
+    expect(wires[1]).toMatchObject({ model: 'gpt-reserve' })
+    expect(usageReads).toBe(1)
+    now += 61_000
+    await send(agent, 'third')
+    expect(wires[2]).toMatchObject({ model: 'gpt-6-astra', reasoning: { effort: 'max' } })
     expect(agent.session.requestHeader()?.config).toEqual(proposal)
     expect(usageReads).toBe(2)
     const transcript = agent.session.snapshotEvents().flatMap(event => {
@@ -124,6 +238,7 @@ describe('assembled Reserve agent routing', () => {
     })
     expect(transcript).toEqual([
       { event: 'request', provider: 'openai-codex', model: 'gpt-reserve' },
+      { event: 'answer', model: 'gpt-reserve' },
       { event: 'answer', model: 'gpt-reserve' },
       { event: 'request', ...proposal },
       { event: 'answer', model: 'gpt-6-astra' },
@@ -156,19 +271,25 @@ describe('assembled Reserve agent routing', () => {
 
   it('does not use incomplete identity or a FedRAMP token to negotiate Reserve', async () => {
     const { request, proposal, setAccount } = await fixture()
-    const fetch = vi.fn()
+    const fetch = vi.fn(async (_url: unknown, init: RequestInit) => {
+      expect(new Headers(init.headers).has('x-openai-codex-luna-reserve')).toBe(false)
+      return Response.json(ordinaryUsage())
+    })
     vi.stubGlobal('fetch', fetch)
     await setAccount('fixture-account', '')
     expect(await request()).toEqual(proposal)
     await setAccount('fixture-account', 'fixture-user', { chatgpt_account_is_fedramp: true })
     expect(await request()).toEqual(proposal)
-    expect(fetch).not.toHaveBeenCalled()
+    expect(fetch).toHaveBeenCalledOnce()
   })
 
   it('rejects unsupported model metadata and keeps failed usage checks from granting Reserve', async () => {
+    let now = Date.now()
+    vi.spyOn(Date, 'now').mockImplementation(() => now)
     const { request, proposal } = await fixture()
-    vi.stubGlobal('fetch', async () => Response.json(reserveUsage({ additional_rate_limits: [{ limit_name: 'gpt-reserve', normal_model_slug: 'future-luna' }] })))
+    vi.stubGlobal('fetch', async () => Response.json(reserveUsage({ additional_rate_limits: [{ metered_feature: 'reserve', limit_name: 'gpt-reserve', normal_model_slug: 'future-luna' }] })))
     await expect(request()).rejects.toThrow('unsupported Luna Reserve model metadata')
+    now += 61_000
     vi.stubGlobal('fetch', async () => new Response('private details', { status: 429 }))
     expect(await request()).toEqual(proposal)
     await expect(request({ provider: 'openai-codex', model: 'gpt-reserve' })).rejects.toThrow('eligibility could not be verified')
@@ -208,7 +329,7 @@ describe('assembled Reserve agent routing', () => {
     await send(agent, 'authorized loop')
     expect(agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')).toHaveLength(1)
     await expect(stream()).rejects.toThrow('agent-loop requests')
-    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it('restores a saved target after plugin reload and never reuses it for a different account', async () => {
@@ -249,7 +370,7 @@ describe('assembled Reserve agent routing', () => {
     expect(disposed).toBe(true)
   })
 
-  it('cancels an in-flight check on caller cancellation and plugin disposal', async () => {
+  it('detaches caller cancellation and cancels the shared check on plugin disposal', async () => {
     const { request, plugin } = await fixture()
     const fetch = vi.fn(async (_url: unknown, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
       init.signal!.addEventListener('abort', () => { reject(new Error('fixture aborted')) }, { once: true })
@@ -263,7 +384,7 @@ describe('assembled Reserve agent routing', () => {
     await rejected
     const disposing = request()
     const disposed = expect(disposing).rejects.toThrow()
-    await vi.waitFor(() => { expect(fetch).toHaveBeenCalledTimes(2) })
+    expect(fetch).toHaveBeenCalledOnce()
     await plugin.dispose()
     await disposed
   })

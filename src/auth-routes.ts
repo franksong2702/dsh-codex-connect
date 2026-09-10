@@ -13,6 +13,7 @@ import {
   readOpenAICodexRateLimits,
 } from './usage.ts'
 import type { OpenAICodexUsage } from './usage.ts'
+import type { OpenAICodexQuotaState } from './quota-state.ts'
 import {
   OPENAI_CODEX_AUTH_LOGIN_PATH,
   OPENAI_CODEX_AUTH_CALLBACK_PATH,
@@ -69,6 +70,8 @@ export interface OpenAICodexWebAuthOptions {
   proxyManager?: OpenAICodexProxyManager | undefined
   /** Resolve the explicitly activated proxy for each operation. */
   resolveProxyUrl?: (() => string | undefined) | undefined
+  /** Shared server-owned quota state; UI never receives its account-bound routing fields. */
+  quotaState?: OpenAICodexQuotaState | undefined
 }
 
 /** Reject with the prompt's abort reason while browser callback owns completion. */
@@ -128,6 +131,7 @@ export class OpenAICodexWebAuth {
   private readonly authorizationTimeoutMs: number
   private readonly proxyManager: OpenAICodexProxyManager | undefined
   private readonly resolveProxyUrl: () => string | undefined
+  private readonly quotaState: OpenAICodexQuotaState | undefined
 
   constructor(
     private readonly store: OpenAICodexCredentialStore,
@@ -137,6 +141,7 @@ export class OpenAICodexWebAuth {
     this.authorizationTimeoutMs = options.authorizationTimeoutMs ?? OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS
     this.proxyManager = options.proxyManager
     this.resolveProxyUrl = options.resolveProxyUrl ?? (() => undefined)
+    this.quotaState = options.quotaState
     if (!Number.isFinite(this.challengeTimeoutMs) || this.challengeTimeoutMs <= 0) {
       throw new TypeError('OpenAI Codex auth URL timeout must be a positive finite number')
     }
@@ -230,6 +235,7 @@ export class OpenAICodexWebAuth {
       this.challenge = undefined
       if (action === 'logout') {
         await logoutOpenAICodex(this.store)
+        this.quotaState?.invalidate()
         this.state = { status: 'signed-out' }
       } else if (action === 'cancel') {
         this.state = await this.readStoredStatus()
@@ -251,6 +257,7 @@ export class OpenAICodexWebAuth {
       await login?.catch(() => undefined)
       this.challenge = undefined
       await operation()
+      this.quotaState?.invalidate()
       result = await this.readStoredStatus()
       this.state = result
     })()
@@ -291,6 +298,7 @@ export class OpenAICodexWebAuth {
     }, this.store)
     this.operation = (this.proxyManager?.run(this.resolveProxyUrl(), login) ?? login()).then(
       async () => {
+        this.quotaState?.invalidate()
         this.manualPromptClosed = true
         this.pendingManualPrompt?.reject(new Error('OpenAI Codex manual callback is unavailable'))
         if (this.challenge === undefined) {
@@ -347,7 +355,9 @@ export class OpenAICodexWebAuth {
       const readUsage = () => readOpenAICodexRateLimits(credentials)
       return {
         status: 'signed-in',
-        usage: await (this.proxyManager?.run(this.resolveProxyUrl(), readUsage) ?? readUsage()),
+        usage: this.quotaState === undefined
+          ? await (this.proxyManager?.run(this.resolveProxyUrl(), readUsage) ?? readUsage())
+          : (await this.quotaState.read(credentials)).usage,
       }
     } catch (error: unknown) {
       if (isOpenAICodexReauthRequiredError(error)) {
@@ -606,8 +616,9 @@ export function registerOpenAICodexAuthRoutes(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   authorizationTimeoutMs?: number,
+  quotaState?: OpenAICodexQuotaState,
 ): void {
-  const auth = new OpenAICodexWebAuth(store, { proxyManager, resolveProxyUrl, authorizationTimeoutMs })
+  const auth = new OpenAICodexWebAuth(store, { proxyManager, resolveProxyUrl, authorizationTimeoutMs, quotaState })
   const storedFilename = (store as OpenAICodexCredentialStore & { filename?: unknown }).filename
   const fastMode = fastModeOverride ?? new FastModeRegistry()
   const trustedOrigins = trustedOriginsOverride ?? (typeof storedFilename === 'string'

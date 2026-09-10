@@ -32,3 +32,6 @@ export function publicAuthError(error: unknown): string {
   if (/^OpenAI Codex usage request failed with HTTP [1-5][0-9]{2}$/u.test(message)) return message
   return 'OpenAI Codex operation failed. Please try again.'
 }
+
+/** Stable public discriminant for an expired or revoked Codex OAuth session. */
+export const OPENAI_CODEX_REAUTH_REQUIRED_CODE = 'OPENAI_CODEX_REAUTH_REQUIRED' as const
