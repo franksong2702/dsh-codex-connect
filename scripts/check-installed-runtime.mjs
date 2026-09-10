@@ -76,6 +76,12 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const listed = await ctx.llm.listModels(PROVIDER_ID)
     const models = await Promise.all(listed.map(model => ctx.llm.resolveModelInfo(PROVIDER_ID, model.id)))
     const projection = validateRuntimeProjection(providers, models)
+    for (const model of models) {
+      const prepared = await ctx.llm.prepareCall({ provider: PROVIDER_ID, model: model.id })
+      if (prepared.config.provider !== PROVIDER_ID || prepared.config.model !== model.id) {
+        throw new Error(`runtime prepared the wrong model for ${model.id}`)
+      }
+    }
 
     await plugin.dispose()
     if (ctx.llm.listProviders().some(provider => provider.id === PROVIDER_ID)) {
@@ -86,6 +92,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       schemaVersion: JSON_SCHEMA_VERSION,
       provider: PROVIDER_ID,
       ...projection,
+      preparedModelCount: models.length,
       disposalVerified: true,
     }
   } finally {

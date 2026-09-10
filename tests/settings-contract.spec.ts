@@ -11,6 +11,13 @@ import {
 import { Config } from '../src/index.ts'
 
 describe('OpenAI Codex proxy settings contract', () => {
+  it.each(['gpt-image-2\n', 'gpt-image-2\r', 'gpt-image-2\u2028', 'gpt-image-2\u2029', 'a'.repeat(129), 'model\tname'])('rejects padded or oversized image hints on Host and browser: %j', imageModelHint => {
+    expect(isValidOpenAICodexImageModelHint(imageModelHint)).toBe(false)
+    expect(() => Config({ imageModelHint })).toThrow()
+    expect(() => resolveOpenAICodexSettings({ imageModelHint })).toThrow()
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, imageModelHint })).toBeUndefined()
+  })
+
   it('validates and defaults the optional image model hint', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.imageModelHint).toBe('')
     expect(isValidOpenAICodexImageModelHint('gpt-image-2')).toBe(true)

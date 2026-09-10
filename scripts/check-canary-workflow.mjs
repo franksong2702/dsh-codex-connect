@@ -30,12 +30,12 @@ function assertContract(name, condition) {
 
 assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
 assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
-const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1']
+const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1']
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
   capabilities: { enableProxy: false, enableSearch: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
-  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, disposalVerified: true },
+  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true },
 }))
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
 for (const [name, change] of [
@@ -44,6 +44,8 @@ for (const [name, change] of [
   ['wrong host version', reports => { reports[1].dshVersion = reports[0].dshVersion }],
   ['wrong plugin version', reports => { reports[1].pluginVersion = '0.1.0-alpha.4.32' }],
   ['failed disposal', reports => { reports[1].runtime.disposalVerified = false }],
+  ['unprepared model', reports => { reports[1].runtime.preparedModelCount = 7 }],
+  ['missing request preparation', reports => { delete reports[1].runtime.preparedModelCount }],
   ['changed optional default', reports => { reports[1].capabilities.enableSearch = true }],
 ]) {
   const reports = structuredClone(matrixReports)
@@ -187,6 +189,13 @@ assertContract('full check includes the canary workflow contract', /(?:^|&&)\s*p
 // Match a dedicated, required step in validate, not a comment or another job.
 const ciValidateJob = ciWorkflow.match(/^  validate:\s*\n([\s\S]*?)(?=^  \S|(?![\s\S]))/m)?.[1] ?? ''
 const ciValidateSteps = [...ciValidateJob.matchAll(/^      - [\s\S]*?(?=^      - |(?![\s\S]))/gm)]
+assertContract(
+  'PR CI checks every declared host with the same packed artifact',
+  ciValidateSteps.some(([step]) =>
+    /^        run: pnpm --silent run check:dsh-matrix[ \t]*$/m.test(step) &&
+    !step.split('\n').some(line => /^(?:      - |        )(?:if|continue-on-error):/.test(line)),
+  ),
+)
 assertContract(
   'PR CI validate runs the canary workflow contract as a required step',
   !/^    (?:if|continue-on-error):/m.test(ciValidateJob) && ciValidateSteps.some(([step]) =>

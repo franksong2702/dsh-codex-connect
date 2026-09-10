@@ -116,6 +116,8 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 
 ### 本地安装诊断
 
+已发布的 Alpha 4.33 在 DSH `0.1.5-rc.1` 上列出或准备 Codex 模型时，可能报 `Cannot read properties of undefined (reading 'get')`。新宿主要求按模型记录错误的索引，旧插件 profile 没有提供。包含 [Issue #178 修复](https://github.com/franksong2702/dsh-codex-connect/issues/178)的构建会初始化该索引；重新授权不能补齐这个字段。请选择与宿主版本完成验证的精确插件版本，不能仅凭属于同一 Alpha 系列判断。
+
 运行 `dsh plugin --profile web exec dsh-codex-connect doctor --json` 可检查本地安装元数据，不会联网。兼容性状态含义：`compatible` 表示符合声明的版本要求，不是行为测试通过；`unverified` 表示包版本超出声明的支持集合；`unknown` 表示缺少必要版本元数据或无法读取；`incompatible` 表示 Node 版本不满足声明的 engine 要求。汇总状态依次优先采用 `incompatible`、`unknown`、`unverified`。任何非 compatible 结果或不安全的凭据文件元数据都会让 doctor 返回 `1`，但这并不授权或建议更改 DSH。
 
 常规更新卡片只检查 Codex Connect 发布版本。插件版本检查成功后最多缓存 24 小时，页面挂载期间每五分钟重试不可用的检查；手动检查会绕过缓存。它不会查询宿主兼容性，也不会建议升级或降级宿主。未列入记录的 DSH/plugin 组合需要验证，不能据此认定无法运行。

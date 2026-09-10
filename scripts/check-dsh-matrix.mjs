@@ -21,7 +21,8 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
       || ['enableProxy', 'enableSearch', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1
-      || report.runtime.reasoningModelCount !== report.runtime.modelCount) {
+      || report.runtime.reasoningModelCount !== report.runtime.modelCount
+      || report.runtime.preparedModelCount !== report.runtime.modelCount) {
       throw new Error('DSH matrix contains an incomplete or mismatched install report')
     }
   }
