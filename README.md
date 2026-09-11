@@ -16,15 +16,17 @@ This guide describes the published pairings below. Check `dsh --version` first a
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.34` |
+| Codex Connect | `0.1.0-alpha.4.35` |
 | DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
+As of 2026-09-11, npm `alpha` points to 4.35 while `latest` intentionally remains on 4.34. Use the exact version below for 4.35; this recommendation does not promote the default installation channel.
+
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.34
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.35
 dsh web
 ```
 
@@ -74,7 +76,7 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 | GPT Image generation | `enableImageGeneration` | Prompt-only generation; availability, dimensions, and quota remain account- and service-controlled. |
 | Auto-review | `enableAutoReview` | Sends bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`, with confirmation on first enablement. Failures return to human approval. |
 
-**Unreleased experiment:** Luna Reserve fallback is not included in published Alpha 4.34. It remains disabled by default in this development build; real-account Reserve entry and recovery have not been verified.
+**Published experiment:** Alpha 4.35 includes Luna Reserve fallback, disabled by default. Real-account Reserve entry and recovery remain unverified; Alpha 4.34 does not include this feature.
 
 With `enableReserveFallback: true`, the account UI and agent routing share one identity-bound quota state. Background refresh follows the returned quota windows; fresh state is reused across agent steps. The plugin enters `gpt-reserve` only with complete, non-FedRAMP account/user identity and backend Luna Reserve authorization, then restores the session's previous model and reasoning effort after confirmed ordinary-usage recovery. Reserve has its own allowance, is hidden from the model picker, and is not unlimited. The backend decides eligibility; reset times alone do not authorize a switch. This version supports known `gpt-5.6-luna` metadata only. See [Luna Reserve fallback](docs/reference.md#luna-reserve-fallback) for refresh, identity, and verification limits.
 

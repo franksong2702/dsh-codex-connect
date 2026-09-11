@@ -42,3 +42,39 @@ Reserve is experimental and remains disabled by default. Automated coverage uses
 The Reserve route uses Luna's documented 272,000-token catalog window. Automatic/manual compaction through Reserve is not authorized by this implementation, and no exact cross-host long-context preflight is claimed. Full Windows application acceptance and live Reserve transition acceptance remain separate from the release gate.
 
 After publication, independently verify npm version and `alpha` dist-tag, unchanged `latest`, matching Git tag/prerelease, package integrity, and an isolated exact-version installation. Only then update README.md, docs/README.zh.md, INSTALL.md, and README.i18n.yaml to recommend 4.35 and update #177 with the published scope.
+
+## Publication and independent readback — 2026-09-11
+
+Release preparation [PR #192](https://github.com/franksong2702/dsh-codex-connect/pull/192) merged as `1776eb4bd582ae200af2cc0758677a250acb092b`. [PR CI 34565552714](https://github.com/franksong2702/dsh-codex-connect/actions/runs/34565552714) and [release-commit main CI 34565789448](https://github.com/franksong2702/dsh-codex-connect/actions/runs/34565789448) each passed 840 tests on Node 22.19.0 and 24.20.0, 28 Chromium tests, Windows canary contracts, and all four exact-host installation/Reserve combinations on both Node jobs. [Main CodeQL 34565789141](https://github.com/franksong2702/dsh-codex-connect/actions/runs/34565789141) also passed.
+
+[Publish alpha release 34566085197](https://github.com/franksong2702/dsh-codex-connect/actions/runs/34566085197) completed successfully through the existing protected npm Trusted Publishing workflow. Verification, publication, npm readback, and GitHub prerelease creation all succeeded; no recovery mutation or second npm publication was needed. The [GitHub prerelease](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.35) was created at `2026-09-11T05:32:58Z`, and `v0.1.0-alpha.4.35` resolves to the original release commit above.
+
+The new readback diagnostics recorded E404 for the exact version and the old alpha tag on attempts 1–9. Attempt 10 observed both the new version and `alpha=0.1.0-alpha.4.35`; `latest` remained `0.1.0-alpha.4.34`. This establishes what the runner observed, not the precise cache or registry-propagation root cause.
+
+Read-only `recover-release.mjs --version 0.1.0-alpha.4.35 --run-id 34566085197` independently returned `already-complete`. It verified original release/CI provenance, npm integrity, and exact equality with the release workflow artifact. The npm archive SHA-256 is `785d6a40323ab0763fc9c4e86f5686dba15e1e6e03f128b781ababb5b1d521cc`, also matching every release-commit CI matrix report. The helper did not republish npm, promote a dist-tag, or modify the existing release.
+
+## Published-package installation and upgrade acceptance
+
+An independent macOS arm64 run on Node `v22.22.3` completed at `2026-09-11T05:42:53.262Z`. It downloaded the exact published npm archive, verified the release hash, and installed `dsh-codex-connect@0.1.0-alpha.4.35` through the normal DSH plugin command in four separate temporary homes. No local source build was substituted for the published plugin. [Structured reports](validation/alpha-435-published-install-reports.json) record each result.
+
+| Exact DSH runtime | DSH packages pinned and checked | pi-ai | Installed files identical | Additional check |
+|---|---:|---|---:|---|
+| `0.1.2-rc.1` | 214 | `0.84.4` | 63 | Fresh install |
+| `0.1.5-alpha.1` | 229 | `0.85.1` | 63 | Fresh install |
+| `0.1.5-rc.1` | 231 | `0.85.1` | 63 | Fresh install |
+| `0.1.5-rc.2` | 231 | `0.85.1` | 63 | Published 4.34 → 4.35 in the same profile |
+
+For each host, the CLI and actual model-runtime versions were checked rather than inferred from each other. All 63 installed plugin files matched the published archive byte-for-byte. Doctor reported compatible dependencies and absent credentials; all eight advertised models resolved and prepared; default model/search routing stayed unchanged; all six optional capability flags remained false; provider disposal and the installed synthetic Reserve lifecycle checks passed.
+
+The rc.2 upgrade first installed published 4.34 and verified its version/doctor, then used the same profile for the exact 4.35 command. The verifier reused `exact-dsh-fixture.mjs`, `validateDoctorResult`, and `check-installed-runtime.mjs`/`check-installed-reserve.mjs`; only the plugin source changed from a locally packed candidate to the exact registry package. Profile dumps were compared for unchanged defaults, and every installed plugin file was compared with the verified npm tarball. No live model requests were made, no production credentials were accessed, and all temporary fixtures were removed.
+
+The verified exact installation/upgrade command is:
+
+```sh
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.35
+dsh plugin --profile web exec dsh-codex-connect doctor --json
+```
+
+Replace `web` with the existing profile. This evidence does not authorize changing an existing DSH host or starting OAuth. Real-account Reserve entry/recovery, full native-session recovery, live search/image behavior, and full Windows application acceptance remain unverified by this run. #177 stays open for bounded real eligible-account acceptance; ordinary quota must not be deliberately exhausted for testing.
+
+Post-publication documentation now recommends the exact published 4.35 pairing while explicitly retaining `latest=4.34`. The immutable npm package may still contain the pre-publication README recommendation and unreleased wording; this documentation update does not republish or overwrite it. Historical release records and the separate #167 work are unchanged.
