@@ -98,7 +98,7 @@ jobs:
               pluginCommit: context.sha,
             })
             if (tracking === undefined) {
-              core.info('The channel is unchanged, older, or deduplicated; no candidate tracker is needed.')
+              core.info('The declared regression passed, or the channel is older/deduplicated; no new candidate tracker is needed. Full acceptance remains separate.')
               return
             }
             const issues = await github.paginate(github.rest.issues.listForRepo, {
