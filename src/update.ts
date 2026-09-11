@@ -29,6 +29,7 @@ export type OpenAICodexUpdateHighlightKind =
   | 'multi-account'
   | 'search-route'
   | 'image-model-hint'
+  | 'luna-reserve'
 
 export interface OpenAICodexUpdateHighlight {
   version: string
@@ -75,6 +76,7 @@ const HIGHLIGHT_KINDS: readonly OpenAICodexUpdateHighlightKind[] = [
   'multi-account',
   'search-route',
   'image-model-hint',
+  'luna-reserve',
 ]
 
 function isHighlightKind(value: unknown): value is OpenAICodexUpdateHighlightKind {

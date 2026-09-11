@@ -1,7 +1,7 @@
 /** Alpha release metadata checks shared by lint and its keyless regression tests. */
 
 const ALPHA_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-alpha\.(0|[1-9]\d*)(\.(0|[1-9]\d*))*$/u
-const HIGHLIGHT_KINDS = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'astra-compatibility', 'multi-account', 'search-route', 'image-model-hint'])
+const HIGHLIGHT_KINDS = new Set(['trusted-origins', 'runtime-compatibility', 'quota-fast-mode', 'dsh-rc7', 'search-stability', 'image-generation', 'oauth-history', 'model-visibility', 'proxy-connection', 'models-account', 'context-budget', 'auto-review-probe', 'auto-review', 'astra-compatibility', 'multi-account', 'search-route', 'image-model-hint', 'luna-reserve'])
 
 /** Accept the numeric Alpha format supported by the current release workflow, without build metadata. */
 export function isAlphaReleaseVersion(value) {
