@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
-import { readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
+import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
@@ -208,7 +208,7 @@ async function main() {
       throw new InfrastructureCheckError(`exact DSH fixture resolution failed: ${error instanceof Error ? error.message : String(error)}`)
     }
     await mkdir(installRoot, { recursive: true })
-    await writeFile(join(installRoot, 'package.json'), `${JSON.stringify({ private: true, overrides })}\n`)
+    await writeFile(join(installRoot, 'package.json'), `${JSON.stringify(exactDshFixtureManifest(overrides))}\n`)
     const install = await runCommand('npm', [
       'install',
       '--prefix', installRoot,

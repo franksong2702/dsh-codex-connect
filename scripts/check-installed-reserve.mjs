@@ -24,6 +24,9 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
   const ctx = new Context()
   process.env.DSH_HOME = directory
   let ordinary = false
+  let accountId = 'fixture-account'
+  let userId = 'fixture-user'
+  let exhausted = false
   let usageReads = 0
   const wires = []
   try {
@@ -39,8 +42,9 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
         assert.equal(new Headers(init.headers).get('x-openai-codex-luna-reserve'), '1')
         usageReads++
         return Response.json({
-          account_id: 'fixture-account', user_id: 'fixture-user', plan_type: 'pro',
+          account_id: accountId, user_id: userId, plan_type: 'pro',
           rate_limit: { allowed: ordinary, limit_reached: !ordinary },
+          ...(exhausted ? { additional_rate_limits: [{ metered_feature: 'base_model_inference', limit_name: 'gpt-reserve', rate_limit: { allowed: false, limit_reached: true } }] } : {}),
           rate_limit_upsell: ordinary ? null : {
             banner_type: 'luna_reserve', presentation: 'dismissible',
             title: 'Luna Reserve is available', description: 'Fixture authorization.', ctas: [],
@@ -63,7 +67,7 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
     }
     for (const plugin of [Llm, Sessions, Projections, Prompt, Tools, Agents]) await ctx.plugin(plugin)
     await ctx.plugin(Loop, { agents: [] })
-    await ctx.plugin(CodexConnect, { enableReserveFallback: true })
+    let plugin = await ctx.plugin(CodexConnect, { enableReserveFallback: true })
     assert.equal((await ctx.llm.listModels('openai-codex')).some(model => model.id === 'gpt-reserve'), false)
     const selection = { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('max'), maxTokens: 2048 }
     const agent = await ctx.agentLoop.create(SessionId('installed-reserve-fixture'), selection)
@@ -73,6 +77,7 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture turn' }] }))
       await agent.whenIdle()
       assert.deepEqual(agent.session.requestHeader()?.config, ordinary ? selection : { provider: 'openai-codex', model: 'gpt-reserve' })
+      if (!ordinary) assert.equal(agent.session.snapshotEvents().filter(event => event.type === 'request/context').at(-1)?.data.contextWindow, 272_000)
     }
     assert.equal(usageReads, 2)
     assert.deepEqual(wires.map(wire => wire.model), ['gpt-reserve', 'gpt-reserve', 'gpt-6-astra'])
@@ -83,8 +88,9 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
     const recovering = await ctx.agentLoop.create(SessionId('installed-reserve-retry-fixture'), selection)
     ordinary = false
     let attempts = 0
+    let injectQuotaFailure = true
     ctx.on('llm/stream', async function* (request, next) {
-      if (request.sessionId === recovering.session.id) {
+      if (injectQuotaFailure && request.sessionId === recovering.session.id) {
         attempts++
         if (request.model === 'gpt-6-astra') {
           yield { type: 'finish', reason: { kind: 'error', failure: { code: QUOTA_EXCEEDED_CODE, message: 'Fixture quota exhausted' } } }
@@ -99,6 +105,57 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
     assert.equal(usageReads, 3)
     assert.equal(wires.at(-1).model, 'gpt-reserve')
     assert.equal(recovering.session.snapshotEvents().filter(event => event.type === 'assistant/message').length, 1)
+    injectQuotaFailure = false
+    const send = async target => {
+      target.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture lifecycle check' }] }))
+      await target.whenIdle()
+    }
+    const count = wires.length
+    await assert.rejects(async () => {
+      for await (const _chunk of ctx.llm.stream({ provider: 'openai-codex', model: 'gpt-reserve', sessionId: recovering.session.id, messages: [], purpose: 'compaction' })) { /* drain */ }
+    }, /agent-loop requests/)
+    assert.equal(wires.length, count)
+
+    // Reloading with the feature disabled must stop a Reserve conversation.
+    await plugin.dispose()
+    plugin = await ctx.plugin(CodexConnect, { enableReserveFallback: false })
+    await send(recovering)
+    assert.equal(wires.length, count)
+    await plugin.dispose()
+    plugin = await ctx.plugin(CodexConnect, { enableReserveFallback: true })
+    ordinary = true
+    await send(recovering)
+    assert.equal(wires.length, count + 1)
+    assert.equal(wires.at(-1).model, selection.model)
+    assert.deepEqual(recovering.session.requestHeader()?.config, selection)
+
+    // A different session must not inherit a persisted return target.
+    const fork = await ctx.agentLoop.create(SessionId('installed-reserve-without-target'), { provider: 'openai-codex', model: 'gpt-reserve' })
+    await send(fork)
+    assert.equal(wires.length, count + 1)
+
+    ordinary = false
+    now += 61_000
+    await send(recovering)
+    assert.equal(wires.length, count + 2)
+    assert.equal(wires.at(-1).model, 'gpt-reserve')
+    accountId = 'second-fixture-account'
+    userId = 'second-fixture-user'
+    const secondClaims = { chatgpt_account_id: accountId, chatgpt_user_id: userId }
+    await credentials.modify('openai-codex', async () => ({
+      type: 'oauth', accountId,
+      access: `e30.${Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': secondClaims })).toString('base64url')}.fixture`,
+      refresh: 'second-fixture-refresh', expires: Date.now() + 3_600_000,
+    }))
+    await send(recovering)
+    assert.equal(wires.length, count + 2)
+
+    // Affirmative exhaustion must stop even an ordinary-model conversation.
+    exhausted = true
+    now += 61_000
+    const depleted = await ctx.agentLoop.create(SessionId('installed-reserve-exhausted'), selection)
+    await send(depleted)
+    assert.equal(wires.length, count + 2)
     return true
   } finally {
     try {

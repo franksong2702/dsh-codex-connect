@@ -308,6 +308,38 @@ describe('OpenAICodexQuotaState acceptance', () => {
     expect(readResponse).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('revokes previous authority when background refresh starts (failure: %s)', async fail => {
+    const h = setup()
+    try {
+      const previous = await h.state.read()
+      if (fail) readResponse.mockRejectedValueOnce(new Error('fixture refresh failure'))
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flush()
+      expect(readResponse).toHaveBeenCalledTimes(2)
+      expect(previous.authoritySignal.aborted).toBe(true)
+      if (!fail) expect((await h.state.read()).authoritySignal.aborted).toBe(false)
+    } finally { await h.state.dispose() }
+  })
+
+  it('revokes only the refreshed identity and revokes evicted cache entries', async () => {
+    const h = setup()
+    try {
+      const first = await h.state.read()
+      h.setAccount('second')
+      const second = await h.state.read()
+      vi.setSystemTime(60_000)
+      h.setAccount('acct')
+      await h.state.read()
+      expect(first.authoritySignal.aborted).toBe(true)
+      expect(second.authoritySignal.aborted).toBe(false)
+      for (let index = 0; index < 16; index++) {
+        h.setAccount(`eviction-${index}`)
+        await h.state.read()
+      }
+      expect(second.authoritySignal.aborted).toBe(true)
+    } finally { await h.state.dispose() }
+  })
+
   it('disables Reserve negotiation when token identity claims are incomplete', async () => {
     const h = setup()
     readAuth.mockResolvedValueOnce({ access: 'opaque-token-without-jwt-claims', accountId: 'acct' })

@@ -63,11 +63,15 @@ export function registerReserveRouting(ctx: Context, options: ReserveRoutingOpti
     }
 
     const { identity, decision } = result
+    const authoritySignal = AbortSignal.any([requestSignal, result.authoritySignal])
+    authoritySignal.throwIfAborted()
     if (decision.kind === 'exhausted') {
       throw new Error('Ordinary Codex usage and Luna Reserve are exhausted; wait for usage to recover or select another available model')
     }
     const saved = usingReserve ? await options.returns.load(sessionId) : undefined
-    requestSignal.throwIfAborted()
+    // Account/settings changes or a newer quota snapshot can arrive during I/O,
+    // including on ordinary recovery where no Reserve dispatch permit is issued.
+    authoritySignal.throwIfAborted()
     if (usingReserve && (saved === undefined || saved.identityKey !== identity.key)) {
       throw new Error('Codex Reserve has no return target for this account and conversation; select an ordinary model')
     }
@@ -88,8 +92,6 @@ export function registerReserveRouting(ctx: Context, options: ReserveRoutingOpti
     if (!usingReserve) {
       await options.returns.save(sessionId, { version: 1, identityKey: identity.key, ordinary: { ...ordinary } })
     }
-    requestSignal.throwIfAborted()
-    const authoritySignal = AbortSignal.any([requestSignal, result.authoritySignal])
     authoritySignal.throwIfAborted()
     options.permits.issue(sessionId, identity.key, authoritySignal)
     if (usingReserve) return config
@@ -115,6 +117,7 @@ export function registerReserveRouting(ctx: Context, options: ReserveRoutingOpti
     const result = await options.quota.read(undefined, requestSignal, previous.model).catch(() => undefined)
     requestSignal.throwIfAborted()
     if (result?.identity?.key !== account) return next()
+    result.authoritySignal.throwIfAborted()
     const decision = result.decision
     const entering = previous.model !== OPENAI_CODEX_RESERVE_MODEL && decision.kind === 'reserve'
       && decision.normalModel === OPENAI_CODEX_RESERVE_NORMAL_MODEL

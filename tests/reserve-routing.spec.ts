@@ -346,6 +346,31 @@ describe('assembled Reserve agent routing', () => {
     await expect(request(reserved)).rejects.toThrow('no return target for this account')
   })
 
+  it.each(['account', 'disabled'] as const)('rejects stale recovery when %s changes during return-target loading', async change => {
+    const originalRead = OpenAICodexQuotaState.prototype.read
+    let shared: OpenAICodexQuotaState | undefined
+    vi.spyOn(OpenAICodexQuotaState.prototype, 'read').mockImplementation(function (this: OpenAICodexQuotaState, ...args) {
+      shared = this
+      return originalRead.apply(this, args)
+    })
+    const config = { enableReserveFallback: true }
+    const { request, setAccount } = await fixture(config)
+    let usage = reserveUsage()
+    vi.stubGlobal('fetch', async () => Response.json(usage))
+    const reserved = await request()
+    usage = ordinaryUsage()
+    shared!.invalidate()
+    const originalLoad = ReserveReturnStore.prototype.load
+    vi.spyOn(ReserveReturnStore.prototype, 'load').mockImplementation(async function (this: ReserveReturnStore, sessionId) {
+      const saved = await originalLoad.call(this, sessionId)
+      if (change === 'account') await setAccount('second-account', 'second-user')
+      else config.enableReserveFallback = false
+      shared!.invalidate()
+      return saved
+    })
+    await expect(request(reserved)).rejects.toThrow()
+  })
+
   it('waits for an in-flight return write before plugin disposal completes and never grants its cancelled route', async () => {
     const { plugin, request } = await fixture()
     vi.stubGlobal('fetch', async () => Response.json(reserveUsage()))

@@ -61,6 +61,8 @@ export function reserveIdentity(access: string): ReserveIdentity | undefined {
   return {
     accountId,
     userId,
+    // Stable pseudonymous binding, not a password verifier or a bearer-token hash.
+    // Possession of this identifier never authorizes a backend request.
     key: createHash('sha256').update(JSON.stringify([accountId, userId])).digest('hex'),
   }
 }

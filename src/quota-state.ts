@@ -15,6 +15,8 @@ export interface OpenAICodexQuotaSnapshot {
 }
 
 interface Entry {
+  /** Revokes permits from this exact snapshot without invalidating other accounts. */
+  authority?: AbortController
   snapshot?: OpenAICodexQuotaSnapshot
   error?: Error
   pending?: Promise<OpenAICodexQuotaSnapshot>
@@ -118,11 +120,11 @@ export class OpenAICodexQuotaState {
     epoch.throwIfAborted()
     const candidate = enabled ? reserveIdentity(auth.access) : undefined
     const identity = candidate?.accountId === auth.accountId ? candidate : undefined
-    const fetch = async (): Promise<OpenAICodexQuotaSnapshot> => {
+    const fetch = async (authoritySignal = epoch): Promise<OpenAICodexQuotaSnapshot> => {
       const value = await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, epoch, enabled && identity !== undefined))
       epoch.throwIfAborted()
       return { usage: parseOpenAICodexUsage(value), ...(identity === undefined ? {} : { identity }),
-        decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal: epoch }
+        decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal }
     }
     if (!enabled) return fetch()
     const key = JSON.stringify([auth.accountId, identity?.key])
@@ -131,6 +133,7 @@ export class OpenAICodexQuotaState {
       if (this.cache.size >= 16) {
         const victim = [...this.cache].find(([, value]) => value.pending === undefined)
         if (victim === undefined) throw new Error('OpenAI Codex quota is temporarily unavailable')
+        victim[1].authority?.abort()
         this.cache.delete(victim[0])
       }
       entry = { fetchedAt: 0, refreshAt: 0 }
@@ -150,7 +153,12 @@ export class OpenAICodexQuotaState {
       if (entry.snapshot !== undefined) return entry.snapshot
     }
     const current = entry
-    const pending = fetch().then(result => {
+    // A refresh (including a failed one) must not leave undispatched permits
+    // authorized by the previous snapshot. Other account entries stay isolated.
+    current.authority?.abort()
+    const authority = new AbortController()
+    current.authority = authority
+    const pending = fetch(AbortSignal.any([epoch, authority.signal])).then(result => {
       epoch.throwIfAborted()
       current.snapshot = result
       delete current.error

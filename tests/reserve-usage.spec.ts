@@ -25,6 +25,14 @@ describe('Reserve identity and backend authority', () => {
       .toMatchObject({ userId: 'fallback' })
   })
 
+  it('binds identifiers rather than bearer bytes and separates ambiguous identifier pairs', () => {
+    const refreshed = reserveToken('fixture-account', 'fixture-user', { exp: 9999999999 }).replace(/\.[^.]+$/u, '.changed-signature')
+    expect(reserveIdentity(refreshed)?.key).toBe(identity.key)
+    expect(reserveIdentity(reserveToken('ab', 'c'))?.key)
+      .not.toBe(reserveIdentity(reserveToken('a', 'bc'))?.key)
+    expect(reserveIdentity(reserveToken('fixture-account', 'different-user'))?.key).not.toBe(identity.key)
+  })
+
   it('enters only for the recognized identity-matched banner and preserves its blocked model', () => {
     expect(parseReserveUsage(reserveUsage(), identity)).toEqual({ kind: 'reserve', normalModel: 'gpt-5.6-luna' })
     const usage = reserveUsage()
