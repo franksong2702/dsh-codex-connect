@@ -35,7 +35,7 @@ describe('compatibility contract', () => {
     expect(JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))).toEqual(COMPATIBILITY_CONTRACT)
   })
 
-  it.each(['0.1.5-alpha.1', '0.1.5-rc.1'])('accepts the exact %s host pair without accepting mixed or future versions', version => {
+  it.each(['0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2'])('accepts the exact %s host pair without accepting mixed or future versions', version => {
     const alpha = {
       '@deepseek-ai/dsh-llm': version,
       '@deepseek-ai/dsh-llm-pi-ai': version,
@@ -44,11 +44,12 @@ describe('compatibility contract', () => {
     expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: alpha }).status).toBe('compatible')
     for (const packages of [
       { ...alpha, '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
+      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-rc.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.2' },
       { ...alpha, '@earendil-works/pi-ai': '0.84.4' },
       { ...compatiblePackages, '@earendil-works/pi-ai': '0.85.1' },
       { ...alpha, '@earendil-works/pi-ai': '0.85.2' },
       { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-alpha.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-alpha.2' },
-      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.2' },
+      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-rc.3', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.3' },
     ]) expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
   })
 
