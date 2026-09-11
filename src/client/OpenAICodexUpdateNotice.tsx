@@ -75,6 +75,7 @@ const highlightKeys: Record<OpenAICodexUpdateHighlightKind, OpenAICodexSettingsK
   'multi-account': 'updateHighlightMultiAccount',
   'search-route': 'updateHighlightSearchRoute',
   'image-model-hint': 'updateHighlightImageModelHint',
+  'luna-reserve': 'updateHighlightLunaReserve',
 }
 
 function pluginVersionSummary(current: string, latest: string | undefined, t: OpenAICodexUpdateTranslation): string {
