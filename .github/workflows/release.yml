@@ -198,32 +198,9 @@ jobs:
           npm publish "$RUNNER_TEMP/release/release.tgz" --tag alpha --provenance --ignore-scripts
 
       - name: Verify npm version and alpha dist-tag
-        shell: bash
         env:
           VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          readonly PACKAGE='dsh-codex-connect'
-          for attempt in 1 2 3 4 5 6; do
-            version_json="$(npm view "$PACKAGE@$VERSION" version --json 2>/dev/null || true)"
-            alpha_json="$(npm view "$PACKAGE" dist-tags.alpha --json 2>/dev/null || true)"
-            if node -e '
-              const [expected, versionRaw, alphaRaw] = process.argv.slice(1)
-              const parse = (raw) => {
-                try { return JSON.parse(raw) }
-                catch { return raw.trim() }
-              }
-              if (parse(versionRaw) !== expected || parse(alphaRaw) !== expected) process.exit(1)
-            ' "$VERSION" "$version_json" "$alpha_json"; then
-              echo "npm published $PACKAGE@$VERSION with alpha=$VERSION."
-              exit 0
-            fi
-            if (( attempt < 6 )); then
-              sleep 10
-            fi
-          done
-          echo "npm did not expose $PACKAGE@$VERSION and dist-tags.alpha=$VERSION after six attempts." >&2
-          exit 1
+        run: node scripts/verify-npm-readback.mjs
 
       - name: Create GitHub prerelease
         shell: bash
