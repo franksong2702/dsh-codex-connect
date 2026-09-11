@@ -256,6 +256,7 @@ async function main() {
     if (!/^    enableProxy: false$/mu.test(pluginBlock)
       || !/^    enableSearch: false$/mu.test(pluginBlock)
       || !/^    enableReserveFallback: false$/mu.test(pluginBlock)
+      || !/^    enableNativeCompaction: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
       || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
@@ -303,6 +304,7 @@ async function main() {
         enableProxy: false,
         enableSearch: false,
         enableReserveFallback: false,
+        enableNativeCompaction: false,
         enableImageTool: false,
         enableImageGeneration: false,
         enableAutoReview: false,

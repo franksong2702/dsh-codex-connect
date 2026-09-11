@@ -34,7 +34,7 @@ const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
-  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
+  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true },
 }))
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')

@@ -103,6 +103,7 @@ const CONFIG_FIELDS = [
   'contextWindowOverrides',
   'enableProxy',
   'enableReserveFallback',
+  'enableNativeCompaction',
   'proxyUrl',
   'enableImageTool',
   'enableImageGeneration',
@@ -773,6 +774,17 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             <span style={toggleCopyStyle}>
               <span style={labelStyle}>{t('enableReserveFallback')}</span>
               <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableNativeCompaction}
+              onChange={event => { update('enableNativeCompaction', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableNativeCompaction')}</span>
+              <span style={bodyStyle}>{t('enableNativeCompactionHelp')}</span>
             </span>
           </label>
           <label style={toggleRowStyle}>

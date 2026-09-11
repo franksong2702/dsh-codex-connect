@@ -30,6 +30,7 @@ describe('OpenAI Codex proxy settings contract', () => {
   it('keeps fresh and legacy settings on direct connection', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableReserveFallback).toBe(false)
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableNativeCompaction).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.autoReviewDisclosureAcknowledged).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableAutoReview).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
@@ -43,6 +44,7 @@ describe('OpenAI Codex proxy settings contract', () => {
     })
     expect(legacy?.enableProxy).toBe(false)
     expect(legacy?.enableReserveFallback).toBe(false)
+    expect(legacy?.enableNativeCompaction).toBe(false)
     expect(legacy?.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
     expect(legacy?.autoReviewDisclosureAcknowledged).toBe(false)
     expect(legacy?.enableAutoReview).toBe(false)
