@@ -12,19 +12,19 @@ Codex Connect adds the `openai-codex` model provider to the normal Harness agent
 
 ## Quick start
 
-This guide describes the published pairing below. Check `dsh --version` first; for another DSH version, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
+This guide describes the published pairings below. Check `dsh --version` first and use `doctor --json` to inspect the installed model-runtime packages: an rc.1 CLI can resolve rc.2 packages. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.33` |
-| DeepSeek Harness | `0.1.2-rc.1` or `0.1.5-alpha.1` |
+| Codex Connect | `0.1.0-alpha.4.34` |
+| DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.33
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.34
 dsh web
 ```
 

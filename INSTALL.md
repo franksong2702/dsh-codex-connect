@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-Alpha 4.33 is verified with DSH `0.1.2-rc.1` and pi-ai `0.84.4` within `^0.84.2`, and with DSH `0.1.5-alpha.1` and pi-ai `0.85.1`.
+Published Alpha 4.34 is verified with DSH `0.1.2-rc.1` and pi-ai `0.84.4` within `^0.84.2`, and with each exact DSH `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` model-runtime pairing using pi-ai `0.85.1`.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
@@ -16,22 +16,26 @@ Install `dsh-codex-connect` into one requested DeepSeek Harness profile without 
 
 ### Select an exact version before installation
 
-Check `dsh --version` before changing the requested profile. Use `dsh --help` to locate the CLI if needed; from a Harness checkout use `pnpm dsh --version`. Select an exact pair from [verified-compatibility.json](verified-compatibility.json):
+Check `dsh --version` before changing the requested profile. Use `dsh --help` to locate the CLI if needed; from a Harness checkout use `pnpm dsh --version`. The CLI string alone does not identify every installed model-runtime package: a CLI reporting `0.1.5-rc.1` can resolve `0.1.5-rc.2` packages. When the plugin is already installed, also run `dsh plugin --profile web exec dsh-codex-connect doctor --json` and inspect the installed `@deepseek-ai/dsh-llm`, `@deepseek-ai/dsh-llm-pi-ai`, and pi-ai versions. Substitute the requested profile. Select an exact pair from [verified-compatibility.json](verified-compatibility.json):
 
 | Installed DSH version | Codex Connect version to pin |
 | --- | --- |
 | `0.1.0-rc.7` | `0.1.0-alpha.4.14` |
 | `0.1.1-rc.2` | `0.1.0-alpha.4.21` |
 | `0.1.2-alpha.2` | `0.1.0-alpha.4.23` |
-| `0.1.2-rc.1` | `0.1.0-alpha.4.33` |
+| `0.1.2-rc.1` | `0.1.0-alpha.4.34` |
 | `0.1.2-alpha.5` | `0.1.0-alpha.4.25` |
-| `0.1.5-alpha.1` | `0.1.0-alpha.4.33` |
+| `0.1.5-alpha.1` | `0.1.0-alpha.4.34` |
+| `0.1.5-rc.1` | `0.1.0-alpha.4.34` |
+| `0.1.5-rc.2` | `0.1.0-alpha.4.34` |
 
 If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-Alpha 4.33 requires one consistent DSH plugin API version: `0.1.2-rc.1` with `@earendil-works/pi-ai` `^0.84.2`, or `0.1.5-alpha.1` with pi-ai `0.85.1`; Node.js remains `^22.19.0 || >=24.0.0`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+Alpha 4.34 requires one consistent DSH plugin API version: `0.1.2-rc.1` with `@earendil-works/pi-ai` `^0.84.2`, or one of `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`; Node.js remains `^22.19.0 || >=24.0.0`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 remains the verified choice for DSH `0.1.2-alpha.2`, Alpha 4.21 remains the verified choice for DSH `0.1.1-rc.2`, and staying on DSH `0.1.0-rc.7` means selecting Alpha 4.14. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
 
-The Alpha 4.33 rows reflect same-artifact isolated installation and runtime checks, bounded real-account calls, and isolated upgrades from Alpha 4.32. Fresh OAuth and manual callback acceptance used the real implementation through a temporary acceptance page. See [.github/ALPHA_433_RELEASE_READINESS.md](https://github.com/franksong2702/dsh-codex-connect/blob/main/.github/ALPHA_433_RELEASE_READINESS.md) for commands and verification limits. Historical rows remain the repository's existing verification record. This guidance does not change upstream DSH behavior or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
+The Alpha 4.34 rows reflect same-artifact isolated installation and model-runtime checks on both configured Node versions, browser regression, Windows canary contracts, and independent verification of the published npm artifact. All eight advertised models resolved and prepared, defaults were unchanged, and provider disposal succeeded. These are not fresh real OAuth, live model/tool/image, or full Windows application acceptance. See [.github/ALPHA_434_RELEASE_READINESS.md](https://github.com/franksong2702/dsh-codex-connect/blob/main/.github/ALPHA_434_RELEASE_READINESS.md) for release recovery, upgrade evidence, and verification limits. Historical rows remain the repository's existing verification record. This guidance does not change upstream DSH behavior or resolve [Issue #64](https://github.com/franksong2702/dsh-codex-connect/issues/64).
+
+Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, producing `Cannot read properties of undefined (reading 'get')`. Alpha 4.34 contains the fix. Reauthorization or repeated model-list retries do not add a missing profile field. Pin the corrected plugin version for a verified host combination; do not delete credentials or change DSH merely to work around this failure. DSH `0.1.5-alpha.2` remains unverified.
 
 ### Install the selected version and validate
 
@@ -54,10 +58,10 @@ The Alpha 4.33 rows reflect same-artifact isolated installation and runtime chec
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.23
    ```
 
-   For DSH `0.1.2-rc.1` or `0.1.5-alpha.1`, use Alpha 4.33:
+   For DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2`, use Alpha 4.34:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.33
+   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.34
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -66,7 +70,7 @@ The Alpha 4.33 rows reflect same-artifact isolated installation and runtime chec
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.25
    ```
 
-   If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.33'` only for the DSH `0.1.2-rc.1` or `0.1.5-alpha.1` combinations.
+   If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.34'` only for the DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` combinations.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
