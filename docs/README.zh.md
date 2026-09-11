@@ -16,15 +16,17 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.34` |
+| Codex Connect | `0.1.0-alpha.4.35` |
 | DeepSeek Harness | `0.1.2-rc.1`、`0.1.5-alpha.1`、`0.1.5-rc.1` 或 `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
+截至 2026-09-11，npm `alpha` 指向 4.35，`latest` 则有意保留在 4.34。安装 4.35 请使用下方精确版本命令；文档推荐更新不代表默认安装渠道已提升。
+
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.34
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.35
 dsh web
 ```
 
@@ -74,9 +76,9 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 | GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
 
-**尚未发布的实验功能：** 已发布的 Alpha 4.34 不包含 Luna Reserve 回退。此开发版本仍默认关闭该功能，尚未完成真实账户进入 Reserve 及恢复普通模型的验证。
+**已发布的实验功能：** Alpha 4.35 包含 Luna Reserve 回退，仍默认关闭。真实账户进入 Reserve 及恢复普通模型的过程仍未验证；Alpha 4.34 不包含该功能。
 
-启用 `enableReserveFallback: true` 后，账户 UI 和 agent 路由共用一份绑定身份的额度状态，按服务端返回的额度窗口后台刷新；有效状态可跨 agent step 复用。只有身份完整、非 FedRAMP 且服务端授权时，插件才进入 `gpt-reserve`；普通额度确认恢复后，切回该会话先前的模型和推理强度。Reserve 有自己的额度，不出现在模型选择器中，也不是无限额度。资格由服务端决定，重置时间本身不授权切换。当前版本只支持已知的 `gpt-5.6-luna` 元数据。刷新、身份和验证限制见 [Luna Reserve fallback](reference.md#luna-reserve-fallback)。
+启用 `enableReserveFallback: true` 后，账户 UI 和 agent 路由共用一份绑定身份的额度状态，按服务端返回的额度窗口后台刷新；有效状态可跨 agent step 复用。只有身份完整、非 FedRAMP 且服务端授权时，插件才进入 `gpt-reserve`；普通额度确认恢复后，切回该会话先前的模型和推理强度。Reserve 有自己的额度，不出现在模型选择器中，也不是无限额度。资格由服务端决定，重置时间本身不授权切换。当前版本只支持已知的 `gpt-5.6-luna` 元数据。刷新、身份和验证限制见 [Luna Reserve 回退](reference.zh.md#luna-reserve-回退)。
 
 使用你当前 GPT 订阅计划提供的图片生成能力。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 
