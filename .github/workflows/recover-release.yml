@@ -1,0 +1,51 @@
+name: Recover published alpha release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Alpha version already published on npm
+        required: true
+        type: string
+      original_run_id:
+        description: Original Publish alpha release run ID whose publish step succeeded
+        required: true
+        type: string
+      confirm:
+        description: Type RECOVER to authorize missing GitHub prerelease creation only
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm-release
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Check out trusted recovery code only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.15.0
+      - name: Verify original evidence and complete missing prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          ORIGINAL_RUN_ID: ${{ inputs.original_run_id }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: node scripts/recover-release.mjs --version "$VERSION" --run-id "$ORIGINAL_RUN_ID" --apply

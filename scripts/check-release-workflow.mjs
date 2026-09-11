@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import './verify-release-ci.test.mjs'
+import './verify-npm-readback.test.mjs'
+import './recover-release.test.mjs'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/release.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
@@ -74,10 +76,11 @@ assertContract('publish waits for read-only verification', /needs: verify/.test(
 assertContract('privileged job does not install project dependencies or run project tests', !/pnpm|npm (?:ci|install)(?! --global)/.test(publishJob))
 assertContract('CI is checked before verification and after approval', (workflow.match(/run: node scripts\/verify-release-ci.mjs/g) ?? []).length === 2)
 assertContract('verified artifact is SHA-bound and digest checked', workflow.includes('verified-package-${{ github.sha }}') && publishJob.includes('needs.verify.outputs.sha256') && publishJob.includes('sha256sum --check --strict'))
-assertContract('post-publish version and alpha tag verification is retried',
-  /for attempt in 1 2 3 4 5 6/.test(workflow) &&
-  /npm view "\$PACKAGE\@\$VERSION" version/.test(workflow) &&
-  /npm view "\$PACKAGE" dist-tags\.alpha/.test(workflow))
+const readbackSource = readFileSync(new URL('./verify-npm-readback.mjs', import.meta.url), 'utf8')
+assertContract('post-publish readback uses tested bounded online diagnostics',
+  /run: node scripts\/verify-npm-readback.mjs/.test(workflow)
+    && readbackSource.includes('--prefer-online') && readbackSource.includes('NPM_READBACK_ATTEMPTS = 12')
+    && readbackSource.includes('maxBuffer: 64 * 1024') && readbackSource.includes('npmReadbackObservation'))
 assertContract('GitHub prerelease is created from the workflow SHA',
   /gh release create[\s\S]*?--prerelease[\s\S]*?--target "\$GITHUB_SHA"[\s\S]*?--generate-notes/.test(workflow))
 assertContract('workflow never promotes the latest dist-tag', !/npm dist-tag add/.test(workflow))
@@ -95,6 +98,23 @@ assertContract(
     !step.split('\n').some(line => /^(?:      - |        )(?:if|continue-on-error):/.test(line)),
   ),
 )
+
+const recoveryWorkflow = readFileSync(new URL('../.github/workflows/recover-release.yml', import.meta.url), 'utf8')
+const recoverySource = readFileSync(new URL('./recover-release.mjs', import.meta.url), 'utf8')
+assertContract('recovery is manual, main-only and protected by the release environment',
+  /^on:\s*\n\s+workflow_dispatch:/m.test(recoveryWorkflow)
+    && !/^\s+(?:push|pull_request|schedule):/m.test(recoveryWorkflow)
+    && recoveryWorkflow.includes("github.ref == 'refs/heads/main'")
+    && recoveryWorkflow.includes('environment: npm-release') && recoveryWorkflow.includes('group: npm-release'))
+assertContract('recovery grants no OIDC or npm credential and never republishes or promotes',
+  !/id-token|NPM_TOKEN|NODE_AUTH_TOKEN|npm publish|npm dist-tag|pnpm install/.test(recoveryWorkflow + recoverySource))
+assertContract('recovery actions are pinned and checkout credentials are not persisted',
+  [...recoveryWorkflow.matchAll(/uses:\s+([^\s#]+)/g)].every(match => /@[0-9a-f]{40}$/.test(match[1]))
+    && recoveryWorkflow.includes('persist-credentials: false'))
+assertContract('recovery uses an explicit confirmation and only the tested helper',
+  recoveryWorkflow.includes('CONFIRM: ${{ inputs.confirm }}')
+    && recoveryWorkflow.includes('run: node scripts/recover-release.mjs --version "$VERSION" --run-id "$ORIGINAL_RUN_ID" --apply')
+    && recoverySource.includes("confirmation !== 'RECOVER'"))
 
 if (failures.length > 0) {
   console.error(`release workflow contract failed (${failures.length}/${assertionCount}):`)

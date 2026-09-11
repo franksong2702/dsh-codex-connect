@@ -64,17 +64,55 @@ npm logout
 The readback must equal `<version>`. After the first stable release,
 `latest` must point only to stable releases.
 
+## npm readback diagnostics
+
+The post-publish check now uses `scripts/verify-npm-readback.mjs`: at most 12
+attempts, ten seconds apart, with parallel bounded version/tag queries to the
+explicit public registry and `--prefer-online`. Each query has a 12-second npm
+fetch timeout, no internal retries, and a 20-second process deadline. Output
+records only exit codes, allowlisted error codes, valid version strings, and
+whether the exact version/alpha pair matched. It never prints raw responses,
+local paths, authorization URLs, or credentials. A mismatch, invalid JSON, and
+query failure remain different observations; none by itself proves propagation
+delay. `--prefer-online` requests fresher metadata but cannot guarantee immediate
+registry visibility. See the [npm configuration reference](https://docs.npmjs.com/cli/v11/using-npm/config/).
+
 ## If npm published but GitHub release creation failed
 
-Do not publish the npm version again. After confirming the npm readback, create
-the missing prerelease from the same commit with GitHub CLI:
+**Do not rerun npm publication.** Use the original release run ID, not the latest
+main commit. First run read-only verification from trusted current main code:
 
 ```sh
-gh release create "v<version>" --repo franksong2702/dsh-codex-connect \
-  --prerelease --target <commit-sha> --generate-notes
+node scripts/recover-release.mjs --version <exact-alpha-version> --run-id <original-release-run-id>
 ```
 
-Use a short-lived `gh` authentication session as required by your local
-environment; never record its OAuth URL or token. If the target Git tag already
-exists, the command attaches the release to that tag; otherwise, stop and
-investigate the commit/tag mismatch before retrying.
+The helper requires the original repository/main/workflow identity, successful
+verification and authorized publish steps, successful exact-SHA main CI, and a
+non-expired verified artifact from that run. It downloads data only, never runs
+the old package, and requires npm metadata, SHA-512 integrity, SHA-1, manifest
+identity, and exact archive bytes to match the original artifact. The original
+SHA must remain on main. Existing tags must resolve to that SHA; conflicting
+or draft/non-prerelease releases stop recovery. Missing or expired evidence
+also stops recovery; rebuilding current main is not a substitute.
+
+To complete a missing prerelease, manually dispatch **Recover published alpha
+release** on main with the same version, original run ID, and `RECOVER`.
+The existing `npm-release` environment approval and shared release concurrency
+apply. This workflow has no OIDC/npm publication permission or package-install
+step. Alternatively, an authorized maintainer can apply the verified result:
+
+```sh
+CONFIRM=RECOVER node scripts/recover-release.mjs --version <exact-alpha-version> --run-id <original-release-run-id> --apply
+```
+
+Apply only creates missing tag/release records and checks their final identity.
+It never moves an existing tag, promotes npm or GitHub latest, or republishes npm.
+An already-complete matching release is a no-op, including on retry. If tag
+creation succeeds but release creation fails, inspect and rerun this recovery
+helper rather than deleting or moving the tag. A later alpha channel does not
+block recovery of the exact historical package and is never rolled back.
+
+The original failed workflow remains historical evidence, not a success claim.
+Record the recovery verification/run alongside it. Do not copy temporary signed
+artifact-download URLs or authentication material into reports. Artifact API
+semantics: [GitHub Actions artifacts](https://docs.github.com/en/rest/actions/artifacts).
