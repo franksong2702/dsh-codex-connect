@@ -291,6 +291,10 @@ async function main() {
     if (runtimeReport?.['reserveTransitionsVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
+    if (runtimeReport?.nativeCompactionLifecycle?.syntheticOnly !== true
+      || runtimeReport.nativeCompactionLifecycle.freshProcesses !== 8) {
+      throw new CompatibilityCheckError('installed native compaction lifecycle proof is missing')
+    }
 
     process.stdout.write(`${JSON.stringify({
       schemaVersion: JSON_SCHEMA_VERSION,

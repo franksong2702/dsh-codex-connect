@@ -19,8 +19,12 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
       || report.runtime?.reserveTransitionsVerified !== true
+      || report.runtime?.nativeCompactionLifecycle?.syntheticOnly !== true
+      || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 8
+      || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'
+      || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.phases) !== '["write","resume-fork","verify-child","failure-paths"]'
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
-      || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
+      || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableNativeCompaction', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1
       || report.runtime.reasoningModelCount !== report.runtime.modelCount
       || report.runtime.preparedModelCount !== report.runtime.modelCount) {

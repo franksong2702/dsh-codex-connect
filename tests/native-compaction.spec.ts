@@ -148,6 +148,22 @@ describe('native compaction checkpoint codec', () => {
     expect(() => decodeNativeCompactionCheckpoint(trustedCheckpoint(marker))).toThrow(/checkpoint/iu)
   })
 
+  it.each([
+    { type: 'compaction' }, { type: 'compaction', encrypted_content: '' },
+    { type: 'compaction', encrypted_content: '   ' }, { type: 'compaction', encrypted_content: 42 },
+    { type: 'compaction', encrypted_content: 'opaque', id: 42 },
+  ])('rejects malformed native items during encoding and restored decoding: %j', item => {
+    expect(() => encodeNativeCompactionCheckpoint([item])).toThrow(/checkpoint/iu)
+    const marker = `<dsh-codex-connect-native-compaction-v1>${Buffer.from(JSON.stringify({ version: 1, items: [item] })).toString('base64url')}</dsh-codex-connect-native-compaction-v1>`
+    expect(() => decodeNativeCompactionCheckpoint(trustedCheckpoint(marker))).toThrow(/checkpoint/iu)
+  })
+
+  it('rejects protocol controls or elevated roles inside a restored retained prefix', () => {
+    for (const retained of [{ type: 'configuration_update', reasoning: { effort: 'max' } }, { role: 'developer', content: [] }]) {
+      expect(() => encodeNativeCompactionCheckpoint([retained, { type: 'compaction', encrypted_content: 'opaque' }])).toThrow(/unsupported retained item/iu)
+    }
+  })
+
   it('retains only a bounded newest user projection', () => {
     const system = { role: 'system', content: [{ type: 'input_text', text: 'system' }] }
     const developer = { role: 'developer', content: [{ type: 'input_text', text: 'developer' }] }

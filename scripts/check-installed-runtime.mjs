@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { checkInstalledReserve } from './check-installed-reserve.mjs'
+import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const PROVIDER_ID = 'openai-codex'
@@ -90,6 +91,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     }
 
     const reserveTransitionsVerified = await checkInstalledReserve(specifier => importFromProfile(hostPath, specifier), OpenAICodex)
+    const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
 
     return {
       schemaVersion: JSON_SCHEMA_VERSION,
@@ -98,6 +100,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       preparedModelCount: models.length,
       disposalVerified: true,
       reserveTransitionsVerified,
+      nativeCompactionLifecycle,
     }
   } finally {
     await ctx.fiber.dispose()

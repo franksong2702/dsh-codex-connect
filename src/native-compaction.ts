@@ -77,7 +77,17 @@ function validateNativeItems(value: unknown): readonly unknown[] {
   let compactions = 0
   for (const item of value) {
     if (!isRecord(item)) throw new Error('Codex native compaction checkpoint contains a malformed item')
-    if (item['type'] === 'compaction') compactions += 1
+    if (item['type'] === 'compaction') {
+      const encrypted = item['encrypted_content']
+      if (typeof encrypted !== 'string' || encrypted.trim().length === 0
+        || (item['id'] !== undefined && (typeof item['id'] !== 'string' || item['id'].length === 0))) {
+        throw new Error('Codex native compaction checkpoint contains invalid encrypted content or identity')
+      }
+      compactions += 1
+    } else if (item['role'] !== 'user' || (item['type'] !== undefined && item['type'] !== 'message')
+      || !Array.isArray(item['content'])) {
+      throw new Error('Codex native compaction checkpoint contains an unsupported retained item')
+    }
   }
   if (compactions !== 1 || !isRecord(value.at(-1)) || value.at(-1)?.['type'] !== 'compaction') {
     throw new Error('Codex native compaction checkpoint must end with exactly one compaction item')
@@ -397,6 +407,7 @@ async function compactResponse(response: Response, retained: readonly unknown[])
   let responseId: string | undefined
   let usage: JsonRecord | undefined
   let completed = false
+  let receivedBytes = 0
 
   const consumeEvent = (raw: string): void => {
     const data = raw.split(/\r?\n/u)
@@ -420,9 +431,11 @@ async function compactResponse(response: Response, retained: readonly unknown[])
     }
     if (event['type'] !== 'response.completed' && event['type'] !== 'response.done') return
     const terminal = event['response']
-    if (!isRecord(terminal)) throw new Error('OpenAI Codex native compaction returned a malformed terminal event')
+    if (completed || !isRecord(terminal) || terminal['status'] !== 'completed') {
+      throw new Error('OpenAI Codex native compaction returned an invalid or duplicate terminal event')
+    }
     const id = terminal['id']
-    if (id !== undefined && typeof id !== 'string') throw new Error('OpenAI Codex native compaction returned a malformed response id')
+    if (typeof id !== 'string' || id.length === 0) throw new Error('OpenAI Codex native compaction returned a malformed response id')
     responseId = id
     const rawUsage = terminal['usage']
     if (rawUsage !== undefined && !isRecord(rawUsage)) throw new Error('OpenAI Codex native compaction returned malformed usage')
@@ -433,6 +446,10 @@ async function compactResponse(response: Response, retained: readonly unknown[])
   try {
     while (true) {
       const { done, value } = await reader.read()
+      receivedBytes += value?.byteLength ?? 0
+      if (receivedBytes > OPENAI_CODEX_NATIVE_COMPACTION_MAX_CHECKPOINT_BYTES * 4) {
+        throw new Error('OpenAI Codex native compaction stream exceeds the local size limit')
+      }
       buffer += decoder.decode(value, { stream: !done })
       while (true) {
         const match = /\r?\n\r?\n/u.exec(buffer)
@@ -444,6 +461,7 @@ async function compactResponse(response: Response, retained: readonly unknown[])
     }
     if (buffer.trim().length > 0) consumeEvent(buffer)
   } finally {
+    await reader.cancel().catch(() => undefined)
     reader.releaseLock()
   }
   if (!completed) throw new Error('OpenAI Codex native compaction stream ended before response.completed')
@@ -542,9 +560,9 @@ async function requestNativeCompaction(
     await options?.onResponse?.({ status: response.status, headers: responseHeaders(response.headers) }, model)
     if (response.ok) return compactResponse(response, retained)
     const error = new Error(`OpenAI Codex native compaction request failed with HTTP ${response.status}`)
+    await response.body?.cancel()
     if (!retryableStatus(response.status) || attempt === maxRetries) throw error
     lastError = error
-    await response.body?.cancel()
     await waitForRetry(retryDelayMs(response, attempt), options?.signal)
   }
   throw lastError instanceof Error ? lastError : new Error('OpenAI Codex native compaction request failed')
@@ -575,18 +593,23 @@ function nativeCompactionStream(
   scope: NativeCompactionScope,
 ): AssistantMessageEventStream {
   const target = createAssistantMessageEventStream()
-  void requestNativeCompaction(model, context, options, scope).then(
-    response => {
-      const source = markerStream(model, response)
-      void (async () => { for await (const event of source) target.push(event) })()
-    },
-    error => {
-      const source = options?.signal?.aborted === true
+  void (async () => {
+    let source: AssistantMessageEventStream
+    try {
+      const response = await requestNativeCompaction(model, context, options, scope)
+      options?.signal?.throwIfAborted()
+      // Encoding/validation can fail too; keep it inside the pre-emission fallback boundary.
+      source = markerStream(model, response)
+    } catch (error: unknown) {
+      source = options?.signal?.aborted === true
         ? failedStream(model, error, options.signal)
         : standardStream(provider, model, context, options, scope)
-      void (async () => { for await (const event of source) target.push(event) })()
-    },
-  )
+    }
+    for await (const event of source) target.push(event)
+  })().catch(async (error: unknown) => {
+    // A synchronous fallback setup failure or iterator error must terminate the stream.
+    for await (const event of failedStream(model, error, options?.signal)) target.push(event)
+  })
   return target
 }
 
