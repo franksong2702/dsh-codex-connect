@@ -147,8 +147,23 @@ export function duplicateCandidateOwner(channel, dedupeAgainst, distTags) {
   return dedupeAgainst.find(owner => distTags[channel] === distTags[owner])
 }
 
-export function classifyCandidateVersion(candidateVersion, supportedVersion) {
-  if (candidateVersion === supportedVersion) return 'unchanged'
+/** Validate the exact support set; the legacy scalar is a baseline, not the full set. */
+export function declaredDshVersions(compatibility) {
+  const baseline = compatibility?.dshPluginApi?.version
+  const supplied = compatibility?.dshPluginApi?.versions
+  const versions = supplied === undefined ? [baseline] : supplied
+  if (typeof baseline !== 'string' || parseSemanticVersion(baseline) === undefined
+    || !Array.isArray(versions) || versions.length === 0 || versions.length > 64
+    || versions.some(value => typeof value !== 'string' || parseSemanticVersion(value) === undefined)
+    || new Set(versions).size !== versions.length || !versions.includes(baseline)) {
+    throw new Error('compatibility.json has an invalid exact DSH support set')
+  }
+  return [...versions]
+}
+
+export function classifyCandidateVersion(candidateVersion, supportedVersion, supportedVersions = [supportedVersion]) {
+  if (supportedVersions.includes(candidateVersion)) return 'declared'
+  // Comparing only with the maximum would skip holes such as alpha.2.
   return compareSemanticVersions(candidateVersion, supportedVersion) > 0 ? 'newer' : 'not-newer'
 }
 
@@ -226,11 +241,14 @@ async function emitReport(path, report) {
   process.stdout.write(serialized)
 }
 
-function baseReport(supportedVersion, channel) {
+function baseReport(supportedVersion, supportedVersions, channel) {
   return {
     schemaVersion: JSON_SCHEMA_VERSION,
     channel,
     supportedVersion,
+    supportedVersions,
+    declaredSupport: null,
+    acceptanceScope: 'not-assessed',
     candidateVersion: null,
     nodeVersion: process.version,
     pluginCommit: process.env.GITHUB_SHA ?? null,
@@ -266,14 +284,9 @@ export async function runCanary(options, dependencies = {}) {
   }
   const { channel, dedupeAgainst, outputPath, resolvedDistTags } = options
   const compatibility = JSON.parse(await readFile(COMPATIBILITY_FILE, 'utf8'))
-  const supportedVersion = compatibility?.dshPluginApi?.version
-  if (typeof supportedVersion !== 'string' || supportedVersion.length === 0) {
-    throw new Error('compatibility.json has no declared DSH plugin API version')
-  }
-  if (parseSemanticVersion(supportedVersion) === undefined) {
-    throw new Error('compatibility.json has an invalid DSH plugin API version')
-  }
-  const base = baseReport(supportedVersion, channel)
+  const supportedVersions = declaredDshVersions(compatibility)
+  const supportedVersion = compatibility.dshPluginApi.version
+  const base = baseReport(supportedVersion, supportedVersions, channel)
   const resolved = resolvedDistTags === undefined ? await resolveRegistryDistTags() : { distTags: resolvedDistTags }
   if (resolved.distTags === undefined) {
     await emitReport(outputPath, {
@@ -287,6 +300,9 @@ export async function runCanary(options, dependencies = {}) {
   }
   const distTags = resolved.distTags
   const candidateVersion = distTags[channel]
+  const versionClassification = classifyCandidateVersion(candidateVersion, supportedVersion, supportedVersions)
+  const declaredSupport = versionClassification === 'declared'
+  base.declaredSupport = declaredSupport
 
   const duplicateOwner = duplicateCandidateOwner(channel, dedupeAgainst, distTags)
   if (duplicateOwner !== undefined) {
@@ -297,19 +313,6 @@ export async function runCanary(options, dependencies = {}) {
       classification: 'duplicate',
       stage: 'compare-candidate',
       summary: `DSH ${channel} matches ${duplicateOwner} at ${candidateVersion}; the ${duplicateOwner} canary owns this candidate.`,
-    })
-    return 0
-  }
-
-  const versionClassification = classifyCandidateVersion(candidateVersion, supportedVersion)
-  if (versionClassification === 'unchanged') {
-    await emitReport(outputPath, {
-      ...base,
-      candidateVersion,
-      status: 'pass',
-      classification: 'unchanged',
-      stage: 'compare-candidate',
-      summary: `DSH ${channel} remains at the declared supported version ${supportedVersion}.`,
     })
     return 0
   }
@@ -326,12 +329,11 @@ export async function runCanary(options, dependencies = {}) {
     return 0
   }
 
+  const checkEnvironment = { ...scrubCanaryEnvironment(process.env), DSH_VERSION: candidateVersion }
+  delete checkEnvironment.DSH_UNDECLARED_CANARY_VERSION
+  if (!declaredSupport) checkEnvironment.DSH_UNDECLARED_CANARY_VERSION = '1'
   const candidateCheck = await runCommand(process.execPath, [candidateCheckPath], {
-    env: {
-      ...scrubCanaryEnvironment(process.env),
-      DSH_VERSION: candidateVersion,
-      DSH_UNDECLARED_CANARY_VERSION: '1',
-    },
+    env: checkEnvironment,
     timeoutMs: CANDIDATE_CHECK_TIMEOUT_MS,
   })
   if (candidateCheck.status !== 0) {
@@ -352,9 +354,12 @@ export async function runCanary(options, dependencies = {}) {
     ...base,
     candidateVersion,
     status: 'pass',
-    classification: 'candidate-compatible',
+    classification: declaredSupport ? 'declared-compatible' : 'candidate-compatible',
     stage: 'isolated-install',
-    summary: `The isolated ${channel} install check passed with DSH ${candidateVersion}; declared support remains ${supportedVersion}.`,
+    summary: declaredSupport
+      ? `The isolated ${channel} regression passed for declared DSH ${candidateVersion}. Full user acceptance was not assessed by this check.`
+      : `The isolated ${channel} install check passed for undeclared DSH ${candidateVersion}. Declared versions: ${supportedVersions.join(', ')}. Full user acceptance remains separate.`,
+
   })
   return 0
 }

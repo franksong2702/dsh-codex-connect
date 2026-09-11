@@ -164,8 +164,8 @@ assertContract('mismatched retry candidates fail closed', (() => {
     return true
   }
 })())
-assertContract('candidate checker opts into the undeclared-version mode', /DSH_UNDECLARED_CANARY_VERSION:\s*'1'/.test(nextCheck))
-assertContract('only candidates that supersede declared support reach isolated installation', /compareSemanticVersions\(candidateVersion, supportedVersion\) > 0[\s\S]*?versionClassification === 'not-newer'[\s\S]*?const candidateCheck/u.test(nextCheck))
+assertContract('only undeclared candidates opt into warning-tolerant validation', /delete checkEnvironment\.DSH_UNDECLARED_CANARY_VERSION[\s\S]*?if \(!declaredSupport\) checkEnvironment\.DSH_UNDECLARED_CANARY_VERSION = '1'/.test(nextCheck))
+assertContract('declared versions and candidates newer than the baseline reach isolated installation', /compareSemanticVersions\(candidateVersion, supportedVersion\) > 0[\s\S]*?versionClassification === 'not-newer'[\s\S]*?const candidateCheck/u.test(nextCheck))
 assertContract('candidate classification is driven by fail-closed exit codes', /classifyCandidateCheckStatus\(candidateCheck\.status\)/.test(nextCheck) && /error instanceof CompatibilityCheckError \? 1 : 2/.test(installCheck))
 assertContract('registry and candidate subprocesses have explicit timeouts', /REGISTRY_TIMEOUT_MS\s*=\s*60 \* 1000[\s\S]*?CANDIDATE_CHECK_TIMEOUT_MS\s*=\s*25 \* 60 \* 1000/.test(nextCheck) && /timeoutMs:\s*COMMAND_TIMEOUT_MS/.test(installCheck))
 assertContract('candidate subprocesses receive a scrubbed environment', /scrubCanaryEnvironment\(process\.env\)/.test(nextCheck) && /allowUndeclaredCanaryVersion[\s\S]*?scrubCanaryEnvironment\(process\.env\)/.test(installCheck))

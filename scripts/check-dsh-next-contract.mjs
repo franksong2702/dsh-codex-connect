@@ -26,6 +26,7 @@ import {
   validateDoctorResult,
 } from './check-dsh-install.mjs'
 import { validateRuntimeProjection } from './check-installed-runtime.mjs'
+import './canary-multiversion.test.mjs'
 
 const failures = []
 let assertionCount = 0
@@ -127,7 +128,7 @@ assertContract(
     alpha: '0.1.4-alpha.1',
   }) === undefined,
 )
-assertContract('an exact declared version is unchanged', classifyCandidateVersion('0.1.2-alpha.5', '0.1.2-alpha.5') === 'unchanged')
+assertContract('an exact supported version is declared', classifyCandidateVersion('0.1.2-alpha.5', '0.1.2-alpha.5') === 'declared')
 assertContract('an older stable candidate is not newer than a declared alpha', classifyCandidateVersion('0.1.1-rc.2', '0.1.2-alpha.5') === 'not-newer')
 assertContract(
   'later prereleases and stable releases supersede a declared alpha',

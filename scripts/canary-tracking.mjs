@@ -25,10 +25,15 @@ function trackingState(first, second) {
     && second.status === 'fail'
     && first.classification === 'compatibility'
     && second.classification === 'compatibility'
-  return confirmedCompatibilityFailure ? 'compatibility-failed' : 'infrastructure-blocked'
+  return confirmedCompatibilityFailure
+    ? (final.declaredSupport === true ? 'declared-regression' : 'compatibility-failed')
+    : 'infrastructure-blocked'
 }
 
 function stateExplanation(state, channel, version) {
+  if (state === 'declared-regression') {
+    return `The bounded regression failed twice for already-declared DSH ${version} on ${channel}. Investigate the regression without treating this host as a new support request. Full user acceptance remains a separate record.`
+  }
   if (state === 'passed-needs-full-validation') {
     return `The bounded Codex Connect check passed against \`@deepseek-ai/dsh@${channel}\` version \`${version}\`. Full Web, OAuth, model, tool, image, network, quota, settings, and session validation is still required before compatibility can be declared.`
   }
@@ -49,12 +54,17 @@ export function buildCanaryTrackingIssue(first, second, metadata) {
     }
   }
   const final = second ?? first
+  // A successful declared regression, including a recovered retry, must not
+  // reopen a candidate/full-acceptance issue or falsely certify acceptance.
+  if (final.status === 'pass' && final.classification === 'declared-compatible') return undefined
   const state = trackingState(first, second)
   const version = first.candidateVersion
   const channel = first.channel
-  const marker = `<!-- dsh-canary:${version} -->`
+  const marker = final.declaredSupport === true
+    ? `<!-- dsh-canary-regression:${version} -->`
+    : `<!-- dsh-canary:${version} -->`
   const stateMarker = `<!-- dsh-canary-state:${state}:${channel} -->`
-  const label = state === 'compatibility-failed' ? 'bug' : 'enhancement'
+  const label = ['compatibility-failed', 'declared-regression'].includes(state) ? 'bug' : 'enhancement'
   const pluginCommit = final.pluginCommit ?? metadata.pluginCommit
   const body = [
     marker,
@@ -67,7 +77,10 @@ export function buildCanaryTrackingIssue(first, second, metadata) {
     '',
     `- Candidate DSH version: \`${version}\``,
     `- Current owning channel: \`${channel}\``,
-    `- Declared supported DSH version: \`${final.supportedVersion}\``,
+    `- Declared DSH baseline: \`${final.supportedVersion}\``,
+    `- Declared supported DSH versions: ${(final.supportedVersions ?? [final.supportedVersion]).map(value => `\`${value}\``).join(', ')}`,
+    `- Candidate declared support: ${final.declaredSupport === true ? 'yes' : 'not declared'}`,
+    '- Full user acceptance: not assessed by this automated check',
     `- Candidate stage: \`${final.stage ?? 'unknown'}\``,
     `- Plugin commit: \`${pluginCommit}\``,
     `- Node.js: \`${final.nodeVersion ?? 'unknown'}\``,
@@ -79,7 +92,7 @@ export function buildCanaryTrackingIssue(first, second, metadata) {
     boundedSummary(final),
     '```',
     '',
-    'This tracker is preliminary evidence only. It does not widen the supported version range, edit `verified-compatibility.json`, deploy a profile, merge code, or publish a release. Complete the full test-profile validation before declaring compatibility.',
+    'This tracker is preliminary evidence only. It does not widen the supported version range, edit `verified-compatibility.json`, deploy a profile, merge code, publish a release, or replace the separate full user-acceptance record.',
     '',
     'Umbrella: #108',
     '',
@@ -89,7 +102,7 @@ export function buildCanaryTrackingIssue(first, second, metadata) {
     state,
     marker,
     stateMarker,
-    title: `compatibility: track DSH ${version}`,
+    title: final.declaredSupport === true ? `compatibility: regression on declared DSH ${version}` : `compatibility: track DSH ${version}`,
     body,
     label,
   }
