@@ -43,6 +43,7 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
   config:
     enableProxy: false
     enableSearch: false
+    enableReserveFallback: false
     enableImageTool: false
     enableImageGeneration: false
     enableAutoReview: false
@@ -55,6 +56,26 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 关闭代理或卸载插件时，先给活动代理操作一秒收尾，再销毁本实例的连接池，最多再等待一秒完成。关闭期间拒绝新的代理操作；被中断的请求不会改走直连重试。代理管理器无法强制终止任意应用回调。作用域 dispatcher 会保留至迟到回调结束，防止它们绕过已销毁的代理；无关流量仍使用宿主 dispatcher。
 
 默认使用直连。启用后，不带凭据的 HTTP(S) proxy 只应用于本插件的模型、OAuth、刷新、额度、搜索、图片和自动审查流量。检测只检查标准代理环境变量和文档列出的 loopback 候选地址，不调用模型、不消耗额度，也不保存设置。代理请求失败时，绝不会静默改走直连。加载 Codex Connect 不会替换 Node 的环境代理 dispatcher，因此其他 Harness 请求会继续使用进程已有的代理策略。
+
+### Luna Reserve 回退
+
+这是尚未发布、默认关闭的实验功能；已发布的 Alpha 4.34 不包含该功能。真实账户进入 Reserve 及恢复普通模型的过程仍未完成验证。
+
+`enableReserveFallback: true` 为 agent 请求启用由后端授权的 Luna Reserve 回退。账户 UI 和路由共用绑定账户与用户的内存额度快照；并发读取合并，有效状态不再发起额度 `GET`。首次或过期读取等待刷新。查询成功后，根据普通额度和相关模型窗口中的最高消耗，低于 75%、达到 75%、达到 90%、达到 99% 时，分别每 60/30/15/5 秒后台刷新。未来重置时间可将下次刷新提前到重置后一秒，但不证明额度恢复。缓存读取不会推迟刷新期限。查询失败会清除缓存决策，五秒后重试。账户修改、设置变更和插件卸载会使状态失效；UI 只接收公开额度投影。
+
+有效的共享决策为该会话和账户的下一次 `gpt-reserve` 调用签发私有一次性许可。这是本地调用保护，不代表服务端要求每次调用单独认证额度。取消、替换请求、agent 出错、回合停止、额度状态失效、快照刷新或缓存淘汰都会撤销未使用的许可。恢复普通模型前，返回记录的读取也会重新检查该授权是否有效。直接和辅助 Reserve 调用会在发送前失败。关闭回退时，普通 agent 步骤不查询额度，账户 UI 保持被动读取，也不创建后台额度轮询；已处于 Reserve 的会话需要显式选择普通模型.
+
+Access token 的 `https://api.openai.com/auth` 中必须包含非空的 `chatgpt_account_id` 和 `chatgpt_user_id`（或 `user_id`），且 `chatgpt_account_is_fedramp` 必须缺省或为 `false`。身份缺失、不完整、属于 FedRAMP、发生变化或与额度响应不匹配时，该步骤不会启用回退。插件不会从邮箱地址或订阅套餐推测身份。
+
+只有额度响应同时匹配固定的账户与用户，并包含适用于当前模型的有效 Luna Reserve 授权 banner，插件才会路由到隐藏模型。普通 HTTP `429`、四舍五入后的额度百分比、重置时间或 Reserve 模型名称都不是授权，也不会触发 Reserve 重试。当前版本只接受已知的 `gpt-5.6-luna` Reserve 元数据，不推测其他模型。能否使用 Reserve，以及触发授权的是 `5h`、周额度还是其他后端限制，都由服务端决定。
+
+进入 Reserve 前，插件会将会话的普通模型请求参数原子保存到 Codex 凭据文件旁的私有 `codex-connect-reserve/<会话 id 的 SHA-256>.json` 文件中。记录包含账户与用户组合的哈希，以及普通模型、推理强度、温度、输出上限和停止序列，不包含 bearer token 或原始账户与用户 id。Reserve 请求不继承这些普通模型参数，而是使用 Luna 自身的默认值。后续身份匹配的额度响应必须明确允许普通额度，插件才会恢复完整的已保存请求配置。返回记录缺失、损坏、过大、属于其他账户，或 fork 没有自己的记录时，插件都不会猜测或继承目标；请显式选择普通模型后继续。
+
+Reserve 不出现在模型发现列表，也不修改整个 profile 的默认模型。它有独立于普通额度的限额，并非无限可用。两者明确耗尽时，路由停止并提示额度用尽。如果模型请求报告宿主明确分类的账户额度耗尽，插件使缓存失效，每回合至多按新授权进行一次进入或恢复重试；普通请求限流不触发此路径。
+
+Reserve 使用 Luna 目录中的 272,000 token 上下文窗口，不沿用原模型更大的窗口。当前版本不授权通过 Reserve 进行自动或手动上下文压缩。因此，长会话切换后可能超过 Luna 的上下文限制；请在普通额度耗尽前压缩，或配置另一个仍可用的摘要模型。插件不保证跨宿主的精确 token 预检或自动长上下文恢复。
+
+自动化覆盖使用合成 token 和额度响应，验证本地路由与恢复规则，不连接真实账户，因此不能证明实际账户资格、可用额度或当前服务端策略。
 
 ### 搜索与图片工具
 
@@ -101,6 +122,7 @@ GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 | `proxyUrl` | `http://127.0.0.1:7890` | 不带凭据的 HTTP(S) proxy origin；启用前不生效 |
 | `contextWindowOverrides` | 无 | 按模型设置客户端上下文预算 |
 | `enableSearch` | `false` | 注册 Codex 搜索，并在保存时将它选为搜索提供方 |
+| `enableReserveFallback` | `false` | 为 agent 请求执行身份匹配、后端授权的 Luna Reserve 切换 |
 | `enableImageTool` | `false` | 注册 `view_image` |
 | `enableImageGeneration` | `false` | 注册 GPT Image 图片生成 |
 | `imageModelHint` | 空字符串 | 可选的未验证图片路由提示；留空保持默认请求 |

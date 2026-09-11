@@ -6,7 +6,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import {
   OPENAI_CODEX_REAUTH_REQUIRED_CODE,
-} from './usage.ts'
+} from './auth-error.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'

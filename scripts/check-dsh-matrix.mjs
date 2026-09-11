@@ -18,8 +18,9 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
+      || report.runtime?.reserveTransitionsVerified !== true
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
-      || ['enableProxy', 'enableSearch', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
+      || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1
       || report.runtime.reasoningModelCount !== report.runtime.modelCount
       || report.runtime.preparedModelCount !== report.runtime.modelCount) {

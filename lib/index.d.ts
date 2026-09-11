@@ -1,7 +1,7 @@
 import z from "@deepseek-ai/schemastery";
 import { AuthInteraction, Credential, CredentialInfo, CredentialStore, OAuthCredential } from "@earendil-works/pi-ai";
-import "@deepseek-ai/dsh-tools";
 import { Context, Service } from "@deepseek-ai/cordis";
+import "@deepseek-ai/dsh-tools";
 import { WebSearchProvider, WebSearchRequest, WebSearchResult } from "@deepseek-ai/dsh-web";
 //#region src/account-profile.d.ts
 type OpenAICodexAccountProfileSource = 'oauth' | 'generated';
@@ -444,6 +444,8 @@ interface OpenAICodexSettingsConfig {
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined;
   enableSearch: boolean;
+  /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
+  enableReserveFallback: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -744,6 +746,8 @@ interface Config {
   contextWindowOverrides?: Record<string, number | null> | null | undefined;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
+  /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
+  enableReserveFallback?: boolean;
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean;
   /** Register the optional prompt-only image generation tool. */

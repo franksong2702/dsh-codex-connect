@@ -1,13 +1,17 @@
 /** Live ChatGPT Codex rate-limit usage for the browser account page. */
 
 import { readOpenAICodexRequestAuth } from './auth.ts'
-import { OpenAICodexRequestAuthError } from './auth-error.ts'
+import { OpenAICodexRequestAuthError, OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
+export { OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
+import { readOpenAICodexBoundedBody } from './transport.ts'
 
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
 
 const USAGE_REQUEST_TIMEOUT_MS = 15_000
+/** Upper bound for one full account usage response, before projecting public and routing fields. */
+export const OPENAI_CODEX_USAGE_MAX_BYTES = 128 * 1024
 
 /** Release a discarded response without replacing the HTTP failure with a cancellation error. */
 async function cancelDiscardedResponseBody(response: Response): Promise<void> {
@@ -17,9 +21,6 @@ async function cancelDiscardedResponseBody(response: Response): Promise<void> {
     // Body cancellation is best effort; the response status remains the useful error.
   }
 }
-
-/** Stable public discriminant for an expired or revoked Codex OAuth session. */
-export const OPENAI_CODEX_REAUTH_REQUIRED_CODE = 'OPENAI_CODEX_REAUTH_REQUIRED' as const
 
 /** Fixed, secret-free message for a browser-facing reauthorization prompt. */
 export const OPENAI_CODEX_REAUTH_REQUIRED_MESSAGE = 'OpenAI Codex authorization must be renewed'
@@ -240,22 +241,29 @@ export async function readOpenAICodexRateLimits(
     }
     throw error
   })
-  const access = auth?.access
-  const accountId = auth?.accountId
-  if (access === undefined || access.length === 0 || typeof accountId !== 'string' || accountId.length === 0) {
-    throw new Error('OpenAI Codex is signed out')
-  }
+  return parseOpenAICodexUsage(await readOpenAICodexUsageResponse(auth, signal, false))
+}
+
+/** Read one bounded account response; public quota and Reserve decisions share these exact bytes. */
+export async function readOpenAICodexUsageResponse(
+  auth: { access: string; accountId: string },
+  signal: AbortSignal,
+  supportsReserve: boolean,
+): Promise<unknown> {
+  const deadline = AbortSignal.any([signal, AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)])
+  deadline.throwIfAborted()
   const response = await fetch(OPENAI_CODEX_USAGE_URL, {
     method: 'GET',
     redirect: 'error',
     headers: {
-      authorization: `Bearer ${access}`,
-      'chatgpt-account-id': accountId,
+      authorization: `Bearer ${auth.access}`,
+      'chatgpt-account-id': auth.accountId,
+      ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
       accept: 'application/json',
       'cache-control': 'no-store',
       'user-agent': 'dsh-codex-connect',
     },
-    signal,
+    signal: deadline,
   })
   if (!response.ok) {
     await cancelDiscardedResponseBody(response)
@@ -264,11 +272,13 @@ export async function readOpenAICodexRateLimits(
     }
     throw new Error(`OpenAI Codex usage request failed with HTTP ${response.status}`)
   }
-  let value: unknown
   try {
-    value = await response.json()
-  } catch (error: unknown) {
-    throw new Error('OpenAI Codex returned an unreadable usage response', { cause: error })
+    const bytes = await readOpenAICodexBoundedBody(response, OPENAI_CODEX_USAGE_MAX_BYTES)
+    deadline.throwIfAborted()
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
+  } catch {
+    throw new Error('OpenAI Codex returned an unreadable usage response')
+  } finally {
+    await cancelDiscardedResponseBody(response)
   }
-  return parseOpenAICodexUsage(value)
 }

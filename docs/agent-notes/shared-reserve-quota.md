@@ -1,0 +1,9 @@
+# Shared Luna Reserve quota state
+
+One plugin-owned quota service supplies both the account UI and Reserve routing. It coalesces concurrent usage GETs and schedules adaptive refresh from the last successful completion. Repeated reads preserve that deadline. Reset times accelerate observation without granting permission; only an identity-matched backend response authorizes Reserve or ordinary-usage recovery.
+
+The in-memory cache holds at most sixteen account/user entries. Account mutations, configuration changes, and disposal revoke the epoch signal carried by undispatched local permits. Each entry also owns a snapshot signal: starting a refresh (successful or failed) or evicting that entry revokes its old undispatched permits without revoking other identities. Return-target reads and writes recheck this combined authority before changing routes, including recovery to an ordinary model. Caller cancellation detaches its waiter without cancelling shared transport. Disposal aborts the epoch and awaits authentication and transport operations before closing the proxy manager. Failed responses remove cached decisions and receive a five-second retry deadline; raw provider failures are not retained in public errors.
+
+Ordinary and Reserve allowances are distinct. Explicit exhaustion of both stops routing. A typed account-quota failure invalidates stale state and permits at most one fresh, authorized transition per turn; generic request-rate failures do not enter this path. Return selections remain session/account-bound private files. Reserve model calls use Luna defaults and the existing context-window restriction remains unchanged.
+
+Verification uses synthetic credentials and HTTP responses through the quota service, account API, assembled agent loop, and installed host matrix. It does not establish actual account eligibility or production quota availability.

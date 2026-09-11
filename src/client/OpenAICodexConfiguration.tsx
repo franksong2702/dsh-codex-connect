@@ -102,6 +102,7 @@ const CONFIG_FIELDS = [
   'models',
   'contextWindowOverrides',
   'enableProxy',
+  'enableReserveFallback',
   'proxyUrl',
   'enableImageTool',
   'enableImageGeneration',
@@ -763,6 +764,17 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
               />
             </label>
           </div>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableReserveFallback}
+              onChange={event => { update('enableReserveFallback', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableReserveFallback')}</span>
+              <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
+            </span>
+          </label>
           <label style={toggleRowStyle}>
             <input
               type="checkbox"

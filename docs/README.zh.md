@@ -69,9 +69,14 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 |---|---|---|
 | 代理 | `enableProxy` | 不带凭据的 HTTP(S)，只作用于本插件流量。代理请求失败不会静默改走直连。 |
 | Codex 搜索 | `enableSearch` | 将整个 profile 的搜索路由切换为 Codex；关闭后恢复之前的路由。 |
+| Luna Reserve | `enableReserveFallback` | 只在服务端为当前已固定账户明确授权时使用隐藏的 Reserve 路由；不修改全局默认模型，也不因普通 `429` 重试。 |
 | 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
 | GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
+
+**尚未发布的实验功能：** 已发布的 Alpha 4.34 不包含 Luna Reserve 回退。此开发版本仍默认关闭该功能，尚未完成真实账户进入 Reserve 及恢复普通模型的验证。
+
+启用 `enableReserveFallback: true` 后，账户 UI 和 agent 路由共用一份绑定身份的额度状态，按服务端返回的额度窗口后台刷新；有效状态可跨 agent step 复用。只有身份完整、非 FedRAMP 且服务端授权时，插件才进入 `gpt-reserve`；普通额度确认恢复后，切回该会话先前的模型和推理强度。Reserve 有自己的额度，不出现在模型选择器中，也不是无限额度。资格由服务端决定，重置时间本身不授权切换。当前版本只支持已知的 `gpt-5.6-luna` 元数据。刷新、身份和验证限制见 [Luna Reserve fallback](reference.md#luna-reserve-fallback)。
 
 使用你当前 GPT 订阅计划提供的图片生成能力。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 

@@ -6,6 +6,7 @@
       config:
         enableProxy: false
         enableSearch: false
+        enableReserveFallback: false
         enableImageTool: false
         enableImageGeneration: false
         enableAutoReview: false

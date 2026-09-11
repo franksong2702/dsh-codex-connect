@@ -42,6 +42,9 @@ import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
+import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
+import { registerReserveRouting } from './reserve-routing.ts'
+import { OpenAICodexQuotaState } from './quota-state.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -251,6 +254,8 @@ export interface Config {
   contextWindowOverrides?: Record<string, number | null> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
+  /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
+  enableReserveFallback?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
@@ -281,6 +286,7 @@ export const Config: z<Config> = z.object({
     parseOpenAICodexContextWindowOverrides,
   ),
   enableSearch: z.boolean().default(false),
+  enableReserveFallback: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
@@ -316,6 +322,19 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  const quota = new OpenAICodexQuotaState({
+    credentials,
+    proxyManager,
+    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
+    resolveProxyUrl: resolveProviderProxyUrl,
+  })
+  const reservePermits = new ReserveRequestPermits()
+  const stopReserveRouting = registerReserveRouting(ctx, {
+    quota,
+    returns: new ReserveReturnStore(join(dirname(credentials.filename), 'codex-connect-reserve')),
+    permits: reservePermits,
+    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
+  })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
   registerOpenAICodexAutoReview(
@@ -335,10 +354,11 @@ export function apply(ctx: Context, config: Config): void {
       proxyManager,
       resolveProviderProxyUrl,
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
+      reservePermits,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
-    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl, config.oauthTimeoutMs)
+    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl, config.oauthTimeoutMs, quota)
     registerOpenAICodexProxyRoutes(webCtx, trustedOrigins, proxyManager)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
@@ -466,6 +486,8 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
+    await stopReserveRouting()
+    await quota.dispose()
     await Promise.all([searchTail, imageTail, imageGenerationTail])
     const search = searchFiber
     const image = imageFiber
@@ -491,6 +513,7 @@ export function apply(ctx: Context, config: Config): void {
       },
       setSource(source) { current = source },
       onChange() {
+        quota.invalidate()
         const proxyIsActive = resolveProviderProxyUrl() !== undefined
         if (proxyWasActive && !proxyIsActive) {
           void proxyManager.deactivate().catch((error: unknown) => {

@@ -24,6 +24,20 @@ export async function resolveExactDshOverrides(version, readManifest) {
   return overrides
 }
 
+/**
+ * Pin peer-only packages as direct fixture roots as well as transitive overrides.
+ * Overrides alone can leave npm's auto-installed DSH peers at a newer release.
+ * This manifest belongs only to the temporary test host, never a user's profile.
+ */
+export function exactDshFixtureManifest(overrides) {
+  const entries = Object.entries(overrides)
+  if (typeof overrides['@deepseek-ai/dsh'] !== 'string'
+    || entries.some(([name, version]) => !DSH_PACKAGE.test(name) || version !== overrides['@deepseek-ai/dsh'])) {
+    throw new Error('An exact fixture requires one consistent DSH-only package set')
+  }
+  return { private: true, dependencies: { ...overrides }, overrides: { ...overrides } }
+}
+
 /** Read a public, exact npm manifest with a bounded network deadline. */
 export async function readDshRegistryManifest(name, version) {
   const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`, {
