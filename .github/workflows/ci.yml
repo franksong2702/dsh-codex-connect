@@ -52,6 +52,8 @@ jobs:
         run: pnpm run pack:check
       - name: Validate declared DSH installation matrix
         run: pnpm --silent run check:dsh-matrix
+      - name: Validate internal Split exact-host matrix
+        run: node scripts/check-split-matrix.mjs
       - name: Verify committed build output
         shell: bash
         run: |
@@ -81,6 +83,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run browser UI regression tests
         run: pnpm run test:browser
+      - name: Validate authenticated Split browser lifecycle
+        run: node scripts/check-split-browser.mjs
+      - name: Validate experimental Split Gateway conversation
+        run: node scripts/check-split-conversation.mjs
 
   windows-canary-contract:
     runs-on: windows-latest
