@@ -8,9 +8,10 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { runNativeLifecyclePhase } from './native-compaction-lifecycle-fixture.mjs'
+import { AUTOMATIC_SCENARIOS, runNativeAutomaticScenario } from './native-compaction-automatic-fixture.mjs'
 
 const SELF = fileURLToPath(import.meta.url)
-const PHASES = ['write', 'resume-fork', 'verify-child', 'failure-paths']
+const PHASES = ['write', 'resume-fork', 'verify-child', 'failure-paths', 'automatic']
 
 /** Test both physical JSONL encodings, with no memory shared across lifecycle transitions. */
 export async function checkInstalledNativeCompaction(profilePath, hostPath = profilePath) {
@@ -47,7 +48,13 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === SELF) {
       assert.ok(PHASES.includes(phase) && root && ['none', 'zstd'].includes(compression) && profilePath && hostPath && process.argv.length === 8)
       const from = (path, specifier) => import(pathToFileURL(createRequire(path).resolve(specifier)).href)
       const plugin = await from(profilePath, 'dsh-codex-connect')
-      const report = await runNativeLifecyclePhase(phase, { root, compression, plugin, importHost: specifier => from(hostPath, specifier) })
+      const options = { root, compression, plugin, importHost: specifier => from(hostPath, specifier) }
+      let report
+      if (phase === 'automatic') {
+        const scenarios = []
+        for (const scenario of AUTOMATIC_SCENARIOS) scenarios.push(await runNativeAutomaticScenario(scenario, options))
+        report = { phase, syntheticOnly: true, scenarios }
+      } else report = await runNativeLifecyclePhase(phase, options)
       process.stdout.write(`${JSON.stringify({ ...report, compression, pid: process.pid })}\n`)
     } else {
       assert.ok(process.argv[2] && process.argv.length <= 4, 'usage: check-installed-native-compaction <profile-package.json> [host-package.json]')

@@ -292,7 +292,7 @@ async function main() {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
     if (runtimeReport?.nativeCompactionLifecycle?.syntheticOnly !== true
-      || runtimeReport.nativeCompactionLifecycle.freshProcesses !== 8) {
+      || runtimeReport.nativeCompactionLifecycle.freshProcesses !== 10) {
       throw new CompatibilityCheckError('installed native compaction lifecycle proof is missing')
     }
 

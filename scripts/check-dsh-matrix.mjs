@@ -20,9 +20,9 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
       || report.runtime?.reserveTransitionsVerified !== true
       || report.runtime?.nativeCompactionLifecycle?.syntheticOnly !== true
-      || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 8
+      || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 10
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'
-      || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.phases) !== '["write","resume-fork","verify-child","failure-paths"]'
+      || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.phases) !== '["write","resume-fork","verify-child","failure-paths","automatic"]'
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
       || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableNativeCompaction', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1

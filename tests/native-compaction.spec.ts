@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 import { Context } from '@deepseek-ai/cordis'
+import type { Context as PiContext, SimpleStreamOptions } from '@earendil-works/pi-ai'
+import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import {
   BlockAssembler,
   createUserMessage,
@@ -18,6 +20,8 @@ import {
   decodeNativeCompactionCheckpoint,
   encodeNativeCompactionCheckpoint,
   retainedNativeCompactionInput,
+  streamWithNativeCompactionScope,
+  withOpenAICodexNativeCompaction,
 } from '../src/native-compaction.ts'
 
 let context: Context | undefined
@@ -164,6 +168,27 @@ describe('native compaction checkpoint codec', () => {
     }
   })
 
+  it.each([1, 2, 16])('counts array wrappers and separators at the byte boundary for %i items', count => {
+    const itemsAtBoundary = (extraBytes: number) => {
+      const items = Array.from({ length: count }, () => ({
+        role: 'user', content: [{ type: 'input_text', text: 'é🙂' }],
+      }))
+      const padding = OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES - Buffer.byteLength(JSON.stringify(items)) + extraBytes
+      items[0]!.content[0]!.text += 'a'.repeat(padding)
+      return items
+    }
+    const exact = itemsAtBoundary(0)
+    expect(Buffer.byteLength(JSON.stringify(exact))).toBe(OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES)
+    expect(retainedNativeCompactionInput(exact)).toEqual(exact)
+
+    const oversized = itemsAtBoundary(1)
+    expect(Buffer.byteLength(JSON.stringify(oversized))).toBe(OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES + 1)
+    const retained = retainedNativeCompactionInput(oversized)
+    expect(retained).toHaveLength(count - 1)
+    expect(retained).toEqual(oversized.slice(1))
+    expect(Buffer.byteLength(JSON.stringify(retained))).toBeLessThanOrEqual(OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES)
+  })
+
   it('retains only a bounded newest user projection', () => {
     const system = { role: 'system', content: [{ type: 'input_text', text: 'system' }] }
     const developer = { role: 'developer', content: [{ type: 'input_text', text: 'developer' }] }
@@ -174,6 +199,62 @@ describe('native compaction checkpoint codec', () => {
     expect(retained).toEqual([user2])
     expect(Buffer.byteLength(JSON.stringify(retained))).toBeLessThanOrEqual(OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES)
   })
+})
+
+describe('native checkpoint payload callback composition', () => {
+  it.each(['sync-observer', 'async-observer', 'mutating-observer', 'replacement'] as const)(
+    'preserves expansion through the real pi-ai provider with a %s callback',
+    async mode => {
+      const nativeProvider = withOpenAICodexNativeCompaction(openaiCodexProvider())
+      const piModel = nativeProvider.getModels().find(candidate => candidate.id === model)
+      if (piModel === undefined) throw new Error('missing synthetic test model')
+      const items = [
+        { role: 'user', content: [{ type: 'input_text', text: 'retained callback history' }] },
+        { type: 'compaction', id: 'cmp_callback', encrypted_content: 'synthetic-callback-opaque' },
+      ]
+      const wires: Record<string, unknown>[] = []
+      vi.stubGlobal('fetch', vi.fn(async (_input: unknown, init?: RequestInit) => {
+        if (init === undefined) throw new Error('missing request init')
+        wires.push(requestJson(init))
+        return ordinaryResponse('callback continued')
+      }))
+      const onPayload = vi.fn<NonNullable<SimpleStreamOptions['onPayload']>>((payload, payloadModel) => {
+        expect(payloadModel.id).toBe(model)
+        const body = payload as Record<string, unknown>
+        expect(body.input).toEqual(expect.arrayContaining(items))
+        expect(JSON.stringify(body.input)).not.toContain('dsh-codex-connect-native-checkpoint:')
+        if (mode === 'replacement') return { ...body, text: { verbosity: 'high' } }
+        if (mode === 'mutating-observer') body.text = { verbosity: 'high' }
+        return mode === 'async-observer' ? Promise.resolve(undefined) : undefined
+      })
+      const scoped = streamWithNativeCompactionScope(async function* (prepared) {
+        const messages: PiContext['messages'] = prepared.messages.map(message => ({
+          role: 'user',
+          content: message.content.map(block => {
+            if (block.type !== 'text') throw new Error('expected a text-only fixture')
+            return { type: 'text', text: block.text }
+          }),
+          timestamp: Date.now(),
+        }))
+        const result = await nativeProvider.streamSimple(piModel, { messages }, {
+          apiKey: accessToken('callback-fixture'), transport: 'sse', maxRetries: 0, onPayload,
+        }).result()
+        expect(result.stopReason).toBe('stop')
+        yield* []
+      }, {
+        provider, model,
+        messages: [trustedCheckpoint(encodeNativeCompactionCheckpoint(items))],
+      }, false)
+      for await (const chunk of scoped) throw new Error(`unexpected fixture chunk: ${chunk.type}`)
+      expect(onPayload).toHaveBeenCalledTimes(1)
+      expect(wires).toHaveLength(1)
+      expect(wires[0]!.input).toEqual(expect.arrayContaining(items))
+      expect(JSON.stringify(wires[0]!.input)).not.toContain('dsh-codex-connect-native-checkpoint:')
+      if (mode === 'mutating-observer' || mode === 'replacement') {
+        expect(wires[0]!.text).toEqual({ verbosity: 'high' })
+      }
+    },
+  )
 })
 
 describe('native compaction request routing', () => {

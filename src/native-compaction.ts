@@ -237,11 +237,11 @@ function serializedBytes(value: unknown): number {
  */
 export function retainedNativeCompactionInput(input: readonly unknown[]): readonly unknown[] {
   const retained: unknown[] = []
-  let used = 0
+  let used = 2 // The retained JSON array's opening and closing brackets.
   for (let index = input.length - 1; index >= 0; index -= 1) {
     const item = input[index]
     if (!isRecord(item) || item['role'] !== 'user') continue
-    const size = serializedBytes(item)
+    const size = serializedBytes(item) + (retained.length === 0 ? 0 : 1)
     if (!Number.isFinite(size) || size <= 0 || size > OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES - used) continue
     retained.push(item)
     used += size
@@ -580,7 +580,8 @@ function standardStream(
     ...options,
     onPayload: async (payload, payloadModel) => {
       const transformed = transformPayload(payload, scope)
-      return options?.onPayload === undefined ? transformed : await options.onPayload(transformed, payloadModel)
+      const replacement = await options?.onPayload?.(transformed, payloadModel)
+      return replacement === undefined ? transformed : replacement
     },
   })
 }
