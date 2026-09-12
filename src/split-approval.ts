@@ -8,6 +8,12 @@ import type { ApprovedSplitTask, SplitWorkerHandle } from './split-worker.ts'
 import type { SplitApprovalChoice, SplitApprovalPhase, SplitApprovalReview, SplitApprovalView } from './split-approval-view.ts'
 import { isSplitEvidence } from './split-evidence.ts'
 
+const approvalOwners = new WeakMap<SplitApprovalHandle, Agent>()
+/** Host-only identity check. A wire object cannot manufacture or rebind an approval handle. */
+export function ownsSplitApproval(handle: SplitApprovalHandle, parent: Agent): boolean {
+  return approvalOwners.get(handle) === parent
+}
+
 export interface SplitApprovalTask extends Omit<ApprovedSplitTask, 'authorize' | 'onSettled'> {
   /** Trusted display name for the selected workspace, not a model-supplied filesystem root. */
   readonly workspaceLabel: string
@@ -134,5 +140,6 @@ export function attachSplitApprovalRequest(ctx: Context, parent: Agent, task: Sp
   if (task.enabled === true) releaseParent = ctx.on('agent/disposed', ({ agent }) => {
     if (agent === parent) void handle.revoke().catch(() => { /* The authoritative view retains failure. */ })
   })
+  approvalOwners.set(handle, parent)
   return handle
 }

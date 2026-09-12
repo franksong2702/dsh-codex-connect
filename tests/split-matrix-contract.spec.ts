@@ -33,4 +33,8 @@ it('keeps the internal worker outside the public plugin exports', () => {
   expect(JSON.stringify(pkg.exports)).not.toContain('split')
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   expect(workflow).toContain('run: node scripts/check-split-matrix.mjs')
+  expect(workflow).toContain('run: node scripts/check-split-browser.mjs')
+  expect(entry).not.toContain('split-transport')
+  const client = readFileSync(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+  expect(client).not.toContain('SplitApprovalRemoteCard')
 })

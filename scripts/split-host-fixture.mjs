@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 import { setTimeout as delay } from 'node:timers/promises'
+import { exerciseSplitTransport, SPLIT_TRANSPORT_SCENARIOS } from './split-transport-fixture.mjs'
 
 export const SPLIT_HOST_SCENARIOS = Object.freeze([
   'success', 'plain', 'unread', 'bad-reference', 'forbidden', 'recursive', 'run-code',
@@ -17,6 +18,7 @@ export const SPLIT_HOST_SCENARIOS = Object.freeze([
   'approval-intercepted', 'approval-provider-change', 'prompt-isolation', 'context-injection',
   'grant-revoked-before-start', 'grant-revoked-running',
   'approval-disposal-failure', 'approval-owner-disposed',
+  ...SPLIT_TRANSPORT_SCENARIOS,
 ])
 const content = 'export const answer = 42\n'
 const sha256 = createHash('sha256').update(content).digest('hex')
@@ -30,9 +32,10 @@ function response(item, model) {
   ].map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
 }
 
-export async function runSplitHostScenario(scenario, { root, implementation, importHost }) {
+export async function runSplitHostScenario(scenario, { root, implementation, importHost, interaction }) {
   assert.ok(SPLIT_HOST_SCENARIOS.includes(scenario))
-  const isApproval = scenario.startsWith('approval-')
+  const isTransport = scenario.startsWith('transport-')
+  const isApproval = scenario.startsWith('approval-') || isTransport
   const approvalSuccess = ['approval-allow', 'approval-stale'].includes(scenario)
   const waitFor = async condition => { for (let n = 0; !condition() && n < 400; n += 1) await delay(5); assert.ok(condition(), 'expected lifecycle boundary must be reached') }
   const prior = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, home: process.env.DSH_HOME }
@@ -73,10 +76,10 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     assert.equal(body.reasoning.effort, 'low')
     assert.equal(body.service_tier, undefined)
     if (scenario === 'http-error') return new Response(JSON.stringify({ error: { message: 'Synthetic failure', code: 'server_error' } }), { status: 500 })
-    if (['timeout', 'parent-dispose', 'concurrent-admission', 'approval-revoke-running', 'grant-revoked-running'].includes(scenario)) return new Promise((_resolve, reject) => {
+    if (['timeout', 'parent-dispose', 'concurrent-admission', 'approval-revoke-running', 'grant-revoked-running', 'transport-revoke'].includes(scenario)) return new Promise((_resolve, reject) => {
       if (init.signal.aborted) { reject(init.signal.reason); return }
       init.signal.addEventListener('abort', () => {
-        if (scenario.endsWith('revoked-running') || scenario === 'approval-revoke-running') setTimeout(() => reject(init.signal.reason), 25)
+        if (scenario.endsWith('revoked-running') || scenario === 'approval-revoke-running' || scenario === 'transport-revoke') setTimeout(() => reject(init.signal.reason), 80)
         else reject(init.signal.reason)
       }, { once: true })
     })
@@ -176,7 +179,9 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       }
       if (scenario === 'route-change') agent.ctx.on('agent/request', async (_event, next) => ({ ...await next(), model: 'fixture-disallowed-model' }))
     })
-    if (isApproval) {
+    if (isTransport) {
+      await exerciseSplitTransport(scenario, { ctx, parent, parentHandle, consent, implementation, importHost, childWires, children, llm, waitFor, interaction })
+    } else if (isApproval) {
       const offer = consent.getSnapshot()
       assert.equal(consent.decide(offer.id, offer.reviewDigest, 'allow-once'), false, 'ready is not an outstanding approval')
       parent.followup(llm.createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'PARENT_ONLY_FIXTURE: run the approved inspection.' }] }))
@@ -298,7 +303,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     if (scenario === 'success') assert.deepEqual(lifecycle, ['start', 'end'])
     assert.equal(forbiddenEffects, 0, 'no forbidden tool or substituted provider body ran')
     for (const child of children) assert.equal(ctx.agents.get(child.id), undefined, 'child must reach quiescence')
-    if (!['parent-dispose', 'approval-owner-disposed'].includes(scenario)) assert.equal(ctx.agents.get(parent.id), parent)
+    if (!['parent-dispose', 'approval-owner-disposed', 'transport-owner-disposed'].includes(scenario)) assert.equal(ctx.agents.get(parent.id), parent)
     assert.ok(lifecycle.length === 0 || JSON.stringify(lifecycle) === '["start","end"]', 'published lifecycle must pair')
     revoke()
     if (scenario === 'success' || scenario === 'prompt-isolation' || approvalSuccess) {

@@ -23,6 +23,8 @@ const labels = {
 export interface SplitApprovalCardProps {
   view: SplitApprovalView
   locale?: 'en' | 'zh'
+  decisionDisabled?: boolean
+  revokeDisabled?: boolean
   onDecide(id: string, reviewDigest: string, choice: SplitApprovalChoice): Promise<boolean>
   onRevoke(id: string): Promise<void>
 }
@@ -30,20 +32,20 @@ export function SplitApprovalCard(props: SplitApprovalCardProps) {
   // A changed offer remounts local interaction state. Old async callbacks cannot unlock a new offer.
   return <Offer key={`${props.view.id}:${props.view.reviewDigest}`} {...props} />
 }
-function Offer({ view, locale = 'en', onDecide, onRevoke }: SplitApprovalCardProps) {
+function Offer({ view, locale = 'en', onDecide, onRevoke, decisionDisabled = false, revokeDisabled = false }: SplitApprovalCardProps) {
   const copy = labels[locale]
   const action = useRef<'decision' | 'revoke' | undefined>(undefined)
   const [decisionSent, setDecisionSent] = useState(false)
   const [revokeSent, setRevokeSent] = useState(false)
   const [unknown, setUnknown] = useState(false)
   const decide = async (choice: SplitApprovalChoice): Promise<void> => {
-    if (action.current !== undefined || view.phase !== 'awaiting-approval') return
+    if (decisionDisabled || action.current !== undefined || view.phase !== 'awaiting-approval') return
     action.current = 'decision'; setDecisionSent(true)
     try { if (!await onDecide(view.id, view.reviewDigest, choice)) setUnknown(true) }
     catch { setUnknown(true) }
   }
   const revoke = async (): Promise<void> => {
-    if (action.current === 'revoke') return
+    if (revokeDisabled || action.current === 'revoke') return
     action.current = 'revoke'; setRevokeSent(true)
     try { await onRevoke(view.id) } catch { setUnknown(true) }
   }
@@ -61,10 +63,10 @@ function Offer({ view, locale = 'en', onDecide, onRevoke }: SplitApprovalCardPro
     {unknown && <p role="alert">{copy.unknown}</p>}
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
       {view.phase === 'awaiting-approval' && <>
-        <button type="button" disabled={decisionSent || revokeSent} onClick={() => { void decide('allow-once') }}>{copy.allow}</button>
-        <button type="button" disabled={decisionSent || revokeSent} onClick={() => { void decide('reject') }}>{copy.reject}</button>
+        <button type="button" disabled={decisionDisabled || decisionSent || revokeSent} onClick={() => { void decide('allow-once') }}>{copy.allow}</button>
+        <button type="button" disabled={decisionDisabled || decisionSent || revokeSent} onClick={() => { void decide('reject') }}>{copy.reject}</button>
       </>}
-      {revocable && <button type="button" disabled={revokeSent} onClick={() => { void revoke() }}>{copy.revoke}</button>}
+      {revocable && <button type="button" disabled={revokeDisabled || revokeSent} onClick={() => { void revoke() }}>{copy.revoke}</button>}
     </div>
   </section>
 }
