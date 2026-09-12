@@ -45,6 +45,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
   const childWires = []
   const children = []
   const lifecycle = []
+  const systemRepresentations = new Set()
   let parentRequests = 0
   let forbiddenEffects = 0
   const controller = new AbortController()
@@ -121,6 +122,14 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     ctx.tools.register(effect('fixture_write'))
     parentHandle = await ctx.agents.create({ sessionId: sessions.SessionId(`split-${scenario}`), agentOptions: { provider: 'openai-codex', model: SPLIT_MODEL, reasoningEffort: llm.ReasoningEffortId('low') } })
     const parent = parentHandle.agent
+    // Observe the actual host request without changing its frozen history or prompt.
+    ctx.on('llm/stream', async function* (options, next) {
+      if (options.sessionId !== parent.id) {
+        const first = options.messages[0]
+        systemRepresentations.add(options.system !== undefined ? 'field' : first?.role === 'system' ? 'history' : 'missing')
+      }
+      yield* next()
+    })
     const provider = ctx.subagents.getProvider('split-exact-spawn')
     if (scenario === 'approval-disposal-failure') {
       const originalStart = provider.start
@@ -292,7 +301,11 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     if (!['parent-dispose', 'approval-owner-disposed'].includes(scenario)) assert.equal(ctx.agents.get(parent.id), parent)
     assert.ok(lifecycle.length === 0 || JSON.stringify(lifecycle) === '["start","end"]', 'published lifecycle must pair')
     revoke()
-    return { scenario, syntheticOnly: true, mockDispatches: wires.length, childMockDispatches: childWires.length, children: children.length, lifecyclePaired: true, childQuiescent: true, forbiddenEffects }
+    if (scenario === 'success' || scenario === 'prompt-isolation' || approvalSuccess) {
+      assert.equal(systemRepresentations.size, 1, 'a successful child must use one observed host prompt representation')
+      assert.ok(!systemRepresentations.has('missing'))
+    }
+    return { scenario, syntheticOnly: true, mockDispatches: wires.length, childMockDispatches: childWires.length, children: children.length, lifecyclePaired: true, childQuiescent: true, forbiddenEffects, systemRepresentations: [...systemRepresentations] }
   } finally {
     try { await ctx?.fiber.dispose() } finally {
       globalThis.fetch = prior.fetch
