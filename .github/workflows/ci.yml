@@ -85,6 +85,8 @@ jobs:
         run: pnpm run test:browser
       - name: Validate authenticated Split browser lifecycle
         run: node scripts/check-split-browser.mjs
+      - name: Validate experimental Split Gateway conversation
+        run: node scripts/check-split-conversation.mjs
 
   windows-canary-contract:
     runs-on: windows-latest

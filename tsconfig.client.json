@@ -5,6 +5,6 @@
     "lib": ["es2024", "dom", "dom.iterable"],
     "types": ["react"]
   },
-  "include": ["src/client", "tests/**/*.client.spec.tsx", "scripts/split-browser-entry.tsx"],
+  "include": ["src/client", "tests/**/*.client.spec.tsx", "scripts/split-browser-entry.tsx", "scripts/split-conversation-entry.tsx"],
   "exclude": []
 }

@@ -1,8 +1,6 @@
 /** Internal HTTP bridge over DSH's real browser authentication. Not mounted by the public plugin. */
-import { createHmac, randomBytes, randomUUID } from 'node:crypto'
-import type { IncomingMessage, ServerResponse } from 'node:http'
+import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
-import { symbols } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ConnectionTrustRequest } from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
@@ -10,10 +8,8 @@ import { ownsSplitApproval } from './split-approval.ts'
 import type { SplitApprovalHandle } from './split-approval.ts'
 import { SPLIT_APPROVAL_PATH } from './split-transport-contract.ts'
 import type { SplitApprovalTarget, SplitOperationReceipt, SplitTransportSnapshot } from './split-transport-contract.ts'
+import { bodyOf, reject, reply, RequestFailure, splitRequestGuard, text } from './split-http.ts'
 
-class RequestFailure extends Error { constructor(readonly status: number) { super('SPLIT_REQUEST_REFUSED') } }
-function reject(status: number): never { throw new RequestFailure(status) }
-const text = (value: unknown, max: number): value is string => typeof value === 'string' && value.length > 0 && value.length <= max && !/[\x00-\x1f\x7f]/u.test(value)
 interface Receipt { operationId: string; state: SplitOperationReceipt['state']; fingerprint: string }
 interface Binding {
   target: SplitApprovalTarget; parent: Agent; approval: SplitApprovalHandle; owner: string; revision: number
@@ -25,40 +21,6 @@ export interface SplitApprovalTransport {
   release(target: SplitApprovalTarget): Promise<void>
   dispose(): Promise<void>
 }
-function headersOf(request: ConnectionTrustRequest): Headers {
-  if (request.headers instanceof Headers) return new Headers(request.headers)
-  const headers = new Headers()
-  for (const [name, value] of Object.entries(request.headers)) {
-    if (Array.isArray(value)) { if (value.length !== 1) reject(403); headers.set(name, value[0]!) }
-    else if (typeof value === 'string') headers.set(name, value)
-  }
-  return headers
-}
-function reply(res: ServerResponse, status: number, value: unknown): void {
-  if (res.destroyed || res.writableEnded) return
-  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
-    ...status >= 400 ? { connection: 'close' } : {} })
-  res.end(JSON.stringify(value))
-}
-async function bodyOf(req: IncomingMessage): Promise<Record<string, unknown>> {
-  if (req.headers['content-type']?.split(';', 1)[0]?.trim() !== 'application/json'
-    || req.headers['content-encoding'] !== undefined) reject(415)
-  const chunks: Buffer[] = []; let size = 0
-  const timer = setTimeout(() => req.destroy(), 5000)
-  try {
-    // Keep the socket alive long enough to send a bounded rejection; ordinary for-await
-    // destroys IncomingMessage on early return and would erase the 413 response.
-    for await (const chunk of req.iterator({ destroyOnReturn: false })) {
-      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-      size += bytes.length
-      if (size > 4096) reject(413)
-      chunks.push(bytes)
-    }
-    const value: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'))
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) reject(400)
-    return value as Record<string, unknown>
-  } finally { clearTimeout(timer) }
-}
 
 /**
  * Reuse public requestRejection, including Host/Origin and signed-cookie checks. No cookie
@@ -67,35 +29,11 @@ async function bodyOf(req: IncomingMessage): Promise<Record<string, unknown>> {
  * Credential-equivalent browser tabs are one principal; this is not a multi-user ACL.
  */
 export function registerSplitApprovalTransport(ctx: Context): SplitApprovalTransport {
-  const connection = ctx.get('connection')
-  if (!connection || !ctx.get('webServer')) throw new Error('SPLIT_CONNECTION_UNAVAILABLE')
-  // Cordis returns a caller-scoped proxy per read; compare the underlying service identity only.
-  const identity = (value: object): object => Reflect.get(value, symbols.original) ?? value
-  const connectionIdentity = identity(connection)
-  const epoch = randomUUID(); const salt = randomBytes(32)
+  const guard = splitRequestGuard(ctx)
+  const { ownerOf } = guard
+  const epoch = randomUUID()
   const bindings = new Map<string, Binding>()
-  let closed = false; let disposal: Promise<void> | undefined
-  const ownerOf = (request: ConnectionTrustRequest): string => {
-    const activeConnection = ctx.get('connection')
-    if (closed || !activeConnection || identity(activeConnection) !== connectionIdentity) reject(503)
-    const status = connection.requestRejection(request)
-    if (status !== undefined) reject(status)
-    const headers = headersOf(request)
-    const cookie = headers.get('cookie'); const host = headers.get('host')
-    if (!cookie || !host || cookie.length > 8192) reject(403)
-    const candidates = cookie.split(';').map(value => value.trim()).filter(Boolean)
-    if (candidates.length > 32) reject(403)
-    const names = candidates.map(value => value.slice(0, value.indexOf('=')))
-    if (names.some(name => !name) || new Set(names).size !== names.length) reject(403)
-    // Ask the existing verifier which individual credential authenticates this request.
-    // Unrelated cookies do not change ownership; ambiguous accepted credentials fail closed.
-    const accepted = candidates.filter(value => {
-      const candidate = new Headers(headers); candidate.set('cookie', value)
-      return connection.requestRejection({ headers: candidate }) === undefined
-    })
-    if (accepted.length !== 1) reject(403)
-    return createHmac('sha256', salt).update(host.toLowerCase()).update('\0').update(accepted[0]!).digest('hex')
-  }
+  let disposal: Promise<void> | undefined
   const snapshot = (binding: Binding): SplitTransportSnapshot => ({
     version: 1, ...binding.target, revision: binding.revision, view: binding.approval.getSnapshot(),
     ...binding.decision ? { decision: { operationId: binding.decision.operationId, state: binding.decision.state } } : {},
@@ -163,11 +101,10 @@ export function registerSplitApprovalTransport(ctx: Context): SplitApprovalTrans
     },
     dispose() {
       if (disposal) return disposal
-      closed = true; unregister()
+      guard.dispose(); unregister()
       const owned = [...bindings.values()]; bindings.clear()
       for (const binding of owned) binding.unsubscribe()
       disposal = Promise.allSettled(owned.map(binding => binding.approval.revoke())).then(results => {
-        salt.fill(0)
         if (results.some(result => result.status === 'rejected')) throw new Error('SPLIT_TRANSPORT_DISPOSAL_FAILED')
       })
       return disposal

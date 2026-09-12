@@ -2,6 +2,7 @@
 export { attachApprovedSplitWorker, SPLIT_INSPECT_TOOL } from '../src/split-worker.ts'
 export { attachSplitApprovalRequest } from '../src/split-approval.ts'
 export { registerSplitApprovalTransport } from '../src/split-transport.ts'
+export { registerSplitConversation } from '../src/split-conversation.ts'
 export { snapshotSplitEvidence } from '../src/split-evidence.ts'
 export { createOpenAICodexAdapter } from '../src/adapter.ts'
 export { OpenAICodexCredentialStore } from '../src/store.ts'

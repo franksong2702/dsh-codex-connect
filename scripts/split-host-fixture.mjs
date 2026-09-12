@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 import { setTimeout as delay } from 'node:timers/promises'
 import { exerciseSplitTransport, SPLIT_TRANSPORT_SCENARIOS } from './split-transport-fixture.mjs'
+import { exerciseSplitConversation, SPLIT_CONVERSATION_SCENARIOS } from './split-conversation-fixture.mjs'
 
 export const SPLIT_HOST_SCENARIOS = Object.freeze([
   'success', 'plain', 'unread', 'bad-reference', 'forbidden', 'recursive', 'run-code',
@@ -33,9 +34,10 @@ function response(item, model) {
 }
 
 export async function runSplitHostScenario(scenario, { root, implementation, importHost, interaction }) {
-  assert.ok(SPLIT_HOST_SCENARIOS.includes(scenario))
+  assert.ok(SPLIT_HOST_SCENARIOS.includes(scenario) || SPLIT_CONVERSATION_SCENARIOS.includes(scenario))
   const isTransport = scenario.startsWith('transport-')
-  const isApproval = scenario.startsWith('approval-') || isTransport
+  const isConversation = scenario.startsWith('conversation-')
+  const isApproval = scenario.startsWith('approval-') || isTransport || isConversation
   const approvalSuccess = ['approval-allow', 'approval-stale'].includes(scenario)
   const waitFor = async condition => { for (let n = 0; !condition() && n < 400; n += 1) await delay(5); assert.ok(condition(), 'expected lifecycle boundary must be reached') }
   const prior = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, home: process.env.DSH_HOME }
@@ -76,10 +78,10 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     assert.equal(body.reasoning.effort, 'low')
     assert.equal(body.service_tier, undefined)
     if (scenario === 'http-error') return new Response(JSON.stringify({ error: { message: 'Synthetic failure', code: 'server_error' } }), { status: 500 })
-    if (['timeout', 'parent-dispose', 'concurrent-admission', 'approval-revoke-running', 'grant-revoked-running', 'transport-revoke'].includes(scenario)) return new Promise((_resolve, reject) => {
+    if (['timeout', 'parent-dispose', 'concurrent-admission', 'approval-revoke-running', 'grant-revoked-running', 'transport-revoke', 'conversation-revoke'].includes(scenario)) return new Promise((_resolve, reject) => {
       if (init.signal.aborted) { reject(init.signal.reason); return }
       init.signal.addEventListener('abort', () => {
-        if (scenario.endsWith('revoked-running') || scenario === 'approval-revoke-running' || scenario === 'transport-revoke') setTimeout(() => reject(init.signal.reason), 80)
+        if (scenario.endsWith('revoked-running') || scenario === 'approval-revoke-running' || scenario === 'transport-revoke' || scenario === 'conversation-revoke') setTimeout(() => reject(init.signal.reason), 80)
         else reject(init.signal.reason)
       }, { once: true })
     })
@@ -121,6 +123,8 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       ctx.systemPrompt.context({ name: 'fixture:private-context', order: 123, text: 'DEPLOYMENT_ONLY_FIXTURE context' })
     }
     ctx.llm.registerAdapter(['openai-codex'], createOpenAICodexAdapter(store, () => undefined))
+    if (isConversation) return await exerciseSplitConversation(scenario, { ctx, workspace, sha256, implementation, importHost,
+      childWires, wires, waitFor, interaction, model: SPLIT_MODEL })
     const effect = name => ({ name, description: 'Synthetic effect only.', parameters: { type: 'object', properties: {} }, output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] }, execute: async () => { forbiddenEffects += 1; return 'forbidden'; } })
     ctx.tools.register(effect('fixture_write'))
     parentHandle = await ctx.agents.create({ sessionId: sessions.SessionId(`split-${scenario}`), agentOptions: { provider: 'openai-codex', model: SPLIT_MODEL, reasoningEffort: llm.ReasoningEffortId('low') } })

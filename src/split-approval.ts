@@ -64,6 +64,8 @@ export function attachSplitApprovalRequest(ctx: Context, parent: Agent, task: Sp
     if (view.phase === 'running' || view.phase === 'ready' || view.phase === 'deciding') update(succeeded ? 'completed' : 'failed')
   }
   if (task.enabled === true) {
+    // Claim only our exact request before generic Gateway forwarding; every unrelated
+    // approval still delegates to the ordinary host/browser answerer chain.
     releaseAnswerer = parent.ctx.on('approval/request', (request, next) => {
       if (request !== ownedRequest) return next()
       const signal = request.signal!
@@ -79,7 +81,7 @@ export function attachSplitApprovalRequest(ctx: Context, parent: Agent, task: Sp
         signal.addEventListener('abort', abort, { once: true })
         update('awaiting-approval')
       })
-    })
+    }, { prepend: true })
   }
   try {
     worker = attachApprovedSplitWorker(ctx, parent, {
