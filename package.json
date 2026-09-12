@@ -191,6 +191,8 @@
     "@deepseek-ai/dsh-storage": "0.1.2-rc.1",
     "@deepseek-ai/dsh-storage-domain": "0.1.2-rc.1",
     "@deepseek-ai/dsh-subagent": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.2-rc.1",
     "@deepseek-ai/dsh-system-prompt": "0.1.2-rc.1",
     "@deepseek-ai/dsh-token-meter": "0.1.2-rc.1",
     "@deepseek-ai/dsh-tools": "0.1.2-rc.1",

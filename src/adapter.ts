@@ -19,6 +19,7 @@ import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
+import { withSplitProviderBounds } from './split-dispatch.ts'
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -145,7 +146,7 @@ function requestProvider(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
 ): Provider {
-  const configured = withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode)
+  const configured = withSplitProviderBounds(withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode))
   const streamSimple = configured.streamSimple
   return {
     ...configured,
