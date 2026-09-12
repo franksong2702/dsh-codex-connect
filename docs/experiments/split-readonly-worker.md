@@ -36,14 +36,37 @@ The installed DSH JSON-schema subset does **not** support `maxLength`, `maxItems
 pnpm exec vitest run tests/split-evidence.spec.ts tests/split-dispatch.spec.ts tests/split-worker.spec.ts tests/split-readonly-boundary.spec.ts
 pnpm run check
 pnpm run test:browser
+node scripts/check-split-matrix.mjs
 ```
+
+The matrix checker resolves pi-ai under Node's ESM `import` condition from the isolated experiment and adapter locations, not `require.resolve`. pi-ai's root and package manifest are not CommonJS exports. The first actual isolated run exposed this checker defect before any scenario ran; that failed attempt is not acceptance evidence. The corrected fresh checker process uses `--experimental-import-meta-resolve`, verifies both resolutions are identical and inside the temporary host, and reads the package manifest as local metadata. Four subprocess regressions cover import-only exports, same-version duplicate providers, an out-of-root symlink and wrong package identity. This test-only Node flag does not change the production runtime.
 
 The integration test drives an actual parent turn through a model-issued delegation call, real DSH spawn, model-issued approved snapshot read, official structured-result capture, parent tool-result consumption and a new parent completion. It checks that parent-only text is absent from child requests, child tools are limited, lifecycle events pair, the child disappears after disposal and the parent remains live.
 
 Negative tests cover invalid paths/hashes/files, byte/read budgets, pre-cancellation, publication cancellation, active-parent disposal, cooperative timeout, repeated requests, overlapping admission, single-use grants, missing/invalid structured results, unread/fabricated evidence, excessive findings/output, recursive/reserved tools, implementation substitution, observer-driven route changes and asynchronous-observer cancellation. No live credentials are inspected and no real provider request is issued.
 
+## Local source regression — 2026-09-12
+
+On M15 / Node 22.22.3, the complete `pnpm run check` passed 100 test files / 974 tests, including typecheck, lint, build and package checks. Chromium regression passed eight files / 28 tests. These totals include the four ESM-resolution regressions and the stronger post-seal replacement assertions. The production `lib/` tree remained byte-for-byte unchanged from the preceding worker commit. Matrix execution is a separate gate; neither these counts nor the old Remember installation matrix substitute for its exact-host results.
+
+## Completed local exact-host matrix — 2026-09-12
+
+The corrected M15 matrix passed all four hosts on Node 22.22.3: DSH `0.1.2-rc.1` with pi-ai `0.84.4`, and `0.1.5-alpha.1`, `0.1.5-rc.1`, `0.1.5-rc.2` with pi-ai `0.85.1`. The checker verified respectively 214, 229, 231 and 231 exact-version DSH packages. Each host executed all 23 scenarios in its own fresh process: **92 scenario executions / four processes**, not 92 child processes. All hosts used internal bundle SHA-256 `3f15465a68eb39455eb6c206253f9c8ac1b43e6a2e001c49d122f082b605977b`.
+
+The full non-sensitive report is `docs/experiments/split-host-matrix-m15-2026-09-12.json`. Every scenario passed, all exercised forbidden effects remained zero, and the controller remained inaccessible through the production entry. Real provider dispatches were zero. This establishes the internal synthetic Split integration across the exact hosts; it is not a published-package, real-provider, persistent-profile or restart/resume acceptance result. GitHub exact-head CI results are tracked on #200 separately rather than inferred from this local run.
+
+## Deployment-composition review
+
+The initial controller cannot reconstruct a process-local evidence grant, execution guard or budget after cold resume. It now rejects a mounted `sessionPersistence` service both when attaching a grant and when executing it, and rechecks at child publication. The fixture tests a real JSONL backend present at attachment and introduced after grant attachment. Both paths reject before a child request. This is a supported-composition gate, not a security sandbox against arbitrary trusted plugins changing the host during execution.
+
+The additional tool identity seal runs at `agent/created`. A mutation before that point is part of trusted host composition, not an attack this seal authenticates. The older read-replacement test used that same event and could fail because the worker read tool did not exist yet. It now replaces the installed capability at `agent/session-start`, verifies the tool exists and that the child actually issues its tool call, and checks that the substituted body never executes. The matrix also checks post-seal structured-capture substitution and child-local tool additions. No claim is made that shape checking proves the original identity of an already-replaced trusted capture implementation.
+
+Fresh spawning still inherits deployment/preset prompt contributions even though it does not inherit parent conversation history. These contributions, approval delivery, grant revocation and persistence/resume reconstruction need explicit product-level design before enabling the worker in an everyday profile. Current findings are returned as data only.
+
 ## Still required before product enablement
 
-This source-level integration is currently verified against the exact baseline host. The ordinary four-host installation matrix continues to exercise shipped functionality and Remember; it must not be relabeled as Split cross-host acceptance. Exact-version Split integration across the other supported hosts, a public package/profile entry, the real user approval UI and deployment-composition review are separate gates.
+The new, separate `check-split-matrix.mjs` gate builds a private experiment artifact with every npm dependency external, then installs each declared exact DSH dependency closure into a disposable directory. Each host imports the same artifact bytes and its own actual AgentLoop, ToolRuntime, SubagentRuntime, spawn provider and in-process driver. It verifies all pinned DSH package versions and the adapter/provider pi-ai resolution identity before exercising 23 scenarios. One fresh process per host runs the scenarios; this is not a worker restart/resume test. The experiment artifact is not the public npm package. Ordinary `check:dsh-matrix` remains a distinct shipped-functionality/Remember regression gate.
+
+Both Node validation jobs run the Split gate independently. A missing host/scenario, failed scenario, changed artifact, reused host process, mixed runtime or enabled production entry rejects the report. Passing the internal matrix does not expose a package entry, install a profile, approve deployment composition, or supply a user approval UI.
 
 There is no worker persistence/restart recovery, continuable child, automatic relaunch, multi-worker scheduling or live model comparison here. The controller must not be enabled in a production-like persistent profile before resume/permission reconstruction is defined and tested. No claim is made about usefulness, reasoning quality, token savings or real-backend worker behavior. Remember's outstanding real-provider JSONL/restart acceptance remains in #196/#65. No release, deployment, service restart or changes to ports 3080/3081 are part of this work.

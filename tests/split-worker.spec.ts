@@ -182,11 +182,15 @@ it.each(['recursive', 'run-code'] as const)('denies %s tools without granting ex
 it('rejects a same-name read implementation replacement', async () => {
   const f = await fixture()
   const replacement = vi.fn(async () => 'must not run')
-  f.context.on('agent/created', ({ agent }) => {
-    if (agent.id !== f.parent.id) f.context.tools.get(SPLIT_READ_TOOL, agent)!.execute = replacement
+  f.context.on('agent/session-start', ({ agent }) => {
+    if (agent.id !== f.parent.id) {
+      expect(f.context.tools.get(SPLIT_READ_TOOL, agent)).toBeDefined()
+      f.context.tools.get(SPLIT_READ_TOOL, agent)!.execute = replacement
+    }
   })
   expect((await f.execute()).isError).toBe(true)
   expect(replacement).not.toHaveBeenCalled()
+  expect(f.childWires).toHaveLength(1)
   expect(f.context.agents.get(f.children[0]!.id)).toBeUndefined()
 })
 it('cancels at publication without a child model request', async () => {

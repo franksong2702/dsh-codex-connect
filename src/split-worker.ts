@@ -67,6 +67,8 @@ function verifiedResult(value: unknown, observations: readonly SplitReference[])
 /** Install one parent-only, single-use approved task. Its empty schema grants the model no scope controls. */
 export function attachApprovedSplitWorker(ctx: Context, parent: Agent, task: ApprovedSplitTask): () => void {
   if (task.enabled !== true) return () => undefined
+  // The prototype cannot reconstruct its process-local grant after a cold resume.
+  if (ctx.get('sessionPersistence') !== undefined) fail('SPLIT_PERSISTENCE_UNSUPPORTED')
   if (ctx.agents.get(parent.id) !== parent || (parent.session.header.delegationDepth ?? 0) !== 0) fail('SPLIT_PARENT_INVALID')
   if (!isSplitEvidence(task.evidence) || consumedEvidence.has(task.evidence)
     || typeof task.brief !== 'string' || task.brief.trim().length === 0 || Buffer.byteLength(task.brief) > 16_000) fail('SPLIT_APPROVAL_INVALID')
@@ -88,6 +90,7 @@ export function attachApprovedSplitWorker(ctx: Context, parent: Agent, task: App
     async execute(_args, exec) {
       if (exec.agent !== parent || ctx.agents.get(parent.id) !== parent) fail('SPLIT_PARENT_INVALID')
       exec.signal.throwIfAborted()
+      if (ctx.get('sessionPersistence') !== undefined) fail('SPLIT_PERSISTENCE_UNSUPPORTED')
       if (activeParents.has(parent)) fail('SPLIT_PARENT_BUSY')
       if (used || consumedEvidence.has(evidence)) fail('SPLIT_APPROVAL_CONSUMED')
       if (ctx.subagents.getProvider(provider.name) !== provider || provider.start !== startProvider) fail('SPLIT_PROVIDER_CHANGED')
@@ -111,6 +114,7 @@ export function attachApprovedSplitWorker(ctx: Context, parent: Agent, task: App
       const releaseParentListener = ctx.on('agent/disposed', ({ agent }) => { if (agent === parent) stop('SPLIT_PARENT_DISPOSED') })
       const releaseCreated = ctx.on('agent/created', ({ agent }) => {
         if (currentSplitDispatch() !== scope) return
+        if (ctx.get('sessionPersistence') !== undefined) fail('SPLIT_PERSISTENCE_UNSUPPORTED')
         if (child !== undefined || agent.session.header.parentSession !== parent.id
           || agent.session.header.isSeeded === true || agent.session.header.delegationDepth !== 1) fail('SPLIT_CHILD_INVALID')
         child = agent

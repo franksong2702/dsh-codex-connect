@@ -52,6 +52,8 @@ jobs:
         run: pnpm run pack:check
       - name: Validate declared DSH installation matrix
         run: pnpm --silent run check:dsh-matrix
+      - name: Validate internal Split exact-host matrix
+        run: node scripts/check-split-matrix.mjs
       - name: Verify committed build output
         shell: bash
         run: |
