@@ -34,8 +34,10 @@ const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
-  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
-  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true },
+  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
+  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true,
+    nativeCompactionLifecycle: { syntheticOnly: true, freshProcesses: 10, encodings: ['none', 'zstd'], phases: ['write', 'resume-fork', 'verify-child', 'failure-paths', 'automatic'] },
+  },
 }))
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
 for (const [name, change] of [
@@ -45,6 +47,12 @@ for (const [name, change] of [
   ['wrong plugin version', reports => { reports[1].pluginVersion = '0.1.0-alpha.4.32' }],
   ['failed disposal', reports => { reports[1].runtime.disposalVerified = false }],
   ['missing Reserve transitions', reports => { delete reports[1].runtime.reserveTransitionsVerified }],
+  ['missing native lifecycle', reports => { delete reports[1].runtime.nativeCompactionLifecycle }],
+  ['in-process-only native lifecycle', reports => { reports[1].runtime.nativeCompactionLifecycle.freshProcesses = 0 }],
+  ['missing native encoding', reports => { reports[1].runtime.nativeCompactionLifecycle.encodings.pop() }],
+  ['missing automatic trigger phase', reports => { reports[1].runtime.nativeCompactionLifecycle.phases.pop() }],
+  ['enabled native default', reports => { reports[1].capabilities.enableNativeCompaction = true }],
+  ['missing native default', reports => { delete reports[1].capabilities.enableNativeCompaction }],
   ['unprepared model', reports => { reports[1].runtime.preparedModelCount = 7 }],
   ['missing request preparation', reports => { delete reports[1].runtime.preparedModelCount }],
   ['changed optional default', reports => { reports[1].capabilities.enableSearch = true }],

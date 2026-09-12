@@ -446,6 +446,8 @@ interface OpenAICodexSettingsConfig {
   enableSearch: boolean;
   /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
   enableReserveFallback: boolean;
+  /** Use provider-native Responses V2 compaction when DSH requests compaction. */
+  enableNativeCompaction: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -748,6 +750,8 @@ interface Config {
   enableSearch?: boolean;
   /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
   enableReserveFallback?: boolean;
+  /** Use the default-off provider-native Responses V2 compaction experiment. */
+  enableNativeCompaction?: boolean;
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean;
   /** Register the optional prompt-only image generation tool. */

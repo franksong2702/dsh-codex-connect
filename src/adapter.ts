@@ -4,6 +4,7 @@ import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-w
 import type { Context as PiContext, Model, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -17,6 +18,7 @@ import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './mode
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
+import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -143,7 +145,7 @@ function requestProvider(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
 ): Provider {
-  const configured = withOpenAICodexFastMode(provider, fastMode)
+  const configured = withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode)
   const streamSimple = configured.streamSimple
   return {
     ...configured,
@@ -244,6 +246,7 @@ export function createOpenAICodexAdapter(
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
   reservePermits?: ReserveRequestPermits,
+  nativeCompactionEnabled?: () => boolean,
 ): PiAiAdapter {
   const baseline = withOpenAICodexAstra(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
@@ -260,6 +263,25 @@ export function createOpenAICodexAdapter(
     return profiles
   }
   class OpenAICodexAdapter extends PiAiAdapter {
+    private streamPrepared(
+      stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
+      options: GenerateOptions,
+    ): AsyncIterable<StreamChunk> {
+      return streamWithNativeCompactionScope(stream, options, nativeCompactionEnabled?.() === true)
+    }
+
+    override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
+      const prepared = await super.prepareCall(providerId, model, signal)
+      return {
+        model: prepared.model,
+        stream: options => this.streamPrepared(prepared.stream, options),
+      }
+    }
+
+    override stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+      return this.streamPrepared(next => super.stream(next), options)
+    }
+
     override async listModels(providerId: string) {
       const catalog = (await super.listModels(providerId)).filter(model => model.id !== OPENAI_CODEX_RESERVE_MODEL)
       const configured = visibleModelIds?.()

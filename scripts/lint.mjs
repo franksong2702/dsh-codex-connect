@@ -79,6 +79,9 @@ const patch = await readFile(new URL('../cordis.patch.yml', import.meta.url), 'u
 if (/^- id: agent-default-model/mu.test(patch) || /searchProvider:\s*openai-codex/u.test(patch)) {
   failures.push('bundle patch must not take over Harness routing')
 }
+if (!/^\s+enableNativeCompaction: false$/mu.test(patch)) {
+  failures.push('bundle patch must keep native compaction disabled by default')
+}
 if (!/^\s+enableImageGeneration: false$/mu.test(patch)) {
   failures.push('bundle patch must keep image generation disabled by default')
 }

@@ -256,6 +256,7 @@ async function main() {
     if (!/^    enableProxy: false$/mu.test(pluginBlock)
       || !/^    enableSearch: false$/mu.test(pluginBlock)
       || !/^    enableReserveFallback: false$/mu.test(pluginBlock)
+      || !/^    enableNativeCompaction: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
       || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
@@ -290,6 +291,10 @@ async function main() {
     if (runtimeReport?.['reserveTransitionsVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
+    if (runtimeReport?.nativeCompactionLifecycle?.syntheticOnly !== true
+      || runtimeReport.nativeCompactionLifecycle.freshProcesses !== 10) {
+      throw new CompatibilityCheckError('installed native compaction lifecycle proof is missing')
+    }
 
     process.stdout.write(`${JSON.stringify({
       schemaVersion: JSON_SCHEMA_VERSION,
@@ -303,6 +308,7 @@ async function main() {
         enableProxy: false,
         enableSearch: false,
         enableReserveFallback: false,
+        enableNativeCompaction: false,
         enableImageTool: false,
         enableImageGeneration: false,
         enableAutoReview: false,

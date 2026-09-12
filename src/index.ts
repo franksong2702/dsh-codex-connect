@@ -256,6 +256,8 @@ export interface Config {
   enableSearch?: boolean
   /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
   enableReserveFallback?: boolean
+  /** Use the default-off provider-native Responses V2 compaction experiment. */
+  enableNativeCompaction?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
@@ -287,6 +289,7 @@ export const Config: z<Config> = z.object({
   ),
   enableSearch: z.boolean().default(false),
   enableReserveFallback: z.boolean().default(false),
+  enableNativeCompaction: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
@@ -355,6 +358,7 @@ export function apply(ctx: Context, config: Config): void {
       resolveProviderProxyUrl,
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
       reservePermits,
+      () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
