@@ -12,6 +12,11 @@ export const SPLIT_HOST_SCENARIOS = Object.freeze([
   'read-substitution', 'capture-substitution', 'local-tool', 'route-change',
   'parent-dispose', 'concurrent-admission', 'provider-changed', 'disabled',
   'persistent-composition', 'persistence-after-grant', 'oversized-result',
+  'approval-allow', 'approval-reject', 'approval-missing', 'approval-unavailable', 'approval-never',
+  'approval-stale', 'approval-revoke-pending', 'approval-revoke-running', 'approval-timeout',
+  'approval-intercepted', 'approval-provider-change', 'prompt-isolation', 'context-injection',
+  'grant-revoked-before-start', 'grant-revoked-running',
+  'approval-disposal-failure', 'approval-owner-disposed',
 ])
 const content = 'export const answer = 42\n'
 const sha256 = createHash('sha256').update(content).digest('hex')
@@ -27,10 +32,13 @@ function response(item, model) {
 
 export async function runSplitHostScenario(scenario, { root, implementation, importHost }) {
   assert.ok(SPLIT_HOST_SCENARIOS.includes(scenario))
+  const isApproval = scenario.startsWith('approval-')
+  const approvalSuccess = ['approval-allow', 'approval-stale'].includes(scenario)
+  const waitFor = async condition => { for (let n = 0; !condition() && n < 400; n += 1) await delay(5); assert.ok(condition(), 'expected lifecycle boundary must be reached') }
   const prior = { fetch: globalThis.fetch, WebSocket: globalThis.WebSocket, home: process.env.DSH_HOME }
   const workspace = join(root, scenario)
   process.env.DSH_HOME = join(workspace, 'synthetic-home')
-  const { attachApprovedSplitWorker, snapshotSplitEvidence, createOpenAICodexAdapter, OpenAICodexCredentialStore, SPLIT_MODEL, SPLIT_INSPECT_TOOL, SPLIT_READ_TOOL, SPLIT_RESULT_TOOL } = implementation
+  const { attachApprovedSplitWorker, attachSplitApprovalRequest, snapshotSplitEvidence, createOpenAICodexAdapter, OpenAICodexCredentialStore, SPLIT_MODEL, SPLIT_INSPECT_TOOL, SPLIT_READ_TOOL, SPLIT_RESULT_TOOL } = implementation
   let ctx
   let parentHandle
   const wires = []
@@ -51,21 +59,25 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     assert.equal(body.model, SPLIT_MODEL)
     assert.ok(wires.length < 8, 'fixture requests remain bounded')
     wires.push(body)
-    if (body.tools.some(tool => tool.name === SPLIT_INSPECT_TOOL)) {
+    if (!body.tools.some(tool => [SPLIT_READ_TOOL, SPLIT_RESULT_TOOL].includes(tool.name))) {
       parentRequests += 1
       if (parentRequests === 1) return call(SPLIT_INSPECT_TOOL, {})
-      assert.ok(JSON.stringify(body.input).includes('Verified the fixture.'))
+      if (!isApproval || approvalSuccess) assert.ok(JSON.stringify(body.input).includes('Verified the fixture.'))
       return answer('Parent consumed the worker result.')
     }
     childWires.push(body)
     assert.ok(!JSON.stringify(body).includes('PARENT_ONLY_FIXTURE'))
+    assert.ok(!JSON.stringify(body).includes('DEPLOYMENT_ONLY_FIXTURE'))
     assert.deepEqual(body.tools.map(tool => tool.name).sort(), [SPLIT_READ_TOOL, SPLIT_RESULT_TOOL].sort())
     assert.equal(body.reasoning.effort, 'low')
     assert.equal(body.service_tier, undefined)
     if (scenario === 'http-error') return new Response(JSON.stringify({ error: { message: 'Synthetic failure', code: 'server_error' } }), { status: 500 })
-    if (['timeout', 'parent-dispose', 'concurrent-admission'].includes(scenario)) return new Promise((_resolve, reject) => {
+    if (['timeout', 'parent-dispose', 'concurrent-admission', 'approval-revoke-running', 'grant-revoked-running'].includes(scenario)) return new Promise((_resolve, reject) => {
       if (init.signal.aborted) { reject(init.signal.reason); return }
-      init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true })
+      init.signal.addEventListener('abort', () => {
+        if (scenario.endsWith('revoked-running') || scenario === 'approval-revoke-running') setTimeout(() => reject(init.signal.reason), 25)
+        else reject(init.signal.reason)
+      }, { once: true })
     })
     if (scenario === 'plain') return answer('Plain text is not structured completion.')
     if (scenario === 'unread') return call(SPLIT_RESULT_TOOL, { summary: 'No inspection.', findings: [], limitations: [] })
@@ -96,12 +108,27 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     await ctx.plugin(loop.default, { agents: [] })
     await ctx.plugin(subagents.default)
     await ctx.plugin(spawn, { providerName: 'split-exact-spawn' })
+    if (isApproval && scenario !== 'approval-missing') {
+      const approval = await importHost('@deepseek-ai/dsh-user-approval')
+      await ctx.plugin(approval.default, { policy: scenario === 'approval-never' ? 'never' : 'ask' })
+    }
+    if (scenario === 'prompt-isolation') {
+      ctx.systemPrompt.section({ name: 'fixture:private-section', order: 123, text: 'DEPLOYMENT_ONLY_FIXTURE system' })
+      ctx.systemPrompt.context({ name: 'fixture:private-context', order: 123, text: 'DEPLOYMENT_ONLY_FIXTURE context' })
+    }
     ctx.llm.registerAdapter(['openai-codex'], createOpenAICodexAdapter(store, () => undefined))
     const effect = name => ({ name, description: 'Synthetic effect only.', parameters: { type: 'object', properties: {} }, output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: String(value) }] }, execute: async () => { forbiddenEffects += 1; return 'forbidden'; } })
     ctx.tools.register(effect('fixture_write'))
     parentHandle = await ctx.agents.create({ sessionId: sessions.SessionId(`split-${scenario}`), agentOptions: { provider: 'openai-codex', model: SPLIT_MODEL, reasoningEffort: llm.ReasoningEffortId('low') } })
     const parent = parentHandle.agent
     const provider = ctx.subagents.getProvider('split-exact-spawn')
+    if (scenario === 'approval-disposal-failure') {
+      const originalStart = provider.start
+      provider.start = async request => {
+        const run = await originalStart.call(provider, request)
+        return { ...run, async dispose() { await run.dispose(); throw new Error('Synthetic disposal failure after child removal') } }
+      }
+    }
     ctx.on('agent/created', ({ agent }) => { if (agent !== parent) children.push(agent) })
     ctx.on('subagent/start', () => lifecycle.push('start'))
     ctx.on('subagent/end', () => lifecycle.push('end'))
@@ -110,14 +137,16 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       await ctx.plugin(persistence.default, { root: join(workspace, 'sessions'), compression: 'none', packChunks: true })
     }
     const task = { enabled: scenario !== 'disabled', brief: 'Inspect the approved example and cite its source.', evidence, provider,
-      maximumRequests: scenario === 'request-budget' ? 2 : 6, timeoutMs: scenario === 'timeout' ? 150 : 10000 }
+      maximumRequests: scenario === 'request-budget' ? 2 : 6, timeoutMs: ['timeout', 'approval-timeout'].includes(scenario) ? 150 : 10000 }
     if (scenario === 'persistent-composition') {
       await attachPersistence()
       assert.throws(() => attachApprovedSplitWorker(ctx, parent, task), /SPLIT_PERSISTENCE_UNSUPPORTED/u)
       assert.equal(wires.length, 0)
       return { scenario, syntheticOnly: true, rejectedBeforeDispatch: true, mockDispatches: 0 }
     }
-    const revoke = attachApprovedSplitWorker(ctx, parent, task)
+    const consent = isApproval ? attachSplitApprovalRequest(ctx, parent, { ...task, workspaceLabel: 'Synthetic fixture workspace' }) : undefined
+    const revoke = consent === undefined ? attachApprovedSplitWorker(ctx, parent, task) : () => undefined
+    if (scenario === 'approval-intercepted' || scenario === 'approval-unavailable') parent.ctx.on('approval/request', async () => scenario === 'approval-intercepted' ? 'allowed-once' : 'unavailable', { prepend: true })
     const execute = () => ctx.tools.execute({ callId: llm.ToolCallId('split-host-inspection'), name: SPLIT_INSPECT_TOOL, arguments: {}, agent: parent, signal: controller.signal })
     if (scenario === 'disabled') {
       assert.equal(ctx.tools.get(SPLIT_INSPECT_TOOL, parent), undefined)
@@ -130,6 +159,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     // Mutating earlier would exercise trusted composition, not a post-seal substitution.
     ctx.on('agent/session-start', ({ agent }) => {
       if (agent === parent) return
+      if (scenario === 'context-injection') agent.inject(llm.createUserMessage({ source: { kind: 'plugin', plugin: 'fixture' }, content: [{ type: 'text', text: 'DEPLOYMENT_ONLY_FIXTURE injected context' }] }))
       if (scenario === 'local-tool') agent.ctx.tools.register(effect('fixture_local'))
       if (scenario === 'read-substitution' || scenario === 'capture-substitution') {
         ctx.tools.get(scenario === 'read-substitution' ? SPLIT_READ_TOOL : SPLIT_RESULT_TOOL, agent).execute = effect('replacement').execute
@@ -137,12 +167,90 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       }
       if (scenario === 'route-change') agent.ctx.on('agent/request', async (_event, next) => ({ ...await next(), model: 'fixture-disallowed-model' }))
     })
-    if (scenario === 'provider-changed') {
+    if (isApproval) {
+      const offer = consent.getSnapshot()
+      assert.equal(consent.decide(offer.id, offer.reviewDigest, 'allow-once'), false, 'ready is not an outstanding approval')
+      parent.followup(llm.createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'PARENT_ONLY_FIXTURE: run the approved inspection.' }] }))
+      if (!['approval-missing', 'approval-unavailable', 'approval-never', 'approval-intercepted'].includes(scenario)) {
+        await waitFor(() => consent.getSnapshot().phase === 'awaiting-approval')
+        assert.equal(childWires.length, 0); assert.equal(children.length, 0)
+        if (scenario === 'approval-stale') {
+          assert.equal(consent.decide('another-offer', offer.reviewDigest, 'allow-once'), false)
+          assert.equal(consent.decide(offer.id, 'different-review', 'allow-once'), false)
+          assert.equal(consent.decide(offer.id, offer.reviewDigest, 'unexpected-choice'), false)
+          assert.equal(consent.getSnapshot().phase, 'awaiting-approval')
+          task.brief = 'MUTATED_AFTER_REVIEW'
+        }
+        if (scenario === 'approval-revoke-pending' || scenario === 'approval-owner-disposed') {
+          if (scenario === 'approval-owner-disposed') await parentHandle.dispose()
+          const stopped = consent.revoke()
+          assert.equal(consent.revoke(), stopped)
+          await stopped
+          assert.equal(consent.decide(offer.id, offer.reviewDigest, 'allow-once'), false, 'late allow must remain stale')
+        } else if (scenario !== 'approval-timeout') {
+          const originalStart = provider.start
+          if (scenario === 'approval-provider-change') provider.start = async () => { forbiddenEffects += 1; throw new Error('Must not start') }
+          assert.equal(consent.decide(offer.id, offer.reviewDigest, scenario === 'approval-reject' ? 'reject' : 'allow-once'), true)
+          assert.equal(consent.decide(offer.id, offer.reviewDigest, 'allow-once'), false)
+          if (scenario === 'approval-revoke-running') {
+            await waitFor(() => childWires.length === 1)
+            const stopped = consent.revoke()
+            assert.equal(consent.getSnapshot().phase, 'revoking')
+            assert.equal(consent.revoke(), stopped)
+            assert.ok(ctx.agents.get(children[0].id), 'revocation must await the cooperative provider and child cleanup')
+            await stopped
+          }
+          await parent.whenIdle()
+          provider.start = originalStart
+        }
+      }
+      await parent.whenIdle()
+      const events = parent.session.snapshotEvents()
+      const audit = events.filter(event => ['approval/asked', 'approval/decided'].includes(event.type))
+      if (scenario === 'approval-missing') assert.equal(audit.length, 0)
+      else {
+        assert.deepEqual(audit.map(event => event.type), ['approval/asked', 'approval/decided'])
+        assert.equal(audit[0].data.id, audit[1].data.id)
+        assert.ok(audit[0].data.reason.includes(offer.reviewDigest))
+        assert.ok(audit[0].data.reason.includes(sha256))
+        assert.ok(events.findIndex(event => event.type === 'turn/start') < events.indexOf(audit[0]))
+        assert.ok(events.indexOf(audit[1]) < events.findIndex(event => event.type === 'turn/end'))
+      }
+      if (approvalSuccess) {
+        assert.equal(consent.getSnapshot().phase, 'completed')
+        assert.equal(childWires.length, 2)
+        assert.ok(JSON.stringify(events.find(event => event.type === 'tool/result')).includes('Verified the fixture.'))
+        assert.ok(!JSON.stringify(childWires).includes('MUTATED_AFTER_REVIEW'))
+      } else {
+        const toolResult = events.find(event => event.type === 'tool/result')
+        assert.ok(toolResult?.data.message.content.some(block => block.type === 'tool-result' && block.isError === true))
+        assert.equal(childWires.length, scenario === 'approval-revoke-running' ? 1 : scenario === 'approval-disposal-failure' ? 2 : 0)
+      }
+      if (scenario.includes('revoke-')) assert.equal(consent.getSnapshot().phase, 'revoked')
+      if (scenario === 'approval-disposal-failure') {
+        await assert.rejects(() => consent.revoke(), /SPLIT_REVOCATION_FAILED/u)
+        assert.equal(consent.getSnapshot().phase, 'failed', 'removed child does not erase disposal failure')
+      } else await consent.revoke()
+    } else if (scenario === 'grant-revoked-before-start') {
+      const saved = ctx.tools.get(SPLIT_INSPECT_TOOL, parent)
+      await revoke.revoke()
+      await assert.rejects(() => saved.execute({}, { agent: parent, signal: controller.signal }), /SPLIT_REVOKED/u)
+      assert.equal(childWires.length, 0)
+    } else if (scenario === 'grant-revoked-running') {
+      const pending = execute()
+      await waitFor(() => childWires.length === 1)
+      const stopped = revoke.revoke()
+      assert.equal(revoke.revoke(), stopped)
+      assert.ok(ctx.agents.get(children[0].id))
+      await stopped
+      assert.equal((await pending).isError, true)
+      assert.equal(childWires.length, 1)
+    } else if (scenario === 'provider-changed') {
       // Same trusted fixture object, different start identity: execution must reject it before startup.
       const original = provider.start
       provider.start = async () => { forbiddenEffects += 1; throw new Error('Must not run') }
       try { assert.match(JSON.stringify(await execute()), /SPLIT_PROVIDER_CHANGED/u) } finally { provider.start = original }
-    } else if (scenario === 'success') {
+    } else if (scenario === 'success' || scenario === 'prompt-isolation') {
       parent.followup(llm.createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'PARENT_ONLY_FIXTURE: run the approved inspection.' }] }))
       await parent.whenIdle()
       const events = parent.session.snapshotEvents()
@@ -151,6 +259,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       assert.equal(parentRequests, 2)
       assert.equal(childWires.length, 2)
       assert.equal(wires.length, 4)
+      if (scenario === 'prompt-isolation') assert.ok(JSON.stringify(wires[0]).includes('DEPLOYMENT_ONLY_FIXTURE'))
     } else {
       if (scenario === 'pre-cancel') controller.abort()
       const pending = execute()
@@ -166,7 +275,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       if (scenario === 'persistence-after-grant') assert.match(JSON.stringify(result), /SPLIT_PERSISTENCE_UNSUPPORTED/u)
       if (scenario === 'http-error') assert.equal(childWires.length, 1, 'provider error must not retry')
       if (scenario === 'request-budget') assert.equal(childWires.length, 2)
-      if (['pre-cancel', 'publication-cancel', 'route-change', 'persistence-after-grant'].includes(scenario)) assert.equal(childWires.length, 0)
+      if (['pre-cancel', 'publication-cancel', 'route-change', 'persistence-after-grant', 'context-injection'].includes(scenario)) assert.equal(childWires.length, 0)
       if (scenario === 'concurrent-admission') {
         const after = await ctx.tools.execute({ callId: llm.ToolCallId('second'), name: SPLIT_INSPECT_TOOL, arguments: {}, agent: parent, signal: new AbortController().signal })
         assert.match(JSON.stringify(after), /SPLIT_APPROVAL_CONSUMED/u)
@@ -180,7 +289,7 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
     if (scenario === 'success') assert.deepEqual(lifecycle, ['start', 'end'])
     assert.equal(forbiddenEffects, 0, 'no forbidden tool or substituted provider body ran')
     for (const child of children) assert.equal(ctx.agents.get(child.id), undefined, 'child must reach quiescence')
-    if (scenario !== 'parent-dispose') assert.equal(ctx.agents.get(parent.id), parent)
+    if (!['parent-dispose', 'approval-owner-disposed'].includes(scenario)) assert.equal(ctx.agents.get(parent.id), parent)
     assert.ok(lifecycle.length === 0 || JSON.stringify(lifecycle) === '["start","end"]', 'published lifecycle must pair')
     revoke()
     return { scenario, syntheticOnly: true, mockDispatches: wires.length, childMockDispatches: childWires.length, children: children.length, lifecyclePaired: true, childQuiescent: true, forbiddenEffects }
