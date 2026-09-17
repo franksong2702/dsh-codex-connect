@@ -202,7 +202,7 @@
     "@deepseek-ai/schemastery": "3.18.2",
     "@earendil-works/pi-ai": "0.84.4",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^22.20.0",
+    "@types/node": "^26.5.1",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.1",
     "@vitest/browser-playwright": "4.1.11",
