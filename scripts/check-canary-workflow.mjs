@@ -37,11 +37,15 @@ const matrixReports = matrixVersions.map(dshVersion => ({
   capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true,
     nativeCompactionLifecycle: { syntheticOnly: true, freshProcesses: 10, encodings: ['none', 'zstd'], phases: ['write', 'resume-fork', 'verify-child', 'failure-paths', 'automatic'] },
+    images: { syntheticOnly: true, generated: 2, codeRuns: 1, dispatchEvent: 'tool/code-dispatch', originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true, realProviderRequests: 0 },
   },
 }))
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
 for (const [name, change] of [
   ['missing host', reports => reports.pop()],
+  ['missing enabled image proof', reports => { delete reports[0].runtime.images }],
+  ['missing fork denial', reports => { reports[0].runtime.images.earlierForkDenied = false }],
+  ['unexpected real image request', reports => { reports[0].runtime.images.realProviderRequests = 1 }],
   ['different package bytes', reports => { reports[1].pluginArtifactSha256 = 'b'.repeat(64) }],
   ['wrong host version', reports => { reports[1].dshVersion = reports[0].dshVersion }],
   ['wrong plugin version', reports => { reports[1].pluginVersion = '0.1.0-alpha.4.32' }],
