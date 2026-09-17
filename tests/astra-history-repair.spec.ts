@@ -8,6 +8,7 @@ import { assertReleasedPayloadSemantics, releasedV0SessionFormatCodec, releasedV
 import { releasedV2SessionFormatCodec, sessionFormatV1ToV2 } from '@deepseek-ai/dsh-session-format-v1-to-v2'
 import { assertReleasedV3Header, releasedV3SessionFormatCodec, restoreReleasedV3Artifact, sessionFormatV2ToV3 } from '@deepseek-ai/dsh-session-format-v2-to-v3'
 import { repairAstraHistory, repairAstraHistoryFile } from '../src/astra-history-repair.ts'
+import { scanZstdFrames } from '../src/history-migration.ts'
 import { ASTRA_REASONING_SOURCE, createReasoningUpdateMessage, readReasoningUpdate, readReasoningSelectionOrdinal } from '../src/reasoning-update.ts'
 
 const update = { version: 1 as const, sessionId: 'astra-history-fixture', baseEffort: 'low' as const, previousEffort: 'low' as const, effort: 'high' as const }
@@ -118,11 +119,15 @@ it('creates an exclusive compressed copy and never overwrites either file', asyn
   try {
     const input = join(dir, 'source.jsonl.zstd'), output = join(dir, 'repaired.jsonl.zstd')
     // Production persistence appends frames; decoding only the first frame loses the body.
-    const bytes = Buffer.concat(rows().map(row => zstdCompressSync(Buffer.from(encode([row])))))
+    const originalRows = rows()
+    const bytes = Buffer.concat(originalRows.map(row => zstdCompressSync(Buffer.from(encode([row])))))
     await writeFile(input, bytes)
     expect(await repairAstraHistoryFile(input, output)).toBe(2)
     const repaired = await readFile(output)
-    expect(zstdDecompressSync(repaired).toString()).toContain(ASTRA_REASONING_SOURCE)
+    const frames = scanZstdFrames(repaired).map(({ start, end }) => zstdDecompressSync(repaired.subarray(start, end)).toString())
+    expect(frames[0]).toBe(encode([header]))
+    expect(frames.join('')).toBe(repairAstraHistory(encode(originalRows)).jsonl)
+    expect(frames[1]).toContain(ASTRA_REASONING_SOURCE)
     await expect(repairAstraHistoryFile(input, input)).rejects.toThrow(/differ/)
     await expect(repairAstraHistoryFile(input, output)).rejects.toThrow()
     expect(await readFile(input)).toEqual(bytes)

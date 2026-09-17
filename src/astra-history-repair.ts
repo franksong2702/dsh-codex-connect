@@ -89,7 +89,11 @@ export async function repairAstraHistoryFile(input: string, output: string): Pro
   const repaired = repairAstraHistory(text)
   if (repaired.changed === 0) throw new Error('No legacy Astra provenance found; no output written')
   const outputBytes = Buffer.from(repaired.jsonl)
-  await writeFile(output, output.endsWith('.zstd') ? zstdCompressSync(outputBytes) : outputBytes, { flag: 'wx', mode: 0o600 })
+  const headerEnd = outputBytes.indexOf(10) + 1
+  const encoded = output.endsWith('.zstd')
+    ? Buffer.concat([zstdCompressSync(outputBytes.subarray(0, headerEnd)), zstdCompressSync(outputBytes.subarray(headerEnd))])
+    : outputBytes
+  await writeFile(output, encoded, { flag: 'wx', mode: 0o600 })
   return repaired.changed
 }
 
