@@ -19,6 +19,14 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
       || report.runtime?.reserveTransitionsVerified !== true
+      || report.runtime?.images?.syntheticOnly !== true
+      || report.runtime.images.generated !== 2 || report.runtime.images.codeRuns !== 1
+      || !['tool/code-dispatch', 'tool/ptc-dispatch'].includes(report.runtime.images.dispatchEvent)
+      || report.runtime.images.originalDownloadVerified !== true
+      || report.runtime.images.inheritedOriginalVerified !== true
+      || report.runtime.images.earlierForkDenied !== true
+      || report.runtime.images.unrelatedSessionDenied !== true
+      || report.runtime.images.realProviderRequests !== 0
       || report.runtime?.nativeCompactionLifecycle?.syntheticOnly !== true
       || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 10
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'
