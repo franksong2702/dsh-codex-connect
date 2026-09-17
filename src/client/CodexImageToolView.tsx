@@ -12,7 +12,7 @@ import {
   IconCopyOutline16,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { decodeImagePresentationMeta } from '../image-presentation.ts'
+import { decodeImagePresentationMeta, decodeImageResultContent } from '../image-presentation.ts'
 import { openAICodexOriginalImageUrl } from '../image-assets-contract.ts'
 import type { OpenAICodexOriginalImageRef } from '../image-assets-contract.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
@@ -52,7 +52,9 @@ function contentText(content: readonly unknown[]): string | undefined {
 
 function presentation(block: CodexImageToolViewProps['block']) {
   if (!('kind' in block) || block.kind !== 'tool-result' || block.isError) return undefined
-  return decodeImagePresentationMeta(block.meta)
+  if (block.meta !== undefined) return decodeImagePresentationMeta(block.meta)
+  const prompt = promptFor(block)
+  return prompt === undefined ? undefined : decodeImageResultContent(block.content, prompt)
 }
 
 function promptFromArgs(raw: string): string | undefined {
