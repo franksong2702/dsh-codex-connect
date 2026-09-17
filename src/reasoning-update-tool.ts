@@ -14,6 +14,7 @@ import {
   isAstraReasoningEffort,
   planReasoningUpdates,
   readReasoningUpdate,
+  readReasoningSelectionOrdinal,
   reasoningUpdateError,
 } from './reasoning-update.ts'
 import type { AstraReasoningEffort } from './reasoning-update.ts'
@@ -33,10 +34,11 @@ function pendingSelection(session: Session) {
   const events = session.snapshotEvents()
   const selection = events.findLast(event => event.type === 'model/selection')
   if (selection === undefined) return undefined
+  const ordinal = events.filter(event => event.type === 'model/selection').length
   const admitted = events.some(event => event.seq > selection.seq && event.type === 'user/message'
     && readReasoningUpdate(event.data) !== undefined
-    && event.data.source.kind === 'plugin' && 'reasoningSelectionSeq' in event.data.source
-    && event.data.source.reasoningSelectionSeq === selection.seq)
+    && (readReasoningSelectionOrdinal(event.data) === ordinal
+      || ('reasoningSelectionSeq' in event.data.source && event.data.source.reasoningSelectionSeq === selection.seq)))
   if (admitted) return undefined
   // A later in-flight request may still use the old selection; only a matching header consumes the choice.
   const consumed = events.some(event => event.seq > selection.seq && event.type === 'request/header'
@@ -140,9 +142,9 @@ export function registerReasoningUpdateTool(ctx: Context, enabled: () => boolean
     if (selected !== undefined && base !== undefined && isAstraReasoningEffort(selected.reasoningEffort)) {
       const previous = planReasoningUpdates({ provider: config.provider, model: config.model, reasoningEffort: ReasoningEffortId(base), messages, sessionId: agent.id })!
       if (selected.reasoningEffort !== previous.effectiveEffort) {
-        const approved = createReasoningUpdateMessage({ version: 1, sessionId: agent.id, baseEffort: base,
-          previousEffort: previous.effectiveEffort, effort: selected.reasoningEffort })
-        const notice = { ...approved, source: { ...approved.source, reasoningSelectionSeq: selected.seq } }
+        const notice = createReasoningUpdateMessage({ version: 1, sessionId: agent.id, baseEffort: base,
+          previousEffort: previous.effectiveEffort, effort: selected.reasoningEffort },
+        agent.session.snapshotEvents().filter(event => event.type === 'model/selection').length)
         messages.push(notice)
         additions.push(notice)
       }

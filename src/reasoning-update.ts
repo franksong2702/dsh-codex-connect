@@ -16,6 +16,10 @@ export interface AstraReasoningUpdate {
   effort: AstraReasoningEffort
 }
 
+/** Structured snapshot section owned by this plugin; text is not parsed from user content. */
+export const ASTRA_REASONING_SOURCE = 'dsh-codex-connect/reasoning-update' as const
+const SELECTION_SECTION = 'dsh-codex-connect/selection-ordinal'
+
 /** One immutable request's ordered updates, anchored to ordinary user-message positions. */
 export interface AstraReasoningPlan {
   baseEffort: AstraReasoningEffort
@@ -42,14 +46,19 @@ export function reasoningUpdateText(update: AstraReasoningUpdate): string {
   return `The user approved changing Astra reasoning effort from ${update.previousEffort} to ${update.effort} for this conversation. The change applies when this message enters the next request. The original request-level effort remains ${update.baseEffort}; other conversations and defaults are unchanged.`
 }
 
-/** Construct after a DSH human answer or a logged explicit model selection. */
-export function createReasoningUpdateMessage(update: AstraReasoningUpdate): UserMessage {
+/**
+ * Construct after a DSH human answer or a logged explicit model selection.
+ * @param update - confirmed effort change.
+ * @param selectionOrdinal - one-based count of model/selection events, when acknowledging a manual choice.
+ * @returns a model-visible message with migration-safe structured provenance.
+ */
+export function createReasoningUpdateMessage(update: AstraReasoningUpdate, selectionOrdinal?: number): UserMessage {
   const source = {
     kind: 'plugin' as const,
-    plugin: 'dsh-codex-connect',
-    form: 'notice' as const,
-    summary: `Approved Astra reasoning: ${update.previousEffort} → ${update.effort}`,
-    reasoningUpdate: { ...update },
+    plugin: 'dsh-codex-connect' as const,
+    form: 'snapshot' as const,
+    sections: [{ name: ASTRA_REASONING_SOURCE, text: JSON.stringify(update) },
+      ...(selectionOrdinal === undefined ? [] : [{ name: SELECTION_SECTION, text: String(selectionOrdinal) }])],
   }
   return createUserMessage({ source, content: [{ type: 'text', text: reasoningUpdateText(update) }] })
 }
@@ -57,8 +66,20 @@ export function createReasoningUpdateMessage(update: AstraReasoningUpdate): User
 /** Read structured plugin provenance, never a magic string from user or model text. */
 export function readReasoningUpdate(message: Message): AstraReasoningUpdate | undefined {
   const source = message.source
-  if (source.kind !== 'plugin' || source.plugin !== 'dsh-codex-connect' || !('reasoningUpdate' in source)) return undefined
-  const value: unknown = source.reasoningUpdate
+  if (source.kind !== 'plugin' || source.plugin !== 'dsh-codex-connect') return undefined
+  let value: unknown
+  if ('reasoningUpdate' in source) value = source.reasoningUpdate
+  else if (source.form === 'snapshot') {
+    const sections = source.sections.filter(section => section.name === ASTRA_REASONING_SOURCE)
+    if (sections.length === 0) return undefined
+    if (sections.length !== 1 || source.sections.some(section => ![ASTRA_REASONING_SOURCE, SELECTION_SECTION].includes(section.name))) {
+      reasoningUpdateError('Invalid Astra reasoning snapshot sections.')
+    }
+    try { value = JSON.parse(sections[0]!.text) } catch { reasoningUpdateError('Invalid Astra reasoning snapshot JSON.') }
+    readReasoningSelectionOrdinal(message)
+  } else {
+    return undefined
+  }
   if (typeof value !== 'object' || value === null || Array.isArray(value)
     || !('version' in value) || value.version !== 1
     || !('sessionId' in value) || typeof value.sessionId !== 'string' || value.sessionId.length === 0
@@ -69,12 +90,29 @@ export function readReasoningUpdate(message: Message): AstraReasoningUpdate | un
     reasoningUpdateError('The saved Astra reasoning update is invalid or uses an unsupported version. Keep the session unchanged and start a new conversation.')
   }
   const update = value as AstraReasoningUpdate
-  if (message.role !== 'user' || source.form !== 'notice'
+  if (message.role !== 'user' || (source.form !== 'notice' && source.form !== 'snapshot')
     || message.content.length !== 1 || message.content[0]?.type !== 'text'
     || message.content[0].text !== reasoningUpdateText(update)) {
     reasoningUpdateError('The saved Astra reasoning notice does not match its confirmed update.')
   }
   return update
+}
+
+/**
+ * Read the one-based model-selection ordinal, which survives host event-sequence remapping.
+ * @param message - durable plugin snapshot.
+ * @returns acknowledged selection ordinal, if present.
+ */
+export function readReasoningSelectionOrdinal(message: Message): number | undefined {
+  const source = message.source
+  if (source.kind !== 'plugin' || source.plugin !== 'dsh-codex-connect' || source.form !== 'snapshot') return undefined
+  const sections = source.sections.filter(section => section.name === SELECTION_SECTION)
+  if (sections.length === 0) return undefined
+  const value = Number(sections[0]!.text)
+  if (sections.length !== 1 || !Number.isSafeInteger(value) || value < 1 || String(value) !== sections[0]!.text) {
+    reasoningUpdateError('Invalid Astra model-selection ordinal.')
+  }
+  return value
 }
 
 /**

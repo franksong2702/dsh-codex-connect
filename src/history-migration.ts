@@ -48,7 +48,12 @@ export interface OpenAICodexHistoryMigrationResult {
   readonly files: readonly OpenAICodexHistoryMigrationFile[]
 }
 
-function scanZstdFrames(buffer: Buffer): readonly FrameRange[] {
+/**
+ * Locate every complete frame in an append-only Zstandard artifact, rejecting trailing damage.
+ * @param buffer - compressed artifact bytes.
+ * @returns all frame ranges in physical order.
+ */
+export function scanZstdFrames(buffer: Buffer): readonly FrameRange[] {
   const frames: FrameRange[] = []
   let offset = 0
   while (offset < buffer.length) {

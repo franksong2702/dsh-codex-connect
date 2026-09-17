@@ -16,6 +16,7 @@ const required = ['LICENSE', 'NOTICE', 'README.md', 'docs/README.zh.md', 'docs/r
 for (const name of required) {
   if (!names.includes(name)) throw new Error(`packed artifact is missing ${name}`)
 }
+if (!names.includes('lib/astra-history-repair.js')) throw new Error('packed artifact is missing the offline Astra repair utility')
 
 const forbidden = names.filter(name => /(^|\/)(?:\.env(?:\.|$)|\.git|node_modules|tests?|scripts?|src)(?:\/|$)|auth\.json$|credential|token/iu.test(name))
 if (forbidden.length > 0) throw new Error(`packed artifact contains forbidden files: ${forbidden.join(', ')}`)

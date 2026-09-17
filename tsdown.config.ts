@@ -27,6 +27,7 @@ export default [
       index: 'src/index.ts',
       invariant: 'src/invariant.ts',
       bin: 'src/bin.ts',
+      'astra-history-repair': 'src/astra-history-repair.ts',
     },
     outDir: 'lib',
     format: ['esm'],
