@@ -138,6 +138,7 @@ describe('Codex image generation tool', () => {
     }] })
     expect(result.content).toEqual([
       expect.objectContaining({ type: 'text' }),
+      expect.objectContaining({ type: 'text', text: expect.stringContaining('codex-connect-image-result-v1:') }),
       {
         type: 'image',
         attachment: expect.objectContaining({
