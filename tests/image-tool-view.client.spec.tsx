@@ -6,6 +6,7 @@ import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import { en } from '../src/client/locales.ts'
 import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
+import { IMAGE_RESULT_PREFIX } from '../src/image-presentation.ts'
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     IconCopyOutline16: () => <svg aria-hidden="true" data-icon="copy" />,
@@ -71,6 +72,22 @@ const standard = {
 afterEach(() => { cleanup(); actionPrompt.mockClear(); actionCancel.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('Codex image Tool view', () => {
+  it.each([false, true])('renders and downloads a nested PTC result (exact original: %s)', async (exact) => {
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ptc'), revokeObjectURL: vi.fn() })
+    const content = [
+      ...(exact ? [{ type: 'text' as const, text: IMAGE_RESULT_PREFIX + JSON.stringify([{ original, preview: image }]) }] : []),
+      { type: 'image' as const, attachment: image },
+    ]
+    render(<CodexImageToolView {...standard} t={t} sessions={sessions} block={{
+      kind: 'tool-result', seq: 2, time: 2, callId: 'call-1:ptc:1', callTime: 1, isError: false, content, subCalls: [],
+      call: { callId: 'call-1:ptc:1', name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt: 'A blue whale' }), turn: 1, step: 1, time: 1, subCalls: [] },
+    }} />)
+    expect(screen.queryByText(en.unknownResult)).toBeNull()
+    expect(screen.getByTestId('codex-image-gallery')).toBeTruthy()
+    expect(screen.getByRole('button', { name: exact ? en.downloadOriginal : en.download })).toBeTruthy()
+    if (exact) expect(screen.getByRole('button', { name: en.downloadPreview })).toBeTruthy()
+    await waitFor(() => { expect(URL.createObjectURL).toHaveBeenCalled() })
+  })
   it('uses a responsive two-region card and an icon-only prompt copy control while generating', async () => {
     const writeText = vi.fn(async () => undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
