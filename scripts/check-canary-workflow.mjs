@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import { buildCanaryTrackingIssue } from './canary-tracking.mjs'
 import { validateDshMatrix } from './check-dsh-matrix.mjs'
+import { imageRuntimeService } from './check-installed-images.mjs'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/upstream-dsh-canary.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
@@ -26,6 +27,14 @@ let assertionCount = 0
 function assertContract(name, condition) {
   assertionCount += 1
   if (!condition) failures.push(name)
+}
+
+assertContract('image fixture selects legacy runtime by declared dependency', imageRuntimeService({ peerDependencies: { '@deepseek-ai/dsh-code-runtime': 'fixture' } }) === 'codeRuntime')
+assertContract('image fixture selects current runtime without a version-prefix assumption', imageRuntimeService({ version: '1.0.0', dependencies: { '@deepseek-ai/dsh-ptc-runtime': 'fixture' } }) === 'ptcRuntime')
+for (const dependencies of [{}, { '@deepseek-ai/dsh-code-runtime': 'fixture', '@deepseek-ai/dsh-ptc-runtime': 'fixture' }]) {
+  let rejected = false
+  try { imageRuntimeService({ dependencies }) } catch { rejected = true }
+  assertContract('image fixture rejects missing or ambiguous runtime identity', rejected)
 }
 
 assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))

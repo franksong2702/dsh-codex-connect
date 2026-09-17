@@ -6,8 +6,18 @@ import { join } from 'node:path'
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64')
 const PREFIX = 'codex-connect-image-result-v1:'
 
+/** Select the service required by the installed tools package, not its version label. */
+export function imageRuntimeService(manifest) {
+  const dependencies = { ...manifest.dependencies, ...manifest.peerDependencies }
+  const services = [['@deepseek-ai/dsh-code-runtime', 'codeRuntime'], ['@deepseek-ai/dsh-ptc-runtime', 'ptcRuntime']]
+    .filter(([name]) => Object.hasOwn(dependencies, name))
+  assert.equal(services.length, 1, 'installed tools must declare exactly one known PTC runtime')
+  return services[0][1]
+}
+
 /** Exercise the packed image tool and real PTC bridge; provider, preview store and code execution are synthetic. */
-export async function checkInstalledImages(importHost, CodexConnect, dshVersion) {
+export async function checkInstalledImages(importHost, CodexConnect, toolsManifest) {
+  const runtimeKey = imageRuntimeService(toolsManifest)
   const [{ Context }, { default: Llm }, { default: Sessions, SessionId },
     { default: Projections }, { default: Prompt }, { default: Tools },
     { default: Agents }, { default: Loop }] = await Promise.all([
@@ -33,8 +43,6 @@ export async function checkInstalledImages(importHost, CodexConnect, dshVersion)
         return inputs.map(input => ({ attachmentId: 'fixture-preview', mediaType: 'image/png', width: 1, height: 1, bytes: PNG.length, name: input.name }))
       },
     })
-    // The renamed service is selected by the exact host under test, not a fallback implementation.
-    const runtimeKey = dshVersion.startsWith('0.1.6-') ? 'ptcRuntime' : 'codeRuntime'
     ctx.provide(runtimeKey, {
       language: 'typescript', isolation: 'fixture',
       executionInstructions: '',

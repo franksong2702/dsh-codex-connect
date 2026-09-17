@@ -94,8 +94,8 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
 
     const reserveTransitionsVerified = await checkInstalledReserve(specifier => importFromProfile(hostPath, specifier), OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
-    const { version: dshVersion } = JSON.parse(await readFile(hostPath, 'utf8'))
-    const images = await checkInstalledImages(specifier => importFromProfile(hostPath, specifier), OpenAICodex, dshVersion)
+    const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
+    const images = await checkInstalledImages(specifier => importFromProfile(hostPath, specifier), OpenAICodex, toolsManifest)
 
     return {
       schemaVersion: JSON_SCHEMA_VERSION,
