@@ -2,7 +2,7 @@
 
 Tracking: [PR #197](https://github.com/franksong2702/dsh-codex-connect/pull/197), [mechanism #196](https://github.com/franksong2702/dsh-codex-connect/issues/196), [context experiment #65](https://github.com/franksong2702/dsh-codex-connect/issues/65), [roadmap #195](https://github.com/franksong2702/dsh-codex-connect/issues/195).
 
-Status: **unreleased prototype**, creation disabled by default. The published npm `0.1.0-alpha.4.35` does not contain this experiment even though the development branch has not bumped the package version.
+Status as of **2026-09-18**: #197 is merged and included in the GitHub `v0.1.0-alpha.4.36` release record; creation remains disabled by default. Full real-provider lifecycle acceptance is still incomplete. Use [the bounded remaining acceptance contract](remember-acceptance.md) for current gates; the dated test results below retain their original scope and are not new executions.
 
 ## What this gate actually exercises
 

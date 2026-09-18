@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { zstdDecompressSync } from 'node:zlib'
+import { readVerifiedDurableRuntime } from './native-compaction-runtime.mjs'
 
 const SELF = fileURLToPath(import.meta.url)
 const MODEL = 'gpt-5.6-luna'
@@ -69,6 +70,8 @@ async function child(phase, root) {
   const statePath = join(root, 'state.json')
   const state = await json(statePath)
   if (state.live !== LIVE || !['write', 'resume'].includes(phase)) fail('INVALID_CHILD_MODE')
+  const runtimeVersions = await readVerifiedDurableRuntime()
+  if (JSON.stringify(runtimeVersions) !== JSON.stringify(state.runtime_versions)) fail('DURABLE_RUNTIME_CHANGED')
   const credential = LIVE ? (await readLogin()).credential : syntheticCredential()
   const undici = await import('undici')
   const dispatcher = LIVE ? new undici.EnvHttpProxyAgent() : undefined
@@ -210,16 +213,18 @@ async function main() {
   }
   if (process.argv.slice(2).some(arg => !['--live', '--codex-login', '--offline', '--reject-native'].includes(arg))
     || LIVE !== process.argv.includes('--codex-login') || (LIVE && (process.argv.includes('--offline') || process.argv.includes('--reject-native')))) fail('INVALID_MODE')
-  const result = { schema_version: 1, mode: LIVE ? 'live' : 'offline', request_model: MODEL, host: '0.1.2-rc.1', node: process.version,
+  const result = { schema_version: 1, mode: LIVE ? 'live' : 'offline', request_model: MODEL, host: null, runtime_versions: null, node: process.version,
     source_sha256: digest(await readFile(new URL('../src/native-compaction.ts', import.meta.url))), max_retries: 0, maximum_dispatches: 3, credential_refresh: false, credential_source: LIVE ? 'codex-login' : 'synthetic', credential_file_unchanged: null,
     real_dsh_components: true, authentication_source_in_memory: true, compression: 'none', private_temporary_storage: true, prompt_padding_bytes: 65000, phases: [], metrics: [], fallback_dispatched: false }
   let root
   let fingerprint
   try {
+    result.runtime_versions = await readVerifiedDurableRuntime()
+    result.host = result.runtime_versions['@deepseek-ai/dsh-llm']
     fingerprint = LIVE ? (await readLogin()).fingerprint : undefined
     root = await mkdtemp(join(tmpdir(), 'codex-native-durable-'))
     if (((await stat(root)).mode & 0o077) !== 0) fail('TEMP_DIRECTORY_UNSAFE')
-    await save(join(root, 'state.json'), { live: LIVE, label: randomBytes(6).toString('hex').toUpperCase(), scenario: process.argv.includes('--reject-native') ? 'reject-native' : 'success' })
+    await save(join(root, 'state.json'), { live: LIVE, runtime_versions: result.runtime_versions, label: randomBytes(6).toString('hex').toUpperCase(), scenario: process.argv.includes('--reject-native') ? 'reject-native' : 'success' })
     await save(join(root, 'ledger.json'), { metrics: [], blocked_dispatch_attempts: 0, fallback_attempted: false })
     for (const phase of ['write', 'resume']) {
       if (LIVE && (await readLogin()).fingerprint !== fingerprint) fail('CREDENTIAL_CHANGED_STOP')
