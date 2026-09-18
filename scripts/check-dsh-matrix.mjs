@@ -15,6 +15,7 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
   }
   for (const [index, report] of reports.entries()) {
     if (report?.schemaVersion !== 1 || report.dshVersion !== versions[index]
+      || report.hostPackageCandidate !== undefined
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
