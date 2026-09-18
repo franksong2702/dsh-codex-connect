@@ -1,5 +1,9 @@
 # Remember: bounded remaining acceptance
 
+## Latest local observation — 2026-09-18
+
+A separately authorized M15 attempt completed its three real Luna requests but failed exact recall after persistence/restore: see [the immutable live outcome](native-compaction-durable-m15-2026-09-18-1317.md). Its request budget is exhausted. The later [offline investigation and diagnostic corrections](../agent-notes/remember-recall-investigation-2026-09-18.md) identify a padded-user retention confound and add content-free mismatch/restore observations without relaxing exact-match acceptance. No later live run is authorized or implied. The previous blocked attempt and preparatory state below are historical and remain distinct from this new failed result.
+
 Tracking: #196 is the concrete lifecycle-acceptance gate; #65 owns broader context-quality/value research; #195 is the roadmap. Baseline and release facts are maintained in [the dated runtime checkpoint](../agent-notes/adaptive-runtime-status.md).
 
 ## State, not a new compaction implementation

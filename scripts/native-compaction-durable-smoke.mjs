@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { zstdDecompressSync } from 'node:zlib'
 import { readVerifiedDurableRuntime } from './native-compaction-runtime.mjs'
+import { diagnoseRecall, describeRecallPayload } from './native-compaction-recall-diagnostics.mjs'
 
 const SELF = fileURLToPath(import.meta.url)
 const MODEL = 'gpt-5.6-luna'
@@ -49,7 +50,9 @@ function syntheticCredential() {
 }
 function offlineResponse(stage, label, scenario) {
   if (stage === 'native' && scenario === 'reject-native') return new Response(JSON.stringify({ error: { code: 'invalid_request_error' } }), { status: 400 })
-  const value = stage === 'resume' ? label : 'ACK'
+  const replies = { 'recall-case-only': label.toLowerCase(), 'recall-wrapped': `The label is ${label}.`,
+    'recall-wrong': `${label.slice(0, -1)}${label.endsWith('0') ? '1' : '0'}`, 'recall-empty': '' }
+  const value = stage === 'resume' ? (replies[scenario] ?? label) : 'ACK'
   const item = stage === 'native' ? { type: 'compaction', id: 'cmp_offline_durable', encrypted_content: 'synthetic-durable-checkpoint' }
     : { type: 'message', id: 'msg_offline_durable', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: value, annotations: [] }] }
   return new Response([
@@ -78,6 +81,8 @@ async function child(phase, root) {
   const ledgerPath = join(root, 'ledger.json')
   const ledger = await json(ledgerPath)
   let stage = phase === 'write' ? 'baseline' : 'resume'
+  let retainedProjection
+  let providerFinalReply
   globalThis.fetch = async (url, init) => {
     let rawBody = init?.body
     if (new Headers(init?.headers).get('content-encoding') === 'zstd') rawBody = zstdDecompressSync(rawBody)
@@ -86,11 +91,17 @@ async function child(phase, root) {
     const triggers = input.filter(item => item?.type === 'compaction_trigger').length
     const compactions = input.filter(item => item?.type === 'compaction').length
     if (stage === 'native' && triggers !== 1) ledger.fallback_attempted = true
+    const payload = describeRecallPayload(body, state.label)
+    const retained = stage === 'native' ? describeRecallPayload({ input: retainedProjection(input) }, state.label) : undefined
+    const checkpointMatches = stage === 'resume'
+      ? digest(JSON.stringify(input.filter(item => item?.type === 'compaction'))) === state.provider_checkpoint_digest : undefined
     if (String(url) !== ENDPOINT || init?.method !== 'POST' || body.model !== MODEL || body.service_tier !== undefined
       || body.stream !== true || body.store !== false || ledger.metrics.length >= 3 || ledger.metrics.some(metric => metric.stage === stage)
       || ['baseline', 'native', 'resume'][ledger.metrics.length] !== stage
       || (stage === 'native' ? triggers !== 1 || input.at(-1)?.type !== 'compaction_trigger' : triggers !== 0)
       || (stage === 'resume' ? compactions !== 1 || JSON.stringify(input.filter(item => item?.type !== 'compaction')).includes(state.label) : compactions !== 0)
+      || (stage === 'native' && triggers === 1 && !payload.user_contains_target)
+      || (stage === 'resume' && (payload.outside_compaction_contains_target || checkpointMatches !== true))
       || JSON.stringify(input).includes('dsh-codex-connect-native-checkpoint:')) {
       ledger.blocked_dispatch_attempts += 1
       await save(ledgerPath, ledger)
@@ -98,6 +109,9 @@ async function child(phase, root) {
     }
     const metric = { stage, dispatch: ledger.metrics.length + 1, request_model: MODEL, server_model: null, http_status: null, terminal_status: null, input_tokens: null, output_tokens: null, total_tokens: null, cached_tokens: null, reasoning_tokens: null, latency_ms: null, compaction_items: 0 }
     ledger.metrics.push(metric)
+    metric.payload = payload
+    if (retained !== undefined) metric.retained_projection = retained
+    if (checkpointMatches !== undefined) metric.replayed_compaction_matches_persisted = checkpointMatches
     await save(ledgerPath, ledger) // Reserve a dispatch before sending; failure never grants a replay.
     const started = performance.now()
     const deadline = AbortSignal.timeout(90000)
@@ -124,6 +138,10 @@ async function child(phase, root) {
         if (!data || data === '[DONE]') continue
         const event = JSON.parse(data)
         if (event.type === 'response.output_item.done' && event.item?.type === 'compaction') metric.compaction_items += 1
+        if (stage === 'resume' && event.type === 'response.output_item.done' && event.item?.type === 'message'
+          && event.item.role === 'assistant' && [undefined, 'final_answer'].includes(event.item.phase)) {
+          providerFinalReply = (event.item.content ?? []).filter(block => block.type === 'output_text').map(block => block.text).join('')
+        }
         if (['response.completed', 'response.done'].includes(event.type)) {
           const terminal = event.response
           if (!sameModel(terminal?.model)) fail('UNEXPECTED_SERVER_MODEL')
@@ -145,6 +163,7 @@ async function child(phase, root) {
       import('@deepseek-ai/dsh-compaction-basic'), import('@deepseek-ai/dsh-session-persistence-jsonl'),
       import('../src/adapter.ts'), import('../src/native-compaction.ts'),
     ])
+    retainedProjection = native.retainedNativeCompactionInput
     // Only the credential source is supplied in memory. The shipped adapter, AgentLoop,
     // compaction engine, SessionStore and JSONL writer/restorer execute unchanged.
     const captured = { read: async () => credential, list: async () => [{ providerId: PROVIDER, type: 'oauth' }], modify: async () => fail('CREDENTIAL_WRITE_BLOCKED'), delete: async () => fail('CREDENTIAL_WRITE_BLOCKED') }
@@ -169,14 +188,14 @@ async function child(phase, root) {
       await ctx.sessions.flush(agent.session)
       const last = agent.session.snapshotEvents().findLast(event => event.type === 'assistant/message')
       if (!last || last.seq < before) fail('AGENT_TURN_FAILED')
-      return last.data.message.content.filter(block => block.type === 'text').map(block => block.text).join('').trim()
+      return last.data.message.content.filter(block => block.type === 'text').map(block => block.text).join('')
     }
     if (phase === 'write') {
       // Whitespace padding crosses the byte-retention limit without a costly long generation.
       // The label's only original occurrence is in a user item too large to retain verbatim.
       const prompt = `Remember the checkpoint label ${state.label}. Reply ONLY ACK and do not echo the label. Ignore the padding between brackets.[${' '.repeat(65000)}] End padding. The checkpoint label must survive later summarization.`
       assert.ok(Buffer.byteLength(JSON.stringify({ role: 'user', content: [{ type: 'input_text', text: prompt }] })) > native.OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES)
-      if (await send(prompt) !== 'ACK') fail('BASELINE_ACK_INVALID')
+      if ((await send(prompt)).trim() !== 'ACK') fail('BASELINE_ACK_INVALID')
       stage = 'native'
       const compacted = await ctx.compaction.compactNow(agent, new AbortController().signal)
       if (!compacted || agent.session.surface.replaceGeneration !== 1) fail('DSH_COMPACTION_NOT_COMMITTED')
@@ -191,14 +210,24 @@ async function child(phase, root) {
       if (!stored.includes('dsh-codex-connect-native-compaction-v1')) fail('PERSISTED_CHECKPOINT_MISSING')
       if (stored.includes(credential.access) || stored.includes(credential.accountId)) fail('CREDENTIAL_IN_SESSION')
       state.checkpoint_digest = digest(JSON.stringify(saved))
+      state.provider_checkpoint_digest = digest(JSON.stringify(items.filter(item => item.type === 'compaction')))
       state.writer_pid = process.pid
       await save(statePath, state)
       return { phase, pid: process.pid, real_dsh_transaction: true, native_checkpoint_committed: true, jsonl_checkpoint_verified: true, selected_user_omitted_from_retained_projection: true }
     }
     if (process.pid === state.writer_pid || digest(JSON.stringify(checkpoint(agent.session))) !== state.checkpoint_digest) fail('FRESH_RESTORE_MISMATCH')
+    // Record restoration separately so a later recall failure does not erase it.
+    ledger.restore_observation = { fresh_process_restored: true, checkpoint_identical: true, native_creation_disabled: true }
+    await save(ledgerPath, ledger)
     if (JSON.stringify(agent.session.deriveMessages()).includes(state.label)) fail('LABEL_REMAINS_VISIBLE')
     const reply = await send('What is the checkpoint label I asked you to remember? Return ONLY that label, not ACK. Do not invent a new label.')
-    if (reply !== state.label) fail('RECALL_MISMATCH_NO_RETRY')
+    ledger.recall_diagnostic = diagnoseRecall(reply, state.label)
+    ledger.provider_reply_diagnostic = typeof providerFinalReply === 'string' ? {
+      available: true, matches_agent_after_trim: providerFinalReply.trim() === reply.trim(),
+      recall: diagnoseRecall(providerFinalReply, state.label),
+    } : { available: false, matches_agent_after_trim: null }
+    await save(ledgerPath, ledger)
+    if (reply.trim() !== state.label) fail('RECALL_MISMATCH_NO_RETRY')
     return { phase, pid: process.pid, fresh_process_restored: true, native_creation_disabled: true, checkpoint_identical: true, replay_accepted: true, label_recalled: true }
   } finally { try { await ctx?.fiber.dispose() } finally { await dispatcher?.destroy() } }
 }
@@ -211,8 +240,12 @@ async function main() {
     catch (error) { console.log(JSON.stringify({ ok: false, stop_reason: safeError(error), ...(!LIVE ? { diagnostic: error.stack } : {}) })); process.exitCode = 1 }
     return
   }
-  if (process.argv.slice(2).some(arg => !['--live', '--codex-login', '--offline', '--reject-native'].includes(arg))
-    || LIVE !== process.argv.includes('--codex-login') || (LIVE && (process.argv.includes('--offline') || process.argv.includes('--reject-native')))) fail('INVALID_MODE')
+  const recallArgs = process.argv.slice(2).filter(arg => arg.startsWith('--offline-recall='))
+  const recallCase = recallArgs[0]?.slice('--offline-recall='.length)
+  if (process.argv.slice(2).some(arg => !['--live', '--codex-login', '--offline', '--reject-native'].includes(arg) && !arg.startsWith('--offline-recall='))
+    || LIVE !== process.argv.includes('--codex-login') || (LIVE && (process.argv.includes('--offline') || process.argv.includes('--reject-native')))
+    || recallArgs.length > 1 || (recallArgs.length > 0 && (LIVE || !process.argv.includes('--offline') || process.argv.includes('--reject-native')
+      || !['case-only', 'wrapped', 'wrong', 'empty'].includes(recallCase)))) fail('INVALID_MODE')
   const result = { schema_version: 1, mode: LIVE ? 'live' : 'offline', request_model: MODEL, host: null, runtime_versions: null, node: process.version,
     source_sha256: digest(await readFile(new URL('../src/native-compaction.ts', import.meta.url))), max_retries: 0, maximum_dispatches: 3, credential_refresh: false, credential_source: LIVE ? 'codex-login' : 'synthetic', credential_file_unchanged: null,
     real_dsh_components: true, authentication_source_in_memory: true, compression: 'none', private_temporary_storage: true, prompt_padding_bytes: 65000, phases: [], metrics: [], fallback_dispatched: false }
@@ -224,7 +257,10 @@ async function main() {
     fingerprint = LIVE ? (await readLogin()).fingerprint : undefined
     root = await mkdtemp(join(tmpdir(), 'codex-native-durable-'))
     if (((await stat(root)).mode & 0o077) !== 0) fail('TEMP_DIRECTORY_UNSAFE')
-    await save(join(root, 'state.json'), { live: LIVE, runtime_versions: result.runtime_versions, label: randomBytes(6).toString('hex').toUpperCase(), scenario: process.argv.includes('--reject-native') ? 'reject-native' : 'success' })
+    // A fixed synthetic label guarantees the case-only fixture has letters; live targets stay random.
+    await save(join(root, 'state.json'), { live: LIVE, runtime_versions: result.runtime_versions,
+      label: recallCase === undefined ? randomBytes(6).toString('hex').toUpperCase() : 'A1B2C3D4E5F6',
+      scenario: recallCase !== undefined ? `recall-${recallCase}` : process.argv.includes('--reject-native') ? 'reject-native' : 'success' })
     await save(join(root, 'ledger.json'), { metrics: [], blocked_dispatch_attempts: 0, fallback_attempted: false })
     for (const phase of ['write', 'resume']) {
       if (LIVE && (await readLogin()).fingerprint !== fingerprint) fail('CREDENTIAL_CHANGED_STOP')
