@@ -1,0 +1,1408 @@
+{
+  "schema_version": 1,
+  "scope": "new offline controlled fixtures, not live-provider acceptance",
+  "observed_at": "2026-09-18T14:59:39.476Z",
+  "parent_commit": "263bfcd866fc028798e39d588939ca899d564ba1",
+  "node": "v22.22.3",
+  "source_sha256": {
+    "scripts/native-compaction-durable-smoke.mjs": "b21896d2c9379acd4e04848600a1c52c2bea2d60cc829d5b8201f50af3a9d72b",
+    "scripts/native-compaction-controlled-cases.mjs": "165c517838660734c45b823500cbf8dd8b53766af3104494e2a5a7cb31d71877",
+    "scripts/native-compaction-recall-diagnostics.mjs": "915247a04dfdc049dbfb62bad111d852fc1da482ea1b8d1a4cdd488ba95b8dc3"
+  },
+  "historical_live_evidence_sha256": "c8884b6b7fbeedb44f67615b0bfca9c96d4600203929da6627755e27d448aa91",
+  "real_provider_dispatches": 0,
+  "rows": [
+    {
+      "case": "retained-user",
+      "fault": null,
+      "exit": 0,
+      "stop_reason": "COMPLETED",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87586,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "user",
+          "target_in_retained_user": true
+        },
+        {
+          "phase": "resume",
+          "pid": 87588,
+          "fresh_process_restored": true,
+          "native_creation_disabled": true,
+          "checkpoint_identical": true,
+          "replay_accepted": true,
+          "label_recalled": true
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": true,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "exact",
+        "exact_match": true,
+        "case_only_match": false,
+        "contains_exact_target": true,
+        "contains_case_insensitive_target": true,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 12,
+        "trimmed_utf8_bytes": 12
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "exact",
+          "exact_match": true,
+          "case_only_match": false,
+          "contains_exact_target": true,
+          "contains_case_insensitive_target": true,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 12,
+          "trimmed_utf8_bytes": 12
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 442,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5012,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5042,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 600,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1135,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": null,
+      "exit": 0,
+      "stop_reason": "COMPLETED",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87590,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        },
+        {
+          "phase": "resume",
+          "pid": 87591,
+          "fresh_process_restored": true,
+          "native_creation_disabled": true,
+          "checkpoint_identical": true,
+          "replay_accepted": true,
+          "label_recalled": true
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "exact",
+        "exact_match": true,
+        "case_only_match": false,
+        "contains_exact_target": true,
+        "contains_case_insensitive_target": true,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 12,
+        "trimmed_utf8_bytes": 12
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "exact",
+          "exact_match": true,
+          "case_only_match": false,
+          "contains_exact_target": true,
+          "contains_case_insensitive_target": true,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 12,
+          "trimmed_utf8_bytes": 12
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1260,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "missing-native-target",
+      "exit": 1,
+      "stop_reason": "ACCEPTANCE_FAILED_REDACTED",
+      "guard_failure": "COMPACTED_PREFIX_TARGET_MISSING",
+      "dispatch_count": 2,
+      "real_provider_dispatches": 0,
+      "phases": [],
+      "checkpoint": null,
+      "restore": null,
+      "recall": null,
+      "provider_reply": null,
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "plaintext-leak",
+      "exit": 1,
+      "stop_reason": "AGENT_TURN_FAILED",
+      "guard_failure": "REPLAY_TARGET_LEAK",
+      "dispatch_count": 3,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87599,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": null,
+      "provider_reply": null,
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "retained-user",
+      "fault": "retained-user-lost",
+      "exit": 1,
+      "stop_reason": "AGENT_TURN_FAILED",
+      "guard_failure": "REPLAY_RETAINED_INPUT_MISMATCH",
+      "dispatch_count": 3,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87603,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "user",
+          "target_in_retained_user": true
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": true,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": null,
+      "provider_reply": null,
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 442,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5012,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5042,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 600,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": true,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "replayed_compaction_matches_persisted": null
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "checkpoint-altered",
+      "exit": 1,
+      "stop_reason": "AGENT_TURN_FAILED",
+      "guard_failure": "REPLAY_CHECKPOINT_MISMATCH",
+      "dispatch_count": 3,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87606,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": null,
+      "provider_reply": null,
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "checkpoint-missing",
+      "exit": 1,
+      "stop_reason": "AGENT_TURN_FAILED",
+      "guard_failure": "REPLAY_CHECKPOINT_MISMATCH",
+      "dispatch_count": 3,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87609,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": null,
+      "provider_reply": null,
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "case-only",
+      "exit": 1,
+      "stop_reason": "RECALL_MISMATCH_NO_RETRY",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87613,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "case-only",
+        "exact_match": false,
+        "case_only_match": true,
+        "contains_exact_target": false,
+        "contains_case_insensitive_target": true,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 12,
+        "trimmed_utf8_bytes": 12
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "case-only",
+          "exact_match": false,
+          "case_only_match": true,
+          "contains_exact_target": false,
+          "contains_case_insensitive_target": true,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 12,
+          "trimmed_utf8_bytes": 12
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1260,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "wrapped",
+      "exit": 1,
+      "stop_reason": "RECALL_MISMATCH_NO_RETRY",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87616,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "target-with-extra-text",
+        "exact_match": false,
+        "case_only_match": false,
+        "contains_exact_target": true,
+        "contains_case_insensitive_target": true,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 26,
+        "trimmed_utf8_bytes": 26
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "target-with-extra-text",
+          "exact_match": false,
+          "case_only_match": false,
+          "contains_exact_target": true,
+          "contains_case_insensitive_target": true,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 26,
+          "trimmed_utf8_bytes": 26
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1260,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "wrong",
+      "exit": 1,
+      "stop_reason": "RECALL_MISMATCH_NO_RETRY",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87619,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "different-label",
+        "exact_match": false,
+        "case_only_match": false,
+        "contains_exact_target": false,
+        "contains_case_insensitive_target": false,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 12,
+        "trimmed_utf8_bytes": 12
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "different-label",
+          "exact_match": false,
+          "case_only_match": false,
+          "contains_exact_target": false,
+          "contains_case_insensitive_target": false,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 12,
+          "trimmed_utf8_bytes": 12
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1260,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    },
+    {
+      "case": "assistant-origin",
+      "fault": "empty",
+      "exit": 1,
+      "stop_reason": "RECALL_MISMATCH_NO_RETRY",
+      "guard_failure": null,
+      "dispatch_count": 4,
+      "real_provider_dispatches": 0,
+      "phases": [
+        {
+          "phase": "write",
+          "pid": 87624,
+          "real_dsh_transaction": true,
+          "native_checkpoint_committed": true,
+          "jsonl_checkpoint_verified": true,
+          "target_origin": "assistant",
+          "target_in_retained_user": false
+        }
+      ],
+      "checkpoint": {
+        "retained_input_identical": true,
+        "target_in_retained_user": false,
+        "physical_checkpoint_identical": true
+      },
+      "restore": {
+        "fresh_process_restored": true,
+        "checkpoint_identical": true,
+        "native_creation_disabled": true
+      },
+      "recall": {
+        "schema_version": 1,
+        "classification": "empty",
+        "exact_match": false,
+        "case_only_match": false,
+        "contains_exact_target": false,
+        "contains_case_insensitive_target": false,
+        "outer_whitespace_removed": false,
+        "raw_utf8_bytes": 0,
+        "trimmed_utf8_bytes": 0
+      },
+      "provider_reply": {
+        "available": true,
+        "matches_agent_after_trim": true,
+        "recall": {
+          "schema_version": 1,
+          "classification": "empty",
+          "exact_match": false,
+          "case_only_match": false,
+          "contains_exact_target": false,
+          "contains_case_insensitive_target": false,
+          "outer_whitespace_removed": false,
+          "raw_utf8_bytes": 0,
+          "trimmed_utf8_bytes": 0
+        }
+      },
+      "requests": [
+        {
+          "stage": "baseline",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 1,
+            "input_utf8_bytes": 551,
+            "user_items": 1,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "anchor",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 3,
+            "input_utf8_bytes": 5153,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "native",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 4,
+            "input_utf8_bytes": 5183,
+            "user_items": 2,
+            "assistant_items": 1,
+            "compaction_items": 0,
+            "trigger_items": 1,
+            "user_contains_target": false,
+            "assistant_contains_target": true,
+            "plaintext_input_contains_target": true,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": true
+          },
+          "retained_projection": {
+            "schema_version": 1,
+            "input_items": 2,
+            "input_utf8_bytes": 709,
+            "user_items": 2,
+            "assistant_items": 0,
+            "compaction_items": 0,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "replayed_compaction_matches_persisted": null
+        },
+        {
+          "stage": "resume",
+          "payload": {
+            "schema_version": 1,
+            "input_items": 5,
+            "input_utf8_bytes": 1260,
+            "user_items": 3,
+            "assistant_items": 1,
+            "compaction_items": 1,
+            "trigger_items": 0,
+            "user_contains_target": false,
+            "assistant_contains_target": false,
+            "plaintext_input_contains_target": false,
+            "instructions_contain_target": false,
+            "outside_compaction_contains_target": false
+          },
+          "retained_projection": null,
+          "replayed_compaction_matches_persisted": true
+        }
+      ],
+      "fallback_dispatched": false,
+      "temporary_storage_removed": true
+    }
+  ]
+}

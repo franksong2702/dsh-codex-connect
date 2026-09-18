@@ -1,5 +1,9 @@
 # Remember: bounded remaining acceptance
 
+## Controlled-case preparation completed locally
+
+The [two controlled cases](remember-controlled-acceptance-plan.md) are now implemented and passed synthetic two-process replay tests. They separate retained-user persistence from assistant-origin opaque-only recall, preserve the historical oversized-user case, and add request-derived fixtures and strict negative gates. See [implementation and current local validation](../agent-notes/remember-controlled-probes-delivery.md). This is not new live acceptance; the previous three-request failure below remains failed. A proposed A-then-B live sequence has a new maximum of eight requests and requires separate authorization.
+
 ## Latest local observation — 2026-09-18
 
 A separately authorized M15 attempt completed its three real Luna requests but failed exact recall after persistence/restore: see [the immutable live outcome](native-compaction-durable-m15-2026-09-18-1317.md). Its request budget is exhausted. The later [offline investigation and diagnostic corrections](../agent-notes/remember-recall-investigation-2026-09-18.md) identify a padded-user retention confound and add content-free mismatch/restore observations without relaxing exact-match acceptance. No later live run is authorized or implied. The previous blocked attempt and preparatory state below are historical and remain distinct from this new failed result.
