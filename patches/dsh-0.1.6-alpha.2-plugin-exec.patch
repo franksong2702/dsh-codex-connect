@@ -1,0 +1,26 @@
+--- a/packages/boot/plugin-manager/src/operations.ts
++++ b/packages/boot/plugin-manager/src/operations.ts
+@@ -7,6 +7,7 @@
+ import {
+   DEFAULT_PROFILE_BUNDLES, initProfile, PROFILE_TEMPLATES, readProfileManifest,
+   resolveBundleDir, resolveProfileDir, loadOverlayPatches, type ProfileManifest,
++  healIsolatedProfileModuleFallback, loadProfileDirectory,
+ } from '@deepseek-ai/dsh-app-boot'
+ import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
+ import type { PackageResult } from './types.ts'
+@@ -181,6 +182,15 @@
+       initProfile(dir, template?.bundles ?? DEFAULT_PROFILE_BUNDLES)
+       options.onOutput?.(`dsh: initialized profile ${context.profile} at ${dir}\n`, 'stderr')
+     }
++    if (options.execution === 'cli' && args[0] === 'exec') {
++      options.signal?.throwIfAborted()
++      // A child process cannot inherit the running profile resolver. Use the
++      // host-owned disk projection for this explicit cross-process command,
++      // under the existing profile writer lock; ordinary boot stays runtime-only.
++      const profile = loadProfileDirectory('dsh', dir, context.installAnchor, { userLayer: false })
++      healIsolatedProfileModuleFallback({ installAnchor: context.installAnchor, profile })
++      options.signal?.throwIfAborted()
++    }
+     return runProfilePnpm(context, args, options)
+   }, options.lockWaitMs === undefined ? undefined : { waitMs: options.lockWaitMs })
+ }

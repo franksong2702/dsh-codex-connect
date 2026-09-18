@@ -52,6 +52,7 @@ const matrixReports = matrixVersions.map(dshVersion => ({
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
 for (const [name, change] of [
   ['missing host', reports => reports.pop()],
+  ['patched host represented as stock', reports => { reports[0].hostPackageCandidate = { package: '@deepseek-ai/dsh-plugin-manager' } }],
   ['missing enabled image proof', reports => { delete reports[0].runtime.images }],
   ['missing fork denial', reports => { reports[0].runtime.images.earlierForkDenied = false }],
   ['unexpected real image request', reports => { reports[0].runtime.images.realProviderRequests = 1 }],
