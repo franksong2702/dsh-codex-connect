@@ -15,6 +15,11 @@ const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const COMPATIBILITY = JSON.parse(await readFile(join(REPO_ROOT, 'compatibility.json'), 'utf8'))
+const PACKAGE_MANIFEST = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf8'))
+const DECLARED_RUNTIME_PACKAGES = new Set([
+  ...Object.keys(PACKAGE_MANIFEST.dependencies ?? {}),
+  ...Object.keys(PACKAGE_MANIFEST.peerDependencies ?? {}),
+])
 const DECLARED_DSH_VERSIONS = COMPATIBILITY.dshPluginApi.versions
 const DECLARED_DSH_RANGE = DECLARED_DSH_VERSIONS.join(' || ')
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
@@ -95,11 +100,16 @@ function configBlock(dump, id, classification = 'infrastructure') {
 
 function parseOneLineJson(output, label) {
   const text = output.trim()
-  if (text === '' || /\r?\n/u.test(text)) throw new CompatibilityCheckError(`${label} did not emit exactly one JSON line`)
+  // Describe framing without publishing output, JSON parser excerpts, or private paths.
+  const bytes = Buffer.byteLength(output, 'utf8')
+  const lines = text === '' ? 0 : text.split(/\r\n|\r|\n/u).length
+  if (text === '' || lines !== 1) {
+    throw new CompatibilityCheckError(`${label} did not emit exactly one JSON line (shape=${text === '' ? 'empty' : 'multiline'}; bytes=${bytes}; lines=${lines})`)
+  }
   try {
     return JSON.parse(text)
-  } catch (error) {
-    throw new CompatibilityCheckError(`${label} emitted invalid JSON: ${error instanceof Error ? error.message : String(error)}`)
+  } catch {
+    throw new CompatibilityCheckError(`${label} emitted invalid JSON (shape=invalid-json; bytes=${bytes}; lines=${lines})`)
   }
 }
 
@@ -145,6 +155,14 @@ export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
   const candidateDiagnostic = options.allowUndeclaredCanaryVersion === true && result.status === 1
     && commandFailureClassification(result, 'compatibility') !== 'infrastructure'
   if (!candidateDiagnostic) requireSuccess('plugin doctor', result, 'compatibility')
+  if (candidateDiagnostic && result.stdout.trim() === '') {
+    // A startup import error is not the doctor's expected version warning. Emit
+    // only one package name already declared by this project, never raw stderr.
+    const missing = [...result.stderr.matchAll(/Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^'\r\n]+)' imported from /gu)]
+    if (missing.length === 1 && DECLARED_RUNTIME_PACKAGES.has(missing[0][1])) {
+      throw new CompatibilityCheckError(`plugin doctor failed before emitting JSON (error=ERR_MODULE_NOT_FOUND; package=${missing[0][1]}; exit=1)`)
+    }
+  }
   const report = parseOneLineJson(result.stdout, 'plugin doctor')
   assertDoctorJson(report, dshHome, repoRoot, options)
   // Only a validated version warning explains the doctor's expected nonzero exit.
@@ -154,7 +172,8 @@ export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
   return report
 }
 
-async function main() {
+/** Stock verification is the default; a local upstream candidate is explicitly labelled. */
+export async function checkDshInstall({ pluginManagerCandidate } = {}) {
   const requestedDshVersion = process.env.DSH_VERSION
   const allowUndeclaredCanaryVersion = process.env.DSH_UNDECLARED_CANARY_VERSION === UNDECLARED_CANARY_MODE
   if (requestedDshVersion !== undefined
@@ -166,6 +185,8 @@ async function main() {
   const dshVersion = requestedDshVersion === undefined || requestedDshVersion === ''
     ? DEFAULT_DSH_VERSION
     : requestedDshVersion
+  const repair = pluginManagerCandidate === undefined ? undefined
+    : await (await import('./issue-211-repair.mjs')).validateRepairCandidate(pluginManagerCandidate, dshVersion, allowUndeclaredCanaryVersion)
   const inheritedEnvironment = allowUndeclaredCanaryVersion
     ? scrubCanaryEnvironment(process.env)
     : process.env
@@ -208,7 +229,13 @@ async function main() {
       throw new InfrastructureCheckError(`exact DSH fixture resolution failed: ${error instanceof Error ? error.message : String(error)}`)
     }
     await mkdir(installRoot, { recursive: true })
-    await writeFile(join(installRoot, 'package.json'), `${JSON.stringify(exactDshFixtureManifest(overrides))}\n`)
+    const fixture = exactDshFixtureManifest(overrides)
+    if (repair !== undefined) {
+      const spec = `file:${repair.tarballPath}`
+      fixture.dependencies['@deepseek-ai/dsh-plugin-manager'] = spec
+      fixture.overrides['@deepseek-ai/dsh-plugin-manager'] = spec
+    }
+    await writeFile(join(installRoot, 'package.json'), `${JSON.stringify(fixture)}\n`)
     const install = await runCommand('npm', [
       'install',
       '--prefix', installRoot,
@@ -220,6 +247,14 @@ async function main() {
       `@deepseek-ai/dsh@${dshVersion}`,
     ], { cwd: workspace, env })
     requireSuccess('npm install', install)
+    if (repair !== undefined) {
+      const managerRoot = join(installRoot, 'node_modules', '@deepseek-ai', 'dsh-plugin-manager')
+      const manifest = JSON.parse(await readFile(join(managerRoot, 'package.json'), 'utf8'))
+      const digest = createHash('sha256').update(await readFile(join(managerRoot, 'lib/types/operations.js'))).digest('hex')
+      if (manifest.name !== '@deepseek-ai/dsh-plugin-manager' || manifest.version !== dshVersion || digest !== repair.moduleSha256) {
+        throw new InfrastructureCheckError('installed upstream repair does not match the explicit candidate')
+      }
+    }
 
     const dshBinary = join(installRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'dsh.cmd' : 'dsh')
     const versionResult = await runCommand(dshBinary, ['--version'], { cwd: workspace, env })
@@ -296,8 +331,12 @@ async function main() {
       throw new CompatibilityCheckError('installed native compaction lifecycle proof is missing')
     }
 
-    process.stdout.write(`${JSON.stringify({
+    return {
       schemaVersion: JSON_SCHEMA_VERSION,
+      ...(repair === undefined ? {} : { hostPackageCandidate: {
+        package: '@deepseek-ai/dsh-plugin-manager', version: dshVersion,
+        artifactSha256: repair.tarballSha256, moduleSha256: repair.moduleSha256,
+      } }),
       dshVersion: actualDshVersion,
       nodeVersion: process.version,
       plugin: 'dsh-codex-connect',
@@ -314,7 +353,7 @@ async function main() {
         enableAutoReview: false,
       },
       runtime: runtimeReport,
-    })}\n`)
+    }
   } finally {
     await rm(tempRoot, { recursive: true, force: true })
   }
@@ -323,7 +362,7 @@ async function main() {
 const isMain = process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
   try {
-    await main()
+    process.stdout.write(`${JSON.stringify(await checkDshInstall())}\n`)
   } catch (error) {
     process.stderr.write(`check-dsh-install: ${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = installCheckExitCode(error)

@@ -269,6 +269,57 @@ for (const [name, mutate] of [
 assertContract('unverified JSON does not hide an unexpected process exit', doctorOutcome(candidateDoctor, candidateDoctorOptions, 2) === 1)
 assertContract('unverified JSON does not hide a network failure', doctorOutcome(candidateDoctor, candidateDoctorOptions, 1, 'fetch failed: ECONNRESET') === 2)
 
+function rawDoctorError(stdout, stderr = '') {
+  try {
+    validateDoctorResult({ status: 1, stdout, stderr }, '/fixture-home', '/fixture-repo', candidateDoctorOptions)
+    return undefined
+  } catch (error) {
+    return error
+  }
+}
+for (const [name, stdout, shape] of [
+  ['empty output', '  \n', 'empty'],
+  ['multiline output', 'fixture-private-text\n{}\n', 'multiline'],
+  ['malformed JSON', '{"private":"fixture-private-text"', 'invalid-json'],
+]) {
+  const error = rawDoctorError(stdout)
+  assertContract(`issue 211: ${name} remains a typed failure`, error instanceof CompatibilityCheckError)
+  assertContract(`issue 211: ${name} has content-free shape diagnostics`, error?.message.includes(`shape=${shape}`)
+    && error.message.includes(`bytes=${Buffer.byteLength(stdout, 'utf8')}`)
+    && !error.message.includes('fixture-private-text'))
+}
+assertContract('issue 211: duplicate JSON reports remain rejected', rawDoctorError(`${JSON.stringify(candidateDoctor)}\n${JSON.stringify(candidateDoctor)}`) instanceof CompatibilityCheckError)
+assertContract('issue 211: terminal CRLF is accepted without relaxing the single-report contract', (() => {
+  try {
+    return validateDoctorResult({ status: 1, stdout: `${JSON.stringify(candidateDoctor)}\r\n`, stderr: '' }, '/fixture-home', '/fixture-repo', candidateDoctorOptions).schemaVersion === 1
+  } catch { return false }
+})())
+
+const missingPeerStderr = "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /fixture-home/private/entry.js\nfixture-private-token\n"
+const missingPeerError = rawDoctorError('', missingPeerStderr)
+assertContract('issue 211: missing declared peer is not masked by an empty JSON diagnostic',
+  missingPeerError instanceof CompatibilityCheckError
+  && missingPeerError.message.includes('ERR_MODULE_NOT_FOUND')
+  && missingPeerError.message.includes('@deepseek-ai/schemastery'))
+assertContract('issue 211: startup diagnosis does not expose other stderr or private paths',
+  !missingPeerError.message.includes('/fixture-home') && !missingPeerError.message.includes('fixture-private-token'))
+for (const stderr of [
+  "Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fixture-private-name' imported from /fixture-home/private.js",
+  "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from x\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/cordis' imported from y",
+  "Cannot find package '@deepseek-ai/schemastery' imported from x",
+]) {
+  const error = rawDoctorError('', stderr)
+  assertContract('issue 211: unknown or ambiguous startup diagnostics remain content-free failures',
+    error instanceof CompatibilityCheckError && error.message.includes('shape=empty')
+    && !error.message.includes('fixture-private') && !error.message.includes('package='))
+}
+assertContract('issue 211: startup evidence never makes nonempty invalid stdout acceptable',
+  rawDoctorError('not-json', missingPeerStderr)?.message.includes('shape=invalid-json'))
+assertContract('issue 211: startup evidence retains infrastructure precedence',
+  installCheckExitCode(rawDoctorError('', `${missingPeerStderr}fetch failed: ECONNRESET`)) === 2)
+assertContract('issue 211: valid unverified report still follows the existing schema gate',
+  doctorOutcome(candidateDoctor, candidateDoctorOptions, 1, missingPeerStderr) === 'continue-runtime')
+
 const runtimeProjection = validateRuntimeProjection(
   [{ id: 'openai-codex', name: 'OpenAI Codex' }],
   [{
