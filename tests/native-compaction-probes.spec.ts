@@ -26,6 +26,13 @@ it('rehearses real DSH JSONL write and fresh-process restore with synthetic resp
   expect(result.status).toBe(0)
   const report = JSON.parse(result.stdout.trim())
   expect(report).toMatchObject({ stop_reason: 'COMPLETED', real_provider_dispatches: 0, dispatch_count: 3, fresh_processes_completed: 2, temporary_storage_removed: true, fallback_attempted: false })
+  expect(report.host).toBe('0.1.2-rc.1')
+  expect(report.runtime_versions).toMatchObject({
+    '@deepseek-ai/dsh-llm': '0.1.2-rc.1',
+    '@deepseek-ai/dsh-agent-loop': '0.1.2-rc.1',
+    '@deepseek-ai/dsh-session-persistence-jsonl': '0.1.2-rc.1',
+    '@earendil-works/pi-ai': '0.84.4',
+  })
   expect(new Set(report.phases.map((phase: { pid: number }) => phase.pid)).size).toBe(2)
   expect(report.phases[0]).toMatchObject({ native_checkpoint_committed: true, jsonl_checkpoint_verified: true })
   expect(report.phases[1]).toMatchObject({ fresh_process_restored: true, native_creation_disabled: true, label_recalled: true })
