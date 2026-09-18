@@ -1,3 +1,15 @@
+# Remember delivery checkpoint — 2026-09-19
+
+Remote main was rechecked at `574d55f2f990053c64fabd3fb8867318875183a4`: #212 and #213 are merged. This Remember test/evidence delivery is based on that main and does not change product `src/`, built `lib/`, dependencies, supported-host metadata or experimental defaults. The September 18 checkpoint below is historical, including its then-open PR and unaccepted-live statements.
+
+At test source `ad7c93481096b4750ede77dc93a19b241b7f11e0`, the separately authorized [real A/B controls](../experiments/remember-controlled-live-m15-2026-09-18-9n7e.md) both passed on plain Luna / DSH `0.1.2-rc.1`. A verified retained-user persistence; B verified assistant-origin recall with no target in non-compaction replay input. Each used four requests and distinct writer/resume processes. The [acceptance entry](../experiments/remember-acceptance.md) is the current scope reference.
+
+The [earlier oversized-user failure](../experiments/native-compaction-durable-m15-2026-09-18-1317.md) remains failed and unexplained. Astra, actual UI/fork behavior, repeated/automatic live compaction, tools/images, fault recovery, accounting and long-task quality are not accepted by these controls. #196, #65 and #195 remain open; Think/Split are not incorporated. The [limited user experience plan](../experiments/remember-user-acceptance-plan.md) has no provisioned service or further model budget.
+
+Current delivery authorization covers review, local commit, branch push, one PR and status synchronization only. No merge, package release, deployment, daily upgrade, new credential access or additional real model call is authorized. Exact-head PR checks remain separate from the historical live evidence. The #211 host-side repair evidence was delivered through #212; this PR does not certify stock alpha.2 or close #211.
+
+---
+
 # Adaptive runtime checkpoint — 2026-09-18
 
 Repository: `franksong2702/dsh-codex-connect`. This is a dated checkpoint, not a live dashboard.

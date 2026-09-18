@@ -1,3 +1,11 @@
+# Current Remember handoff — 2026-09-19
+
+Use [the updated runtime checkpoint](docs/agent-notes/adaptive-runtime-status.md) and [bounded acceptance record](docs/experiments/remember-acceptance.md). The later authorized A/B live controls passed on source `ad7c934`: retained-user persistence and assistant-origin opaque-only recall after actual JSONL and process restart. These are limited Luna results, not whole-product/Astra acceptance. The oversized-user failure is retained unchanged; no live budget is reusable. #212/#213 are merged, while this test/evidence delivery is separate and not yet merged or released.
+
+The September 12/18 handoff below is preserved as historical evidence, not the latest gate status or a new authorization.
+
+---
+
 # Native compaction session handoff — 2026-09-12
 
 ## Current-state pointer — 2026-09-18
