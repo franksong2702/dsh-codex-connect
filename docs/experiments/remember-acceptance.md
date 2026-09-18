@@ -1,10 +1,22 @@
 # Remember: bounded remaining acceptance
 
-## Controlled-case preparation completed locally
+## Delivery scope — 2026-09-19
+
+The diagnostics, controlled probes, original failed run and subsequent successful A/B evidence are being consolidated into one reviewed delivery branch based on main `574d55f`. This delivers test tooling and evidence, not a new compaction implementation or an environment change. Historical source/runtime identities below remain unchanged. The [limited user experience plan](remember-user-acceptance-plan.md) is prepared but no test service is running. Trackers #196/#65/#195 stay open for their remaining scopes; exact-head CI is recorded separately on the delivery PR.
+
+## Latest real A/B acceptance — 2026-09-18
+
+The separately authorized [live A/B sequence](remember-controlled-live-m15-2026-09-18-9n7e.md) completed on local source `ad7c934`: A retained-user persistence passed in four real plain Luna requests; only then B assistant-origin opaque-state recall passed in four more. Both cases verified the physical JSONL checkpoint, distinct-process restore, unchanged checkpoint/replay identity and exact new recall. B's actual replay contained no target outside the opaque item; A intentionally retained its target in the user input. Service-side and adapter-extracted replies matched in both cases.
+
+These results establish the two bounded same-account/same-model text controls, not whole-product or Astra acceptance, repeated/automatic compaction, tools, images, UI forks, crash/disk faults, savings or long-task quality. The earlier oversized-user live failure is unchanged and remains unexplained; it was not rerun. All eight requests are consumed, with no retries/fallback, unchanged credential bytes and temporary-session cleanup reported. The owner-only run claims are preserved. No new live execution is authorized by this record. Results are saved locally; no issue closure, push, release, deployment or environment upgrade occurred.
+
+The preparation and earlier execution notes below retain their historical scopes and must not be mistaken for the latest result or a reusable execution budget.
+
+## Historical controlled-case preparation
 
 The [two controlled cases](remember-controlled-acceptance-plan.md) are now implemented and passed synthetic two-process replay tests. They separate retained-user persistence from assistant-origin opaque-only recall, preserve the historical oversized-user case, and add request-derived fixtures and strict negative gates. See [implementation and current local validation](../agent-notes/remember-controlled-probes-delivery.md). This is not new live acceptance; the previous three-request failure below remains failed. A proposed A-then-B live sequence has a new maximum of eight requests and requires separate authorization.
 
-## Latest local observation — 2026-09-18
+## Earlier failed live observation — 2026-09-18
 
 A separately authorized M15 attempt completed its three real Luna requests but failed exact recall after persistence/restore: see [the immutable live outcome](native-compaction-durable-m15-2026-09-18-1317.md). Its request budget is exhausted. The later [offline investigation and diagnostic corrections](../agent-notes/remember-recall-investigation-2026-09-18.md) identify a padded-user retention confound and add content-free mismatch/restore observations without relaxing exact-match acceptance. No later live run is authorized or implied. The previous blocked attempt and preparatory state below are historical and remain distinct from this new failed result.
 
@@ -27,7 +39,7 @@ Historical evidence has two distinct scopes: real DSH lifecycle with synthetic p
 | Continuation | Complete a new turn with the restored checkpoint. Verify the recall target is absent from visible non-compaction input; historical assistant output is not a new continuation. |
 | Closeout | Record outcomes, actual usage when available, fallback/cancellation status, dispatch counts, cleanup and credential immutability. A missing or uncertain result remains unaccepted, not retried automatically. |
 
-The existing bounded live probe covers text recall in two processes and at most three Luna dispatches. It does **not** cover a live tool round trip, UI fork, repeated/automatic real compaction, crash/disk failure, archive migration, cross-account/model transitions, images or Think/Split composition. Those cases remain separately named; passing the narrow gate cannot close #65 or certify them.
+The original oversized-user probe uses at most three Luna dispatches. Each explicitly selected A/B control uses at most four dispatches across the writer and resume processes. These probes do **not** cover a live tool round trip, UI fork, repeated/automatic real compaction, crash/disk failure, archive migration, cross-account/model transitions, images or Think/Split composition. Those cases remain separately named; passing the narrow gate cannot close #65 or certify them.
 
 ## Current execution boundary
 
