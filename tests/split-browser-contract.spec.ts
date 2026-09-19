@@ -7,7 +7,7 @@ import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_REQUIR
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
 import { collectSplitClientBundles, assertSplitHostPath } from '../scripts/split-conversation-bundles.mjs'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
-import { validateSplitMatrix } from '../scripts/check-split-matrix.mjs'
+import { splitBrowserReactDependencies, validateSplitMatrix } from '../scripts/check-split-matrix.mjs'
 
 const version = '0.1.5-rc.1'
 const report = () => ({ kind: 'split-conversation-browser', passed: true, dshVersion: version,
@@ -47,6 +47,23 @@ it.each(['wrong-host', 'missing-chat', 'mixed-client', 'mixed-seed', 'missing-ha
   })
 it('does not accept empty matrix evidence in browser mode', () => {
   expect(() => validateSplitMatrix([], [version], { browser: true })).toThrow()
+})
+
+it('pins both browser-shell packages, refusing mixed or ranged React versions', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'split-react-pair-'))
+  const manifest = (name: string, version: string) => JSON.stringify({ name, version })
+  try {
+    await writeFile(join(root, 'package.json'), '{}')
+    for (const name of ['react', 'react-dom']) {
+      await mkdir(join(root, 'node_modules', name), { recursive: true })
+      await writeFile(join(root, 'node_modules', name, 'package.json'), manifest(name, '18.3.1'))
+    }
+    expect(await splitBrowserReactDependencies(root)).toEqual({ react: '18.3.1', 'react-dom': '18.3.1' })
+    await writeFile(join(root, 'node_modules/react-dom/package.json'), manifest('react-dom', '19.0.0'))
+    await expect(splitBrowserReactDependencies(root)).rejects.toThrow(/matching React pair/)
+    await writeFile(join(root, 'node_modules/react-dom/package.json'), manifest('react-dom', '^18.3.1'))
+    await expect(splitBrowserReactDependencies(root)).rejects.toThrow()
+  } finally { await rm(root, { recursive: true, force: true }) }
 })
 
 it('rejects escaped assets and mixed package versions instead of using a neighboring installation', async () => {

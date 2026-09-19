@@ -19,6 +19,8 @@ Local implementation checks passed 113 files / 1,217 tests, 38 Chromium regressi
 
 The first submitted head (`2e316a4`) failed workflow initialization before any CI test job ran: job-level `env` used the unsupported `runner` expression context. The cache now uses a literal project-relative path, made absolute by the matrix before changing the child HOME/cwd, with a workflow regression assertion. The initialization failure is not a worker/browser test result and is not relabeled as passing.
 
+The next remote run (`11ceb71`) passed the standalone browser baseline but found that the disposable npm host did not include `react-dom`, needed by the private browser shell. Browser-mode installation now explicitly pins the matching React/React DOM versions from the frozen development installation into each temporary host; no code is borrowed across runtime roots and product dependencies remain unchanged. The local expanded matrix attempt timed out during its first host's npm installation, before any browser scenario; it is infrastructure failure evidence, not an accepted host result.
+
 ## Post-4.37 Conversation compatibility gate — 2026-09-19
 
 The worker branch includes design #199 `cc979bc9b09300b533c76d5a81b774415d69a5b4` and exact published-documentation main `e5772cd8a5c47f30b5ab14fe73d2901914348463` through a normal merge (`e10e9b5`). Generated build conflicts were resolved by rebuilding the combined source, not by selecting one old artifact. The existing cleanup quarantine, connection-lifetime checks, authenticated approval and default-unregistered production boundary are retained. This does not republish or alter the immutable 4.37 release.
