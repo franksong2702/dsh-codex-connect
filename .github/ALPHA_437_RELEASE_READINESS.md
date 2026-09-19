@@ -1,4 +1,6 @@
-# Alpha 4.37 release candidate — not published
+# Alpha 4.37 release readiness — historical preparation
+
+**Published on 2026-09-19.** Release workflow `35439115133` succeeded at `5cbd0d330d12c81f0bf37515b65bc799e480aa78`; independent npm artifact, channel, Git tag and GitHub prerelease checks passed. See [publication verification](ALPHA_437_PUBLICATION.md). The preparation and gate descriptions below are historical, not the current publication state.
 
 ## Identity and scope
 
