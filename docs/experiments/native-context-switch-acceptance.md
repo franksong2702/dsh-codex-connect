@@ -10,6 +10,8 @@ The existing [bounded live A/B evidence](remember-controlled-live-m15-2026-09-18
 
 Entry: Codex Connect settings → 能力 / Capabilities.
 
+The native-context option uses the same unboxed row hierarchy as its neighboring capabilities. Its checkbox and title align with Reserve and image controls; supplementary consent, saved-state, risk and disclosure copy use the same subordinate indentation as Auto-review details. The experimental label does not create a separate card or settings tier. This layout-only adjustment changes neither saved authorization nor automatic compaction behavior.
+
 **Codex 原生上下文管理** — 实验性 · 默认关闭
 
 > 对话变长、需要整理上下文时，自动使用 Codex 原生压缩能力，尽量保留关键要求和任务进展，帮助长任务持续进行，减少重新交代背景。
