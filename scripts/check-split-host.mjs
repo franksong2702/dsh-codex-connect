@@ -10,8 +10,8 @@ import { SPLIT_HOST_SCENARIOS, runSplitHostScenario } from './split-host-fixture
 import { resolveSplitPiAi } from './split-esm-resolution.mjs'
 import { SPLIT_RUNTIME_PACKAGES } from './check-split-matrix.mjs'
 
-const [packagePath, version, expectedDigest] = process.argv.slice(2)
-assert.ok(packagePath && version && /^[a-f0-9]{64}$/u.test(expectedDigest ?? '') && process.argv.length === 5)
+const [packagePath, version, expectedDigest, mode] = process.argv.slice(2)
+assert.ok(packagePath && version && /^[a-f0-9]{64}$/u.test(expectedDigest ?? '') && (process.argv.length === 5 || (process.argv.length === 6 && mode === '--browser')))
 const root = await realpath(dirname(resolve(packagePath)))
 const require = createRequire(join(root, 'package.json'))
 const source = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
@@ -51,7 +51,13 @@ try {
     try { scenarios.push({ ...await runSplitHostScenario(scenario, { root: fixtureRoot, implementation, importHost }), passed: true }) }
     catch (error) { throw new Error(`Split ${version}/${scenario}: ${error.message}`, { cause: error }) }
   }
+  let browserAcceptance
+  if (mode === '--browser') {
+    const { runSplitConversationBrowser } = await import('./check-split-conversation.mjs')
+    browserAcceptance = await runSplitConversationBrowser({ hostRoot: root, expectedVersion: version, implementation, importHost })
+  }
   console.log(JSON.stringify({ schemaVersion: 1, kind: 'split-internal-experiment', dshVersion: version, nodeVersion: process.version, piAiVersion: piVersion,
+    ...(browserAcceptance ? { browserAcceptance } : {}),
     bundleDigest, exactDshPackages: Object.keys(versions).length, runtimePackages: Object.fromEntries(important.map(name => [name, versions[name]])),
     syntheticOnly: true, realProviderDispatches: 0, productionEntryEnabled: false, freshProcesses: 1, pid: process.pid, scenarios }))
 } finally { await rm(fixtureRoot, { recursive: true, force: true }) }

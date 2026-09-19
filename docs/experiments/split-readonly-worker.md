@@ -2,6 +2,21 @@
 
 Tracking: #198; design gate: #199 and `docs/design/split-readonly-delegation.md`.
 
+## Exact-host Chromium gate — 2026-09-19
+
+`check-split-matrix.mjs --browser` now runs the existing 58 worker/HTTP scenarios and the four complete Chromium conversation paths in each exact, disposable host process. The browser runner accepts that host's already-verified implementation/import resolver; it loads that host's published client bundles and aliases shared React/Cordis/store/slot/primitives imports to the same installation. Package versions, asset hashes and real paths are checked before browsing. Escaping symlinks, mixed frontend versions, worker-only evidence, missing flows, duplicate creates/decisions, failed reload recovery or unconfirmed child cleanup cannot pass the browser report contract.
+
+Approve with a lost decision reply/reconnect, reject, running revoke, and lost creation reply/reload retain the existing real Gateway, Session Controller and Conversation/Chat assertions. Browser HTTP is limited to the disposable loopback origin, service workers are blocked, and uncaught page errors fail acceptance. Optional settings/workspace controller console warnings are not a claim of full profile acceptance. The workspace catalog and credentials remain ephemeral/synthetic, not a production profile, named-user ACL or persistent worker implementation.
+
+Reproduce using an explicit test browser cache, also set by the CI browser job:
+
+```sh
+PLAYWRIGHT_BROWSERS_PATH=node_modules/.cache/playwright pnpm exec playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH=node_modules/.cache/playwright node scripts/check-split-matrix.mjs --browser
+```
+
+Local implementation checks passed 113 files / 1,217 tests, 38 Chromium regressions and the baseline's four full browser paths. Exact-host results are independently read back from the new matrix/CI; these local results do not certify unexecuted newer-host browser paths. Product source/bundles, defaults, package versions, dependency locks, published 4.37 and ports 3080/3081 are unchanged. No real model request is authorized or made. Human experience, real usefulness and persistent authorization/budget recovery remain separate gates.
+
 ## Post-4.37 Conversation compatibility gate — 2026-09-19
 
 The worker branch includes design #199 `cc979bc9b09300b533c76d5a81b774415d69a5b4` and exact published-documentation main `e5772cd8a5c47f30b5ab14fe73d2901914348463` through a normal merge (`e10e9b5`). Generated build conflicts were resolved by rebuilding the combined source, not by selecting one old artifact. The existing cleanup quarantine, connection-lifetime checks, authenticated approval and default-unregistered production boundary are retained. This does not republish or alter the immutable 4.37 release.

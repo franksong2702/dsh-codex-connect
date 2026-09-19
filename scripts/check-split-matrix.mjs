@@ -11,10 +11,11 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { SPLIT_HOST_SCENARIOS } from './split-host-fixture.mjs'
 import { SPLIT_CONVERSATION_SCENARIOS } from './split-conversation-fixture.mjs'
+import { assertSplitBrowserReport } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = value => createHash('sha256').update(value).digest('hex')
 export const SPLIT_RUNTIME_PACKAGES = Object.freeze(['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process', '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-api-session-controller', '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-session-query', '@deepseek-ai/dsh-client-connection'])
-export function validateSplitMatrix(reports, versions) {
+export function validateSplitMatrix(reports, versions, { browser = false } = {}) {
   assert.ok(versions.length > 0 && new Set(versions).size === versions.length)
   assert.equal(reports.length, versions.length)
   const digests = new Set()
@@ -40,6 +41,7 @@ export function validateSplitMatrix(reports, versions) {
       assert.equal(result.actualSessionController, true, 'conversation acceptance requires the actual Session Controller')
       assert.equal(result.realProviderDispatches, 0)
     }
+    if (browser) assertSplitBrowserReport(report.browserAcceptance, versions[index])
     digests.add(report.bundleDigest); pids.add(report.pid)
   }
   assert.equal(digests.size, 1, 'all hosts must exercise identical internal bundle bytes')
@@ -47,7 +49,9 @@ export function validateSplitMatrix(reports, versions) {
 }
 async function main() {
   const argv = process.argv.slice(2)
-  assert.ok(argv.length === 0 || (argv.length === 2 && argv[0] === '--report'), 'usage: check-split-matrix [--report relative-path]')
+  const browser = argv[0] === '--browser'
+  if (browser) argv.shift()
+  assert.ok(argv.length === 0 || (argv.length === 2 && argv[0] === '--report'), 'usage: check-split-matrix [--browser] [--report relative-path]')
   const reportPath = argv[1] === undefined ? undefined : resolve(ROOT, argv[1])
   if (reportPath) assert.ok(reportPath.startsWith(`${ROOT}/docs/experiments/`) && reportPath.endsWith('.json'))
   const compatibility = JSON.parse(await readFile(join(ROOT, 'compatibility.json'), 'utf8'))
@@ -83,6 +87,8 @@ async function main() {
       const env = { ...scrubCanaryEnvironment(process.env), HOME: join(host, 'home'), DSH_HOME: join(host, 'synthetic-home'),
         DSH_TELEMETRY_MODE: 'DISABLED', OTEL_SDK_DISABLED: 'true', npm_config_userconfig: join(host, 'empty.npmrc'), npm_config_cache: join(root, 'npm-cache') }
       delete env.NODE_OPTIONS; delete env.NODE_PATH; delete env.CODEX_HOME
+      // Resolve the approved test cache before changing cwd/HOME for the isolated child.
+      if (browser && process.env.PLAYWRIGHT_BROWSERS_PATH) env.PLAYWRIGHT_BROWSERS_PATH = resolve(process.env.PLAYWRIGHT_BROWSERS_PATH)
       await mkdir(env.HOME)
       await writeFile(env.npm_config_userconfig, '')
       const installed = await runBoundedCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false', '--registry=https://registry.npmjs.org'], { cwd: host, env, timeoutMs: 10 * 60 * 1000 })
@@ -90,14 +96,15 @@ async function main() {
       process.stderr.write(`Installed ${version}; running ${SPLIT_HOST_SCENARIOS.length} Split scenarios\n`)
       await mkdir(join(host, 'experiment'))
       for (const name of names) await copyFile(join(bundleRoot, name), join(host, 'experiment', name))
-      const result = await runBoundedNode(['--experimental-import-meta-resolve', join(ROOT, 'scripts/check-split-host.mjs'), join(host, 'package.json'), version, bundleDigest], { cwd: host, env, timeoutMs: 90000, maxBuffer: 2 * 1024 * 1024 })
+      const result = await runBoundedNode(['--experimental-import-meta-resolve', join(ROOT, 'scripts/check-split-host.mjs'), join(host, 'package.json'), version, bundleDigest, ...(browser ? ['--browser'] : [])], { cwd: host, env, timeoutMs: browser ? 180000 : 90000, maxBuffer: 2 * 1024 * 1024 })
       if (result.error || result.status !== 0) throw new Error(`Split ${version} failed: ${result.error?.message ?? result.stderr.slice(-5000)}`)
       reports.push(JSON.parse(result.stdout.trim()))
       process.stderr.write(`Passed Split ${version}: ${SPLIT_HOST_SCENARIOS.length} scenarios in one fresh process\n`)
       await rm(host, { recursive: true, force: true })
     }
-    validateSplitMatrix(reports, versions)
+    validateSplitMatrix(reports, versions, { browser })
     const report = { schemaVersion: 1, kind: 'split-internal-experiment-matrix', sameBundle: true, bundleDigest,
+      browserMatrix: browser,
       realProviderDispatches: 0, freshProcesses: reports.length, scenarioExecutions: reports.length * SPLIT_HOST_SCENARIOS.length, reports }
     if (reportPath) await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
     console.log(JSON.stringify(report))

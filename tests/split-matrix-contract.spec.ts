@@ -12,6 +12,9 @@ const reports = () => versions.map((version, index) => ({ schemaVersion: 1, kind
     actualGateway: true, actualSessionController: true, realProviderDispatches: 0 })),
 }))
 it('requires a separate exact-host Split matrix, not compaction reports', () => { expect(() => validateSplitMatrix(reports(), versions)).not.toThrow() })
+it('refuses worker-only reports when full browser acceptance is required', () => {
+  expect(() => validateSplitMatrix(reports(), versions, { browser: true })).toThrow()
+})
 it('includes actual Gateway conversation admission in every exact-host run', () => {
   for (const scenario of SPLIT_CONVERSATION_SCENARIOS) expect(SPLIT_HOST_SCENARIOS).toContain(scenario)
 })
@@ -56,4 +59,5 @@ it('keeps the internal worker outside the public plugin exports', () => {
   expect(client).not.toContain('SplitApprovalRemoteCard')
   expect(client).not.toContain('split-conversation')
   expect(workflow).toContain('run: node scripts/check-split-conversation.mjs')
+  expect(workflow).toContain('run: node scripts/check-split-matrix.mjs --browser')
 })

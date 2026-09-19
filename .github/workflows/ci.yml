@@ -107,6 +107,8 @@ jobs:
   browser-ui-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/split-playwright
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -128,6 +130,8 @@ jobs:
         run: node scripts/check-split-browser.mjs
       - name: Validate experimental Split Gateway conversation
         run: node scripts/check-split-conversation.mjs
+      - name: Validate Split browser lifecycle on every exact host
+        run: node scripts/check-split-matrix.mjs --browser
 
   windows-canary-contract:
     runs-on: windows-latest

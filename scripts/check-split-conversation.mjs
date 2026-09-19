@@ -2,38 +2,45 @@
 /** Explicit offline experiment: actual Gateway generation and ordinary DSH conversation UI. */
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'tsdown'
 import { chromium } from 'playwright'
 import { runSplitHostScenario } from './split-host-fixture.mjs'
-import { collectSplitClientBundles } from './split-conversation-bundles.mjs'
+import { assertSplitHostPath, collectSplitClientBundles, splitBrowserSeedAliases } from './split-conversation-bundles.mjs'
+import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const require = createRequire(join(ROOT, 'package.json'))
-const manual = process.argv.find(value => value.startsWith('--manual='))?.slice('--manual='.length)
-if (manual !== undefined && !['allow', 'reject', 'revoke'].includes(manual)) throw new Error('Use --manual=allow, --manual=reject or --manual=revoke')
-const importHost = specifier => import(pathToFileURL(require.resolve(specifier)).href)
-const dir = await mkdtemp(join(ROOT, '.split-conversation-'))
+export async function runSplitConversationBrowser({ hostRoot = ROOT, expectedVersion, implementation, importHost, manual } = {}) {
+const require = createRequire(join(hostRoot, 'package.json'))
+const version = JSON.parse(await readFile(require.resolve('@deepseek-ai/dsh-api-session-controller/package.json'), 'utf8')).version
+if (expectedVersion !== undefined) assert.equal(version, expectedVersion)
+importHost ??= async specifier => import(pathToFileURL(await assertSplitHostPath(hostRoot, require.resolve(specifier))).href)
+const dir = await mkdtemp(join(hostRoot, '.split-conversation-'))
 let browser
+let externalBrowserRequests = 0; let fatalPageErrors = 0
 try {
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  await build({ config: false, entry: { experiment: join(ROOT, 'scripts/split-experiment-entry.ts') }, outDir: join(dir, 'host'),
-    platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent',
-    deps: { neverBundle: true }, define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
-  await build({ config: false, entry: { browser: join(ROOT, 'scripts/split-conversation-entry.tsx') }, outDir: join(dir, 'browser'),
+  if (implementation === undefined) {
+    await build({ config: false, entry: { experiment: join(ROOT, 'scripts/split-experiment-entry.ts') }, outDir: join(dir, 'host'),
+      platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent',
+      deps: { neverBundle: true }, define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
+    implementation = await import(pathToFileURL(join(dir, 'host/experiment.mjs')).href)
+  }
+  const seeds = await splitBrowserSeedAliases(hostRoot, version)
+  await build({ config: false, alias: seeds.alias, entry: { browser: join(ROOT, 'scripts/split-conversation-entry.tsx') }, outDir: join(dir, 'browser'),
     platform: 'browser', target: 'es2022', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent',
     deps: { alwaysBundle: [/.*/] }, define: { 'process.env.NODE_ENV': '"production"' } })
-  const implementation = await import(pathToFileURL(join(dir, 'host/experiment.mjs')).href)
   const names = await readdir(join(dir, 'browser'))
   const entry = names.find(name => /^browser\.m?js$/u.test(name)); assert.ok(entry)
   const files = new Map(await Promise.all(names.map(async name => [name, await readFile(join(dir, 'browser', name))])))
-  const bundles = await collectSplitClientBundles(ROOT)
+  const bundles = await collectSplitClientBundles(hostRoot, undefined, version)
   assert.deepEqual(bundles.missing, [])
   for (const asset of bundles.assets) files.set(asset.fileName, await readFile(asset.path))
   browser = await chromium.launch({ headless: manual === undefined })
   const reports = []
-  for (const scenario of manual ? [`conversation-${manual}`] : ['conversation-allow', 'conversation-reject', 'conversation-revoke', 'conversation-admission']) {
+  for (const scenario of manual ? [`conversation-${manual}`] : SPLIT_BROWSER_SCENARIOS) {
     let creates = 0; let decisions = 0
     const report = await runSplitHostScenario(scenario, { root: join(dir, 'data'), implementation, importHost,
       async interaction({ ctx, origin, cookie, exchange, children }) {
@@ -47,12 +54,16 @@ try {
           if (denied !== undefined) { res.writeHead(denied); res.end(); return }
           res.writeHead(200, { 'content-type': name.endsWith('.css') ? 'text/css' : 'text/javascript', 'cache-control': 'no-store' }); res.end(bytes)
         } }))
-        const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+        const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block' })
+        await context.route('**/*', route => {
+          if (new URL(route.request().url()).origin !== origin) { externalBrowserRequests += 1; return route.abort('blockedbyclient') }
+          return route.continue()
+        })
         try {
           const at = cookie.indexOf('=')
           await context.addCookies([{ name: cookie.slice(0, at), value: cookie.slice(at + 1), url: origin, httpOnly: true, sameSite: 'Strict' }])
           const page = await context.newPage(); const errors = []
-          page.on('pageerror', error => errors.push(error.message))
+          page.on('pageerror', error => { fatalPageErrors += 1; errors.push(error.message) })
           page.on('console', message => { if (message.type() === 'error') errors.push(message.text().slice(0, 500)) })
           page.on('response', async response => {
             if (response.status() >= 400) errors.push(`${response.status()} ${new URL(response.url()).pathname}`)
@@ -119,6 +130,19 @@ try {
     })
     reports.push({ ...report, creates, decisions, reloadRecovered: manual === undefined })
   }
-  console.log(JSON.stringify({ kind: 'split-conversation-browser', passed: true, actualGatewayGeneration: true,
-    ordinaryConversationUi: true, syntheticProvider: true, realProviderDispatches: 0, scenarios: reports }))
+  const report = { kind: 'split-conversation-browser', passed: true, actualGatewayGeneration: true,
+    ordinaryConversationUi: true, syntheticProvider: true, realProviderDispatches: 0, scenarios: reports,
+    dshVersion: version, browserVersion: browser.version(), externalBrowserRequests, fatalPageErrors,
+    browserBundleSha256: createHash('sha256').update(files.get(entry)).digest('hex'),
+    clientPackages: bundles.packages.map(({ id, version, sha256 }) => ({ id, version, sha256 })), seedPackages: seeds.packages }
+  if (manual === undefined) assertSplitBrowserReport(report, version)
+  return report
 } finally { await browser?.close(); await rm(dir, { recursive: true, force: true }) }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const argv = process.argv.slice(2)
+  const manual = argv[0]?.startsWith('--manual=') ? argv[0].slice('--manual='.length) : undefined
+  assert.ok(argv.length === 0 || (argv.length === 1 && ['allow', 'reject', 'revoke'].includes(manual)), 'Use --manual=allow, --manual=reject or --manual=revoke')
+  console.log(JSON.stringify(await runSplitConversationBrowser({ manual })))
+}
