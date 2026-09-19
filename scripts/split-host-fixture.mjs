@@ -20,6 +20,7 @@ export const SPLIT_HOST_SCENARIOS = Object.freeze([
   'grant-revoked-before-start', 'grant-revoked-running',
   'approval-disposal-failure', 'approval-owner-disposed',
   ...SPLIT_TRANSPORT_SCENARIOS,
+  ...SPLIT_CONVERSATION_SCENARIOS,
 ])
 const content = 'export const answer = 42\n'
 const sha256 = createHash('sha256').update(content).digest('hex')

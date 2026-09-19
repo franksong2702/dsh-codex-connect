@@ -2,6 +2,22 @@
 
 Tracking: #198; design gate: #199 and `docs/design/split-readonly-delegation.md`.
 
+## Post-4.37 Conversation compatibility gate — 2026-09-19
+
+The worker branch includes design #199 `cc979bc9b09300b533c76d5a81b774415d69a5b4` and exact published-documentation main `e5772cd8a5c47f30b5ab14fe73d2901914348463` through a normal merge (`e10e9b5`). Generated build conflicts were resolved by rebuilding the combined source, not by selecting one old artifact. The existing cleanup quarantine, connection-lifetime checks, authenticated approval and default-unregistered production boundary are retained. This does not republish or alter the immutable 4.37 release.
+
+The previous 52-scenario exact-host matrix did not include the six Conversation cases, which only ran on the development baseline. A new contract test first reproduced that coverage gap. All six are now mandatory in each host run, and the report checks actual Gateway/Session Controller evidence plus their exact package versions. Worker-only reports, missing controller/Gateway evidence, mismatched controller versions and nonzero live dispatches are rejected; five negative report tests cover those cases.
+
+The first expanded matrix passed all 58 scenarios on `0.1.2-rc.1`, then failed `conversation-allow` on `0.1.5-alpha.1`: the actual Session Controller was not active. Inspection of that exact published package identified its required `fileUploads` service. The disposable composition now initializes real Connection, Commands and FileUploads where required by the controller's declared injection contract. It does not mock that service, replace prompt admission, enable persistence, change the installed user profile, or treat uploads as an approved child capability. After this correction, all four hosts passed their 58 scenarios. The first failed run remains a failure, not an accepted result.
+
+Final-code local verification on M15 / Node 22.22.3:
+
+- `pnpm run check`: **112 files / 1,197 tests**, lint, types, build, CLI, compatibility and package checks passed (`wc_job_sF9FpOPaYk7Hl3Tx`).
+- Chromium: **9 files / 38 tests** passed; authenticated lost-decision/reconnect/reload and actual Gateway/Conversation approve, reject, revoke and lost-creation-reply paths passed (`wc_job_y-szntp1SV38HbKT`).
+- Exact-host matrix: **4 fresh host processes / 232 scenario executions**, including all six Conversation HTTP/controller paths on every host (`wc_job_efDWfKgI7sEs9c1_`). Each used private bundle digest `a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e`. A bounded summary is in [the local evidence record](split-post437-host-acceptance.json).
+
+All source fixtures, signing data, credentials and provider replies remain synthetic; real provider dispatches are zero. The four-host Conversation checks exercise actual local HTTP, Gateway composition and Session Controller, **not Chromium on every host**. The separate full browser checks still use the exact development baseline and an ephemeral workspace catalog. Real-profile UI compatibility, human acceptance, live usefulness and durable permissions/budgets remain open. Ports 3080/3081, their settings and the preview-only native-compaction host patch are not touched. Current-head remote CI is recorded separately on #200 after it completes; prior CI is not reused as proof.
+
 ## September 19 engineering refresh
 
 The implementation is reconciled with design head `b0bbbbb31b5c04e785767b68b08bba5c59250cf0`, including main `085d1d618a01bba6f28ed002f7d5af088a85d4d0`. The existing approval, authenticated transport and experimental Conversation entry remain intact. The sections dated September 12 below are historical evidence, not current-head results.

@@ -3,13 +3,29 @@ import { expect, it } from 'vitest'
 // @ts-expect-error Plain Node validation helper is outside the source build.
 import { validateSplitMatrix, SPLIT_RUNTIME_PACKAGES } from '../scripts/check-split-matrix.mjs'
 import { SPLIT_HOST_SCENARIOS } from '../scripts/split-host-fixture.mjs'
+import { SPLIT_CONVERSATION_SCENARIOS } from '../scripts/split-conversation-fixture.mjs'
 const versions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2']
 const reports = () => versions.map((version, index) => ({ schemaVersion: 1, kind: 'split-internal-experiment', dshVersion: version,
   syntheticOnly: true, realProviderDispatches: 0, productionEntryEnabled: false, freshProcesses: 1, pid: index + 1,
-  bundleDigest: 'a'.repeat(64), exactDshPackages: 7, runtimePackages: Object.fromEntries((SPLIT_RUNTIME_PACKAGES as string[]).map(name => [name, version])),
-  scenarios: SPLIT_HOST_SCENARIOS.map(scenario => ({ scenario, passed: true, syntheticOnly: true })),
+  bundleDigest: 'a'.repeat(64), exactDshPackages: SPLIT_RUNTIME_PACKAGES.length, runtimePackages: Object.fromEntries((SPLIT_RUNTIME_PACKAGES as string[]).map(name => [name, version])),
+  scenarios: SPLIT_HOST_SCENARIOS.map(scenario => ({ scenario, passed: true, syntheticOnly: true,
+    actualGateway: true, actualSessionController: true, realProviderDispatches: 0 })),
 }))
 it('requires a separate exact-host Split matrix, not compaction reports', () => { expect(() => validateSplitMatrix(reports(), versions)).not.toThrow() })
+it('includes actual Gateway conversation admission in every exact-host run', () => {
+  for (const scenario of SPLIT_CONVERSATION_SCENARIOS) expect(SPLIT_HOST_SCENARIOS).toContain(scenario)
+})
+it.each(['old-worker-only', 'gateway-missing', 'controller-missing', 'conversation-live', 'wrong-controller-version'] as const)('rejects %s conversation evidence', kind => {
+  const data = reports()
+  const first = data[0]!
+  const conversation = first.scenarios.find(value => value.scenario === 'conversation-allow')!
+  if (kind === 'old-worker-only') first.scenarios = first.scenarios.filter(value => !SPLIT_CONVERSATION_SCENARIOS.includes(value.scenario))
+  if (kind === 'gateway-missing') conversation.actualGateway = false
+  if (kind === 'controller-missing') conversation.actualSessionController = false
+  if (kind === 'conversation-live') conversation.realProviderDispatches = 1
+  if (kind === 'wrong-controller-version') first.runtimePackages['@deepseek-ai/dsh-api-session-controller'] = '0.1.5-alpha.2'
+  expect(() => validateSplitMatrix(data, versions)).toThrow()
+})
 it.each(['missing-host', 'wrong-host', 'wrong-kind', 'different-bundle', 'reused-process', 'missing-scenario', 'failed-scenario', 'live', 'enabled', 'mixed-runtime', 'unknown-runtime'] as const)('rejects %s evidence', kind => {
   const data = reports()
   const first = data[0]!

@@ -21,6 +21,23 @@ export async function exerciseSplitConversation(scenario, f) {
     resolveByPath: async () => undefined })
   const defaults = await importHost('@deepseek-ai/dsh-agent-default-model')
   await ctx.plugin(defaults.default, { provider: 'openai-codex', model })
+  let record
+  ctx.provide('credentials', { async modifyRecord(_key, update) { const next = await update(record); if (next !== undefined) record = next; return record } })
+  const web = await importHost('@deepseek-ai/dsh-host-webserver')
+  await ctx.plugin(web.default, { host: '127.0.0.1', port: 0 })
+  const connection = await importHost('@deepseek-ai/dsh-client-connection')
+  await ctx.plugin(connection, { cookieMaxAgeDays: 1 })
+  const controller = await importHost('@deepseek-ai/dsh-api-session-controller')
+  // Newer exact hosts require the real file-receipt service even for text-only
+  // prompts. Compose its declared dependencies; never fake prompt admission.
+  const requiresFileUploads = controller.default.inject.includes('fileUploads')
+  if (requiresFileUploads) {
+    const commands = await importHost('@deepseek-ai/dsh-commands')
+    await ctx.plugin(commands.default)
+    const uploads = await importHost('@deepseek-ai/dsh-client-file-upload')
+    await ctx.plugin(uploads.default)
+    assert.ok(ctx.get('fileUploads'), 'actual file upload admission must be active')
+  }
   for (const name of ['api-gateway', 'api-session-controller', 'api-remotes']) {
     const module = await importHost(`@deepseek-ai/dsh-${name}`)
     await ctx.plugin(module.default ?? module, {})
@@ -30,12 +47,6 @@ export async function exerciseSplitConversation(scenario, f) {
   assert.equal(ctx.get('sessionPersistence'), undefined)
   const controllerTypes = await importHost('@deepseek-ai/dsh-api-session-controller/typert')
   ctx.typert.register(controllerTypes.TYPERT)
-  let record
-  ctx.provide('credentials', { async modifyRecord(_key, update) { const next = await update(record); if (next !== undefined) record = next; return record } })
-  const web = await importHost('@deepseek-ai/dsh-host-webserver')
-  await ctx.plugin(web.default, { host: '127.0.0.1', port: 0 })
-  const connection = await importHost('@deepseek-ai/dsh-client-connection')
-  await ctx.plugin(connection, { cookieMaxAgeDays: 1 })
   const origin = `http://127.0.0.1:${ctx.webServer.port}`
   const host = new URL(origin).host
   const mintCookie = () => {

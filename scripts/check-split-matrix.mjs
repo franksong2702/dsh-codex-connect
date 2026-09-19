@@ -10,9 +10,10 @@ import { runBoundedCommand, runBoundedNode } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { SPLIT_HOST_SCENARIOS } from './split-host-fixture.mjs'
+import { SPLIT_CONVERSATION_SCENARIOS } from './split-conversation-fixture.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = value => createHash('sha256').update(value).digest('hex')
-export const SPLIT_RUNTIME_PACKAGES = Object.freeze(['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process', '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-llm-pi-ai'])
+export const SPLIT_RUNTIME_PACKAGES = Object.freeze(['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process', '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-api-session-controller', '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-session-query', '@deepseek-ai/dsh-client-connection'])
 export function validateSplitMatrix(reports, versions) {
   assert.ok(versions.length > 0 && new Set(versions).size === versions.length)
   assert.equal(reports.length, versions.length)
@@ -28,11 +29,17 @@ export function validateSplitMatrix(reports, versions) {
     assert.equal(report.freshProcesses, 1)
     assert.ok(Number.isSafeInteger(report.pid) && report.pid > 0)
     assert.ok(/^[a-f0-9]{64}$/u.test(report.bundleDigest))
-    assert.ok(report.exactDshPackages >= 7)
+    assert.ok(report.exactDshPackages >= SPLIT_RUNTIME_PACKAGES.length)
     assert.deepEqual(Object.keys(report.runtimePackages).sort(), [...SPLIT_RUNTIME_PACKAGES].sort())
     assert.ok(Object.values(report.runtimePackages).every(value => value === report.dshVersion))
     assert.deepEqual(report.scenarios.map(result => result.scenario), SPLIT_HOST_SCENARIOS)
     assert.ok(report.scenarios.every(result => result.passed === true && result.syntheticOnly === true))
+    for (const scenario of SPLIT_CONVERSATION_SCENARIOS) {
+      const result = report.scenarios.find(value => value.scenario === scenario)
+      assert.equal(result.actualGateway, true, 'conversation acceptance requires the actual Gateway')
+      assert.equal(result.actualSessionController, true, 'conversation acceptance requires the actual Session Controller')
+      assert.equal(result.realProviderDispatches, 0)
+    }
     digests.add(report.bundleDigest); pids.add(report.pid)
   }
   assert.equal(digests.size, 1, 'all hosts must exercise identical internal bundle bytes')

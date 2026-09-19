@@ -8,6 +8,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { SPLIT_HOST_SCENARIOS, runSplitHostScenario } from './split-host-fixture.mjs'
 import { resolveSplitPiAi } from './split-esm-resolution.mjs'
+import { SPLIT_RUNTIME_PACKAGES } from './check-split-matrix.mjs'
 
 const [packagePath, version, expectedDigest] = process.argv.slice(2)
 assert.ok(packagePath && version && /^[a-f0-9]{64}$/u.test(expectedDigest ?? '') && process.argv.length === 5)
@@ -26,7 +27,7 @@ for (const name of Object.keys(source.overrides)) {
   assert.equal(manifest.version, version, `wrong installed host: ${name}`)
   versions[name] = manifest.version
 }
-const important = ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process', '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-llm-pi-ai']
+const important = SPLIT_RUNTIME_PACKAGES
 for (const name of important) assert.equal(versions[name], version)
 const { version: piVersion } = await resolveSplitPiAi(root, require.resolve('@deepseek-ai/dsh-llm-pi-ai'))
 const bundleRoot = join(root, 'experiment')
