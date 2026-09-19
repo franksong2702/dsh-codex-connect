@@ -12,7 +12,7 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { SPLIT_HOST_SCENARIOS } from './split-host-fixture.mjs'
 import { SPLIT_CONVERSATION_SCENARIOS } from './split-conversation-fixture.mjs'
-import { assertSplitBrowserReport, SPLIT_BROWSER_ROOTS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
+import { assertSplitBrowserReport, SPLIT_BROWSER_ROOTS, splitBrowserSeedsFor } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = value => createHash('sha256').update(value).digest('hex')
 /** Published client bundles expect a renderer supplied by the browser shell. Pin that shell's
@@ -90,7 +90,7 @@ async function main() {
       const host = join(root, version)
       await mkdir(host)
       const overrides = await resolveExactDshOverrides(version, readDshRegistryManifest, browser ? {
-        additionalRoots: [...SPLIT_BROWSER_ROOTS, ...SPLIT_BROWSER_SEEDS.filter(name => name.startsWith('@deepseek-ai/dsh-'))],
+        additionalRoots: [...SPLIT_BROWSER_ROOTS, ...splitBrowserSeedsFor(version).filter(name => name.startsWith('@deepseek-ai/dsh-'))],
         clientInjections: true,
       } : {})
       const manifest = exactDshFixtureManifest(overrides)

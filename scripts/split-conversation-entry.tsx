@@ -15,6 +15,7 @@ declare global {
   interface Window {
     __splitBundleNames?: readonly string[]
     __splitPluginIds?: readonly string[]
+    __splitExtraModules?: Readonly<Record<string, unknown>>
     __splitConversationBrowser?: { dispose(): void; reconnect(): void }
     __ModuleLoader__?: { load(entry: { id: string; factory(require: (id: string) => unknown): unknown }): void }
   }
@@ -56,6 +57,7 @@ modules.set('@deepseek-ai/dsh-client-ui-primitives', Primitives)
 modules.set('react-dom', ReactDOM)
 modules.set('react-dom/client', ReactDOMClient)
 modules.set('react/jsx-runtime', JSXRuntime)
+for (const [id, value] of Object.entries(window.__splitExtraModules ?? {})) modules.set(id, value)
 window.__ModuleLoader__ = loader
 
 async function loadBundle(name: string): Promise<void> {

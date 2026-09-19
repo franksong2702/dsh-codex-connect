@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Explicit offline experiment: actual Gateway generation and ordinary DSH conversation UI. */
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
@@ -10,7 +10,7 @@ import { build } from 'tsdown'
 import { chromium } from 'playwright'
 import { runSplitHostScenario } from './split-host-fixture.mjs'
 import { assertSplitHostPath, collectSplitClientBundles, splitBrowserSeedAliases } from './split-conversation-bundles.mjs'
-import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS } from './split-browser-contract.mjs'
+import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export async function runSplitConversationBrowser({ hostRoot = ROOT, expectedVersion, implementation, importHost, manual } = {}) {
 const require = createRequire(join(hostRoot, 'package.json'))
@@ -29,7 +29,21 @@ try {
     implementation = await import(pathToFileURL(join(dir, 'host/experiment.mjs')).href)
   }
   const seeds = await splitBrowserSeedAliases(hostRoot, version)
-  await build({ config: false, alias: seeds.alias, entry: { browser: join(ROOT, 'scripts/split-conversation-entry.tsx') }, outDir: join(dir, 'browser'),
+  let browserEntry = join(ROOT, 'scripts/split-conversation-entry.tsx')
+  const extraSeeds = seeds.packages.filter(item => !SPLIT_BROWSER_SEEDS.includes(item.id))
+  if (extraSeeds.length > 0) {
+    const imports = []
+    const values = []
+    for (const [index, item] of extraSeeds.entries()) {
+      const entry = await assertSplitHostPath(hostRoot, require.resolve(item.id))
+      imports.push(`import * as seed${index} from ${JSON.stringify(entry)};`)
+      values.push(`${JSON.stringify(item.id)}: seed${index}`)
+    }
+    const source = `${imports.join('\n')}\nwindow.__splitExtraModules = {${values.join(',')}};\nawait import(${JSON.stringify(browserEntry)});\n`
+    browserEntry = join(dir, 'browser-bootstrap.mjs')
+    await writeFile(browserEntry, source)
+  }
+  await build({ config: false, alias: seeds.alias, entry: { browser: browserEntry }, outDir: join(dir, 'browser'),
     platform: 'browser', target: 'es2022', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent',
     deps: { alwaysBundle: [/.*/] }, define: { 'process.env.NODE_ENV': '"production"' } })
   const names = await readdir(join(dir, 'browser'))

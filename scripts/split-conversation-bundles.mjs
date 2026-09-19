@@ -4,7 +4,7 @@ import { readFile, realpath } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import assert from 'node:assert/strict'
-import { SPLIT_BROWSER_ROOTS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
+import { SPLIT_BROWSER_ROOTS, splitBrowserSeedsFor } from './split-browser-contract.mjs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -20,7 +20,7 @@ export async function assertSplitHostPath(root, path) {
 export async function splitBrowserSeedAliases(root, expectedVersion) {
   const require = createRequire(pathToFileURL(`${resolve(root)}/package.json`))
   const alias = {}; const packages = []
-  for (const id of SPLIT_BROWSER_SEEDS) {
+  for (const id of splitBrowserSeedsFor(expectedVersion)) {
     const packagePath = await assertSplitHostPath(root, require.resolve(`${id}/package.json`))
     const manifest = JSON.parse(await readFile(packagePath, 'utf8'))
     assert.equal(manifest.name, id)

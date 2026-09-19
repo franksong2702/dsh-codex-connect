@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
-import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_REQUIRED_PACKAGES, SPLIT_BROWSER_SEEDS } from '../scripts/split-browser-contract.mjs'
+import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_REQUIRED_PACKAGES, splitBrowserSeedsFor } from '../scripts/split-browser-contract.mjs'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
 import { collectSplitClientBundles, assertSplitHostPath } from '../scripts/split-conversation-bundles.mjs'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
@@ -15,7 +15,7 @@ const report = () => ({ kind: 'split-conversation-browser', passed: true, dshVer
   realProviderDispatches: 0, externalBrowserRequests: 0, fatalPageErrors: 0,
   browserVersion: 'fixture-chromium', browserBundleSha256: 'a'.repeat(64),
   clientPackages: (SPLIT_BROWSER_REQUIRED_PACKAGES as string[]).map(id => ({ id, version, sha256: 'b'.repeat(64) })),
-  seedPackages: (SPLIT_BROWSER_SEEDS as string[]).map(id => ({ id, version, sha256: 'c'.repeat(64) })),
+  seedPackages: (splitBrowserSeedsFor(version) as string[]).map(id => ({ id, version, sha256: 'c'.repeat(64) })),
   scenarios: (SPLIT_BROWSER_SCENARIOS as string[]).map(scenario => ({ scenario,
     syntheticOnly: true, actualGateway: true, actualSessionController: true, realProviderDispatches: 0,
     creates: 1, decisions: 1, reloadRecovered: true, childQuiescent: true, parents: 1,
@@ -23,6 +23,15 @@ const report = () => ({ kind: 'split-conversation-browser', passed: true, dshVer
     childMockDispatches: scenario === 'conversation-reject' ? 0 : scenario === 'conversation-revoke' ? 1 : 2 })),
 })
 it('accepts complete exact-host browser evidence', () => { expect(() => assertSplitBrowserReport(report(), version)).not.toThrow() })
+it('requires the newer shell library without adding it to the old baseline', () => {
+  expect(splitBrowserSeedsFor('0.1.2-rc.1')).not.toContain('@deepseek-ai/dsh-client-ui-dockkit')
+  for (const host of ['0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2']) {
+    expect(splitBrowserSeedsFor(host)).toContain('@deepseek-ai/dsh-client-ui-dockkit')
+  }
+  const value = report()
+  value.seedPackages = value.seedPackages.filter(item => !item.id.endsWith('-dockkit'))
+  expect(() => assertSplitBrowserReport(value, version)).toThrow()
+})
 it.each(['wrong-host', 'missing-chat', 'mixed-client', 'mixed-seed', 'missing-hash', 'duplicate-package', 'missing-flow',
   'duplicate-create', 'duplicate-decision', 'reload-lost', 'child-not-stopped', 'rejected-child', 'live-request', 'external-request', 'page-error', 'fake-gateway'])(
   'rejects %s browser evidence', kind => {

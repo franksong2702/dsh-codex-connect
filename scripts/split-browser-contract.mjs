@@ -8,6 +8,11 @@ export const SPLIT_BROWSER_REQUIRED_PACKAGES = Object.freeze([
 ])
 export const SPLIT_BROWSER_SEEDS = Object.freeze(['react', 'react-dom', '@deepseek-ai/cordis',
   '@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-primitives'])
+/** Newer supported shells externalize dockkit as a shared library, not a client plugin. */
+export function splitBrowserSeedsFor(version) {
+  return ['0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2'].includes(version)
+    ? [...SPLIT_BROWSER_SEEDS, '@deepseek-ai/dsh-client-ui-dockkit'] : [...SPLIT_BROWSER_SEEDS]
+}
 export const SPLIT_BROWSER_ROOTS = Object.freeze([
   '@deepseek-ai/dsh-typert-registry', '@deepseek-ai/dsh-client-connection',
   '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-api-session-controller',
@@ -38,7 +43,7 @@ export function assertSplitBrowserReport(report, version) {
     assert.equal(item.version, version, `mixed browser package: ${item.id}`)
     assert.ok(/^[a-f0-9]{64}$/u.test(item.sha256 ?? ''))
   }
-  assert.deepEqual(report.seedPackages.map(item => item.id).sort(), [...SPLIT_BROWSER_SEEDS].sort())
+  assert.deepEqual(report.seedPackages.map(item => item.id).sort(), splitBrowserSeedsFor(version).sort())
   for (const item of report.seedPackages) {
     assert.ok(/^[a-f0-9]{64}$/u.test(item.sha256 ?? ''))
     if (item.id.startsWith('@deepseek-ai/dsh-')) assert.equal(item.version, version)
