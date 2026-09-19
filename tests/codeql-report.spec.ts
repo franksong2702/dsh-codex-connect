@@ -8,6 +8,15 @@ const valid = () => ({ version: '2.1.0', runs: [{ tool: { driver: { name: 'CodeQ
 it('requires a successful CodeQL execution and zero findings', () => {
   expect(requireCleanCodeqlReport(valid())).toEqual({ runs: 1, rules: 1, findings: 0 })
 })
+it('accepts query-pack rules in extensions as emitted by current CodeQL', () => {
+  const report = valid()
+  const run = report.runs[0]!
+  run.tool.driver.rules = []
+  Object.assign(run.tool, { extensions: [{ name: 'codeql/actions-queries', rules: [{ id: 'actions/example' }] }] })
+  expect(requireCleanCodeqlReport(report)).toEqual({ runs: 1, rules: 1, findings: 0 })
+  run.results.push({ ruleId: 'actions/example' })
+  expect(() => requireCleanCodeqlReport(report)).toThrow()
+})
 it.each(['missing-runs', 'other-tool', 'no-rules', 'no-invocation', 'failed-analysis', 'finding'] as const)('rejects %s evidence', kind => {
   const report = valid()
   const run = report.runs[0]!

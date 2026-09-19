@@ -71,15 +71,30 @@ function terminateProcessTree(child) {
  * @returns {Promise<{ status: number | null, signal: NodeJS.Signals | null, stdout: string, stderr: string, error?: Error, cleanupError?: Error }>} captured result
  */
 export function runBoundedCommand(command, args, options = {}) {
+  return runCapturedProcess(processOptions => {
+    const invocation = resolveCommandInvocation(command, args)
+    return spawn(invocation.command, invocation.args, {
+      ...processOptions, windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+    })
+  }, options)
+}
+
+/** Run the current Node executable directly; paths/arguments never enter a command-script shell. */
+export function runBoundedNode(args, options = {}) {
+  return runCapturedProcess(processOptions => spawn(process.execPath, args, processOptions), options)
+}
+
+/** Shared capture and process-tree cleanup, independent of command-line construction. */
+function runCapturedProcess(start, options) {
   return new Promise(resolve => {
     const maxBuffer = options.maxBuffer ?? DEFAULT_MAX_BUFFER
-    const invocation = resolveCommandInvocation(command, args)
-    const child = spawn(invocation.command, invocation.args, {
+    const child = start({
       cwd: options.cwd,
       env: options.env,
       detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
-      windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+      shell: false,
+      windowsVerbatimArguments: false,
       windowsHide: true,
     })
     const stdout = []

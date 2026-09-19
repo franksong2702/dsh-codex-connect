@@ -11,11 +11,21 @@ export function inspectCodeqlReport(report) {
   let rules = 0
   for (const run of report.runs) {
     assert.equal(run.tool?.driver?.name, 'CodeQL', 'not a CodeQL analysis')
-    assert.ok(Array.isArray(run.tool.driver.rules) && run.tool.driver.rules.length > 0, 'missing query rules')
+    // Current CodeQL SARIF places query-pack rules in tool.extensions; the
+    // driver may have an empty rule table even when queries ran successfully.
+    const extensions = run.tool.extensions ?? []
+    assert.ok(Array.isArray(extensions), 'invalid query-pack components')
+    let runRules = 0
+    for (const component of [run.tool.driver, ...extensions]) {
+      if (component.rules === undefined) continue
+      assert.ok(Array.isArray(component.rules), 'invalid query rules')
+      runRules += component.rules.length
+    }
+    assert.ok(runRules > 0, 'missing query rules')
     assert.ok(Array.isArray(run.results), 'missing results')
     assert.ok(Array.isArray(run.invocations) && run.invocations.length > 0, 'missing execution evidence')
     assert.ok(run.invocations.every(item => item.executionSuccessful === true), 'analysis execution failed')
-    rules += run.tool.driver.rules.length
+    rules += runRules
     findings += run.results.length
   }
   return { runs: report.runs.length, rules, findings }

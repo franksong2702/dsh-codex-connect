@@ -6,7 +6,7 @@ import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { runBoundedCommand } from './bounded-command.mjs'
+import { runBoundedCommand, runBoundedNode } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { SPLIT_HOST_SCENARIOS } from './split-host-fixture.mjs'
@@ -83,7 +83,7 @@ async function main() {
       process.stderr.write(`Installed ${version}; running ${SPLIT_HOST_SCENARIOS.length} Split scenarios\n`)
       await mkdir(join(host, 'experiment'))
       for (const name of names) await copyFile(join(bundleRoot, name), join(host, 'experiment', name))
-      const result = await runBoundedCommand(process.execPath, ['--experimental-import-meta-resolve', join(ROOT, 'scripts/check-split-host.mjs'), join(host, 'package.json'), version, bundleDigest], { cwd: host, env, timeoutMs: 90000, maxBuffer: 2 * 1024 * 1024 })
+      const result = await runBoundedNode(['--experimental-import-meta-resolve', join(ROOT, 'scripts/check-split-host.mjs'), join(host, 'package.json'), version, bundleDigest], { cwd: host, env, timeoutMs: 90000, maxBuffer: 2 * 1024 * 1024 })
       if (result.error || result.status !== 0) throw new Error(`Split ${version} failed: ${result.error?.message ?? result.stderr.slice(-5000)}`)
       reports.push(JSON.parse(result.stdout.trim()))
       process.stderr.write(`Passed Split ${version}: ${SPLIT_HOST_SCENARIOS.length} scenarios in one fresh process\n`)
