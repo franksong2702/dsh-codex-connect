@@ -89,7 +89,7 @@ export class SplitConversationStore {
   private publish(state: SplitConversationState): void {
     if (this.stopped) return
     this.state = Object.freeze(state)
-    for (const listener of [...this.listeners]) listener()
+    for (const listener of [...this.listeners]) { try { listener() } catch { /* View observers cannot control task admission. */ } }
   }
 
   private reset(): void {
@@ -104,7 +104,8 @@ export class SplitConversationStore {
     void this.refresh()
   }
 
-  private request(body: Record<string, unknown>, signal: AbortSignal): Promise<SplitConversationSnapshot> {
+  private async request(body: Record<string, unknown>, signal: AbortSignal): Promise<SplitConversationSnapshot> {
+    signal.throwIfAborted()
     return this.fetcher(SPLIT_CONVERSATION_PATH, {
       method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
       headers: { 'content-type': 'application/json', 'x-dsh-split-request': '1' }, body: JSON.stringify(body), signal,
@@ -177,14 +178,16 @@ export class SplitConversationStore {
   }
 
   create = (brief: string): Promise<void> => {
-    if (this.state.status !== 'ready' || this.state.epoch === undefined || this.state.mutationLocked || this.state.tasks.length > 0 || brief.trim().length === 0 || brief.length > 2_000) return Promise.resolve()
+    if (this.stopped || this.generation === undefined || this.state.status !== 'ready' || this.state.epoch === undefined || this.state.mutationLocked || this.state.tasks.length > 0 || brief.trim().length === 0 || brief.length > 2_000) return Promise.resolve()
     const generation = this.generation
+    const epoch = this.state.epoch
     const operation = operationId()
+    // Capture this connection before view notifications can synchronously reset or dispose it.
+    const request = boundedSignal(this.generationController.signal)
     this.mutationOperation = operation
     this.mutationConfirmed = false
     this.publish({ ...this.state, mutationLocked: true, tasks: [{ operationId: operation, state: 'pending' }] })
-    const request = boundedSignal(this.generationController.signal)
-    return this.request({ action: 'create', epoch: this.state.epoch, operationId: operation, brief }, request.signal).then(snapshot => {
+    return this.request({ action: 'create', epoch, operationId: operation, brief }, request.signal).then(snapshot => {
       this.accept(snapshot, generation, operation)
     }).catch(() => { if (this.generation === generation && !this.stopped) this.publish({ ...this.state, status: 'unknown' }) }).finally(() => { request.cancel() })
   }

@@ -26,6 +26,18 @@ At `c73095b`, supplemental Actions analysis passed, but JavaScript still reporte
 
 The final separation passed the full local check: **111 files / 1,171 tests**, plus typecheck/lint/build and all CLI/package checks. Remote evidence remains specific to each head; the prior failed JavaScript scans are retained rather than treated as passes.
 
+## September 19 conversation-admission closeout
+
+The follow-up starts from `5ef7185cbf8656287555fe8d27a5fd2d2ec10ec8`, whose seven exact-head PR checks, including both supplemental CodeQL jobs, were read back as successful. The quarantine and command-launcher corrections above are retained; they are not newly implemented by this follow-up.
+
+Four new client regressions first failed against that source: a throwing view subscriber interrupted creation after the UI had locked itself, and synchronous disconnect, connection replacement, or store disposal during staged-state notification still reached the injected create fetcher. These are deterministic client-boundary reproductions, not live-account incidents or evidence that server-side approval was bypassed.
+
+The store now isolates subscriber exceptions, captures the originating connection's cancellation signal and epoch before notifying views, refuses already-stopped/disconnected creation, and checks cancellation before invoking the fetcher. The same four cases then passed. A reconnection does not automatically submit a replacement mutation, unlock an uncertain operation, change the allowed source manifest, or grant worker approval. Existing receipt, task-count, body-size and timeout limits remain unchanged.
+
+Final-code local checks on M15 / Node 22.22.3 passed: `pnpm run check` ran **111 files / 1,175 tests** (`wc_job_axTkFFeSZ5G0ly4f`); Chromium ran **9 files / 34 tests** (`wc_job_4zpwUKuaSz3KzcH9`). The separate authenticated transport and actual Gateway/Session Controller/Conversation checks passed (`wc_job_BnfzP1RU2Zh6jKDE`): allow and lost-creation-reply recovery created exactly one child with two synthetic child requests; rejection created none; revocation stopped the one running child; every browser path recovered after reload. These remain synthetic-provider checks and did not access real credentials. Remote checks must be read from the new exact commit; the preceding head's successful scans do not substitute for them.
+
+This changes only the internal experimental client, regression tests and documentation. Public `lib/`, dependencies, feature defaults, #216, ports 3080/3081 and the user's ongoing Remember experiment are unchanged. Hands-on product acceptance, real-provider task usefulness and persistent worker authorization/budget reconstruction remain separate gates. Do not deploy this ephemeral worker into the persistent 3081 profile merely because its offline checks pass.
+
 ## Status and delivery boundary
 
 This is an internal, opt-in implementation prototype, not a deployed worker. The source controller is not imported by `src/index.ts`, registered in a standard profile, or exported as a public package entry. A separate development conversation entry now exposes it through real DSH browser components; see [experimental conversation acceptance](#experimental-conversation-acceptance). A small request-local bounds wrapper is integrated with the existing Codex adapter and is inert outside an explicitly entered Split scope. There is no new automatic delegation policy, shell tool, OAuth flow, or model fallback.

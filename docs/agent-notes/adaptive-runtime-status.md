@@ -1,3 +1,13 @@
+# Split engineering checkpoint — 2026-09-19
+
+This branch is the internal Split implementation in PR #200, based on refreshed design #199 at `b0bbbbb31b5c04e785767b68b08bba5c59250cf0` and main `085d1d618a01bba6f28ed002f7d5af088a85d4d0`. Read [the implementation and current closeout](../experiments/split-readonly-worker.md#september-19-conversation-admission-closeout) before relying on the historical checkpoints below.
+
+The cleanup-failure admission quarantine and supplemental stacked-PR CodeQL gates already exist at `5ef7185`. This follow-up fixes view-observer exceptions and connection-cancellation races in the experimental task-creation client; it neither duplicates those earlier fixes nor registers a production Split entry. Final-code local validation passed 1,175 tests, 34 Chromium tests and both isolated browser/Gateway lifecycle checks with synthetic provider responses. New-head remote CI is a separate required readback.
+
+#199 and #200 remain open drafts. Product/manual acceptance, persistent permissions/budgets and real delegation usefulness are not accepted. #216 remains the user's separate Remember experiment; its preview and ports 3080/3081 must not be changed by this Split closeout. No live-model budget, merge, release or deployment is included. The dated statements below describe their original deliveries, not the current Split state.
+
+---
+
 # Remember delivery checkpoint — 2026-09-19
 
 Remote main was rechecked at `574d55f2f990053c64fabd3fb8867318875183a4`: #212 and #213 are merged. This Remember test/evidence delivery is based on that main and does not change product `src/`, built `lib/`, dependencies, supported-host metadata or experimental defaults. The September 18 checkpoint below is historical, including its then-open PR and unaccepted-live statements.

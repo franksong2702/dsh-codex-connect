@@ -54,6 +54,54 @@ it('creates at most one task locally and does not persist or retry mutations', a
   expect(writes.some(value => JSON.stringify(value).includes('localStorage'))).toBe(false)
 })
 
+it('does not let a failing view observer prevent an explicitly requested task from being sent', async () => {
+  const host = source()
+  const fetcher = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body))
+    return response(snapshot(body.action === 'create' ? [{ operationId: body.operationId, state: 'ready', target }] : []))
+  })
+  const opened: string[] = []
+  const store = new SplitConversationStore(host, fetcher, id => { opened.push(id) }); stores.push(store)
+  await store.refresh()
+  store.subscribe(() => { throw new Error('Synthetic view observer failure') })
+  const notified = vi.fn()
+  store.subscribe(notified)
+  await store.create('Inspect the approved example.')
+  expect(fetcher.mock.calls.filter(([, init]) => JSON.parse(String(init?.body)).action === 'create')).toHaveLength(1)
+  expect(store.getSnapshot().status).toBe('ready')
+  expect(store.getSnapshot().tasks[0]?.state).toBe('ready')
+  expect(notified).toHaveBeenCalled()
+  expect(opened).toEqual(['session'])
+})
+
+it.each(['disconnect', 'replace-generation', 'dispose'] as const)('does not dispatch creation if %s happens during staged-state notification', async interruption => {
+  const host = source()
+  const fetcher = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body))
+    return response(snapshot(body.action === 'create' ? [{ operationId: body.operationId, state: 'ready', target }] : []))
+  })
+  const opened: string[] = []
+  const store = new SplitConversationStore(host, fetcher, id => { opened.push(id) }); stores.push(store)
+  await store.refresh()
+  let interrupted = false
+  store.subscribe(() => {
+    if (interrupted || !store.getSnapshot().mutationLocked) return
+    interrupted = true
+    if (interruption === 'dispose') store.dispose()
+    else if (interruption === 'disconnect') host.set()
+    else host.set(2)
+  })
+  await store.create('Inspect the approved example.')
+  expect(interrupted).toBe(true)
+  expect(fetcher.mock.calls.filter(([, init]) => JSON.parse(String(init?.body)).action === 'create')).toHaveLength(0)
+  expect(opened).toEqual([])
+  if (interruption !== 'dispose') {
+    host.set(3); await store.refresh()
+    await store.create('Do not automatically replace the interrupted operation.')
+    expect(fetcher.mock.calls.filter(([, init]) => JSON.parse(String(init?.body)).action === 'create')).toHaveLength(0)
+  }
+})
+
 it('polls a pending task and does not reopen the same Session after repeated status reads', async () => {
   const host = source()
   const opened: string[] = []
