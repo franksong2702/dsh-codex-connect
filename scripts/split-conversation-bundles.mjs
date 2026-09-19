@@ -4,7 +4,7 @@ import { readFile, realpath } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import assert from 'node:assert/strict'
-import { SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
+import { SPLIT_BROWSER_ROOTS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -39,24 +39,7 @@ export async function splitBrowserSeedAliases(root, expectedVersion) {
  * @param roots - immediate browser plugins to load.
  * @returns package ids, asset paths, and the order-independent loader manifest.
  */
-export async function collectSplitClientBundles(root = ROOT, roots = [
-  '@deepseek-ai/dsh-typert-registry',
-  '@deepseek-ai/dsh-client-connection',
-  '@deepseek-ai/dsh-api-gateway',
-  '@deepseek-ai/dsh-api-remotes',
-  '@deepseek-ai/dsh-api-session-controller',
-  '@deepseek-ai/dsh-client-ui-renderer',
-  '@deepseek-ai/dsh-client-ui-session',
-  '@deepseek-ai/dsh-client-ui-layout',
-  '@deepseek-ai/dsh-client-ui-workspace',
-  '@deepseek-ai/dsh-client-ui-conversation',
-  '@deepseek-ai/dsh-client-ui-chat',
-  '@deepseek-ai/dsh-client-locale',
-  '@deepseek-ai/dsh-client-ui-settings',
-  '@deepseek-ai/dsh-client-ui-settings-models',
-  '@deepseek-ai/dsh-client-ui-settings-plugins',
-  '@deepseek-ai/dsh-client-ui-model-selection',
-], expectedVersion) {
+export async function collectSplitClientBundles(root = ROOT, roots = SPLIT_BROWSER_ROOTS, expectedVersion) {
   const require = createRequire(pathToFileURL(`${resolve(root)}/package.json`))
   const seen = new Set()
   const packages = []

@@ -21,6 +21,8 @@ The first submitted head (`2e316a4`) failed workflow initialization before any C
 
 The next remote run (`11ceb71`) passed the standalone browser baseline but found that the disposable npm host did not include `react-dom`, needed by the private browser shell. Browser-mode installation now explicitly pins the matching React/React DOM versions from the frozen development installation into each temporary host; no code is borrowed across runtime roots and product dependencies remain unchanged. The local expanded matrix attempt timed out during its first host's npm installation, before any browser scenario; it is infrastructure failure evidence, not an accepted host result.
 
+At `e8f90ea`, the strict selected-root check then exposed the missing `dsh-client-store`: the original host closure did not enumerate browser-only seeds and `dsh.client.inject` edges. The shared exact-version resolver now has an opt-in browser closure, while its default runtime-only behavior is retained and tested. Browser fixture roots and bundle collection share one manifest, so missing dependencies are not fixed by falling back to a neighboring checkout or by downgrading the browser components.
+
 ## Post-4.37 Conversation compatibility gate — 2026-09-19
 
 The worker branch includes design #199 `cc979bc9b09300b533c76d5a81b774415d69a5b4` and exact published-documentation main `e5772cd8a5c47f30b5ab14fe73d2901914348463` through a normal merge (`e10e9b5`). Generated build conflicts were resolved by rebuilding the combined source, not by selecting one old artifact. The existing cleanup quarantine, connection-lifetime checks, authenticated approval and default-unregistered production boundary are retained. This does not republish or alter the immutable 4.37 release.

@@ -8,6 +8,15 @@ export const SPLIT_BROWSER_REQUIRED_PACKAGES = Object.freeze([
 ])
 export const SPLIT_BROWSER_SEEDS = Object.freeze(['react', 'react-dom', '@deepseek-ai/cordis',
   '@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-primitives'])
+export const SPLIT_BROWSER_ROOTS = Object.freeze([
+  '@deepseek-ai/dsh-typert-registry', '@deepseek-ai/dsh-client-connection',
+  '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-api-session-controller',
+  '@deepseek-ai/dsh-client-ui-renderer', '@deepseek-ai/dsh-client-ui-session', '@deepseek-ai/dsh-client-ui-layout',
+  '@deepseek-ai/dsh-client-ui-workspace', '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-chat',
+  '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-client-ui-settings',
+  '@deepseek-ai/dsh-client-ui-settings-models', '@deepseek-ai/dsh-client-ui-settings-plugins',
+  '@deepseek-ai/dsh-client-ui-model-selection',
+])
 
 export function assertSplitBrowserReport(report, version) {
   assert.equal(report?.kind, 'split-conversation-browser')
