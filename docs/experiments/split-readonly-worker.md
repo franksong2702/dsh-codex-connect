@@ -17,6 +17,8 @@ PLAYWRIGHT_BROWSERS_PATH=node_modules/.cache/playwright node scripts/check-split
 
 Local implementation checks passed 113 files / 1,217 tests, 38 Chromium regressions and the baseline's four full browser paths. Exact-host results are independently read back from the new matrix/CI; these local results do not certify unexecuted newer-host browser paths. Product source/bundles, defaults, package versions, dependency locks, published 4.37 and ports 3080/3081 are unchanged. No real model request is authorized or made. Human experience, real usefulness and persistent authorization/budget recovery remain separate gates.
 
+The first submitted head (`2e316a4`) failed workflow initialization before any CI test job ran: job-level `env` used the unsupported `runner` expression context. The cache now uses a literal project-relative path, made absolute by the matrix before changing the child HOME/cwd, with a workflow regression assertion. The initialization failure is not a worker/browser test result and is not relabeled as passing.
+
 ## Post-4.37 Conversation compatibility gate — 2026-09-19
 
 The worker branch includes design #199 `cc979bc9b09300b533c76d5a81b774415d69a5b4` and exact published-documentation main `e5772cd8a5c47f30b5ab14fe73d2901914348463` through a normal merge (`e10e9b5`). Generated build conflicts were resolved by rebuilding the combined source, not by selecting one old artifact. The existing cleanup quarantine, connection-lifetime checks, authenticated approval and default-unregistered production boundary are retained. This does not republish or alter the immutable 4.37 release.

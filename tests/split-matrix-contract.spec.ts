@@ -60,4 +60,6 @@ it('keeps the internal worker outside the public plugin exports', () => {
   expect(client).not.toContain('split-conversation')
   expect(workflow).toContain('run: node scripts/check-split-conversation.mjs')
   expect(workflow).toContain('run: node scripts/check-split-matrix.mjs --browser')
+  expect(workflow).toContain('PLAYWRIGHT_BROWSERS_PATH: node_modules/.cache/playwright')
+  expect(workflow).not.toContain('PLAYWRIGHT_BROWSERS_PATH: ${{ runner.')
 })
