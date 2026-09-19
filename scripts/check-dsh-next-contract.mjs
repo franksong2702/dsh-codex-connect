@@ -4,7 +4,7 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
-import { resolveCommandInvocation, runBoundedCommand } from './bounded-command.mjs'
+import { resolveCommandInvocation, runBoundedCommand, runBoundedNode } from './bounded-command.mjs'
 
 import {
   classifyCandidateVersion,
@@ -418,6 +418,10 @@ assertContract(
 )
 
 const windowsInvocation = resolveCommandInvocation('C:\\tools\\check.cmd', ['argument with spaces'], 'win32')
+const literalNodeArgs = ['path with spaces', 'a&b|c', '%PATH%', '$(not-a-command)', '"quoted"', 'line\nbreak']
+const literalNodeResult = await runBoundedNode(['-e', 'process.stdout.write(JSON.stringify(process.argv.slice(1)))', '--', ...literalNodeArgs], { timeoutMs: 10_000 })
+assertContract('direct Node transport preserves literal arguments without shell interpretation',
+  literalNodeResult.status === 0 && literalNodeResult.stdout === JSON.stringify(literalNodeArgs))
 assertContract(
   'Windows command scripts are invoked through cmd.exe with an escaped command line',
   /cmd\.exe$/iu.test(windowsInvocation.command)

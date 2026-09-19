@@ -3,7 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { runBoundedCommand } from './bounded-command.mjs'
+import { runBoundedNode } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { sanitizeSummary } from './check-dsh-next.mjs'
 
@@ -65,7 +65,7 @@ async function main() {
     process.stderr.write(`Checking declared DSH ${version}\n`)
     const env = { ...scrubCanaryEnvironment(process.env), DSH_VERSION: version }
     delete env.DSH_UNDECLARED_CANARY_VERSION
-    const result = await runBoundedCommand(process.execPath, [join(ROOT, 'scripts/check-dsh-install.mjs')], {
+    const result = await runBoundedNode([join(ROOT, 'scripts/check-dsh-install.mjs')], {
       cwd: ROOT, env, timeoutMs: 25 * 60 * 1000,
     })
     if (result.error !== undefined || result.status !== 0) {

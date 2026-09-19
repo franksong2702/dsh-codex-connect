@@ -5,7 +5,7 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { runBoundedCommand } from './bounded-command.mjs'
+import { runBoundedNode } from './bounded-command.mjs'
 
 const root = await mkdtemp(join(tmpdir(), 'codex-capability-cli-'))
 const bin = fileURLToPath(new URL('../lib/bin.js', import.meta.url))
@@ -29,7 +29,7 @@ const env = Object.fromEntries(['PATH', 'SystemRoot', 'SYSTEMROOT', 'WINDIR', 'T
 env.DSH_HOME = root
 
 async function command(action, args) {
-  const result = await runBoundedCommand(process.execPath, [bin, action, ...args, '--json'], { env, timeoutMs: 10_000 })
+  const result = await runBoundedNode([bin, action, ...args, '--json'], { env, timeoutMs: 10_000 })
   assert.equal(result.error, undefined)
   assert.equal(result.cleanupError, undefined)
   assert.equal(result.signal, null)

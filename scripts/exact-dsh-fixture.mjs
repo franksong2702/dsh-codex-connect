@@ -3,9 +3,12 @@
 const DSH_PACKAGE = /^@deepseek-ai\/dsh(?:-[a-z0-9-]+)?$/u
 
 /** Resolve only DSH packages; leave third-party requirements owned by their manifests. */
-export async function resolveExactDshOverrides(version, readManifest) {
+export async function resolveExactDshOverrides(version, readManifest, { additionalRoots = [], clientInjections = false } = {}) {
   const overrides = {}
-  let pending = ['@deepseek-ai/dsh']
+  if (!Array.isArray(additionalRoots) || additionalRoots.length > 64 || additionalRoots.some(name => typeof name !== 'string' || !DSH_PACKAGE.test(name))) {
+    throw new Error('Additional exact fixture roots must be bounded DSH package names')
+  }
+  let pending = [...new Set(['@deepseek-ai/dsh', ...additionalRoots])]
   while (pending.length > 0) {
     const batch = pending.splice(0, 8)
     const manifests = await Promise.all(batch.map(name => readManifest(name, version)))
@@ -15,7 +18,9 @@ export async function resolveExactDshOverrides(version, readManifest) {
         throw new Error(`Registry did not return the exact ${name}@${version} manifest`)
       }
       overrides[name] = version
-      for (const dep of Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies, ...manifest.optionalDependencies })) {
+      const injected = clientInjections ? manifest.dsh?.client?.inject ?? [] : []
+      if (!Array.isArray(injected) || injected.some(name => typeof name !== 'string')) throw new Error('Invalid client injection manifest')
+      for (const dep of [...Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies, ...manifest.optionalDependencies }), ...injected]) {
         if (DSH_PACKAGE.test(dep) && overrides[dep] === undefined && !batch.includes(dep) && !pending.includes(dep)) pending.push(dep)
       }
     }

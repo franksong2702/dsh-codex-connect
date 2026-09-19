@@ -80,7 +80,7 @@ describe('Codex image Tool view', () => {
     ]
     render(<CodexImageToolView {...standard} t={t} sessions={sessions} block={{
       kind: 'tool-result', seq: 2, time: 2, callId: 'call-1:ptc:1', callTime: 1, isError: false, content, subCalls: [],
-      call: { callId: 'call-1:ptc:1', name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt: 'A blue whale' }), turn: 1, step: 1, time: 1, subCalls: [] },
+      call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ prompt: 'A blue whale' }) },
     }} />)
     expect(screen.queryByText(en.unknownResult)).toBeNull()
     expect(screen.getByTestId('codex-image-gallery')).toBeTruthy()

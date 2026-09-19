@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { runBoundedCommand } from './bounded-command.mjs'
+import { runBoundedNode } from './bounded-command.mjs'
 import { runNativeLifecyclePhase } from './native-compaction-lifecycle-fixture.mjs'
 import { AUTOMATIC_SCENARIOS, runNativeAutomaticScenario } from './native-compaction-automatic-fixture.mjs'
 
@@ -21,7 +21,7 @@ export async function checkInstalledNativeCompaction(profilePath, hostPath = pro
     for (const compression of ['none', 'zstd']) {
       for (const phase of PHASES) {
         const fixtureRoot = join(root, compression)
-        const result = await runBoundedCommand(process.execPath, [SELF, '--phase', phase, fixtureRoot, compression, resolve(profilePath), resolve(hostPath)], {
+        const result = await runBoundedNode([SELF, '--phase', phase, fixtureRoot, compression, resolve(profilePath), resolve(hostPath)], {
           cwd: root, env: { ...process.env, DSH_HOME: join(fixtureRoot, 'synthetic-home') }, timeoutMs: 30_000,
         })
         if (result.error !== undefined || result.status !== 0) {

@@ -38,4 +38,22 @@ describe('exact DSH install fixture', () => {
   it('rejects a newer manifest instead of silently testing the wrong host', async () => {
     await expect(resolveExactDshOverrides('0.1.5-alpha.1', async (name: string) => ({ name, version: '0.1.5-rc.1' }))).rejects.toThrow('exact')
   })
+
+  it('adds the browser shell and transitive client injections only when explicitly requested', async () => {
+    const version = '0.1.5-rc.1'
+    const read = async (name: string) => ({ name, version,
+      dsh: { client: { inject: name === '@deepseek-ai/dsh-client-ui-chat' ? ['@deepseek-ai/dsh-client-ui-renderer'] : [] } } })
+    expect(await resolveExactDshOverrides(version, read)).toEqual({ '@deepseek-ai/dsh': version })
+    expect(await resolveExactDshOverrides(version, read, {
+      additionalRoots: ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-chat'], clientInjections: true,
+    })).toEqual({ '@deepseek-ai/dsh': version, '@deepseek-ai/dsh-client-store': version,
+      '@deepseek-ai/dsh-client-ui-chat': version, '@deepseek-ai/dsh-client-ui-renderer': version })
+  })
+
+  it('refuses unrelated additional roots and malformed client injections', async () => {
+    const version = '0.1.5-rc.1'
+    const read = async (name: string) => ({ name, version, dsh: { client: { inject: 'not-an-array' } } })
+    await expect(resolveExactDshOverrides(version, read, { additionalRoots: ['unrelated'] })).rejects.toThrow('DSH package names')
+    await expect(resolveExactDshOverrides(version, read, { clientInjections: true })).rejects.toThrow('client injection')
+  })
 })
