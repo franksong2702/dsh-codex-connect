@@ -133,6 +133,20 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex Plugin configuration card', () => {
+  it('counts saved native context and Reserve capabilities without counting an unsaved draft', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
+      ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])) : json({ status: 'signed-out' })))
+    const { scope } = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableReserveFallback: true })
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    const capabilities = screen.getByRole('tab', { name: en.capabilitiesModule })
+    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 1 }))).toBeTruthy()
+    fireEvent.click(capabilities)
+    fireEvent.click(screen.getByRole('checkbox', { name: en.enableNativeCompaction }))
+    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 1 }))).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await within(capabilities).findByText(t('capabilitiesModuleEnabled', { count: 2 }))
+  })
+
   it('shows a dedicated remote-origin trust state without auth mutations and copies only the suggested command', async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
       expect(requestPath(input)).toBe(OPENAI_CODEX_AUTH_STATUS_PATH)
@@ -440,11 +454,11 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(mutate).toHaveBeenCalledTimes(1)
   })
 
-  it('stages, saves, reloads, and discards the native compaction experiment', async () => {
+  it('stages, saves, reloads, discards, and disables Codex native context management', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, mutate } = settingsScopeFixture()
     const first = render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
-    const native = await screen.findByRole('checkbox', { name: /Experimental native compaction/u }) as HTMLInputElement
+    const native = await screen.findByRole('checkbox', { name: en.enableNativeCompaction }) as HTMLInputElement
 
     expect(native.checked).toBe(false)
     fireEvent.click(native)
@@ -459,11 +473,70 @@ describe('OpenAI Codex Plugin configuration card', () => {
       { op: 'set', path: ['enableNativeCompaction'], value: true },
     ], 0)
     expect(scope.getSnapshot().value?.enableNativeCompaction).toBe(true)
+    expect(scope.getSnapshot().value).toEqual({ ...DEFAULT_OPENAI_CODEX_SETTINGS, enableNativeCompaction: true })
+    expect(screen.getByText(en.nativeCompactionSavedOn)).toBeTruthy()
+    expect(screen.queryByText(en.nativeCompactionPending)).toBeNull()
 
     first.unmount()
     render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
-    const reloaded = await screen.findByRole('checkbox', { name: /Experimental native compaction/u }) as HTMLInputElement
+    const reloaded = await screen.findByRole('checkbox', { name: en.enableNativeCompaction }) as HTMLInputElement
     expect(reloaded.checked).toBe(true)
+    fireEvent.click(reloaded)
+    expect(screen.getByText(en.nativeCompactionSavedOn)).toBeTruthy()
+    expect(screen.getByText(en.nativeCompactionPending)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.nativeCompactionSavedOff)
+    expect(scope.getSnapshot().value).toEqual(DEFAULT_OPENAI_CODEX_SETTINGS)
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['enableNativeCompaction'], value: false }], 1)
+  })
+
+  it.each([['en', en], ['zh', zh]] as const)('explains native context consent and benefits in %s without enabling it on view', async (_language, copy) => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    render(<OpenAICodexConfiguration scope={scope} t={key => copy[key]} activeModule="capabilities" />)
+    const group = screen.getByRole('group', { name: copy.enableNativeCompaction })
+    const native = within(group).getByRole('checkbox', { name: copy.enableNativeCompaction }) as HTMLInputElement
+    expect(native.checked).toBe(false)
+    for (const key of ['enableNativeCompactionHelp', 'nativeCompactionBadge', 'nativeCompactionConsent', 'nativeCompactionRisk', 'nativeCompactionSavedOff'] as const) {
+      expect(within(group).getByText(copy[key])).toBeTruthy()
+    }
+    expect(copy.enableNativeCompaction).toContain('Codex')
+    fireEvent.click(within(group).getByText(copy.nativeCompactionDetails))
+    expect(within(group).getByText(copy.nativeCompactionHostPolicy)).toBeTruthy()
+    expect(within(group).getByText(copy.nativeCompactionDisableHelp)).toBeTruthy()
+    expect(mutate).not.toHaveBeenCalled()
+    fireEvent.click(native)
+    expect(within(group).getByText(copy.nativeCompactionPending)).toBeTruthy()
+    expect(within(group).getByText(copy.nativeCompactionSavedOff)).toBeTruthy()
+    expect(scope.getSnapshot().value?.enableNativeCompaction).toBe(false)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: copy.discard }))
+    expect(native.checked).toBe(false)
+    expect(within(group).queryByText(copy.nativeCompactionPending)).toBeNull()
+    expect(mutate).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])('keeps the last saved native-context value %s when saving fails', async initialEnabled => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const initial = { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableNativeCompaction: initialEnabled }
+    const { scope, mutate } = settingsScopeFixture(true, initial)
+    mutate.mockRejectedValueOnce(new Error('fixture write failed'))
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    fireEvent.click(screen.getByRole('checkbox', { name: en.enableNativeCompaction }))
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaveFailed)
+    expect(scope.getSnapshot().value).toEqual(initial)
+    expect(screen.getByText(initialEnabled ? en.nativeCompactionSavedOn : en.nativeCompactionSavedOff)).toBeTruthy()
+    expect(screen.getByText(en.nativeCompactionPending)).toBeTruthy()
+  })
+
+  it('disables the native-context control when the settings are read-only', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture(false)
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const native = screen.getByRole('checkbox', { name: en.enableNativeCompaction }) as HTMLInputElement
+    expect(native.matches(':disabled')).toBe(true)
+    expect(mutate).not.toHaveBeenCalled()
   })
 
   it('stages, discards, and saves optional capability settings in the same card', async () => {

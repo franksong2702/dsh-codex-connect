@@ -16,17 +16,17 @@ This guide describes the published pairings below. Check `dsh --version` first a
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.35` |
+| Codex Connect | `0.1.0-alpha.4.37` |
 | DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-11, npm `alpha` points to 4.35 while `latest` intentionally remains on 4.34. Use the exact version below for 4.35; this recommendation does not promote the default installation channel.
+As of 2026-09-19, npm `alpha` points to 4.37 while `latest` intentionally remains on 4.34. Use the exact version below for 4.37; this recommendation does not promote the default installation channel.
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.35
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.37
 dsh web
 ```
 

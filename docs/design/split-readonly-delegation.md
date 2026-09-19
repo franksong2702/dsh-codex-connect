@@ -1,5 +1,9 @@
 # Split: one bounded read-only worker
 
+## Post-4.37 baseline refresh — 2026-09-19
+
+The design branch now includes exact main `e5772cd8a5c47f30b5ab14fe73d2901914348463`, after Alpha 4.37 publication and its documentation update. The design and its 19 authority tests remain the only changes relative to that main. Split stays an unmerged, default-unregistered experiment; this baseline sync neither enables the worker nor deploys it. The existing #200 implementation at `8883bc5` already contains cleanup-failure quarantine, authenticated Conversation admission, connection-cancellation fixes and successful supplemental CodeQL. The next engineering gate extends Conversation/Session Controller acceptance beyond the development host; the existing worker-only matrix must not be presented as full browser acceptance. Earlier dated evidence below keeps its historical scope.
+
 Status: **design gate with offline boundary tests, not a shipped worker**. Tracking: [#198](https://github.com/franksong2702/dsh-codex-connect/issues/198), parent [#195](https://github.com/franksong2702/dsh-codex-connect/issues/195).
 
 Refreshed baseline (2026-09-19): `085d1d618a01bba6f28ed002f7d5af088a85d4d0`, including merged #212/#213/#214. The original design started at #197's merge `78c8f71e35755e90e0437371b4365c778c05f955`. Remember remains default-off; its two bounded live Luna JSONL/restart controls have passed, while broader quality/accounting and other acceptance remain open in #196/#65. This design does not retest or certify Remember, and does not incorporate #216's user-preview changes.

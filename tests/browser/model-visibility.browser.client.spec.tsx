@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { modelCatalogFixture } from '../model-catalog-fixture.ts'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
-import { en } from '../../src/client/locales.ts'
+import { en, zh } from '../../src/client/locales.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
 import {
   OPENAI_CODEX_PROXY_DETECT_PATH,
@@ -78,6 +78,59 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it.each([['en', 390, en], ['zh', 390, zh], ['en', 960, en], ['zh', 960, zh]] as const)('keeps the native-context opt-in at peer level in %s at %i pixels without a second confirmation', async (_language, width, copy) => {
+    await page.viewport(width, 844)
+    host.style.width = '100%'
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t: key => copy[key], activeModule: 'capabilities' }))
+    const native = page.getByRole('checkbox', { name: copy.enableNativeCompaction, exact: true })
+    await expect.element(native).not.toBeChecked()
+    await expect.element(page.getByText(copy.nativeCompactionConsent, { exact: true })).toBeVisible()
+    await native.click()
+    await expect.element(page.getByText(copy.nativeCompactionPending, { exact: true })).toBeVisible()
+    expect(scope.getSnapshot().value?.enableNativeCompaction).toBe(false)
+    expect(mutate).not.toHaveBeenCalled()
+    expect(document.querySelector('dialog[open]')).toBeNull()
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionSavedOn, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([{ op: 'set', path: ['enableNativeCompaction'], value: true }], 0)
+    expect(scope.getSnapshot().value).toEqual({ ...DEFAULT_OPENAI_CODEX_SETTINGS, enableNativeCompaction: true })
+    await page.getByText(copy.nativeCompactionDetails, { exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionDisableHelp, { exact: true })).toBeVisible()
+    const group = page.getByRole('group', { name: copy.enableNativeCompaction, exact: true }).element()
+    const groupStyle = getComputedStyle(group)
+    for (const side of ['Top', 'Right', 'Bottom', 'Left'] as const) {
+      expect(groupStyle[`border${side}Width`]).toBe('0px')
+      expect(groupStyle[`padding${side}`]).toBe('0px')
+    }
+    expect(groupStyle.borderRadius).toBe('0px')
+    const nativeLabel = native.element().closest('label')!
+    const nativeTitle = page.getByText(copy.enableNativeCompaction, { exact: true }).element()
+    for (const name of [copy.enableReserveFallback, copy.enableImageTool]) {
+      const peer = page.getByRole('checkbox', { name }).element()
+      const peerLabel = peer.closest('label')!
+      const peerTitle = peerLabel.querySelector('span > span')!
+      expect(Math.abs(native.element().getBoundingClientRect().left - peer.getBoundingClientRect().left)).toBeLessThan(1)
+      expect(Math.abs(nativeTitle.getBoundingClientRect().left - peerTitle.getBoundingClientRect().left)).toBeLessThan(1)
+      expect(getComputedStyle(nativeLabel).gap).toBe(getComputedStyle(peerLabel).gap)
+      expect(getComputedStyle(nativeTitle).fontSize).toBe(getComputedStyle(peerTitle).fontSize)
+      expect(getComputedStyle(nativeTitle).fontWeight).toBe(getComputedStyle(peerTitle).fontWeight)
+    }
+    const nativeDetails = page.getByText(copy.nativeCompactionDetails, { exact: true }).element()
+    const peerDetails = page.getByText(copy.autoReviewDetails, { exact: true }).element()
+    expect(Math.abs(nativeDetails.getBoundingClientRect().left - peerDetails.getBoundingClientRect().left)).toBeLessThan(1)
+    expect(group.scrollWidth).toBeLessThanOrEqual(group.clientWidth)
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth)
+    await native.click()
+    await page.getByRole('button', { name: copy.discard, exact: true }).click()
+    await expect.element(native).toBeChecked()
+    await native.click()
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionSavedOff, { exact: true })).toBeVisible()
+    expect(scope.getSnapshot().value).toEqual(DEFAULT_OPENAI_CODEX_SETTINGS)
+  })
+
   it('keeps staged changes and actions while switching settings modules', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, mutate } = settingsScopeFixture()

@@ -1,10 +1,28 @@
-# Split engineering checkpoint — 2026-09-19
+# Split post-4.37 engineering checkpoint — 2026-09-19
 
-This branch is the internal Split implementation in PR #200, based on refreshed design #199 at `b0bbbbb31b5c04e785767b68b08bba5c59250cf0` and main `085d1d618a01bba6f28ed002f7d5af088a85d4d0`. Read [the implementation and current closeout](../experiments/split-readonly-worker.md#september-19-conversation-admission-closeout) before relying on the historical checkpoints below.
+This branch is the internal Split implementation in PR #200, now based on refreshed design #199 at `cc979bc` and post-publication main `e5772cd8a5c47f30b5ab14fe73d2901914348463`. Read [the implementation and current closeout](../experiments/split-readonly-worker.md#september-19-conversation-admission-closeout) before relying on the historical checkpoints below. Current work extends exact-host Conversation admission coverage; earlier counts are historical until new-head validation is complete.
 
 The cleanup-failure admission quarantine and supplemental stacked-PR CodeQL gates already exist at `5ef7185`. This follow-up fixes view-observer exceptions and connection-cancellation races in the experimental task-creation client; it neither duplicates those earlier fixes nor registers a production Split entry. Final-code local validation passed 1,175 tests, 34 Chromium tests and both isolated browser/Gateway lifecycle checks with synthetic provider responses. New-head remote CI is a separate required readback.
 
 #199 and #200 remain open drafts. Product/manual acceptance, persistent permissions/budgets and real delegation usefulness are not accepted. #216 remains the user's separate Remember experiment; its preview and ports 3080/3081 must not be changed by this Split closeout. No live-model budget, merge, release or deployment is included. The dated statements below describe their original deliveries, not the current Split state.
+
+---
+
+# Alpha 4.37 published checkpoint — 2026-09-19
+
+Alpha `0.1.0-alpha.4.37` was published from `5cbd0d330d12c81f0bf37515b65bc799e480aa78` through successful workflow `35439115133`. The npm archive equals the final tested artifact; the Git tag and published GitHub prerelease match the release commit. `alpha` is 4.37; `latest` remains 4.34. See [publication verification](../../.github/ALPHA_437_PUBLICATION.md). No service or default changed, and no new live-model request was made. The local DSH repair, Think and Split are not included.
+
+## Historical preparation checkpoint — 2026-09-19
+
+#216 was normally squash-merged at `525e01b6e1c2b7d23ba70e29510ef1fd31fb0168`; the merge tree equals the reviewed `1e05677` tree. Main CI `35436177342` passed. This branch prepares 0.1.0-alpha.4.37. The maintainer subsequently authorized publication through the normal candidate-review/main-CI/OIDC workflow on 2026-09-19; a prepared branch is not publication evidence. `latest`, running services and live model calls remain outside scope. See [release readiness](../../.github/ALPHA_437_RELEASE_READINESS.md) and [draft release notes](../release-notes/alpha-4.37.md).
+
+Remember's bounded real A/B restart controls are on main. The user preview on DSH 0.1.5-rc.1 also produced a real automatic native checkpoint and completed subsequent tool-assisted work. Its checkpoint survived a normal preview restart; the deployment check sent no post-restart model continuation. Broader #196/#65 acceptance remains open.
+
+The checkpoint-only retry repair at local source `2e5469e` was applied only to the preview host. It is NOT installed by this plugin candidate. Stock alpha.2 support remains undeclared (#211).
+
+Split #199 (`b0bbbbb`) and #200 (`8883bc5`) remain unmerged drafts; #200's seven checks passed, including supplemental CodeQL and separate Split host matrices. Think #167 remains unmerged. None is included in this release. #215 remains open for reporter recovery. The maintainer-supplied excerpt and an offline control identify a missing local archive in the web-profile dependency set, not a declared plugin dependency; this is not currently a confirmed 4.37 regression blocker. UND_ERR_DESTROYED causality and the reporter's environment remain unverified. See [the bounded triage](issue-215-install-triage-2026-09-19.md). #182 was closed as superseded/not planned, not verified support. #208 remains an enhancement; #194, #183 and #207 retain separate acceptance scopes.
+
+The dated checkpoints below are historical and retain their original scope.
 
 ---
 
