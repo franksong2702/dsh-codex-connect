@@ -256,7 +256,7 @@ export interface Config {
   enableSearch?: boolean
   /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
   enableReserveFallback?: boolean
-  /** Use the default-off provider-native Responses V2 compaction experiment. */
+  /** Explicit profile opt-in to Codex native context management; DSH owns automatic triggers. Disabling stops new native compactions, not replay of existing checkpoints. */
   enableNativeCompaction?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
