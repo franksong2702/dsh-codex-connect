@@ -776,17 +776,38 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
               <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
             </span>
           </label>
-          <label style={toggleRowStyle}>
-            <input
-              type="checkbox"
-              checked={draft.enableNativeCompaction}
-              onChange={event => { update('enableNativeCompaction', event.currentTarget.checked) }}
-            />
-            <span style={toggleCopyStyle}>
-              <span style={labelStyle}>{t('enableNativeCompaction')}</span>
-              <span style={bodyStyle}>{t('enableNativeCompactionHelp')}</span>
-            </span>
-          </label>
+          <div role="group" aria-labelledby={`${panelPrefix}-native-context-label`} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 10 }}>
+            <label style={toggleRowStyle}>
+              <input
+                type="checkbox"
+                aria-labelledby={`${panelPrefix}-native-context-label`}
+                aria-describedby={`${panelPrefix}-native-context-help ${panelPrefix}-native-context-consent`}
+                checked={draft.enableNativeCompaction}
+                onChange={event => { update('enableNativeCompaction', event.currentTarget.checked) }}
+              />
+              <span style={{ ...toggleCopyStyle, minWidth: 0 }}>
+                <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <span id={`${panelPrefix}-native-context-label`} style={labelStyle}>{t('enableNativeCompaction')}</span>
+                  <span style={badgeStyle}>{t('nativeCompactionBadge')}</span>
+                </span>
+                <span id={`${panelPrefix}-native-context-help`} style={bodyStyle}>{t('enableNativeCompactionHelp')}</span>
+              </span>
+            </label>
+            <p id={`${panelPrefix}-native-context-consent`} style={bodyStyle}>{t('nativeCompactionConsent')}</p>
+            {snapshot.status === 'ready' && snapshot.value !== undefined ? <p style={bodyStyle} role="status">
+              {t(snapshot.value.enableNativeCompaction ? 'nativeCompactionSavedOn' : 'nativeCompactionSavedOff')}
+              {draft.enableNativeCompaction !== snapshot.value.enableNativeCompaction
+                ? <span style={{ marginLeft: 8 }}>{t('nativeCompactionPending')}</span> : null}
+            </p> : null}
+            <p style={bodyStyle}>{t('nativeCompactionRisk')}</p>
+            <details>
+              <summary style={{ ...bodyStyle, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('nativeCompactionDetails')}</summary>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                <p style={bodyStyle}>{t('nativeCompactionHostPolicy')}</p>
+                <p style={bodyStyle}>{t('nativeCompactionDisableHelp')}</p>
+              </div>
+            </details>
+          </div>
           <label style={toggleRowStyle}>
             <input
               type="checkbox"

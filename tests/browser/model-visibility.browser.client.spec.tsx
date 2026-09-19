@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { modelCatalogFixture } from '../model-catalog-fixture.ts'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
-import { en } from '../../src/client/locales.ts'
+import { en, zh } from '../../src/client/locales.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
 import {
   OPENAI_CODEX_PROXY_DETECT_PATH,
@@ -78,6 +78,37 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it.each([['en', en], ['zh', zh]] as const)('operates the native-context opt-in in a narrow %s view without a second confirmation', async (_language, copy) => {
+    await page.viewport(390, 844)
+    host.style.width = '100%'
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    root.render(createElement(OpenAICodexConfiguration, { scope, t: key => copy[key], activeModule: 'capabilities' }))
+    const native = page.getByRole('checkbox', { name: copy.enableNativeCompaction, exact: true })
+    await expect.element(native).not.toBeChecked()
+    await expect.element(page.getByText(copy.nativeCompactionConsent, { exact: true })).toBeVisible()
+    await native.click()
+    await expect.element(page.getByText(copy.nativeCompactionPending, { exact: true })).toBeVisible()
+    expect(scope.getSnapshot().value?.enableNativeCompaction).toBe(false)
+    expect(mutate).not.toHaveBeenCalled()
+    expect(document.querySelector('dialog[open]')).toBeNull()
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionSavedOn, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([{ op: 'set', path: ['enableNativeCompaction'], value: true }], 0)
+    expect(scope.getSnapshot().value).toEqual({ ...DEFAULT_OPENAI_CODEX_SETTINGS, enableNativeCompaction: true })
+    await page.getByText(copy.nativeCompactionDetails, { exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionDisableHelp, { exact: true })).toBeVisible()
+    const card = page.getByRole('group', { name: copy.enableNativeCompaction, exact: true }).element()
+    expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth)
+    await native.click()
+    await page.getByRole('button', { name: copy.discard, exact: true }).click()
+    await expect.element(native).toBeChecked()
+    await native.click()
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.nativeCompactionSavedOff, { exact: true })).toBeVisible()
+    expect(scope.getSnapshot().value).toEqual(DEFAULT_OPENAI_CODEX_SETTINGS)
+  })
+
   it('keeps staged changes and actions while switching settings modules', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, mutate } = settingsScopeFixture()
