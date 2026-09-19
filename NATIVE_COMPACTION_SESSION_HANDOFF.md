@@ -1,4 +1,18 @@
+# Current Remember handoff — 2026-09-19
+
+Use [the updated runtime checkpoint](docs/agent-notes/adaptive-runtime-status.md) and [bounded acceptance record](docs/experiments/remember-acceptance.md). The later authorized A/B live controls passed on source `ad7c934`: retained-user persistence and assistant-origin opaque-only recall after actual JSONL and process restart. These are limited Luna results, not whole-product/Astra acceptance. The oversized-user failure is retained unchanged; no live budget is reusable. #212/#213 are merged, while this test/evidence delivery is separate and not yet merged or released.
+
+The September 12/18 handoff below is preserved as historical evidence, not the latest gate status or a new authorization.
+
+---
+
 # Native compaction session handoff — 2026-09-12
+
+## Current-state pointer — 2026-09-18
+
+#197 has since merged and is included in the GitHub `v0.1.0-alpha.4.36` release record at main `eae9430f16f1707d8cefb76dec6e8344871d7684`. Native creation remains default-off. The sections below are historical execution records, not current branch/PR state or a new execution budget.
+
+Continue from [the runtime checkpoint](docs/agent-notes/adaptive-runtime-status.md) and [Remember's remaining acceptance contract](docs/experiments/remember-acceptance.md). The reported blocked real durable probe remains unaccepted and must not be retried or rerouted. The September 18 work changes offline evidence validation, not the compaction engine, credentials or daily services.
 
 ## Scope and exact base
 

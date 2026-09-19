@@ -10,19 +10,34 @@ import { trustedRequestDecision } from './auth-routes.ts'
 import { OPENAI_CODEX_IMAGE_ASSET_ID_PATTERN, OPENAI_CODEX_ORIGINAL_IMAGE_PATH } from './image-assets-contract.ts'
 import type { OpenAICodexImageAssetStore } from './image-assets.ts'
 import type { OpenAICodexOriginalImageRef } from './image-assets-contract.ts'
-import { decodeImagePresentationMeta } from './image-presentation.ts'
+import { decodeImagePresentationMeta, decodeImageResultContent } from './image-presentation.ts'
 
 /** Fork access follows copied result events, not every asset owned by an ancestor. */
 function inheritedOriginal(session: Session | undefined, assetId: string): OpenAICodexOriginalImageRef | undefined {
   if (session?.header.parentSession === undefined) return undefined
   for (const event of session.snapshotEvents()) {
     if (event.seq >= session.inheritedEventCount) break
-    if (event.type !== 'tool/result') continue
-    const meta = decodeImagePresentationMeta(event.data.meta)
+    let meta
+    if (event.type === 'tool/result') meta = decodeImagePresentationMeta(event.data.meta)
+    else meta = inheritedPtcPresentation(event)
     const original = meta?.images.find(image => image.original?.assetId === assetId)?.original
     if (original !== undefined) return original
   }
   return undefined
+}
+
+/** Accept both supported DSH event names without casting a version-specific event union. */
+function inheritedPtcPresentation(event: unknown) {
+  if (typeof event !== 'object' || event === null) return undefined
+  const entry = event as Record<string, unknown>
+  if (entry.type !== 'tool/ptc-dispatch' && entry.type !== 'tool/code-dispatch') return undefined
+  if (typeof entry.data !== 'object' || entry.data === null) return undefined
+  const data = entry.data as Record<string, unknown>
+  if (data.name !== 'codex_connect_image_generate' || data.isError !== false || !Array.isArray(data.content)) return undefined
+  const args = data.arguments
+  if (typeof args !== 'object' || args === null || Array.isArray(args)) return undefined
+  const prompt = (args as Record<string, unknown>).prompt
+  return typeof prompt === 'string' ? decodeImageResultContent(data.content, prompt) : undefined
 }
 
 function json(res: ServerResponse, status: number, value: unknown): void {

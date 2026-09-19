@@ -11,6 +11,7 @@ import { OPENAI_CODEX_ORIGINAL_IMAGE_PATH } from '../src/image-assets-contract.t
 import type { OpenAICodexOriginalImageRef } from '../src/image-assets-contract.ts'
 import { registerOpenAICodexOriginalImageRoute } from '../src/image-asset-routes.ts'
 import type { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
+import { IMAGE_RESULT_PREFIX } from '../src/image-presentation.ts'
 
 const PNG_1X1 = Uint8Array.from(Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
@@ -90,6 +91,22 @@ function response(): ServerResponse & { status?: number; headers?: Record<string
 }
 
 describe('OpenAI Codex original image download route', () => {
+  it.each(['tool/code-dispatch', 'tool/ptc-dispatch'])('authorizes only inherited successful %s original references', async (type) => {
+    root = await mkdtemp(join(tmpdir(), 'codex-image-ptc-'))
+    const store = new OpenAICodexImageAssetStore(root)
+    const [ref] = await store.saveImages('owner', [{ data: PNG_1X1, mediaType: 'image/png', width: 1, height: 1, name: 'original.png' }])
+    if (ref === undefined) throw new Error('missing image')
+    const preview = { attachmentId: 'preview-1', mediaType: 'image/png', width: 1, height: 1, bytes: PNG_1X1.byteLength }
+    const data = { name: 'codex_connect_image_generate', isError: false, arguments: { prompt: 'draw' }, content: [
+      { type: 'text', text: IMAGE_RESULT_PREFIX + JSON.stringify([{ original: ref, preview }]) },
+      { type: 'image', attachment: preview },
+    ] }
+    const makeRoute = (event: unknown, boundary = 1) => capture(store, { get: () => ({ header: { parentSession: 'owner' }, inheritedEventCount: boundary, snapshotEvents: () => [event] }) } as unknown as SessionStore)
+    expect((await download(makeRoute({ type, seq: 0, data }), 'child', ref.assetId)).status).toBe(200)
+    expect((await download(makeRoute({ type, seq: 0, data }, 0), 'child', ref.assetId)).status).toBe(404)
+    expect((await download(makeRoute({ type, seq: 0, data: { ...data, isError: true } }), 'child', ref.assetId)).status).toBe(404)
+    expect((await download(makeRoute({ type, seq: 0, data: { ...data, name: 'another-tool' } }), 'child', ref.assetId)).status).toBe(404)
+  })
   it('downloads inherited originals through nested forks and restored sessions without loading ancestors', async () => {
     root = await mkdtemp(join(tmpdir(), 'codex-image-fork-'))
     const ctx = await sessionContext()

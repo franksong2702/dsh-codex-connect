@@ -2,3 +2,5 @@ node_modules/
 *.tsbuildinfo
 .openai-codex-auth.json
 .playwright-cli/
+.issue211-artifacts/
+.remember-acceptance-runs/

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "node": "v22.22.3",
+  "providerRequests": 0,
+  "evidence": [
+    {
+      "invocation": "host-plugin-exec",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1190,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/.plugin-manager/logs/operation-XltGda/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "direct-plugin-cli",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1008,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "traced-host-plugin-exec",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1709,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [
+        {
+          "stage": "startup",
+          "argvTail": [
+            "plugin",
+            "--profile",
+            "web",
+            "exec",
+            "dsh-codex-connect",
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "startup",
+          "argvTail": [
+            "exec",
+            "dsh-codex-connect",
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "startup",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "plugin-entry",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "urlMatchesArgv": false,
+          "urlMatchesRealArgv": true
+        }
+      ],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/.plugin-manager/logs/operation-5Q7WjE/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "traced-direct-plugin-cli",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1233,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [
+        {
+          "stage": "startup",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "plugin-entry",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "urlMatchesArgv": true,
+          "urlMatchesRealArgv": true
+        }
+      ],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "host-plugin-exec-with-separator",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1190,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-mcurNP/dsh-home/profiles/web/.plugin-manager/logs/operation-SBUtmZ/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    }
+  ],
+  "dshVersion": "0.1.6-alpha.2",
+  "pluginArtifactSha256": "ed1a08eff0f2f0b12f451b5471ea94f9327c619659fb8676fff6014852476cd4",
+  "ownCliBytesVerified": true
+}

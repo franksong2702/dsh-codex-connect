@@ -11,7 +11,7 @@ import { detectEncodedImage } from './image-format.ts'
 import type { CodexImageMediaType, DetectedImage } from './image-format.ts'
 import type { OpenAICodexOriginalImageRef } from './image-assets-contract.ts'
 import type { OpenAICodexImageAssetStore } from './image-assets.ts'
-import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION } from './image-presentation.ts'
+import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION, IMAGE_RESULT_PREFIX } from './image-presentation.ts'
 
 /** Stable model-callable tool name. */
 export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
@@ -71,6 +71,7 @@ function outputContent(value: ImageValue): ToolContentBlock[] {
     `${String(index + 1)}. original ${original.mediaType}, ${String(original.width)}x${String(original.height)} px, ${String(original.bytes)} bytes; preview ${String(preview.width)}x${String(preview.height)} px, attachment ${preview.attachmentId}`)
   return [
     { type: 'text', text: `Generated ${String(value.images.length)} image${value.images.length === 1 ? '' : 's'}:\n${lines.join('\n')}` },
+    { type: 'text', text: IMAGE_RESULT_PREFIX + JSON.stringify(value.images) },
     ...value.images.map(({ preview }) => ({
       type: 'image' as const,
       attachment: {
