@@ -22,19 +22,21 @@ function escapeWindowsArgument(value, doubleEscapeMetaCharacters) {
     : escaped
 }
 
-export function resolveCommandInvocation(command, args, platform = process.platform) {
-  if (platform === 'win32' && /\.(?:bat|cmd)$/iu.test(command)) {
-    const doubleEscapeMetaCharacters = /[\\/]node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/iu.test(command)
-    const shellCommand = [
-      escapeWindowsCommand(command),
-      ...args.map(argument => escapeWindowsArgument(argument, doubleEscapeMetaCharacters)),
-    ].join(' ')
-    return {
-      command: process.env.ComSpec ?? process.env.COMSPEC ?? process.env.comspec ?? 'cmd.exe',
-      args: ['/d', '/s', '/c', `"${shellCommand}"`],
-      windowsVerbatimArguments: true,
-    }
+function resolveWindowsScriptInvocation(command, args) {
+  const doubleEscapeMetaCharacters = /[\\/]node_modules[\\/]\.bin[\\/][^\\/]+\.cmd$/iu.test(command)
+  const shellCommand = [
+    escapeWindowsCommand(command),
+    ...args.map(argument => escapeWindowsArgument(argument, doubleEscapeMetaCharacters)),
+  ].join(' ')
+  return {
+    command: process.env.ComSpec ?? process.env.COMSPEC ?? process.env.comspec ?? 'cmd.exe',
+    args: ['/d', '/s', '/c', `"${shellCommand}"`],
+    windowsVerbatimArguments: true,
   }
+}
+
+export function resolveCommandInvocation(command, args, platform = process.platform) {
+  if (platform === 'win32' && /\.(?:bat|cmd)$/iu.test(command)) return resolveWindowsScriptInvocation(command, args)
   return { command, args, windowsVerbatimArguments: false }
 }
 
@@ -72,10 +74,15 @@ function terminateProcessTree(child) {
  */
 export function runBoundedCommand(command, args, options = {}) {
   return runCapturedProcess(processOptions => {
-    const invocation = resolveCommandInvocation(command, args)
-    return spawn(invocation.command, invocation.args, {
-      ...processOptions, windowsVerbatimArguments: invocation.windowsVerbatimArguments,
-    })
+    // Keep shell-script construction separate from native argv at the actual
+    // spawn boundary, not in a union that can mix a shell command with raw args.
+    if (process.platform === 'win32' && /\.(?:bat|cmd)$/iu.test(command)) {
+      const invocation = resolveWindowsScriptInvocation(command, args)
+      return spawn(invocation.command, invocation.args, {
+        ...processOptions, windowsVerbatimArguments: true, shell: false,
+      })
+    }
+    return spawn(command, args, { ...processOptions, shell: false, windowsVerbatimArguments: false })
   }, options)
 }
 

@@ -3,15 +3,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 // @ts-expect-error Plain Node CI helper is outside the source build.
-import { runBoundedNode } from '../scripts/bounded-command.mjs'
+import { runBoundedNode, runBoundedCommand } from '../scripts/bounded-command.mjs'
 
-it('executes Node files with shell metacharacters in their path as literal argv', async () => {
+it.each(['direct-node', 'generic-native'] as const)('executes Node files with shell metacharacters as literal argv through %s', async route => {
   const root = await mkdtemp(join(tmpdir(), 'split-node & % path-'))
   try {
     const file = join(root, 'receive & literal.mjs')
     await writeFile(file, 'process.stdout.write(JSON.stringify(process.argv.slice(2)))')
     const args = ['a&b|c', '%PATH%', '$(not-a-command)', 'quote"value', 'space value']
-    const result = await runBoundedNode([file, ...args], { timeoutMs: 5_000 })
+    const result = route === 'direct-node'
+      ? await runBoundedNode([file, ...args], { timeoutMs: 5_000 })
+      : await runBoundedCommand(process.execPath, [file, ...args], { timeoutMs: 5_000 })
     expect(result.status).toBe(0)
     expect(JSON.parse(result.stdout)).toEqual(args)
   } finally { await rm(root, { recursive: true, force: true }) }
