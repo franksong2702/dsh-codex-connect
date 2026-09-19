@@ -1,5 +1,13 @@
 # Codex 原生上下文管理：配置与验收
 
+## Observed preview and merge checkpoint — 2026-09-19
+
+#216 merged at `525e01b6e1c2b7d23ba70e29510ef1fd31fb0168` after maintainer approval. The user preview used reviewed `1e05677` on DSH `0.1.5-rc.1`. Ordinary work produced one valid native checkpoint through automatic scheduling, wrote it into the real session, and completed subsequent tool-assisted work. A later normal restart preserved the original history/checkpoint; deployment verification sent no post-restart model turn.
+
+The stock scheduler then tried to compact only its new checkpoint again because pressure remained slightly above its soft threshold. The larger replacement was correctly refused and the ordinary turn completed. A separate local host repair (`2e5469e`) was applied only to the preview; **upgrading this plugin does not install that repair**. This remains a stock-host follow-up, not proof of universal automatic/repeated acceptance or savings.
+
+The implementation description and original plan below remain for reproduction. #196/#65 retain their unverified gates; no new live-request budget is granted here.
+
 ## Scope
 
 Based on merged main `085d1d618a01bba6f28ed002f7d5af088a85d4d0` (#214). This change reuses the existing `enableNativeCompaction` boolean, SettingsProvider section and adapter callback. The checkbox already existed; this PR improves its product semantics, bilingual presentation and regression coverage rather than adding another enablement flag or another compaction engine.
