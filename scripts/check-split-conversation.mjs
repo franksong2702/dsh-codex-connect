@@ -10,7 +10,7 @@ import { build } from 'tsdown'
 import { chromium } from 'playwright'
 import { runSplitHostScenario } from './split-host-fixture.mjs'
 import { assertSplitHostPath, collectSplitClientBundles, splitBrowserSeedAliases } from './split-conversation-bundles.mjs'
-import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
+import { assertSplitBrowserImports, assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_SEEDS } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export async function runSplitConversationBrowser({ hostRoot = ROOT, expectedVersion, implementation, importHost, manual } = {}) {
 const require = createRequire(join(hostRoot, 'package.json'))
@@ -49,6 +49,7 @@ try {
   const names = await readdir(join(dir, 'browser'))
   const entry = names.find(name => /^browser\.m?js$/u.test(name)); assert.ok(entry)
   const files = new Map(await Promise.all(names.map(async name => [name, await readFile(join(dir, 'browser', name))])))
+  for (const [name, bytes] of files) if (/\.m?js$/u.test(name)) await assertSplitBrowserImports(bytes.toString('utf8'))
   const bundles = await collectSplitClientBundles(hostRoot, undefined, version)
   assert.deepEqual(bundles.missing, [])
   for (const asset of bundles.assets) files.set(asset.fileName, await readFile(asset.path))

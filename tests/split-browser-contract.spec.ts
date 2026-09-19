@@ -1,13 +1,14 @@
-import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { expect, it } from 'vitest'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
-import { assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_REQUIRED_PACKAGES, splitBrowserSeedsFor } from '../scripts/split-browser-contract.mjs'
+import { assertSplitBrowserImports, assertSplitBrowserReport, SPLIT_BROWSER_SCENARIOS, SPLIT_BROWSER_REQUIRED_PACKAGES, SPLIT_BROWSER_VENDOR_DEPENDENCIES, splitBrowserSeedsFor } from '../scripts/split-browser-contract.mjs'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
 import { collectSplitClientBundles, assertSplitHostPath } from '../scripts/split-conversation-bundles.mjs'
 // @ts-expect-error Plain Node acceptance helper is outside the source build.
-import { splitBrowserReactDependencies, validateSplitMatrix } from '../scripts/check-split-matrix.mjs'
+import { splitBrowserShellDependencies, validateSplitMatrix } from '../scripts/check-split-matrix.mjs'
 
 const version = '0.1.5-rc.1'
 const report = () => ({ kind: 'split-conversation-browser', passed: true, dshVersion: version,
@@ -67,12 +68,49 @@ it('pins both browser-shell packages, refusing mixed or ranged React versions', 
       await mkdir(join(root, 'node_modules', name), { recursive: true })
       await writeFile(join(root, 'node_modules', name, 'package.json'), manifest(name, '18.3.1'))
     }
-    expect(await splitBrowserReactDependencies(root)).toEqual({ react: '18.3.1', 'react-dom': '18.3.1' })
+    expect(await splitBrowserShellDependencies(root)).toEqual({ react: '18.3.1', 'react-dom': '18.3.1', ...SPLIT_BROWSER_VENDOR_DEPENDENCIES })
     await writeFile(join(root, 'node_modules/react-dom/package.json'), manifest('react-dom', '19.0.0'))
-    await expect(splitBrowserReactDependencies(root)).rejects.toThrow(/matching React pair/)
+    await expect(splitBrowserShellDependencies(root)).rejects.toThrow(/matching React pair/)
     await writeFile(join(root, 'node_modules/react-dom/package.json'), manifest('react-dom', '^18.3.1'))
-    await expect(splitBrowserReactDependencies(root)).rejects.toThrow()
+    await expect(splitBrowserShellDependencies(root)).rejects.toThrow()
   } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+it('pins the reviewed shared-library runtime dependencies already in the frozen development graph', async () => {
+  const require = createRequire(import.meta.url)
+  const owners = new Map<string, ReturnType<typeof createRequire>>()
+  for (const id of ['@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-primitives']) {
+    const packagePath = require.resolve(`${id}/package.json`)
+    const shared = JSON.parse(await readFile(packagePath, 'utf8'))
+    for (const name of Object.keys(shared.dependencies ?? {})) {
+      if (!name.startsWith('@types/') && !['micromark-util-types', 'react', 'react-dom'].includes(name)) {
+        owners.set(name, createRequire(packagePath))
+      }
+    }
+  }
+  expect(Object.keys(SPLIT_BROWSER_VENDOR_DEPENDENCIES).sort()).toEqual([...owners.keys()].sort())
+  for (const [name, version] of Object.entries(SPLIT_BROWSER_VENDOR_DEPENDENCIES)) {
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/)
+    const dependencyRequire = owners.get(name)!
+    let manifest
+    try { manifest = JSON.parse(await readFile(dependencyRequire.resolve(`${name}/package.json`), 'utf8')) }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error
+      let directory = dirname(dependencyRequire.resolve(name))
+      for (let depth = 0; depth < 12; depth += 1) {
+        try {
+          const candidate = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'))
+          if (candidate.name === name) { manifest = candidate; break }
+        } catch (readError) {
+          if ((readError as NodeJS.ErrnoException).code !== 'ENOENT') throw readError
+        }
+        const parent = dirname(directory)
+        if (parent === directory) break
+        directory = parent
+      }
+    }
+    expect(manifest, name).toMatchObject({ name, version })
+  }
 })
 
 it('rejects escaped assets and mixed package versions instead of using a neighboring installation', async () => {
@@ -97,4 +135,17 @@ it('rejects escaped assets and mixed package versions instead of using a neighbo
     await symlink(outside, join(pkg, 'client.js'))
     await expect(collectSplitClientBundles(host, [id], version)).rejects.toThrow(/escaped/)
   } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+it.each([
+  ['import clsx from "clsx";', 'clsx'],
+  ['export { clsx } from "clsx";', 'clsx'],
+  ['const value = import("clsx");', 'clsx'],
+  ['import { createStore } from "zustand/vanilla";', 'zustand/vanilla'],
+  ['import { produce } from "immer";', 'immer'],
+])('rejects unresolved browser modules before page load: %s', async (code, dependency) => {
+  await expect(assertSplitBrowserImports(code)).rejects.toThrow(`Unresolved browser import: ${dependency}`)
+})
+it('allows local chunks without mistaking ordinary text for an import', async () => {
+  await expect(assertSplitBrowserImports('import value from "./chunk.mjs"; const note = `import x from "clsx"`;')).resolves.toBeUndefined()
 })

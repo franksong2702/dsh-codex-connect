@@ -23,6 +23,49 @@ export const SPLIT_BROWSER_ROOTS = Object.freeze([
   '@deepseek-ai/dsh-client-ui-model-selection',
 ])
 
+/** Explicit private-shell runtime dependencies for the inspected RC shared libraries.
+ * These exact versions already exist in the frozen development graph. Installing them in
+ * each disposable host supplies missing package edges; it never borrows code from that graph.
+ * Keep this allowlist reviewed: unresolved imports must fail, not trigger automatic installs.
+ */
+export const SPLIT_BROWSER_VENDOR_DEPENDENCIES = Object.freeze({
+  '@shikijs/langs': '4.4.3',
+  anser: '2.3.5',
+  clsx: '2.1.1',
+  immer: '10.2.0',
+  katex: '0.16.47',
+  'mdast-util-from-markdown': '2.0.3',
+  'mdast-util-gfm': '3.1.0',
+  'mdast-util-math': '3.0.0',
+  'micromark-core-commonmark': '2.0.3',
+  'micromark-extension-gfm': '3.0.0',
+  'micromark-extension-math': '3.1.0',
+  'micromark-factory-space': '2.0.1',
+  'micromark-util-character': '2.1.1',
+  'micromark-util-classify-character': '2.0.1',
+  'micromark-util-sanitize-uri': '2.0.1',
+  'micromark-util-symbol': '2.0.1',
+  shiki: '4.4.3',
+  zustand: '4.4.7',
+})
+
+/** Fail at bundle construction, rather than shipping an unresolved bare import to Chromium. */
+export async function assertSplitBrowserImports(code) {
+  const ts = await import('typescript')
+  const source = ts.createSourceFile('browser.mjs', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS)
+  const check = node => {
+    if (node && ts.isStringLiteralLike(node)) {
+      assert.ok(/^(?:\.{1,2}\/|\/)/u.test(node.text), `Unresolved browser import: ${node.text}`)
+    }
+  }
+  const visit = node => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) check(node.moduleSpecifier)
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) check(node.arguments[0])
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+}
+
 export function assertSplitBrowserReport(report, version) {
   assert.equal(report?.kind, 'split-conversation-browser')
   assert.equal(report.passed, true)

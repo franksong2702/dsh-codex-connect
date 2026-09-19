@@ -1,0 +1,4080 @@
+{
+  "schemaVersion": 1,
+  "kind": "split-internal-experiment-matrix",
+  "sameBundle": true,
+  "bundleDigest": "a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e",
+  "browserMatrix": true,
+  "realProviderDispatches": 0,
+  "freshProcesses": 4,
+  "scenarioExecutions": 232,
+  "reports": [
+    {
+      "schemaVersion": 1,
+      "kind": "split-internal-experiment",
+      "dshVersion": "0.1.2-rc.1",
+      "nodeVersion": "v22.22.3",
+      "piAiVersion": "0.84.4",
+      "browserAcceptance": {
+        "kind": "split-conversation-browser",
+        "passed": true,
+        "actualGatewayGeneration": true,
+        "ordinaryConversationUi": true,
+        "syntheticProvider": true,
+        "realProviderDispatches": 0,
+        "scenarios": [
+          {
+            "scenario": "conversation-allow",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-reject",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 0,
+            "childMockDispatches": 0,
+            "mockDispatches": 2,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-revoke",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 1,
+            "mockDispatches": 3,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-admission",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          }
+        ],
+        "dshVersion": "0.1.2-rc.1",
+        "browserVersion": "153.0.8010.12",
+        "externalBrowserRequests": 0,
+        "fatalPageErrors": 0,
+        "browserBundleSha256": "a2f9f378682bb29e9414d975d4831caa02dbc60691d0a8f80b1309e5beaba366",
+        "clientPackages": [
+          {
+            "id": "@deepseek-ai/dsh-typert-registry",
+            "version": "0.1.2-rc.1",
+            "sha256": "116a1d5ac12355d0713444368158c889cb0e926c7f89d4d35487d648fe30fd0a"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-connection",
+            "version": "0.1.2-rc.1",
+            "sha256": "1b8e76d7fb14c9305e6d43ab03bd908328341537af05c4159747d6da33308257"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-gateway",
+            "version": "0.1.2-rc.1",
+            "sha256": "55dbd591222b28e557e7d47368f7770114a88d97206e910fae940768c83950cd"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-remotes",
+            "version": "0.1.2-rc.1",
+            "sha256": "13bf3a8e768a5d9feb71bc182d6a2f5c6f8d8f97315348d22e321b00a76c8a4d"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-session-controller",
+            "version": "0.1.2-rc.1",
+            "sha256": "f2ec317d1c1f020662b2bd004e6770c721a7bf7bfd90020b3f06bfb2557c70d6"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-renderer",
+            "version": "0.1.2-rc.1",
+            "sha256": "859d0a187e436d682c71d18f0266d588f923d7e1628157ad73000f99a377d151"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-session",
+            "version": "0.1.2-rc.1",
+            "sha256": "a794b82a58f6e7740041456fc3690596db98db6619749b97c49cd2443a89d5ae"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-layout",
+            "version": "0.1.2-rc.1",
+            "sha256": "3a0243033f1a2c074b20fc7574cea3a338cd49dd0e88c084fc7f889d967ce33e"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-locale",
+            "version": "0.1.2-rc.1",
+            "sha256": "cff36c3b5f57b0f26223943f1f176cc519c2624f49743afff71718565f88e77e"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings",
+            "version": "0.1.2-rc.1",
+            "sha256": "479002d654490d19cbc89ed4582198603eddf2a62e3d233bbd30748f1bc0d862"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-theme",
+            "version": "0.1.2-rc.1",
+            "sha256": "0a5641161c824ef442cd9688dfdad90ae8450e4060321a8b6f6e3071878d716d"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-workspace",
+            "version": "0.1.2-rc.1",
+            "sha256": "53c40660195c42cde709b802e239f473dd721f45bc329684af31c01fdb73282a"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-workspace-controller",
+            "version": "0.1.2-rc.1",
+            "sha256": "7d603e41788d1f3873f2bbeee575155e0ece8fa0009ec4f2d5b307b5d75e6990"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-conversation",
+            "version": "0.1.2-rc.1",
+            "sha256": "7ee5792b3f15ac1b691eee7d373869101f8c7d336fc22b3f66d082612e4b1bae"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar",
+            "version": "0.1.2-rc.1",
+            "sha256": "a286b97a6755db76d2fc05919b1273917bb1ed783e08d98f75cab7d3f2c0103a"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-chat",
+            "version": "0.1.2-rc.1",
+            "sha256": "9c9874c57b7d3e5a71222a72e0f19ed8d884c40f895d898640c882d49bd1b231"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-models",
+            "version": "0.1.2-rc.1",
+            "sha256": "7acf9736edeea519c63791e946a135f5cc854c95c299fd9864e82074fce587e5"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-plugins",
+            "version": "0.1.2-rc.1",
+            "sha256": "9f4e51f1f1a710ff422ea4dc0a3097a1d7e72ff9336a418a2c926919227c3b15"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-model-selection",
+            "version": "0.1.2-rc.1",
+            "sha256": "4e6bd5d556836d086a329413967ad0a9dfb3a0a0bebe2863a9b073ab09db686d"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-commands",
+            "version": "0.1.2-rc.1",
+            "sha256": "3fc7c94aba7978eaa5cabfffbfd457ff057be293c19d6bd16967fe1919b74eb3"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-input-trigger",
+            "version": "0.1.2-rc.1",
+            "sha256": "5421f85e53fceb938f42fee37e8d1867a63fc0d3e69d3fbd623b4135bae60926"
+          }
+        ],
+        "seedPackages": [
+          {
+            "id": "react",
+            "version": "18.3.1",
+            "sha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          },
+          {
+            "id": "react-dom",
+            "version": "18.3.1",
+            "sha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4"
+          },
+          {
+            "id": "@deepseek-ai/cordis",
+            "version": "4.0.2",
+            "sha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-store",
+            "version": "0.1.2-rc.1",
+            "sha256": "7272e501f184fdee890b7a04646a6d8b38a09e3d5c6599687c79eb9d87063e3f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-slots",
+            "version": "0.1.2-rc.1",
+            "sha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.1.2-rc.1",
+            "sha256": "8117949324f38f42636d5de645fab575b0f4a947486133fa8dc40d84cbc2a4cb"
+          }
+        ]
+      },
+      "bundleDigest": "a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e",
+      "exactDshPackages": 217,
+      "runtimePackages": {
+        "@deepseek-ai/dsh-agent": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-agent-loop": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-subagent": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-llm-pi-ai": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-api-gateway": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-api-session-controller": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-api-remotes": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-session-query": "0.1.2-rc.1",
+        "@deepseek-ai/dsh-client-connection": "0.1.2-rc.1"
+      },
+      "syntheticOnly": true,
+      "realProviderDispatches": 0,
+      "productionEntryEnabled": false,
+      "freshProcesses": 1,
+      "pid": 28200,
+      "scenarios": [
+        {
+          "scenario": "success",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "plain",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "unread",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "bad-reference",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "forbidden",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "recursive",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "run-code",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "http-error",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "request-budget",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "pre-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "publication-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "read-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "capture-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "local-tool",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "route-change",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "parent-dispose",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "concurrent-admission",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "provider-changed",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "disabled",
+          "syntheticOnly": true,
+          "disabled": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistent-composition",
+          "syntheticOnly": true,
+          "rejectedBeforeDispatch": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistence-after-grant",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "oversized-result",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-missing",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-unavailable",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-never",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-stale",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-pending",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-running",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-intercepted",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-provider-change",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "prompt-isolation",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "context-injection",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-before-start",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-running",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-disposal-failure",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-auth",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-cross-session",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-replay",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-stale-revision",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-revoke",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-epoch",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-body",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-binding",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-lost-response",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "field"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "conversation-allow",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-reject",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 0,
+          "childMockDispatches": 0,
+          "mockDispatches": 2,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-revoke",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 1,
+          "mockDispatches": 3,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-admission",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-source-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-prompt-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "split-internal-experiment",
+      "dshVersion": "0.1.5-alpha.1",
+      "nodeVersion": "v22.22.3",
+      "piAiVersion": "0.85.1",
+      "browserAcceptance": {
+        "kind": "split-conversation-browser",
+        "passed": true,
+        "actualGatewayGeneration": true,
+        "ordinaryConversationUi": true,
+        "syntheticProvider": true,
+        "realProviderDispatches": 0,
+        "scenarios": [
+          {
+            "scenario": "conversation-allow",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-reject",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 0,
+            "childMockDispatches": 0,
+            "mockDispatches": 2,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-revoke",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 1,
+            "mockDispatches": 3,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-admission",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          }
+        ],
+        "dshVersion": "0.1.5-alpha.1",
+        "browserVersion": "153.0.8010.12",
+        "externalBrowserRequests": 0,
+        "fatalPageErrors": 0,
+        "browserBundleSha256": "7c059ad0a68a8761532ed7ab7bd97e1f55c997fa6a8d0c2f82d9e6a483c63dfc",
+        "clientPackages": [
+          {
+            "id": "@deepseek-ai/dsh-typert-registry",
+            "version": "0.1.5-alpha.1",
+            "sha256": "f77db8e57b72314910acd3171efb6cf9dda7652ff6ded23583cb530171433965"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-connection",
+            "version": "0.1.5-alpha.1",
+            "sha256": "b92134281eabdbfd96ca0f4ff57891fc81489f2ec8cd6e82ff63444064e885fe"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-gateway",
+            "version": "0.1.5-alpha.1",
+            "sha256": "097fb9a1f19c61a330f3769ada8c52f3c1c26cf5395afe8b498f135489484347"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-remotes",
+            "version": "0.1.5-alpha.1",
+            "sha256": "1b21d5990d98b173748e410ee401c0fd31b31f168e20c38acc1af3d021944215"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-session-controller",
+            "version": "0.1.5-alpha.1",
+            "sha256": "d18a5042654562a48970d9fa670b253bce4db76ab89d5889209e9caa8559ace6"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-renderer",
+            "version": "0.1.5-alpha.1",
+            "sha256": "859d0a187e436d682c71d18f0266d588f923d7e1628157ad73000f99a377d151"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-session",
+            "version": "0.1.5-alpha.1",
+            "sha256": "a794b82a58f6e7740041456fc3690596db98db6619749b97c49cd2443a89d5ae"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-layout",
+            "version": "0.1.5-alpha.1",
+            "sha256": "74deb09e378679dec584981729554df6ff45c609749477068e29be0b399fd73c"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-locale",
+            "version": "0.1.5-alpha.1",
+            "sha256": "cff36c3b5f57b0f26223943f1f176cc519c2624f49743afff71718565f88e77e"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings",
+            "version": "0.1.5-alpha.1",
+            "sha256": "479002d654490d19cbc89ed4582198603eddf2a62e3d233bbd30748f1bc0d862"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-theme",
+            "version": "0.1.5-alpha.1",
+            "sha256": "be765095ffe627d870945c3367c8f98f5bdae2cda44568003e38e9bdb6c9a331"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-workspace",
+            "version": "0.1.5-alpha.1",
+            "sha256": "34d3b6c895de2ec899e53f5175533fcc629d7d87f5c410da6266656673865ba2"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-workspace-controller",
+            "version": "0.1.5-alpha.1",
+            "sha256": "7d603e41788d1f3873f2bbeee575155e0ece8fa0009ec4f2d5b307b5d75e6990"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-conversation",
+            "version": "0.1.5-alpha.1",
+            "sha256": "a2bbc12fa23b9b13c7526bce2de0ef70ee0aefed5166f5d59348944cc378bc67"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-file-upload",
+            "version": "0.1.5-alpha.1",
+            "sha256": "90d4a010e44f58872c8ea172fa80445ce0e5baf54c886418ae7302f8166c6c53"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar",
+            "version": "0.1.5-alpha.1",
+            "sha256": "2ae0055da539fa2f187f433258ba5e3cd91ee3eec861f1c2cd4bb1acd56f8b55"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-chat",
+            "version": "0.1.5-alpha.1",
+            "sha256": "e8cee38c135627ffb0d6d824dcdc09766d2e86cbff43736b17eb4d2c373e96fd"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar-right",
+            "version": "0.1.5-alpha.1",
+            "sha256": "e77235cd72975baf113214f6d96e8238066a4882e3785ea8d83d9489a94b037a"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-resources",
+            "version": "0.1.5-alpha.1",
+            "sha256": "f99cc9bdbe9dade3c4b90123199e29ddc58c27de9fc5fc426cf4a117ce930130"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-models",
+            "version": "0.1.5-alpha.1",
+            "sha256": "9ecd312865a91fa625e56658fc99e59665527819b61e1538cbce64b86c733592"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-plugins",
+            "version": "0.1.5-alpha.1",
+            "sha256": "1e8f93289cc0b5f3472378feb085ddeb0f0dd5d3b24192ff60d1e646f347fcb6"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-model-selection",
+            "version": "0.1.5-alpha.1",
+            "sha256": "03cbc3cd4f7958beb3200818842216a56a87222aceb76407dfa3b7d7bd84286c"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-commands",
+            "version": "0.1.5-alpha.1",
+            "sha256": "1350ad42ceb2276665ab7a99726e807151a73c7f6c91b3b6f3b2603f224f754b"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-input-trigger",
+            "version": "0.1.5-alpha.1",
+            "sha256": "7c78c0e3dd4d63656ca1b523ef76e93942a8c8e925eec0fb5c95932693ab933c"
+          }
+        ],
+        "seedPackages": [
+          {
+            "id": "react",
+            "version": "18.3.1",
+            "sha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          },
+          {
+            "id": "react-dom",
+            "version": "18.3.1",
+            "sha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4"
+          },
+          {
+            "id": "@deepseek-ai/cordis",
+            "version": "4.0.2",
+            "sha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-store",
+            "version": "0.1.5-alpha.1",
+            "sha256": "7272e501f184fdee890b7a04646a6d8b38a09e3d5c6599687c79eb9d87063e3f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-slots",
+            "version": "0.1.5-alpha.1",
+            "sha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.1.5-alpha.1",
+            "sha256": "853e6f9227e8608db50f971dfc97874c7612a1aea9a6176bf753339ab54871e7"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-dockkit",
+            "version": "0.1.5-alpha.1",
+            "sha256": "365dfd6ac3d7193e2e1092c83f8359784997342d8379610616127eefd0edc828"
+          }
+        ]
+      },
+      "bundleDigest": "a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e",
+      "exactDshPackages": 233,
+      "runtimePackages": {
+        "@deepseek-ai/dsh-agent": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-agent-loop": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-tools": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-subagent": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-llm-pi-ai": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-api-gateway": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-api-session-controller": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-api-remotes": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-session-query": "0.1.5-alpha.1",
+        "@deepseek-ai/dsh-client-connection": "0.1.5-alpha.1"
+      },
+      "syntheticOnly": true,
+      "realProviderDispatches": 0,
+      "productionEntryEnabled": false,
+      "freshProcesses": 1,
+      "pid": 30448,
+      "scenarios": [
+        {
+          "scenario": "success",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "plain",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "unread",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "bad-reference",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "forbidden",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "recursive",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "run-code",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "http-error",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "request-budget",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "pre-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "publication-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "read-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "capture-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "local-tool",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "route-change",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "parent-dispose",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "concurrent-admission",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "provider-changed",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "disabled",
+          "syntheticOnly": true,
+          "disabled": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistent-composition",
+          "syntheticOnly": true,
+          "rejectedBeforeDispatch": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistence-after-grant",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "oversized-result",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-missing",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-unavailable",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-never",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-stale",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-pending",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-running",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-intercepted",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-provider-change",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "prompt-isolation",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "context-injection",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-before-start",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-running",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-disposal-failure",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-auth",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-cross-session",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-replay",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-stale-revision",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-revoke",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-epoch",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-body",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-binding",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-lost-response",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "conversation-allow",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-reject",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 0,
+          "childMockDispatches": 0,
+          "mockDispatches": 2,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-revoke",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 1,
+          "mockDispatches": 3,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-admission",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-source-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-prompt-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "split-internal-experiment",
+      "dshVersion": "0.1.5-rc.1",
+      "nodeVersion": "v22.22.3",
+      "piAiVersion": "0.85.1",
+      "browserAcceptance": {
+        "kind": "split-conversation-browser",
+        "passed": true,
+        "actualGatewayGeneration": true,
+        "ordinaryConversationUi": true,
+        "syntheticProvider": true,
+        "realProviderDispatches": 0,
+        "scenarios": [
+          {
+            "scenario": "conversation-allow",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-reject",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 0,
+            "childMockDispatches": 0,
+            "mockDispatches": 2,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-revoke",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 1,
+            "mockDispatches": 3,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-admission",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          }
+        ],
+        "dshVersion": "0.1.5-rc.1",
+        "browserVersion": "153.0.8010.12",
+        "externalBrowserRequests": 0,
+        "fatalPageErrors": 0,
+        "browserBundleSha256": "5b7e2fd93e9ed0de3c3a5c4235fdd8548668f58c63d28d6e261c048948f71b64",
+        "clientPackages": [
+          {
+            "id": "@deepseek-ai/dsh-typert-registry",
+            "version": "0.1.5-rc.1",
+            "sha256": "f77db8e57b72314910acd3171efb6cf9dda7652ff6ded23583cb530171433965"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-connection",
+            "version": "0.1.5-rc.1",
+            "sha256": "319cc46762af6ccb7ac74c9bab37ab8377be212dad9de4dba1f892b7e5b4d8a1"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-gateway",
+            "version": "0.1.5-rc.1",
+            "sha256": "097fb9a1f19c61a330f3769ada8c52f3c1c26cf5395afe8b498f135489484347"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-remotes",
+            "version": "0.1.5-rc.1",
+            "sha256": "bec369e0f471422d393622a8ef757a0b21113bbe58ed7ea6cf1cad616146d645"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-session-controller",
+            "version": "0.1.5-rc.1",
+            "sha256": "ff33d1f85a0b2f14568fcb555d5f52d2ba5f57f2e0ecfa5d7885ba83e7ff6069"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-renderer",
+            "version": "0.1.5-rc.1",
+            "sha256": "859d0a187e436d682c71d18f0266d588f923d7e1628157ad73000f99a377d151"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-session",
+            "version": "0.1.5-rc.1",
+            "sha256": "a794b82a58f6e7740041456fc3690596db98db6619749b97c49cd2443a89d5ae"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-layout",
+            "version": "0.1.5-rc.1",
+            "sha256": "930c10a9bed1094e7bca6242276c22ba7020fd58bac47d70a0fef174544508ef"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-locale",
+            "version": "0.1.5-rc.1",
+            "sha256": "cff36c3b5f57b0f26223943f1f176cc519c2624f49743afff71718565f88e77e"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings",
+            "version": "0.1.5-rc.1",
+            "sha256": "479002d654490d19cbc89ed4582198603eddf2a62e3d233bbd30748f1bc0d862"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-theme",
+            "version": "0.1.5-rc.1",
+            "sha256": "be765095ffe627d870945c3367c8f98f5bdae2cda44568003e38e9bdb6c9a331"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-workspace",
+            "version": "0.1.5-rc.1",
+            "sha256": "383b9ef779366c13d818500b6488896328b189f156addbaa480c835e902edd5f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-workspace-controller",
+            "version": "0.1.5-rc.1",
+            "sha256": "7d603e41788d1f3873f2bbeee575155e0ece8fa0009ec4f2d5b307b5d75e6990"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-conversation",
+            "version": "0.1.5-rc.1",
+            "sha256": "81314dfd95864f2522f8edb812e3f8e08b04a8ef2141913e6e8cbdaae1ffc37f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-file-upload",
+            "version": "0.1.5-rc.1",
+            "sha256": "90d4a010e44f58872c8ea172fa80445ce0e5baf54c886418ae7302f8166c6c53"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar",
+            "version": "0.1.5-rc.1",
+            "sha256": "88f7e04d046eadb437fd64273b1aea43df85c1a2a5337cb16339735de6bc4f53"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-chat",
+            "version": "0.1.5-rc.1",
+            "sha256": "4f9cfff8398ccf98de4fe22a58e4eccad88b163a3a217a6f25725544234c0ae8"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar-right",
+            "version": "0.1.5-rc.1",
+            "sha256": "32d24a77a28d25b975ffa9560ef94a2af94db232094910de7d5ea94788735afd"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-resources",
+            "version": "0.1.5-rc.1",
+            "sha256": "16c6da29e338582fffa6c378dcccd543f7ad0272ea1c457c3e7d6722a9897765"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-models",
+            "version": "0.1.5-rc.1",
+            "sha256": "a60fd86357f9fbc6f5276ed0393682f7f2223faedec4f30c719d66e99600b1bb"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-plugins",
+            "version": "0.1.5-rc.1",
+            "sha256": "1e8f93289cc0b5f3472378feb085ddeb0f0dd5d3b24192ff60d1e646f347fcb6"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-model-selection",
+            "version": "0.1.5-rc.1",
+            "sha256": "630f10f7f9d0c88db77f76488763e1af22eec9e355179ac2dde07678a6d6c731"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-commands",
+            "version": "0.1.5-rc.1",
+            "sha256": "b04ba5b0d9edc990fe3011c8a97855e7c5a842d5074d25cdd89f33e28604a007"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-input-trigger",
+            "version": "0.1.5-rc.1",
+            "sha256": "7c78c0e3dd4d63656ca1b523ef76e93942a8c8e925eec0fb5c95932693ab933c"
+          }
+        ],
+        "seedPackages": [
+          {
+            "id": "react",
+            "version": "18.3.1",
+            "sha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          },
+          {
+            "id": "react-dom",
+            "version": "18.3.1",
+            "sha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4"
+          },
+          {
+            "id": "@deepseek-ai/cordis",
+            "version": "4.0.2",
+            "sha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-store",
+            "version": "0.1.5-rc.1",
+            "sha256": "7272e501f184fdee890b7a04646a6d8b38a09e3d5c6599687c79eb9d87063e3f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-slots",
+            "version": "0.1.5-rc.1",
+            "sha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.1.5-rc.1",
+            "sha256": "b66c9f456ed2fdd942622ccfea14f8151091047618c00ad7d629e4c442eabe46"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-dockkit",
+            "version": "0.1.5-rc.1",
+            "sha256": "43a329d4e917e536d6f1268d513d5b0a08b93d3ddd85749851e30bd13cb8ec06"
+          }
+        ]
+      },
+      "bundleDigest": "a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e",
+      "exactDshPackages": 235,
+      "runtimePackages": {
+        "@deepseek-ai/dsh-agent": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-agent-loop": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-tools": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-subagent": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-llm-pi-ai": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-api-gateway": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-api-session-controller": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-api-remotes": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-session-query": "0.1.5-rc.1",
+        "@deepseek-ai/dsh-client-connection": "0.1.5-rc.1"
+      },
+      "syntheticOnly": true,
+      "realProviderDispatches": 0,
+      "productionEntryEnabled": false,
+      "freshProcesses": 1,
+      "pid": 30898,
+      "scenarios": [
+        {
+          "scenario": "success",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "plain",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "unread",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "bad-reference",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "forbidden",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "recursive",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "run-code",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "http-error",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "request-budget",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "pre-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "publication-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "read-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "capture-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "local-tool",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "route-change",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "parent-dispose",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "concurrent-admission",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "provider-changed",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "disabled",
+          "syntheticOnly": true,
+          "disabled": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistent-composition",
+          "syntheticOnly": true,
+          "rejectedBeforeDispatch": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistence-after-grant",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "oversized-result",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-missing",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-unavailable",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-never",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-stale",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-pending",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-running",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-intercepted",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-provider-change",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "prompt-isolation",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "context-injection",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-before-start",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-running",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-disposal-failure",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-auth",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-cross-session",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-replay",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-stale-revision",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-revoke",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-epoch",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-body",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-binding",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-lost-response",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "conversation-allow",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-reject",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 0,
+          "childMockDispatches": 0,
+          "mockDispatches": 2,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-revoke",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 1,
+          "mockDispatches": 3,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-admission",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-source-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-prompt-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "kind": "split-internal-experiment",
+      "dshVersion": "0.1.5-rc.2",
+      "nodeVersion": "v22.22.3",
+      "piAiVersion": "0.85.1",
+      "browserAcceptance": {
+        "kind": "split-conversation-browser",
+        "passed": true,
+        "actualGatewayGeneration": true,
+        "ordinaryConversationUi": true,
+        "syntheticProvider": true,
+        "realProviderDispatches": 0,
+        "scenarios": [
+          {
+            "scenario": "conversation-allow",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-reject",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 0,
+            "childMockDispatches": 0,
+            "mockDispatches": 2,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-revoke",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 1,
+            "mockDispatches": 3,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          },
+          {
+            "scenario": "conversation-admission",
+            "syntheticOnly": true,
+            "actualGateway": true,
+            "actualSessionController": true,
+            "ephemeralWorkspaceCatalog": true,
+            "parents": 1,
+            "children": 1,
+            "childMockDispatches": 2,
+            "mockDispatches": 4,
+            "realProviderDispatches": 0,
+            "childQuiescent": true,
+            "creates": 1,
+            "decisions": 1,
+            "reloadRecovered": true
+          }
+        ],
+        "dshVersion": "0.1.5-rc.2",
+        "browserVersion": "153.0.8010.12",
+        "externalBrowserRequests": 0,
+        "fatalPageErrors": 0,
+        "browserBundleSha256": "9728f5ce3ff541520154dc33cbe9d4b9eb0a23cc95e4ab7a2474676f251872b5",
+        "clientPackages": [
+          {
+            "id": "@deepseek-ai/dsh-typert-registry",
+            "version": "0.1.5-rc.2",
+            "sha256": "f77db8e57b72314910acd3171efb6cf9dda7652ff6ded23583cb530171433965"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-connection",
+            "version": "0.1.5-rc.2",
+            "sha256": "319cc46762af6ccb7ac74c9bab37ab8377be212dad9de4dba1f892b7e5b4d8a1"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-gateway",
+            "version": "0.1.5-rc.2",
+            "sha256": "097fb9a1f19c61a330f3769ada8c52f3c1c26cf5395afe8b498f135489484347"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-remotes",
+            "version": "0.1.5-rc.2",
+            "sha256": "bec369e0f471422d393622a8ef757a0b21113bbe58ed7ea6cf1cad616146d645"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-session-controller",
+            "version": "0.1.5-rc.2",
+            "sha256": "ff33d1f85a0b2f14568fcb555d5f52d2ba5f57f2e0ecfa5d7885ba83e7ff6069"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-renderer",
+            "version": "0.1.5-rc.2",
+            "sha256": "859d0a187e436d682c71d18f0266d588f923d7e1628157ad73000f99a377d151"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-session",
+            "version": "0.1.5-rc.2",
+            "sha256": "a794b82a58f6e7740041456fc3690596db98db6619749b97c49cd2443a89d5ae"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-layout",
+            "version": "0.1.5-rc.2",
+            "sha256": "930c10a9bed1094e7bca6242276c22ba7020fd58bac47d70a0fef174544508ef"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-locale",
+            "version": "0.1.5-rc.2",
+            "sha256": "cff36c3b5f57b0f26223943f1f176cc519c2624f49743afff71718565f88e77e"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings",
+            "version": "0.1.5-rc.2",
+            "sha256": "479002d654490d19cbc89ed4582198603eddf2a62e3d233bbd30748f1bc0d862"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-theme",
+            "version": "0.1.5-rc.2",
+            "sha256": "be765095ffe627d870945c3367c8f98f5bdae2cda44568003e38e9bdb6c9a331"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-workspace",
+            "version": "0.1.5-rc.2",
+            "sha256": "383b9ef779366c13d818500b6488896328b189f156addbaa480c835e902edd5f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-api-workspace-controller",
+            "version": "0.1.5-rc.2",
+            "sha256": "7d603e41788d1f3873f2bbeee575155e0ece8fa0009ec4f2d5b307b5d75e6990"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-conversation",
+            "version": "0.1.5-rc.2",
+            "sha256": "81314dfd95864f2522f8edb812e3f8e08b04a8ef2141913e6e8cbdaae1ffc37f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-file-upload",
+            "version": "0.1.5-rc.2",
+            "sha256": "90d4a010e44f58872c8ea172fa80445ce0e5baf54c886418ae7302f8166c6c53"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar",
+            "version": "0.1.5-rc.2",
+            "sha256": "171e3f0014e09c0f907e04e3a5503cae937bdd7169e3dc5f5c63e0e2671f64e0"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-chat",
+            "version": "0.1.5-rc.2",
+            "sha256": "6527556d25c7b2a27f2e3bfb96cc2ae3d9244f1213147e245b17684ad8d9e396"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-sidebar-right",
+            "version": "0.1.5-rc.2",
+            "sha256": "32d24a77a28d25b975ffa9560ef94a2af94db232094910de7d5ea94788735afd"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-resources",
+            "version": "0.1.5-rc.2",
+            "sha256": "16c6da29e338582fffa6c378dcccd543f7ad0272ea1c457c3e7d6722a9897765"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-models",
+            "version": "0.1.5-rc.2",
+            "sha256": "a60fd86357f9fbc6f5276ed0393682f7f2223faedec4f30c719d66e99600b1bb"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-settings-plugins",
+            "version": "0.1.5-rc.2",
+            "sha256": "1e8f93289cc0b5f3472378feb085ddeb0f0dd5d3b24192ff60d1e646f347fcb6"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-model-selection",
+            "version": "0.1.5-rc.2",
+            "sha256": "630f10f7f9d0c88db77f76488763e1af22eec9e355179ac2dde07678a6d6c731"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-commands",
+            "version": "0.1.5-rc.2",
+            "sha256": "b04ba5b0d9edc990fe3011c8a97855e7c5a842d5074d25cdd89f33e28604a007"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-input-trigger",
+            "version": "0.1.5-rc.2",
+            "sha256": "7c78c0e3dd4d63656ca1b523ef76e93942a8c8e925eec0fb5c95932693ab933c"
+          }
+        ],
+        "seedPackages": [
+          {
+            "id": "react",
+            "version": "18.3.1",
+            "sha256": "a216c390bf956cbb906c66d29fdb2e2ad6999464a5ca83e476533a6f25ad0ef3"
+          },
+          {
+            "id": "react-dom",
+            "version": "18.3.1",
+            "sha256": "f26fcb81b5d1dc32c6edea34645c75b60d259916293d3208c8be48ac33e882e4"
+          },
+          {
+            "id": "@deepseek-ai/cordis",
+            "version": "4.0.2",
+            "sha256": "1729cdbf8ee40b17c8839e06bf96491490548559e11ef7e411271e0754e751c5"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-store",
+            "version": "0.1.5-rc.2",
+            "sha256": "7272e501f184fdee890b7a04646a6d8b38a09e3d5c6599687c79eb9d87063e3f"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-slots",
+            "version": "0.1.5-rc.2",
+            "sha256": "5433ef2cb74699a59000052c4b1899808c83544f45ba6176f297efc68414c588"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-primitives",
+            "version": "0.1.5-rc.2",
+            "sha256": "cd55c03145232b49894dc7d9719b66ded954c4f0ae6ac70f3df759cdf7c36804"
+          },
+          {
+            "id": "@deepseek-ai/dsh-client-ui-dockkit",
+            "version": "0.1.5-rc.2",
+            "sha256": "43a329d4e917e536d6f1268d513d5b0a08b93d3ddd85749851e30bd13cb8ec06"
+          }
+        ]
+      },
+      "bundleDigest": "a48d6a6821c46c906420291fa7a13752f1558c4ce76f69d9c9afde2fa370e45e",
+      "exactDshPackages": 235,
+      "runtimePackages": {
+        "@deepseek-ai/dsh-agent": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-agent-loop": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-tools": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-subagent": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-subagent-spawn-in-process": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-subagent-in-process-driver": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-llm-pi-ai": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-api-gateway": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-api-session-controller": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-api-remotes": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-session-query": "0.1.5-rc.2",
+        "@deepseek-ai/dsh-client-connection": "0.1.5-rc.2"
+      },
+      "syntheticOnly": true,
+      "realProviderDispatches": 0,
+      "productionEntryEnabled": false,
+      "freshProcesses": 1,
+      "pid": 31651,
+      "scenarios": [
+        {
+          "scenario": "success",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "plain",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "unread",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "bad-reference",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "forbidden",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "recursive",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "run-code",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "http-error",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "request-budget",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "pre-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "publication-cancel",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "read-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "capture-substitution",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "local-tool",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "route-change",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "parent-dispose",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "concurrent-admission",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "provider-changed",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "disabled",
+          "syntheticOnly": true,
+          "disabled": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistent-composition",
+          "syntheticOnly": true,
+          "rejectedBeforeDispatch": true,
+          "mockDispatches": 0,
+          "passed": true
+        },
+        {
+          "scenario": "persistence-after-grant",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "oversized-result",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-missing",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-unavailable",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-never",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-stale",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-pending",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-revoke-running",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-timeout",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-intercepted",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "approval-provider-change",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "prompt-isolation",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "context-injection",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-before-start",
+          "syntheticOnly": true,
+          "mockDispatches": 0,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "grant-revoked-running",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-disposal-failure",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "approval-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-allow",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-reject",
+          "syntheticOnly": true,
+          "mockDispatches": 2,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-auth",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-cross-session",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-replay",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-stale-revision",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-revoke",
+          "syntheticOnly": true,
+          "mockDispatches": 3,
+          "childMockDispatches": 1,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-epoch",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-owner-disposed",
+          "syntheticOnly": true,
+          "mockDispatches": 1,
+          "childMockDispatches": 0,
+          "children": 0,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [],
+          "passed": true
+        },
+        {
+          "scenario": "transport-body",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-binding",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "transport-lost-response",
+          "syntheticOnly": true,
+          "mockDispatches": 4,
+          "childMockDispatches": 2,
+          "children": 1,
+          "lifecyclePaired": true,
+          "childQuiescent": true,
+          "forbiddenEffects": 0,
+          "systemRepresentations": [
+            "history"
+          ],
+          "passed": true
+        },
+        {
+          "scenario": "conversation-allow",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-reject",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 0,
+          "childMockDispatches": 0,
+          "mockDispatches": 2,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-revoke",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 1,
+          "mockDispatches": 3,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-admission",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "ephemeralWorkspaceCatalog": true,
+          "parents": 1,
+          "children": 1,
+          "childMockDispatches": 2,
+          "mockDispatches": 4,
+          "realProviderDispatches": 0,
+          "childQuiescent": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-source-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        },
+        {
+          "scenario": "conversation-prompt-failure",
+          "syntheticOnly": true,
+          "actualGateway": true,
+          "actualSessionController": true,
+          "realProviderDispatches": 0,
+          "failedBeforeDispatch": true,
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

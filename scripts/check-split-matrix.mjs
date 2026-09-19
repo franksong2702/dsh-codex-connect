@@ -12,12 +12,12 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { SPLIT_HOST_SCENARIOS } from './split-host-fixture.mjs'
 import { SPLIT_CONVERSATION_SCENARIOS } from './split-conversation-fixture.mjs'
-import { assertSplitBrowserReport, SPLIT_BROWSER_ROOTS, splitBrowserSeedsFor } from './split-browser-contract.mjs'
+import { assertSplitBrowserReport, SPLIT_BROWSER_ROOTS, SPLIT_BROWSER_VENDOR_DEPENDENCIES, splitBrowserSeedsFor } from './split-browser-contract.mjs'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = value => createHash('sha256').update(value).digest('hex')
 /** Published client bundles expect a renderer supplied by the browser shell. Pin that shell's
  * React pair from the frozen development install, then install it inside each disposable host. */
-export async function splitBrowserReactDependencies(root = ROOT) {
+export async function splitBrowserShellDependencies(root = ROOT) {
   const require = createRequire(join(root, 'package.json'))
   const dependencies = {}
   for (const name of ['react', 'react-dom']) {
@@ -27,7 +27,8 @@ export async function splitBrowserReactDependencies(root = ROOT) {
     dependencies[name] = manifest.version
   }
   assert.equal(dependencies.react, dependencies['react-dom'], 'browser shell requires a matching React pair')
-  return dependencies
+  // The RC shared libraries omit third-party package edges supplied by their browser shell.
+  return { ...dependencies, ...SPLIT_BROWSER_VENDOR_DEPENDENCIES }
 }
 export const SPLIT_RUNTIME_PACKAGES = Object.freeze(['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process', '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-api-session-controller', '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-session-query', '@deepseek-ai/dsh-client-connection'])
 export function validateSplitMatrix(reports, versions, { browser = false } = {}) {
@@ -100,7 +101,7 @@ async function main() {
       assert.equal(typeof piRange, 'string')
       manifest.dependencies['@earendil-works/pi-ai'] = piRange
       manifest.dependencies.undici = pkg.dependencies.undici
-      if (browser) Object.assign(manifest.dependencies, await splitBrowserReactDependencies())
+      if (browser) Object.assign(manifest.dependencies, await splitBrowserShellDependencies())
       process.stderr.write(`Resolved ${Object.keys(overrides).length} exact DSH packages; installing ${version}\n`)
       await writeFile(join(host, 'package.json'), JSON.stringify(manifest))
       const env = { ...scrubCanaryEnvironment(process.env), HOME: join(host, 'home'), DSH_HOME: join(host, 'synthetic-home'),
