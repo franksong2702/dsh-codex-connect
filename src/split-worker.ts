@@ -230,7 +230,9 @@ export function attachApprovedSplitWorker(ctx: Context, parent: Agent, task: App
         scope.closed = true
         clearTimeout(timeout)
         try { await run?.dispose() } catch { cleanupFailed = true; fail('SPLIT_DISPOSAL_FAILED') } finally {
-          quiescent = child === undefined || ctx.agents.get(child.id) === undefined
+          // Registry removal alone is not proof of successful disposal. Retain the
+          // admission slot and closed-scope guards after any cleanup failure.
+          quiescent = !cleanupFailed && (child === undefined || ctx.agents.get(child.id) === undefined)
           if (quiescent) {
             releaseCreated(); releaseStream(); releaseParentListener()
             activeParents.delete(parent)

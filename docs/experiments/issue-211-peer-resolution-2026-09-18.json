@@ -1,0 +1,837 @@
+{
+  "schemaVersion": 1,
+  "node": "v22.22.3",
+  "providerRequests": 0,
+  "evidence": [
+    {
+      "invocation": "host-plugin-exec",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1190,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/.plugin-manager/logs/operation-gUXXQt/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "direct-plugin-cli",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1008,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "traced-host-plugin-exec",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1709,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [
+        {
+          "stage": "startup",
+          "argvTail": [
+            "plugin",
+            "--profile",
+            "web",
+            "exec",
+            "dsh-codex-connect",
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "startup",
+          "argvTail": [
+            "exec",
+            "dsh-codex-connect",
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "startup",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "plugin-entry",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "urlMatchesArgv": false,
+          "urlMatchesRealArgv": true
+        }
+      ],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/.plugin-manager/logs/operation-8nWF7g/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "traced-direct-plugin-cli",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1233,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [
+        {
+          "stage": "startup",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "preserveSymlinks": false,
+          "execFlags": []
+        },
+        {
+          "stage": "plugin-entry",
+          "argvTail": [
+            "doctor",
+            "--json"
+          ],
+          "urlMatchesArgv": true,
+          "urlMatchesRealArgv": true
+        }
+      ],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "host-plugin-exec-with-separator",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1190,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/schemastery' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/.plugin-manager/logs/operation-R2GnzD/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "control-host-exec-after-schemastery-link",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 0,
+      "stderrBytes": 1194,
+      "stdoutLines": 0,
+      "singleDoctorJson": false,
+      "credentialMissing": false,
+      "compatibility": null,
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "node:internal/modules/package_json_reader:314\nthrow new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);\n^\n\nError [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/dsh-util-values' imported from /private<temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/node_modules/dsh-codex-connect/lib/src-B2ExizRo.js\nat Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)\nat packageResolve (node:internal/modules/esm/resolve:768:81)\nat moduleResolve (node:internal/modules/esm/resolve:855:18)\nat defaultResolve (node:internal/modules/esm/resolve:985:11)\nat #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)\nat ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)\nat ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)\nat ModuleJob._link (node:internal/modules/esm/module_job:182:49) {\ncode: 'ERR_MODULE_NOT_FOUND'\n}\n\nNode.js v22.22.3\ndsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/.plugin-manager/logs/operation-89Xo0c/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    },
+    {
+      "invocation": "control-host-exec-after-peer-links",
+      "exitCode": 1,
+      "signal": null,
+      "stdoutBytes": 1294,
+      "stderrBytes": 182,
+      "stdoutLines": 1,
+      "singleDoctorJson": true,
+      "credentialMissing": true,
+      "compatibility": "unverified",
+      "helpOutput": false,
+      "traces": [],
+      "stderrSummary": "dsh: pnpm failed; diagnostics: <temporary-directory>/dsh-codex-connect-install-uhoJOr/dsh-home/profiles/web/.plugin-manager/logs/operation-e0moAP/pnpm.log\n",
+      "missingExport": null,
+      "executionError": null
+    }
+  ],
+  "dshVersion": "0.1.6-alpha.2",
+  "pluginArtifactSha256": "08c8e37e31072fc9f9c94ecead174ff05eb392ae34cc721616a0c784b5a28841",
+  "ownCliBytesVerified": true,
+  "declaredPeerResolutionBefore": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-atomic-write",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-primitives",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-tool",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-commands",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-invariants",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-settings",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-values",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/dsh-web",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@deepseek-ai/schemastery",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    },
+    {
+      "name": "react",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    }
+  ],
+  "singlePeerControl": {
+    "name": "@deepseek-ai/schemastery",
+    "version": "3.18.2",
+    "outcome": "exposed-from-exact-host"
+  },
+  "remainingPeerControls": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "version": "4.0.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-atomic-write",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-primitives",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-tool",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-commands",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-invariants",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-settings",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-values",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@deepseek-ai/dsh-web",
+      "version": "0.1.6-alpha.2",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "version": "0.85.1",
+      "outcome": "exposed-from-exact-host"
+    },
+    {
+      "name": "react",
+      "outcome": "host-package-absent"
+    }
+  ],
+  "declaredPeerResolutionAfter": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-atomic-write",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-primitives",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-tool",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-commands",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-invariants",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-settings",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-values",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/dsh-web",
+      "resolved": true
+    },
+    {
+      "name": "@deepseek-ai/schemastery",
+      "resolved": true
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "resolved": true
+    },
+    {
+      "name": "react",
+      "resolved": false,
+      "code": "ERR_MODULE_NOT_FOUND"
+    }
+  ],
+  "controlRuntime": {
+    "exitCode": 0,
+    "report": {
+      "schemaVersion": 1,
+      "provider": "openai-codex",
+      "modelCount": 8,
+      "reasoningModelCount": 8,
+      "preparedModelCount": 8,
+      "disposalVerified": true,
+      "reserveTransitionsVerified": true,
+      "nativeCompactionLifecycle": {
+        "syntheticOnly": true,
+        "freshProcesses": 10,
+        "encodings": [
+          "none",
+          "zstd"
+        ],
+        "phases": [
+          "write",
+          "resume-fork",
+          "verify-child",
+          "failure-paths",
+          "automatic"
+        ],
+        "reports": [
+          {
+            "phase": "write",
+            "realTransaction": true,
+            "physicalCheckpoint": true,
+            "checkpointEstimatedTokens": 228,
+            "shadowedEstimatedTokens": 7792,
+            "compression": "none",
+            "pid": 23262
+          },
+          {
+            "phase": "resume-fork",
+            "resumedWithCreationDisabled": true,
+            "toolRoundTrip": true,
+            "reasoningReplay": true,
+            "forkPersisted": true,
+            "parentChildIsolated": true,
+            "compression": "none",
+            "pid": 23263
+          },
+          {
+            "phase": "verify-child",
+            "childResumed": true,
+            "childToolRoundTrip": true,
+            "parentUnchanged": true,
+            "compression": "none",
+            "pid": 23264
+          },
+          {
+            "phase": "failure-paths",
+            "fallbackAndCancellationVerified": true,
+            "cases": [
+              "http-reject",
+              "truncated",
+              "empty-native",
+              "incomplete-terminal",
+              "oversized-checkpoint",
+              "oversized-stream",
+              "caller-cancel"
+            ],
+            "compression": "none",
+            "pid": 23265
+          },
+          {
+            "phase": "automatic",
+            "syntheticOnly": true,
+            "scenarios": [
+              {
+                "scenario": "pressure",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 1,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 1,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "below-threshold",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 1100
+              },
+              {
+                "scenario": "auto-disabled",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 1,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "other-error",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [
+                  "INVALID_REQUEST"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow-bounded",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 1,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED",
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow-no-progress",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 0,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "repeated-pressure",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 2,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 2,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "unshrinkable-tail",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 1,
+                "ordinaryRequests": 2,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 13841
+              }
+            ],
+            "compression": "none",
+            "pid": 23266
+          },
+          {
+            "phase": "write",
+            "realTransaction": true,
+            "physicalCheckpoint": true,
+            "checkpointEstimatedTokens": 228,
+            "shadowedEstimatedTokens": 7792,
+            "compression": "zstd",
+            "pid": 23267
+          },
+          {
+            "phase": "resume-fork",
+            "resumedWithCreationDisabled": true,
+            "toolRoundTrip": true,
+            "reasoningReplay": true,
+            "forkPersisted": true,
+            "parentChildIsolated": true,
+            "compression": "zstd",
+            "pid": 23269
+          },
+          {
+            "phase": "verify-child",
+            "childResumed": true,
+            "childToolRoundTrip": true,
+            "parentUnchanged": true,
+            "compression": "zstd",
+            "pid": 23272
+          },
+          {
+            "phase": "failure-paths",
+            "fallbackAndCancellationVerified": true,
+            "cases": [
+              "http-reject",
+              "truncated",
+              "empty-native",
+              "incomplete-terminal",
+              "oversized-checkpoint",
+              "oversized-stream",
+              "caller-cancel"
+            ],
+            "compression": "zstd",
+            "pid": 23273
+          },
+          {
+            "phase": "automatic",
+            "syntheticOnly": true,
+            "scenarios": [
+              {
+                "scenario": "pressure",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 1,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 1,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "below-threshold",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 1100
+              },
+              {
+                "scenario": "auto-disabled",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 1,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "other-error",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 0,
+                "ordinaryRequests": 3,
+                "surfaceReplacements": 0,
+                "failureCodes": [
+                  "INVALID_REQUEST"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow-bounded",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 1,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED",
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "overflow-no-progress",
+                "syntheticOnly": true,
+                "trigger": "agent/request-error",
+                "nativeRequests": 1,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 0,
+                "failureCodes": [
+                  "CONTEXT_WINDOW_EXCEEDED"
+                ],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "repeated-pressure",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 2,
+                "ordinaryRequests": 4,
+                "surfaceReplacements": 2,
+                "failureCodes": [],
+                "measuredTokensBefore": 9266
+              },
+              {
+                "scenario": "unshrinkable-tail",
+                "syntheticOnly": true,
+                "trigger": "agent/pre-step",
+                "nativeRequests": 1,
+                "ordinaryRequests": 2,
+                "surfaceReplacements": 0,
+                "failureCodes": [],
+                "measuredTokensBefore": 13841
+              }
+            ],
+            "compression": "zstd",
+            "pid": 23280
+          }
+        ]
+      },
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "codeRuns": 1,
+        "dispatchEvent": "tool/ptc-dispatch",
+        "originalDownloadVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "realProviderRequests": 0
+      }
+    }
+  }
+}

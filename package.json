@@ -2,7 +2,7 @@
   "name": "dsh-codex-connect",
   "displayName": "Codex Connect",
   "description": "ChatGPT OAuth and Codex models for DeepSeek Harness.",
-  "version": "0.1.0-alpha.4.35",
+  "version": "0.1.0-alpha.4.36",
   "author": "Frank Song",
   "contributors": [
     "Yan-Zero (original dsh-codex author)"
@@ -211,7 +211,7 @@
     "@deepseek-ai/schemastery": "3.18.2",
     "@earendil-works/pi-ai": "0.84.4",
     "@testing-library/react": "^16.3.2",
-    "@tsdown/css": "0.22.14",
+    "@tsdown/css": "0.23.0",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.1",
@@ -219,10 +219,10 @@
     "eslint": "^10.10.0",
     "jsdom": "29.1.1",
     "pi-ai-oauth-source": "npm:@earendil-works/pi-ai@0.84.4",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tsdown": "^0.22.2",
+    "tsdown": "^0.23.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.69.0",
     "vitest": "^4.1.8"

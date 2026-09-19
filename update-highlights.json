@@ -112,6 +112,10 @@
     {
       "version": "0.1.0-alpha.4.35",
       "highlights": ["luna-reserve"]
+    },
+    {
+      "version": "0.1.0-alpha.4.36",
+      "highlights": ["image-generation"]
     }
   ]
 }

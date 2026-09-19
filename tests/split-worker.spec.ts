@@ -14,6 +14,7 @@ import Agents from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import Loop from '@deepseek-ai/dsh-agent-loop'
 import Subagents from '@deepseek-ai/dsh-subagent'
+import type { SubagentRun } from '@deepseek-ai/dsh-subagent'
 import * as Spawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import { afterEach, expect, it, vi } from 'vitest'
 import { createOpenAICodexAdapter } from '../src/adapter.ts'
@@ -37,7 +38,7 @@ function response(item: Record<string, unknown>): Response {
 const call = (name: string, args: unknown) => response({ type: 'function_call', id: 'fc_split', call_id: `call_${name}`, name, arguments: JSON.stringify(args), status: 'completed' })
 const answer = (text: string) => response({ type: 'message', id: 'msg_split', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] })
 type Scenario = 'success' | 'plain' | 'unobserved' | 'forbidden' | 'repeat' | 'http-error' | 'wait' | 'oversized-result' | 'recursive' | 'run-code' | 'too-many-findings' | 'empty-unread'
-async function fixture(scenario: Scenario = 'success', options: { maximumRequests?: number; timeoutMs?: number; enabled?: boolean } = {}) {
+async function fixture(scenario: Scenario = 'success', options: { maximumRequests?: number; timeoutMs?: number; enabled?: boolean; wrapRun?: (run: SubagentRun) => SubagentRun } = {}) {
   root = await mkdtemp(join(tmpdir(), 'split-worker-test-'))
   vi.stubEnv('DSH_HOME', join(root, 'synthetic-home'))
   vi.stubEnv('OTEL_SDK_DISABLED', 'true')
@@ -78,7 +79,7 @@ async function fixture(scenario: Scenario = 'success', options: { maximumRequest
     if (scenario === 'run-code') return call('run_code', { code: 'fixture only' })
     if (scenario === 'unobserved') return call(SPLIT_RESULT_TOOL, findings)
     if (scenario === 'empty-unread') return call(SPLIT_RESULT_TOOL, { summary: 'No issues found without inspecting.', findings: [], limitations: [] })
-    if (childWires.length === 1 || scenario === 'repeat') return call(SPLIT_READ_TOOL, { path: 'src/example.ts', startLine: 1, endLine: 1 })
+    if (!JSON.stringify(body.input).includes(content.trim()) || scenario === 'repeat') return call(SPLIT_READ_TOOL, { path: 'src/example.ts', startLine: 1, endLine: 1 })
     expect(JSON.stringify(body.input)).toContain('export const answer = 42')
     if (scenario === 'oversized-result') return call(SPLIT_RESULT_TOOL, { ...findings, summary: 'x'.repeat(16_001) })
     if (scenario === 'too-many-findings') return call(SPLIT_RESULT_TOOL, { ...findings, findings: Array.from({ length: 11 }, () => findings.findings[0]) })
@@ -96,15 +97,23 @@ async function fixture(scenario: Scenario = 'success', options: { maximumRequest
   ctx.tools.register({ name: 'fixture_write', description: 'Synthetic effect', parameters: { type: 'object', properties: {} }, output: { schema: { type: 'string' }, render: (_a, value) => [{ type: 'text', text: String(value) }] }, execute: write })
   const parentHandle = await ctx.agents.create({ sessionId: SessionId('split-real-parent'), agentOptions: { provider: 'openai-codex', model: SPLIT_MODEL, reasoningEffort: ReasoningEffortId('low') } })
   const provider = ctx.subagents.getProvider('split-fixture-spawn')!
+  const { wrapRun, ...workerOptions } = options
+  if (wrapRun !== undefined) {
+    const start = provider.start
+    provider.start = async request => wrapRun(await start.call(provider, request))
+  }
   const lifecycle: string[] = []
   const children: Agent[] = []
   ctx.on('subagent/start', () => { lifecycle.push('start') })
   ctx.on('subagent/end', () => { lifecycle.push('end') })
   ctx.on('agent/created', ({ agent }) => { if (agent.id !== parentHandle.agent.id) children.push(agent) })
-  const grant = { enabled: options.enabled ?? true, brief: 'Inspect the approved example and cite the source.', evidence, provider, ...options }
-  attachApprovedSplitWorker(ctx, parentHandle.agent, grant)
+  const grant = { enabled: options.enabled ?? true, brief: 'Inspect the approved example and cite the source.', evidence, provider, ...workerOptions }
+  const handle = attachApprovedSplitWorker(ctx, parentHandle.agent, grant)
+  const freshGrant = async (parent = parentHandle.agent) => attachApprovedSplitWorker(ctx!, parent, {
+    ...grant, evidence: await snapshotSplitEvidence(root!, [{ path: 'src/example.ts', sha256 }], new AbortController().signal),
+  })
   const execute = (signal = new AbortController().signal) => ctx!.tools.execute({ callId: ToolCallId('split-inspection'), name: SPLIT_INSPECT_TOOL, arguments: {}, agent: parentHandle.agent, signal })
-  return { context: ctx, parent: parentHandle.agent, parentHandle, grant, execute, wires, childWires, write, lifecycle, children }
+  return { context: ctx, parent: parentHandle.agent, parentHandle, grant, handle, freshGrant, execute, wires, childWires, write, lifecycle, children }
 }
 afterEach(async () => {
   try { await ctx?.fiber.dispose() } finally {
@@ -222,4 +231,60 @@ it('consumes a grant only once and rejects an overlapping call', async () => {
   expect((await first).isError).toBe(true)
   expect(JSON.stringify(await f.execute())).toContain('SPLIT_APPROVAL_CONSUMED')
   expect(f.childWires).toHaveLength(1)
+})
+
+it.each(['before-removal', 'after-removal'] as const)('quarantines the parent after disposal fails %s, including fresh grants', async mode => {
+  const runs: SubagentRun[] = []
+  const f = await fixture('success', { wrapRun(run) {
+    runs.push(run)
+    return { ...run, async dispose() {
+      if (mode === 'after-removal') await run.dispose()
+      throw new Error('Synthetic disposal failure')
+    } }
+  } })
+  try {
+    const first = await f.execute()
+    expect(first.isError).toBe(true)
+    expect(JSON.stringify(first)).toContain('SPLIT_DISPOSAL_FAILED')
+    expect(f.context.agents.get(f.children[0]!.id) === undefined).toBe(mode === 'after-removal')
+    f.handle() // Withdraw the old tool before attaching a separately approved grant.
+    const replacement = await f.freshGrant()
+    try {
+      expect(JSON.stringify(await f.execute())).toContain('SPLIT_PARENT_BUSY')
+      expect(f.children).toHaveLength(1)
+      expect(f.childWires).toHaveLength(2)
+    } finally { await replacement.revoke() }
+    const revoked = f.handle.revoke()
+    expect(f.handle.revoke()).toBe(revoked)
+    await expect(revoked).rejects.toThrow('SPLIT_DISPOSAL_FAILED')
+    // Parent tools remain usable; only new Split admission is quarantined.
+    expect((await f.context.tools.execute({ callId: ToolCallId('parent-still-live'), name: 'fixture_write', arguments: {}, agent: f.parent, signal: new AbortController().signal })).isError).toBe(false)
+    expect(f.write).toHaveBeenCalledTimes(1)
+  } finally { for (const run of runs) await run.dispose() }
+})
+
+it('keeps the slot while disposal is pending, then releases it only after confirmed cleanup', async () => {
+  const entered = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  let disposals = 0
+  const f = await fixture('success', { wrapRun: run => ({ ...run, async dispose() {
+    await run.dispose()
+    if (++disposals === 1) { entered.resolve(); await release.promise }
+  } }) })
+  const first = f.execute()
+  let replacement: Awaited<ReturnType<typeof f.freshGrant>> | undefined
+  try {
+    await entered.promise
+    expect(f.context.agents.get(f.children[0]!.id)).toBeUndefined()
+    expect(JSON.stringify(await f.execute())).toContain('SPLIT_PARENT_BUSY')
+    expect(f.children).toHaveLength(1)
+    release.resolve()
+    expect((await first).isError).toBe(false)
+    await f.handle.revoke()
+    replacement = await f.freshGrant()
+    // This is a new explicit call using a separately authorized grant.
+    expect((await f.execute()).isError).toBe(false)
+    expect(f.children).toHaveLength(2)
+    expect(f.childWires).toHaveLength(4)
+  } finally { release.resolve(); await first; await replacement?.revoke() }
 })

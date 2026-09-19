@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 import { createRequire } from 'node:module'
+import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { checkInstalledReserve } from './check-installed-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
+import { checkInstalledImages } from './check-installed-images.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const PROVIDER_ID = 'openai-codex'
@@ -92,6 +94,8 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
 
     const reserveTransitionsVerified = await checkInstalledReserve(specifier => importFromProfile(hostPath, specifier), OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
+    const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
+    const images = await checkInstalledImages(specifier => importFromProfile(hostPath, specifier), OpenAICodex, toolsManifest)
 
     return {
       schemaVersion: JSON_SCHEMA_VERSION,
@@ -101,6 +105,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       disposalVerified: true,
       reserveTransitionsVerified,
       nativeCompactionLifecycle,
+      images,
     }
   } finally {
     await ctx.fiber.dispose()

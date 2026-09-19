@@ -15,6 +15,7 @@ import SubagentRuntime, {
   resolveChildAgentOptions,
   resolveChildDepth,
 } from '@deepseek-ai/dsh-subagent'
+import type { SubagentCapabilities, SubagentStartRequest } from '@deepseek-ai/dsh-subagent'
 import { afterEach, expect, it, vi } from 'vitest'
 
 let ctx: Context | undefined
@@ -105,6 +106,43 @@ it('denies child-local tools at execution with a monotonic guard', async () => {
   expect(local).not.toHaveBeenCalled()
 })
 
+it('documents that a name-only guard still accepts a substituted child-local read', async () => {
+  const { context, parent, child, read } = await fixture()
+  const substitute = vi.fn(async () => 'synthetic substituted implementation')
+  child.ctx.tools.register(tool(readName, substitute))
+  expect((await execute(context, child, readName)).isError).toBe(false)
+  expect(substitute).toHaveBeenCalledTimes(1)
+  expect(read).not.toHaveBeenCalled()
+  expect((await execute(context, parent, readName)).isError).toBe(false)
+  expect(read).toHaveBeenCalledTimes(1)
+})
+
+it('denies a substituted read when the guard pins the approved definition, not just its name', async () => {
+  const { context, child, read } = await fixture()
+  const approved = context.tools.get(readName, child)
+  expect(approved).toBeDefined()
+  child.ctx.tools.guard(exec => context.tools.get(exec.name, exec.agent) === approved
+    ? undefined : 'SPLIT_IMPLEMENTATION_CHANGED')
+  expect((await execute(context, child, readName)).isError).toBe(false)
+  const substitute = vi.fn(async () => 'must not execute')
+  child.ctx.tools.register(tool(readName, substitute))
+  expect((await execute(context, child, readName)).isError).toBe(true)
+  expect(substitute).not.toHaveBeenCalled()
+  expect(read).toHaveBeenCalledTimes(1)
+})
+
+it.each([true, false])('keeps a read denial with an additional non-denying guard (denial first: %s)', async denyFirst => {
+  const { context, parent, child, read } = await fixture()
+  const deny = () => 'SPLIT_REVIEW_DENIED'
+  const unchanged = () => undefined
+  child.ctx.tools.guard(denyFirst ? deny : unchanged)
+  child.ctx.tools.guard(denyFirst ? unchanged : deny)
+  expect((await execute(context, child, readName)).isError).toBe(true)
+  expect(read).not.toHaveBeenCalled()
+  expect((await execute(context, parent, readName)).isError).toBe(false)
+  expect(read).toHaveBeenCalledTimes(1)
+})
+
 it('does not turn a cancelled read into an executed read', async () => {
   const { context, child, read } = await fixture()
   const controller = new AbortController()
@@ -122,17 +160,53 @@ it('stamps lineage/depth and rejects grandchildren at the same depth cap', async
   expect(() => resolveChildDepth(child, 1)).toThrow()
 })
 
-it('rejects unsupported tool-filter capability before a provider can start', async () => {
+const capabilityCases = [
+  { capability: 'agentOptions', option: { agentOptions: { model: 'gpt-5.6-luna' } } },
+  { capability: 'outputSchema', option: { outputSchema: { type: 'object', properties: {} } } },
+  { capability: 'depthLimit', option: { maxDepth: 1 } },
+  { capability: 'toolFilter', option: { toolFilter: { allow: [readName] } } },
+  { capability: 'persona', option: { persona: 'Inspect only the approved evidence.' } },
+] satisfies { capability: keyof SubagentCapabilities; option: Partial<SubagentStartRequest> }[]
+
+it.each(capabilityCases)('rejects unsupported $capability before a provider can start', async ({ capability, option }) => {
   const { context, parent } = await fixture()
   const start = vi.fn(async () => { throw new Error('must not dispatch') })
   context.subagents.registerProvider({
     name: 'split-unsupported', inheritsParentContext: false,
-    capabilities: { agentOptions: false, outputSchema: false, depthLimit: false, toolFilter: false, persona: false },
+    capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true, [capability]: false },
     start,
   })
   await expect(context.subagents.start('split-unsupported', {
     parent, prompt: [{ type: 'text', text: 'Inspect only.' }], signal: new AbortController().signal,
-    toolFilter: { allow: [readName] },
+    ...option,
+  })).rejects.toMatchObject({ code: 'UNSUPPORTED_CAPABILITY' })
+  expect(start).not.toHaveBeenCalled()
+})
+
+it('rejects a missing provider without falling back to another registered provider', async () => {
+  const { context, parent } = await fixture()
+  const start = vi.fn(async () => { throw new Error('must not substitute another provider') })
+  context.subagents.registerProvider({
+    name: 'split-other', inheritsParentContext: false,
+    capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true },
+    start,
+  })
+  await expect(context.subagents.start('split-missing', {
+    parent, prompt: [{ type: 'text', text: 'Inspect only.' }], signal: new AbortController().signal,
+  })).rejects.toMatchObject({ code: 'NO_PROVIDER' })
+  expect(start).not.toHaveBeenCalled()
+})
+
+it.each([-1, 0.5, Number.MAX_SAFE_INTEGER + 1])('rejects invalid depth %s before provider start', async maxDepth => {
+  const { context, parent } = await fixture()
+  const start = vi.fn(async () => { throw new Error('must not dispatch') })
+  context.subagents.registerProvider({
+    name: 'split-invalid-depth', inheritsParentContext: false,
+    capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true },
+    start,
+  })
+  await expect(context.subagents.start('split-invalid-depth', {
+    parent, prompt: [{ type: 'text', text: 'Inspect only.' }], signal: new AbortController().signal, maxDepth,
   })).rejects.toThrow()
   expect(start).not.toHaveBeenCalled()
 })

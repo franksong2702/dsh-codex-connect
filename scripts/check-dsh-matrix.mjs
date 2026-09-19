@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
+import { sanitizeSummary } from './check-dsh-next.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -15,10 +16,19 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
   }
   for (const [index, report] of reports.entries()) {
     if (report?.schemaVersion !== 1 || report.dshVersion !== versions[index]
+      || report.hostPackageCandidate !== undefined
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
       || report.runtime?.reserveTransitionsVerified !== true
+      || report.runtime?.images?.syntheticOnly !== true
+      || report.runtime.images.generated !== 2 || report.runtime.images.codeRuns !== 1
+      || !['tool/code-dispatch', 'tool/ptc-dispatch'].includes(report.runtime.images.dispatchEvent)
+      || report.runtime.images.originalDownloadVerified !== true
+      || report.runtime.images.inheritedOriginalVerified !== true
+      || report.runtime.images.earlierForkDenied !== true
+      || report.runtime.images.unrelatedSessionDenied !== true
+      || report.runtime.images.realProviderRequests !== 0
       || report.runtime?.nativeCompactionLifecycle?.syntheticOnly !== true
       || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 10
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'
@@ -36,6 +46,16 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
   }
 }
 
+/** Keep the keyless child check's bounded, redacted stderr instead of losing its cause. */
+export function matrixFailureMessage(version, result) {
+  const status = Number.isSafeInteger(result.status) ? result.status : 'unknown'
+  const code = typeof result.error?.code === 'string' && /^[A-Z0-9_]{1,64}$/u.test(result.error.code)
+    ? result.error.code : 'unclassified'
+  const detail = sanitizeSummary(typeof result.stderr === 'string' ? result.stderr : '')
+  return `DSH ${version} isolated check failed (exit=${status}${result.error === undefined ? '' : `; error=${code}`}${result.cleanupError === undefined ? '' : '; cleanup=failed'})`
+    + (detail === '' ? '; no child stderr retained' : `:\n${detail}`)
+}
+
 async function main() {
   const compatibility = JSON.parse(await readFile(join(ROOT, 'compatibility.json'), 'utf8'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
@@ -49,7 +69,7 @@ async function main() {
       cwd: ROOT, env, timeoutMs: 25 * 60 * 1000,
     })
     if (result.error !== undefined || result.status !== 0) {
-      throw new Error(`DSH ${version} isolated check failed; rerun check:dsh-install for the bounded diagnostic`)
+      throw new Error(matrixFailureMessage(version, result))
     }
     reports.push(JSON.parse(result.stdout.trim()))
   }

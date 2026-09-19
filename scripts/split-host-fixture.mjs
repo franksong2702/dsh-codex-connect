@@ -248,6 +248,16 @@ export async function runSplitHostScenario(scenario, { root, implementation, imp
       if (scenario === 'approval-disposal-failure') {
         await assert.rejects(() => consent.revoke(), /SPLIT_REVOCATION_FAILED/u)
         assert.equal(consent.getSnapshot().phase, 'failed', 'removed child does not erase disposal failure')
+        // A new grant is not evidence that the previous run was cleaned up.
+        const nextEvidence = await snapshotSplitEvidence(workspace, [{ path: 'src/example.ts', sha256 }], new AbortController().signal)
+        const nextGrant = attachApprovedSplitWorker(ctx, parent, { ...task, evidence: nextEvidence })
+        const next = await execute()
+        // Collect cleanup first so a teardown error cannot hide the admission assertion.
+        const cleanup = await Promise.allSettled([nextGrant.revoke()])
+        assert.equal(children.length, 1, 'no replacement child may be started after failed disposal')
+        assert.match(JSON.stringify(next), /SPLIT_PARENT_BUSY/u, 'disposal failure must quarantine the parent even after registry removal')
+        assert.equal(childWires.length, 2, 'no replacement provider request may be sent')
+        assert.equal(cleanup[0].status, 'fulfilled')
       } else await consent.revoke()
     } else if (scenario === 'grant-revoked-before-start') {
       const saved = ctx.tools.get(SPLIT_INSPECT_TOOL, parent)

@@ -92,6 +92,20 @@ describe('Auto-review approval answerer', () => {
     await expect(answerer.answer(target.request('call-4', 1), async () => 'unavailable')).resolves.toBe('unavailable')
   })
 
+  it('scopes a denial to dependent work without granting a retry or new authority', async () => {
+    const target = fixture()
+    const answerer = new OpenAICodexAutoReviewAnswerer(backend(deny))
+    await expect(answerer.answer(target.request('denied-call', 1), async () => 'unavailable')).resolves.toBe('rejected')
+    const guidance = JSON.stringify(target.injected)
+    expect(guidance).toContain('Do not attempt the same outcome through a workaround')
+    expect(guidance).toContain('continue independent, already-authorized work')
+    expect(guidance).toContain('higher-priority restrictions')
+    expect(guidance).toContain('/approve ')
+    expect(target.followups).toHaveLength(0)
+    expect(target.cancel).not.toHaveBeenCalled()
+    expect(answerer.state.consume(target.agent, resolveAutoReviewAction(target.request('unapproved-retry', 1))!)).toBe('none')
+  })
+
   it('honors a matching one-shot override even after the breaker opens', async () => {
     const target = fixture()
     let id = 0
