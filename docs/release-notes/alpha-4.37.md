@@ -1,6 +1,6 @@
-# Codex Connect 0.1.0-alpha.4.37 — draft release notes
+# Codex Connect 0.1.0-alpha.4.37 — release notes
 
-**Preparation only; not published.**
+**Published on 2026-09-19.** [GitHub prerelease](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.37); npm `alpha` points to 4.37 and `latest` remains 4.34. The [publication record](../../.github/ALPHA_437_PUBLICATION.md) verifies the immutable release commit and archive. This post-publication document update does not republish the package.
 
 ## Changes
 
