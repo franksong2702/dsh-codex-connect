@@ -5,6 +5,7 @@ import { OpenAICodexRequestAuthError, OPENAI_CODEX_REAUTH_REQUIRED_CODE } from '
 export { OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { readOpenAICodexBoundedBody } from './transport.ts'
+import { readRetryAfterMs } from './request-backoff.ts'
 
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -37,6 +38,14 @@ export class OpenAICodexReauthRequiredError extends Error {
   constructor() {
     super(OPENAI_CODEX_REAUTH_REQUIRED_MESSAGE)
     this.name = 'OpenAICodexReauthRequiredError'
+  }
+}
+
+/** Safe HTTP status and retry hint; never retains response bodies or credentials. */
+export class OpenAICodexUsageHttpError extends Error {
+  constructor(readonly status: number, readonly retryAfterMs?: number) {
+    super(`OpenAI Codex usage request failed with HTTP ${status}`)
+    this.name = 'OpenAICodexUsageHttpError'
   }
 }
 
@@ -270,7 +279,7 @@ export async function readOpenAICodexUsageResponse(
     if (response.status === 401 || response.status === 403) {
       throw new OpenAICodexReauthRequiredError()
     }
-    throw new Error(`OpenAI Codex usage request failed with HTTP ${response.status}`)
+    throw new OpenAICodexUsageHttpError(response.status, readRetryAfterMs(response.headers))
   }
   try {
     const bytes = await readOpenAICodexBoundedBody(response, OPENAI_CODEX_USAGE_MAX_BYTES)
