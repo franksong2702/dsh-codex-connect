@@ -412,6 +412,39 @@ describe('OpenAICodexQuotaState acceptance', () => {
     await h.state.dispose()
   })
 
+  it('does not let an old expiry timer abort a foreground refresh already in flight', async () => {
+    const h = setup()
+    const get = deferred<Record<string, unknown>>()
+    let fresh: ReturnType<typeof h.state.read> | undefined
+    let refreshSignal: AbortSignal | undefined
+    // Queue the foreground consumer before the cache installs its same-deadline timer.
+    setTimeout(() => {
+      fresh = h.state.read()
+      void fresh.catch(() => undefined)
+    }, 60_000)
+    try {
+      const previous = await h.state.read()
+      readResponse.mockImplementationOnce((_auth: unknown, signal: AbortSignal) => {
+        refreshSignal = signal
+        signal.addEventListener('abort', () => get.reject(new DOMException('Refresh cancelled', 'AbortError')), { once: true })
+        return get.promise
+      })
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(readResponse).toHaveBeenCalledTimes(2)
+      expect(previous.authoritySignal.aborted).toBe(true)
+      expect(refreshSignal).toBeDefined()
+      expect(refreshSignal?.aborted).toBe(false)
+      get.resolve(response('acct', 'user', 25))
+      await expect(fresh).resolves.toMatchObject({ usage: { rateLimits: [{ windows: [{ remainingPercent: 75 }] }] } })
+      expect((await h.state.read()).authoritySignal.aborted).toBe(false)
+      expect(readResponse).toHaveBeenCalledTimes(2)
+    } finally {
+      get.resolve(response())
+      await fresh?.catch(() => undefined)
+      await h.state.dispose()
+    }
+  })
+
   it('backs off repeated failures exponentially even when foreground callers keep polling', async () => {
     const h = setup(); h.setEnabled(false)
     readResponse.mockRejectedValue(new OpenAICodexUsageHttpError(503))

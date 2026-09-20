@@ -105,7 +105,9 @@ export class OpenAICodexQuotaState {
       this.timerAt = Infinity
       // Expiry still revokes stale permits even when there is no demand for another GET.
       for (const entry of this.cache.values()) {
-        if (Date.now() >= entry.refreshAt) entry.authority?.abort()
+        // A refresh revokes the old snapshot before replacing its controller.
+        // An already-due timer must not cancel that replacement request.
+        if (entry.pending === undefined && Date.now() >= entry.refreshAt) entry.authority?.abort()
       }
       // A later account snapshot must still expire after the earliest timer fires.
       const nextExpiry = Math.min(...[...this.cache.values()]
