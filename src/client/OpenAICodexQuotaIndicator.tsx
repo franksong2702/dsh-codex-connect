@@ -50,7 +50,7 @@ function isWindow(value: unknown): value is OpenAICodexRateLimitWindow {
 }
 
 function usageFromStatus(value: unknown): OpenAICodexUsage | undefined {
-  if (!isRecord(value) || value['status'] !== 'signed-in') return undefined
+  if (!isRecord(value) || value['status'] !== 'signed-in' || typeof value['quotaError'] === 'string') return undefined
   const usage = value['usage']
   if (!isRecord(usage) || !Array.isArray(usage['rateLimits'])) return undefined
   const rateLimits = usage['rateLimits']
@@ -136,9 +136,19 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
     const controller = new AbortController()
     let inFlight = false
     let disposed = false
+    let failures = 0
+    let nextAt = 0
+    let timer: number | undefined
 
+    const schedule = (): void => {
+      window.clearTimeout(timer)
+      timer = undefined
+      if (!disposed && !document.hidden && !inFlight) {
+        timer = window.setTimeout(() => { void refresh() }, Math.max(0, nextAt - Date.now()))
+      }
+    }
     const refresh = async (): Promise<void> => {
-      if (inFlight || disposed) return
+      if (inFlight || disposed || document.hidden) return
       inFlight = true
       try {
         const response = await fetch(OPENAI_CODEX_AUTH_STATUS_PATH, {
@@ -149,22 +159,27 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
         })
         const value: unknown = await response.json().catch(() => undefined)
         const usage = response.ok ? usageFromStatus(value) : undefined
+        failures = usage === undefined ? Math.min(failures + 1, 5) : 0
         if (!disposed && !controller.signal.aborted) {
           setRequest(usage === undefined ? { status: 'hidden' } : { status: 'ready', usage })
         }
       } catch {
+        failures = Math.min(failures + 1, 5)
         if (!disposed && !controller.signal.aborted) setRequest({ status: 'hidden' })
       } finally {
         inFlight = false
+        nextAt = Date.now() + Math.min(15 * 60_000, USAGE_POLL_INTERVAL_MS * 2 ** Math.max(0, failures - 1))
+        schedule()
       }
     }
 
     setRequest({ status: 'loading' })
     void refresh()
-    const timer = window.setInterval(() => { void refresh() }, USAGE_POLL_INTERVAL_MS)
+    document.addEventListener('visibilitychange', schedule)
     return () => {
       disposed = true
-      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', schedule)
+      window.clearTimeout(timer)
       controller.abort()
     }
   }, [eligible])

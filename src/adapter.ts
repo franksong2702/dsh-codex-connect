@@ -19,6 +19,7 @@ import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
+import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -151,7 +152,7 @@ function requestProvider(
     ...configured,
     streamSimple(model, context: PiContext, options?: SimpleStreamOptions) {
       const proxyUrl = resolveProxyUrl?.()
-      const operation = () => streamSimple.call(configured, model, context, options)
+      const operation = () => streamSimple.call(configured, model, context, withCodexDiagnosticFetch(options))
       return proxyManager?.runStream(proxyUrl, operation) ?? operation()
     },
     auth: {
@@ -267,7 +268,9 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
-      return streamWithNativeCompactionScope(stream, options, nativeCompactionEnabled?.() === true)
+      return streamWithCodexRequestDiagnostics(
+        next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), options,
+      )
     }
 
     override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
