@@ -104,6 +104,7 @@ const CONFIG_FIELDS = [
   'enableProxy',
   'enableReserveFallback',
   'enableNativeCompaction',
+  'enableReasoningUpdates',
   'proxyUrl',
   'enableImageTool',
   'enableImageGeneration',
@@ -776,6 +777,34 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
               <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
             </span>
           </label>
+          <div role="group" aria-labelledby={`${panelPrefix}-think-label`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={toggleRowStyle}>
+              <input type="checkbox" aria-labelledby={`${panelPrefix}-think-label`}
+                aria-describedby={`${panelPrefix}-think-help ${panelPrefix}-think-consent ${panelPrefix}-think-risk`}
+                checked={draft.enableReasoningUpdates}
+                onChange={event => { update('enableReasoningUpdates', event.currentTarget.checked) }} />
+              <span style={{ ...toggleCopyStyle, minWidth: 0 }}>
+                <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <span id={`${panelPrefix}-think-label`} style={labelStyle}>{t('enableReasoningUpdates')}</span>
+                  <span style={badgeStyle}>{t('reasoningUpdatesBadge')}</span>
+                </span>
+                <span id={`${panelPrefix}-think-help`} style={bodyStyle}>{t('enableReasoningUpdatesHelp')}</span>
+              </span>
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 26 }}>
+              <p id={`${panelPrefix}-think-consent`} style={bodyStyle}>{t('reasoningUpdatesConsent')}</p>
+              {snapshot.status === 'ready' && snapshot.value !== undefined ? <p style={bodyStyle} role="status">
+                {t(snapshot.value.enableReasoningUpdates ? 'reasoningUpdatesSavedOn' : 'reasoningUpdatesSavedOff')}
+                {draft.enableReasoningUpdates !== snapshot.value.enableReasoningUpdates
+                  ? <span style={{ marginLeft: 8 }}>{t('reasoningUpdatesPending')}</span> : null}
+              </p> : null}
+              <p id={`${panelPrefix}-think-risk`} style={bodyStyle}>{t('reasoningUpdatesRisk')}</p>
+              <details>
+                <summary style={{ ...bodyStyle, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('reasoningUpdatesDetails')}</summary>
+                <p style={{ ...bodyStyle, marginTop: 6 }}>{t('reasoningUpdatesDisableHelp')}</p>
+              </details>
+            </div>
+          </div>
           <div role="group" aria-labelledby={`${panelPrefix}-native-context-label`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={toggleRowStyle}>
               <input

@@ -112,6 +112,8 @@ export interface OpenAICodexSettingsConfig {
   enableReserveFallback: boolean
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean
+  /** Allow Astra to propose a native effort change; each change still requires a human answer. */
+  enableReasoningUpdates: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -134,6 +136,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   enableSearch: false,
   enableReserveFallback: false,
   enableNativeCompaction: false,
+  enableReasoningUpdates: false,
   enableImageTool: false,
   enableImageGeneration: false,
   imageModelHint: DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
@@ -160,6 +163,9 @@ export function resolveOpenAICodexSettings(
   }
   if (typeof resolved.enableNativeCompaction !== 'boolean') {
     throw new TypeError('OpenAI Codex enableNativeCompaction must be a boolean')
+  }
+  if (typeof resolved.enableReasoningUpdates !== 'boolean') {
+    throw new TypeError('OpenAI Codex enableReasoningUpdates must be a boolean')
   }
   if (!isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
@@ -190,6 +196,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const enableSearch = value['enableSearch']
   const enableReserveFallback = value['enableReserveFallback']
   const enableNativeCompaction = value['enableNativeCompaction']
+  const enableReasoningUpdates = value['enableReasoningUpdates']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
   const imageModelHint = value['imageModelHint']
@@ -206,6 +213,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   if (enableReserveFallback !== undefined && typeof enableReserveFallback !== 'boolean') return undefined
   if (enableNativeCompaction !== undefined && typeof enableNativeCompaction !== 'boolean') return undefined
+  if (enableReasoningUpdates !== undefined && typeof enableReasoningUpdates !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
   if (imageModelHint !== undefined && !isValidOpenAICodexImageModelHint(imageModelHint)) return undefined
@@ -226,6 +234,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     enableSearch,
     enableReserveFallback: enableReserveFallback ?? false,
     enableNativeCompaction: enableNativeCompaction ?? false,
+    enableReasoningUpdates: enableReasoningUpdates ?? false,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,
     imageModelHint: imageModelHint ?? DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,

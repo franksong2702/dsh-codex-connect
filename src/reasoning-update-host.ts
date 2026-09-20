@@ -1,4 +1,4 @@
-/** Internal Think T2 host integration; production entries do not register it. */
+/** Think host integration: saved opt-in permits proposals, never automatic consent. */
 
 import { isDeepStrictEqual } from 'node:util'
 import type { Context, Fiber } from '@deepseek-ai/cordis'
@@ -51,7 +51,7 @@ interface PreparedStep {
   pending?: PendingChange
 }
 
-/** Explicit test/runtime activation, separate from a persisted product setting. */
+/** Runtime activation driven by the saved product setting or an isolated test. */
 export interface ThinkHostIntegration {
   readonly adapterReplay: OpenAICodexRequestReplay
   setEnabled(enabled: boolean): Promise<void>
@@ -61,7 +61,7 @@ export interface ThinkHostIntegration {
  * Compose native human questions, request admission and the existing model-selection projection.
  * @param ctx - trusted host context containing real Session and live Agent ownership services.
  * @returns an initially disabled integration and optional Codex adapter seam.
- * @remarks No production entry calls this function. It neither edits defaults nor supplies
+ * @remarks The product entry retains replay guards when proposals are disabled. It neither edits defaults nor supplies
  * an automatic proposal policy. Native compaction and child-agent composition remain unsupported.
  */
 export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration {

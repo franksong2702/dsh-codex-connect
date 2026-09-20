@@ -41,6 +41,7 @@ import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
+import { registerThinkHostIntegration } from './reasoning-update-host.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
 import { registerReserveRouting } from './reserve-routing.ts'
@@ -258,6 +259,8 @@ export interface Config {
   enableReserveFallback?: boolean
   /** Explicit profile opt-in to Codex native context management; DSH owns automatic triggers. Disabling stops new native compactions, not replay of existing checkpoints. */
   enableNativeCompaction?: boolean
+  /** Opt in to Astra proposals; each native effort change needs an exact human decision. */
+  enableReasoningUpdates?: boolean
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
@@ -290,6 +293,7 @@ export const Config: z<Config> = z.object({
   enableSearch: z.boolean().default(false),
   enableReserveFallback: z.boolean().default(false),
   enableNativeCompaction: z.boolean().default(false),
+  enableReasoningUpdates: z.boolean().default(false),
   enableImageTool: z.boolean().default(false),
   enableImageGeneration: z.boolean().default(false),
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
@@ -325,6 +329,8 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  // Replay guards remain present after disabling new proposals; they never grant consent.
+  const think = registerThinkHostIntegration(ctx)
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
@@ -359,6 +365,7 @@ export function apply(ctx: Context, config: Config): void {
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
       reservePermits,
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
+      think.adapterReplay,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
@@ -474,6 +481,11 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   const scheduleCapabilities = (): void => {
+    // setEnabled invalidates pending consent synchronously, before asynchronous tool disposal.
+    void think.setEnabled(!stopped && resolveOpenAICodexSettings(current()).enableReasoningUpdates).catch((error: unknown) => {
+      ctx.logger.error('dsh-codex-connect: could not apply the reasoning-proposal configuration')
+      ctx.logger.error(error)
+    })
     searchTail = searchTail.then(reconcileSearch, reconcileSearch).catch((error: unknown) => {
       ctx.logger.error('dsh-codex-connect: could not apply the updated search configuration')
       ctx.logger.error(error)
@@ -490,6 +502,7 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
+    await think.setEnabled(false)
     await stopReserveRouting()
     await quota.dispose()
     await Promise.all([searchTail, imageTail, imageGenerationTail])

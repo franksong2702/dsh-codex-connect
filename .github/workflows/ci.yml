@@ -124,6 +124,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run browser UI regression tests
         run: pnpm run test:browser
+      - name: Verify Think product settings and native question/selector controls
+        run: node scripts/check-think-controls.mjs
 
   windows-canary-contract:
     runs-on: windows-latest

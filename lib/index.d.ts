@@ -448,6 +448,8 @@ interface OpenAICodexSettingsConfig {
   enableReserveFallback: boolean;
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean;
+  /** Allow Astra to propose a native effort change; each change still requires a human answer. */
+  enableReasoningUpdates: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -752,6 +754,8 @@ export interface Config {
   enableReserveFallback?: boolean;
   /** Explicit profile opt-in to Codex native context management; DSH owns automatic triggers. Disabling stops new native compactions, not replay of existing checkpoints. */
   enableNativeCompaction?: boolean;
+  /** Opt in to Astra proposals; each native effort change needs an exact human decision. */
+  enableReasoningUpdates?: boolean;
   /** Register the optional image-loading tool. */
   enableImageTool?: boolean;
   /** Register the optional prompt-only image generation tool. */

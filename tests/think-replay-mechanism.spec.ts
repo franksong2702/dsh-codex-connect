@@ -158,8 +158,12 @@ it('rejects conversion that moves or removes a notice', () => {
   }
 })
 
-it('keeps this mechanism outside product registration, exports, UI and build entries', () => {
-  for (const path of ['src/index.ts', 'src/adapter.ts', 'src/client/index.tsx', 'cordis.patch.yml', 'tsdown.config.ts']) {
+it('exposes the mechanism only through guarded host integration, not direct client or package entry points', () => {
+  const entry = readFileSync('src/index.ts', 'utf8')
+  expect(entry).toContain('registerThinkHostIntegration(ctx)')
+  expect(entry).toContain('enableReasoningUpdates: z.boolean().default(false)')
+  expect(entry).not.toMatch(/createReasoningUpdateMessage|from ['"]\.\/reasoning-update\.ts['"]/)
+  for (const path of ['src/adapter.ts', 'src/client/index.tsx', 'cordis.patch.yml', 'tsdown.config.ts']) {
     expect(readFileSync(path, 'utf8')).not.toMatch(/reasoning-update|think-replay/)
   }
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'))

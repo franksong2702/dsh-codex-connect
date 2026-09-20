@@ -66,7 +66,8 @@ async function main() {
   try {
     const bundle = join(root, 'bundle')
     const { build } = await import('tsdown')
-    await build({ config: false, entry: { 'think-host-admission.spec': join(ROOT, 'tests/think-host-admission.spec.ts') },
+    await build({ config: false, entry: { 'think-host-admission.spec': join(ROOT, 'tests/think-host-admission.spec.ts'),
+      'think-product-settings.spec': join(ROOT, 'tests/think-product-settings.spec.ts') },
       outDir: bundle, platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true,
       report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
@@ -138,8 +139,8 @@ async function main() {
       console.error(`Think ${version}: passed ${result.cases.length} functional cases and runtime identity`)
       await rm(host, { recursive: true, force: true })
     }
-    const report = assertThinkMatrix({ schemaVersion: 1, kind: 'think-native-host-matrix', bundleDigest,
-      syntheticOnly: true, productionEntryEnabled: false, realProviderDispatches: 0, reports }, versions, bundleDigest)
+    const report = assertThinkMatrix({ schemaVersion: 2, kind: 'think-native-host-matrix', bundleDigest,
+      syntheticOnly: true, productSettingsExercised: true, productionDefaultsChanged: false, realProviderDispatches: 0, reports }, versions, bundleDigest)
     if (reportPath) await writeFile(reportPath, JSON.stringify(report, null, 2)+'\n')
     console.log(JSON.stringify(report))
   } finally { await rm(root, { recursive: true, force: true }) }

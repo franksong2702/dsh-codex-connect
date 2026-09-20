@@ -24,12 +24,17 @@ export const THINK_HOST_CASES = Object.freeze([
   'guards direct prepared adapter dispatch after the host integration is disposed',
   'applies an approved decrease after an increase without resetting the wire base',
   ...['removed', 'changed'].map(value => `rejects a first approved notice ${value} by a later pre-step transform`),
+  'defaults old settings to off and rejects malformed reasoning configuration',
+  'activates only on a successful saved opt-in and retains it across plugin reload',
+  'saving disable aborts a real native question without admitting the late answer',
+  'discarding a pending adjustment on disable does not reset an already admitted adjustment',
 ])
 export const THINK_IDENTITY_CASE = 'uses the exact isolated host without a neighboring runtime'
 export const THINK_RUNTIME_PACKAGES = Object.freeze([
   '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-llm',
   '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-projection',
   '@deepseek-ai/dsh-system-prompt', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-user-questions',
+  '@deepseek-ai/dsh-settings',
 ])
 
 export function inspectThinkTestReport(report) {
@@ -46,10 +51,11 @@ export function inspectThinkTestReport(report) {
 }
 
 export function assertThinkMatrix(report, versions, bundleDigest) {
-  assert.equal(report.schemaVersion, 1)
+  assert.equal(report.schemaVersion, 2)
   assert.equal(report.kind, 'think-native-host-matrix')
   assert.equal(report.syntheticOnly, true)
-  assert.equal(report.productionEntryEnabled, false)
+  assert.equal(report.productSettingsExercised, true)
+  assert.equal(report.productionDefaultsChanged, false)
   assert.equal(report.realProviderDispatches, 0)
   assert.ok(versions.length > 0 && new Set(versions).size === versions.length)
   assert.ok(/^[a-f0-9]{64}$/u.test(bundleDigest))

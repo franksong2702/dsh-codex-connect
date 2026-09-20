@@ -1,3 +1,15 @@
+# Think T2b saved opt-in and native controls — 2026-09-20
+
+Branch `franksong2702/think-user-controls` builds on #222 `93d3b0f402075322f04b385a63b1de961ab663a6`. Read [the product behavior, evidence scopes and remaining gates](../experiments/think-user-controls.md). The product now registers host-owned replay guards while new proposals require the saved, default-off `enableReasoningUpdates` flag. Each target still requires an exact native human answer. Bilingual peer-level settings distinguish staged and saved choices; failed save, cancellation, disabling and admitted-history replay are covered. No other feature switch or model default is changed.
+
+The final expanded schema-2 matrix passed all four hosts locally: **35 functional cases plus one runtime identity check per host**, including actual product settings, failed enable/disable and plugin remount, with zero test-network attempts. Evidence is in `docs/experiments/think-user-controls-host-acceptance.json`; bundle digest `bb02b1fe987cd9d4e7b4a50a3a11a4b06bc3f115fae1574a489b1d7dc1714743`. Final-code `pnpm run check` passed **108 files / 1,099 tests**; Chromium passed **38 regressions plus four native-control flows**. The prior schema-1 report below remains historical. Exact-head remote CI must be read independently after finalization.
+
+The native-control Chromium checker uses actual product/host code and published question/selector components, but a bounded test-only Playwright transport, not the authenticated Gateway/session page. It proves approval/refusal/disable/dismissal and recorded-request selector behavior, not full deployed-browser, process-restart or live provider acceptance. Six additional settings browser cases cover English/Chinese and narrow/desktop layout. Native question controls are exercised in English. The two added development dependencies do not change runtime dependencies or supported-host declarations.
+
+No merge, release, deployment, real credential access or real model traffic. The separate Split worktree and 3080/3081 services remain outside this task. Remaining: authenticated session-page transport and human experience, durable fault/restart recovery, Think/Remember/Split composition, then separately authorized usefulness measurement. Disabling suggestions does not reset admitted effort or lift the experimental-history limits.
+
+---
+
 # Think dedicated exact-host lifecycle gate — 2026-09-20
 
 Branch `franksong2702/think-exact-host-matrix` is stacked on #221 at `b60327391ac337af3aa72755cef87124651d7a05`. Read [the dedicated matrix and remaining product gate](../experiments/think-exact-host-matrix.md). The same native admission spec and implementation bundle now run on all four declared hosts, independently of ordinary installation regression. The tested third-party framework may come from the development installation; runtime modules, versions and actual in-process identities must come from each selected host.
