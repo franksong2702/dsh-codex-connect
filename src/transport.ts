@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto'
 import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
 import { readOpenAICodexRequestAuth } from './auth.ts'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
+import { readRetryAfterMs } from './request-backoff.ts'
 import {
   OPENAI_CODEX_REAUTH_REQUIRED_CODE,
 } from './auth-error.ts'
@@ -38,6 +40,7 @@ export const OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH = 32_000
 
 /** Internal, unverified route hint. It is intentionally not exported. */
 const IMAGE_ROUTE_HINT_MODEL = 'gpt-image-2'
+const transportBackendRequestBindings = new WeakMap<OpenAICodexCredentialStore, OpenAICodexBackendRequestLayer>()
 
 /** Stable, secret-free transport errors consumed structurally by companion packages. */
 export const OPENAI_CODEX_TRANSPORT_ERROR_CODES = {
@@ -172,10 +175,8 @@ export async function readOpenAICodexBoundedBody(response: Response, maxBytes: n
 }
 
 function retryAfterSeconds(response: Response): number | undefined {
-  const value = response.headers.get('retry-after')
-  if (value === null || !/^\d+$/u.test(value)) return undefined
-  const seconds = Number(value)
-  return Number.isSafeInteger(seconds) ? seconds : undefined
+  const delay = readRetryAfterMs(response.headers)
+  return delay === undefined || !Number.isFinite(delay) ? undefined : Math.ceil(delay / 1000)
 }
 
 function statusError(response: Response): OpenAICodexTransportError {
@@ -242,19 +243,28 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     private readonly resolveImageModelHint: () => string = () => DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
   ) {
     super(ctx, OPENAI_CODEX_TRANSPORT_SERVICE)
+    if (!transportBackendRequestBindings.has(credentials)) {
+      transportBackendRequestBindings.set(credentials, new OpenAICodexBackendRequestLayer(proxyManager, resolveProxyUrl))
+    }
   }
 
   async generateImages(
     input: ImageGenerationRequest,
     context: ImageRequestContext,
   ): Promise<ImageGenerationResponse> {
-    const operation = () => this.generateImagesWithoutProxy(input, context)
-    return this.proxyManager?.run(this.resolveProxyUrl(), operation) ?? operation()
+    const deadline = openAICodexBackendDeadline(context.signal, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS)
+    const backendRequests = transportBackendRequestBindings.get(this.credentials)!
+    try {
+      return await backendRequests.run(() => this.generateImagesWithoutProxy(input, context, deadline))
+    } finally {
+      deadline.dispose()
+    }
   }
 
   private async generateImagesWithoutProxy(
     input: ImageGenerationRequest,
     context: ImageRequestContext,
+    deadline: ReturnType<typeof openAICodexBackendDeadline>,
   ): Promise<ImageGenerationResponse> {
     if (typeof input?.prompt !== 'string' || input.prompt.trim().length === 0
       || input.prompt.length > OPENAI_CODEX_IMAGE_PROMPT_MAX_LENGTH) {
@@ -278,7 +288,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
 
     let auth: Awaited<ReturnType<typeof readOpenAICodexRequestAuth>>
     try {
-      auth = await readOpenAICodexRequestAuth(credentials, context.signal)
+      auth = await readOpenAICodexRequestAuth(credentials, deadline.signal)
     } catch {
       if (isAborted(context.signal)) throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.canceled)
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.reauthRequired)
@@ -295,27 +305,16 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
 
     const traceId = randomUUID()
     const startedAt = Date.now()
-    const controller = new AbortController()
-    let timedOut = false
-    const onCallerAbort = (): void => controller.abort()
-    context.signal?.addEventListener('abort', onCallerAbort, { once: true })
-    if (isAborted(context.signal)) controller.abort()
-    const timer = setTimeout(() => {
-      timedOut = true
-      controller.abort()
-    }, OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS)
-
     try {
-      const response = await fetch(OPENAI_CODEX_IMAGE_GENERATION_URL, {
+      const response = await transportBackendRequestBindings.get(this.credentials)!.fetch('image', OPENAI_CODEX_IMAGE_GENERATION_URL, {
         method: 'POST',
         redirect: 'manual',
-        signal: controller.signal,
+        signal: deadline.signal,
         headers: {
           authorization: `Bearer ${access}`,
           'chatgpt-account-id': accountId,
           'content-type': 'application/json',
           accept: 'application/json',
-          'user-agent': 'dsh-codex-connect',
         },
         body: JSON.stringify({ model: imageModelHint, prompt: input.prompt }),
       })
@@ -344,11 +343,16 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
       if (isAborted(context.signal)) {
         throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.canceled)
       }
-      if (timedOut) throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.timeout)
+      if (deadline.timedOut()) throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.timeout)
       throw new OpenAICodexTransportError(OPENAI_CODEX_TRANSPORT_ERROR_CODES.networkError)
-    } finally {
-      clearTimeout(timer)
-      context.signal?.removeEventListener('abort', onCallerAbort)
     }
   }
+}
+
+/** Internal plugin assembly hook; preserves the public transport constructor. */
+export function bindOpenAICodexTransportBackendRequests(
+  credentials: OpenAICodexCredentialStore,
+  backendRequests: OpenAICodexBackendRequestLayer,
+): void {
+  transportBackendRequestBindings.set(credentials, backendRequests)
 }

@@ -36,9 +36,10 @@ import { FastModeRegistry } from './fast-mode.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { imageGenerateTool } from './image-tool.ts'
 import { viewImageTool } from './view-image.ts'
-import { OpenAICodexTransport } from './transport.ts'
+import { bindOpenAICodexTransportBackendRequests, OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { OpenAICodexBackendRequestLayer } from './backend-request.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
@@ -100,6 +101,7 @@ import {
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
   DEFAULT_OPENAI_CODEX_SEARCH_MODE,
   DEFAULT_OPENAI_CODEX_SEARCH_MODEL,
+  bindOpenAICodexSearchBackendRequests,
   OpenAICodexSearchProvider,
 } from './search.ts'
 import type { OpenAICodexSearchContextSize, OpenAICodexSearchMode } from './search.ts'
@@ -318,6 +320,7 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
+  const backendRequests = new OpenAICodexBackendRequestLayer(proxyManager, resolveProviderProxyUrl)
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
   const credentials = new OpenAICodexCredentialStore()
   const imageAssets = new OpenAICodexImageAssetStore()
@@ -328,6 +331,7 @@ export function apply(ctx: Context, config: Config): void {
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
+    backendRequests,
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
     resolveProxyUrl: resolveProviderProxyUrl,
   })
@@ -339,13 +343,18 @@ export function apply(ctx: Context, config: Config): void {
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
   })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
-  new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
+  bindOpenAICodexTransportBackendRequests(credentials, backendRequests)
+  new OpenAICodexTransport(
+    ctx, credentials, proxyManager, resolveProviderProxyUrl,
+    () => resolveOpenAICodexSettings(current()).imageModelHint,
+  )
   registerOpenAICodexAutoReview(
     ctx,
     credentials,
     proxyManager,
     resolveProviderProxyUrl,
     () => resolveOpenAICodexSettings(current()).enableAutoReview,
+    backendRequests,
   )
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
@@ -359,6 +368,7 @@ export function apply(ctx: Context, config: Config): void {
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
       reservePermits,
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
+      backendRequests,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
@@ -396,7 +406,7 @@ export function apply(ctx: Context, config: Config): void {
     if (previous !== undefined) await previous.dispose()
     if (stopped || nextRegistration === undefined) return
     const fiber = ctx.inject(['web'], (webCtx) => {
-      const provider = new OpenAICodexSearchProvider({
+      const provider = new OpenAICodexSearchProvider(bindOpenAICodexSearchBackendRequests({
         credentials,
         model: nextRegistration.model,
         mode: nextRegistration.mode,
@@ -405,7 +415,7 @@ export function apply(ctx: Context, config: Config): void {
         resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
         proxyManager,
         resolveProxyUrl: resolveProviderProxyUrl,
-      })
+      }, backendRequests))
       const unregister = webCtx.web.registerSearchProvider(provider)
       try {
         const restoreRoute = selectOpenAICodexSearchRoute(webCtx.web, provider.id)

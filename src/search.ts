@@ -5,6 +5,7 @@
 
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OpenAICodexRequestAuthError } from './auth-error.ts'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 import { WebError } from '@deepseek-ai/dsh-web'
 import type {
   WebSearchProvider,
@@ -92,6 +93,26 @@ export interface OpenAICodexSearchProviderOptions {
   readonly resolveProxyUrl?: () => string | undefined
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
+}
+
+const searchBackendRequestBindings = new WeakMap<OpenAICodexSearchProviderOptions, OpenAICodexBackendRequestLayer>()
+
+/** Internal plugin assembly hook; not part of the package-level API surface. */
+export function bindOpenAICodexSearchBackendRequests(
+  options: OpenAICodexSearchProviderOptions,
+  backendRequests: OpenAICodexBackendRequestLayer,
+): OpenAICodexSearchProviderOptions {
+  searchBackendRequestBindings.set(options, backendRequests)
+  return options
+}
+
+function searchBackendRequests(options: OpenAICodexSearchProviderOptions): OpenAICodexBackendRequestLayer {
+  let backendRequests = searchBackendRequestBindings.get(options)
+  if (backendRequests === undefined) {
+    backendRequests = new OpenAICodexBackendRequestLayer(options.proxyManager, options.resolveProxyUrl)
+    searchBackendRequestBindings.set(options, backendRequests)
+  }
+  return backendRequests
 }
 
 /** Convert the configured mode to the official endpoint field. */
@@ -269,13 +290,12 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
   /** @inheritdoc */
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
     throwIfSearchAborted(signal)
-    const deadline = new AbortController()
-    const combined = signal === undefined ? deadline.signal : AbortSignal.any([signal, deadline.signal])
-    const timer = setTimeout(() => { deadline.abort(new DOMException('Search deadline exceeded', 'TimeoutError')) }, OPENAI_CODEX_SEARCH_TIMEOUT_MS)
+    const deadline = openAICodexBackendDeadline(signal, OPENAI_CODEX_SEARCH_TIMEOUT_MS)
     try {
-      const operation = () => this.searchWithoutProxy(request, combined)
-      return await (this.options.proxyManager?.run(this.options.resolveProxyUrl?.(), operation) ?? operation())
-    } finally { clearTimeout(timer) }
+      return await searchBackendRequests(this.options).run(() => this.searchWithoutProxy(request, deadline.signal))
+    } finally {
+      deadline.dispose()
+    }
   }
 
   private async searchWithoutProxy(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
@@ -319,7 +339,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
 
     let response: Response
     try {
-      response = await abortable(fetch(OPENAI_CODEX_SEARCH_URL, {
+      response = await abortable(searchBackendRequests(this.options).fetch('search', OPENAI_CODEX_SEARCH_URL, {
         method: 'POST',
         redirect: 'error',
         headers: {
@@ -327,7 +347,6 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
           'chatgpt-account-id': accountId,
           'content-type': 'application/json',
           accept: 'application/json',
-          originator: 'deepseek-harness',
         },
         body: JSON.stringify(body),
         ...signal === undefined ? {} : { signal },

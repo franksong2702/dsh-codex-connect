@@ -1,12 +1,14 @@
 /** OAuth transport for the hidden first-party Codex Auto-review route. */
 
 import { readOpenAICodexRequestAuth } from './auth.ts'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
 import { CODEX_AUTO_REVIEW_MODEL } from './auto-review-probe.ts'
 import type { AutoReviewAction, AutoReviewContext } from './auto-review-contract.ts'
 import { fetch } from './undici-runtime.ts'
+import type { FetchFunction } from '@earendil-works/pi-ai'
 
 /** Official Codex review deadline. */
 export const AUTO_REVIEW_TIMEOUT_MS = 90_000
@@ -123,37 +125,37 @@ function aborted(signal?: AbortSignal): boolean {
 
 /** OAuth-backed implementation of the first-party Codex reviewer. */
 export class OpenAICodexAutoReviewBackend implements AutoReviewBackend {
+  private readonly backendRequests: OpenAICodexBackendRequestLayer
+
   constructor(
     credentials: OpenAICodexCredentialStore,
     private readonly proxyManager: OpenAICodexProxyManager,
     private readonly resolveProxyUrl: () => string | undefined,
     private readonly credentialStore: OpenAICodexCredentialStore = credentials,
-  ) {}
+    backendRequests?: OpenAICodexBackendRequestLayer,
+  ) {
+    this.backendRequests = backendRequests ?? new OpenAICodexBackendRequestLayer(proxyManager, resolveProxyUrl)
+  }
 
   /** @inheritdoc */
   async review(input: AutoReviewBackendInput): Promise<AutoReviewBackendResult> {
     if (aborted(input.signal)) return { status: 'cancelled' }
-    const controller = new AbortController()
-    let timedOut = false
-    const cancel = (): void => { controller.abort(input.signal?.reason) }
-    input.signal?.addEventListener('abort', cancel, { once: true })
-    const timer = setTimeout(() => { timedOut = true; controller.abort() }, AUTO_REVIEW_TIMEOUT_MS)
+    const deadline = openAICodexBackendDeadline(input.signal, AUTO_REVIEW_TIMEOUT_MS)
     try {
-      return await this.proxyManager.run<Promise<AutoReviewBackendResult>>(this.resolveProxyUrl(), async () => {
-        const auth = await readOpenAICodexRequestAuth(this.credentialStore, controller.signal)
+      return await this.backendRequests.run(async () => {
+        const auth = await readOpenAICodexRequestAuth(this.credentialStore, deadline.signal)
         const access = auth?.access
         const accountId = auth?.accountId
         if (access === undefined || access.length === 0 || accountId === undefined || accountId.length === 0) return { status: 'unavailable' }
-        const response = await fetch(`${OPENAI_CODEX_BASE_URL}/responses`, {
+        const response = await this.backendRequests.fetch('auto-review', `${OPENAI_CODEX_BASE_URL}/responses`, {
           method: 'POST',
           redirect: 'manual',
-          signal: controller.signal,
+          signal: deadline.signal,
           headers: {
             authorization: `Bearer ${access}`,
             'chatgpt-account-id': accountId,
             'content-type': 'application/json',
             accept: 'text/event-stream',
-            originator: 'deepseek-harness',
           },
           body: JSON.stringify({
             model: CODEX_AUTO_REVIEW_MODEL,
@@ -175,7 +177,7 @@ export class OpenAICodexAutoReviewBackend implements AutoReviewBackend {
             stream: true,
             store: false,
           }),
-        })
+        }, fetch as unknown as FetchFunction)
         if (!response.ok || response.body === null || !response.headers.get('content-type')?.toLowerCase().includes('text/event-stream')) {
           await response.body?.cancel()
           return { status: 'unavailable' }
@@ -200,10 +202,9 @@ export class OpenAICodexAutoReviewBackend implements AutoReviewBackend {
       })
     } catch {
       if (aborted(input.signal)) return { status: 'cancelled' }
-      return { status: timedOut ? 'timeout' : 'unavailable' }
+      return { status: deadline.timedOut() ? 'timeout' : 'unavailable' }
     } finally {
-      clearTimeout(timer)
-      input.signal?.removeEventListener('abort', cancel)
+      deadline.dispose()
     }
   }
 }

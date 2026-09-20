@@ -4,7 +4,7 @@ import { createOpenAICodexAdapter, createOpenAICodexProfile } from '../src/adapt
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from '../src/request-diagnostics.ts'
-import { readRetryAfterMs } from '../src/request-backoff.ts'
+import { openAICodexBackoffDelay, readRetryAfterMs } from '../src/request-backoff.ts'
 
 const token = 'header.' + Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'fixture-account' } })).toString('base64url') + '.signature'
 const credentials = {
@@ -193,5 +193,13 @@ describe('Retry-After parsing', () => {
     [{ 'retry-after': '999999999999999999' }, Infinity],
   ])('reads bounded retry semantics (%j)', (headers, expected) => {
     expect(readRetryAfterMs(new Headers(headers), 0)).toBe(expected)
+  })
+
+  it('keeps an out-of-range server retry hint latched instead of turning it into a fast retry', () => {
+    expect(openAICodexBackoffDelay(0, {
+      baseMs: 500,
+      maxMs: 4_000,
+      retryAfterMs: Infinity,
+    })).toBe(Infinity)
   })
 })

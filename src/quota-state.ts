@@ -2,7 +2,9 @@
 import { createHash } from 'node:crypto'
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OpenAICodexRequestAuthError } from './auth-error.ts'
+import { OpenAICodexBackendRequestLayer } from './backend-request.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { openAICodexBackoffDelay } from './request-backoff.ts'
 import { parseReserveUsage, reserveIdentity, type ReserveIdentity, type ReserveUsageDecision } from './reserve-usage.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError, parseOpenAICodexUsage, readOpenAICodexUsageResponse, type OpenAICodexUsage } from './usage.ts'
@@ -60,13 +62,18 @@ function failureDelay(error: Error, failures: number): number {
   if (error instanceof OpenAICodexReauthRequiredError) return Infinity
   if (error instanceof OpenAICodexUsageHttpError && error.status >= 400 && error.status < 500
     && error.status !== 408 && error.status !== 429) return Infinity
-  const backoff = Math.min(15 * 60_000, 60_000 * 2 ** Math.min(failures - 1, 4))
-  const jittered = Math.min(15 * 60_000, backoff + Math.floor(Math.random() * backoff * 0.1))
-  return Math.max(jittered, error instanceof OpenAICodexUsageHttpError ? error.retryAfterMs ?? 0 : 0)
+  return openAICodexBackoffDelay(failures - 1, {
+    baseMs: 60_000,
+    maxMs: 15 * 60_000,
+    ...(error instanceof OpenAICodexUsageHttpError && error.retryAfterMs !== undefined
+      ? { retryAfterMs: error.retryAfterMs } : {}),
+    jitterRatio: 0.1,
+  })
 }
 
 /** Owns quota cache, Reserve negotiation, and demand-bounded background refresh. */
 export class OpenAICodexQuotaState {
+  private readonly backendRequests: OpenAICodexBackendRequestLayer
   private readonly cache = new Map<string, Entry>()
   private readonly operations = new Set<Promise<OpenAICodexQuotaSnapshot>>()
   private epoch = new AbortController()
@@ -82,8 +89,11 @@ export class OpenAICodexQuotaState {
     credentials: OpenAICodexCredentialStore
     proxyManager: OpenAICodexProxyManager
     resolveProxyUrl: () => string | undefined
+    backendRequests?: OpenAICodexBackendRequestLayer
     enabled: () => boolean
-  }) {}
+  }) {
+    this.backendRequests = options.backendRequests ?? new OpenAICodexBackendRequestLayer(options.proxyManager, options.resolveProxyUrl)
+  }
 
   /** Revoke cached authority and abort operations belonging to the old configuration. */
   invalidate(): void {
@@ -149,12 +159,14 @@ export class OpenAICodexQuotaState {
 
   private async readInternal(credentials: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>, enabled: boolean,
     proxy: string | undefined, epoch: AbortSignal, model: string | undefined): Promise<OpenAICodexQuotaSnapshot> {
-    const auth = await this.options.proxyManager.run(proxy, () => readOpenAICodexRequestAuth(credentials, epoch))
+    const auth = await this.backendRequests.run(() => readOpenAICodexRequestAuth(credentials, epoch), proxy)
     epoch.throwIfAborted()
     const candidate = enabled ? reserveIdentity(auth.access) : undefined
     const identity = candidate?.accountId === auth.accountId ? candidate : undefined
     const fetch = async (authoritySignal = epoch): Promise<OpenAICodexQuotaSnapshot> => {
-      const value = await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, authoritySignal, enabled && identity !== undefined))
+      const value = await this.backendRequests.run(() => readOpenAICodexUsageResponse(
+        auth, authoritySignal, enabled && identity !== undefined, this.backendRequests,
+      ), proxy)
       epoch.throwIfAborted()
       return { usage: parseOpenAICodexUsage(value), ...(identity === undefined ? {} : { identity }),
         decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal }

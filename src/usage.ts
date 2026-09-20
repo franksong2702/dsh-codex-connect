@@ -3,6 +3,7 @@
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OpenAICodexRequestAuthError, OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
 export { OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { readOpenAICodexBoundedBody } from './transport.ts'
 import { readRetryAfterMs } from './request-backoff.ts'
@@ -11,6 +12,7 @@ import { readRetryAfterMs } from './request-backoff.ts'
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
 
 const USAGE_REQUEST_TIMEOUT_MS = 15_000
+const fallbackBackendRequests = new OpenAICodexBackendRequestLayer()
 /** Upper bound for one full account usage response, before projecting public and routing fields. */
 export const OPENAI_CODEX_USAGE_MAX_BYTES = 128 * 1024
 
@@ -243,14 +245,18 @@ export function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage {
 export async function readOpenAICodexRateLimits(
   store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>,
 ): Promise<OpenAICodexUsage> {
-  const signal = AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)
-  const auth = await readOpenAICodexRequestAuth(store, signal).catch((error: unknown) => {
-    if (error instanceof OpenAICodexRequestAuthError && error.code === 'REAUTH_REQUIRED') {
-      throw new OpenAICodexReauthRequiredError()
-    }
-    throw error
-  })
-  return parseOpenAICodexUsage(await readOpenAICodexUsageResponse(auth, signal, false))
+  const deadline = openAICodexBackendDeadline(undefined, USAGE_REQUEST_TIMEOUT_MS)
+  try {
+    const auth = await readOpenAICodexRequestAuth(store, deadline.signal).catch((error: unknown) => {
+      if (error instanceof OpenAICodexRequestAuthError && error.code === 'REAUTH_REQUIRED') {
+        throw new OpenAICodexReauthRequiredError()
+      }
+      throw error
+    })
+    return parseOpenAICodexUsage(await readOpenAICodexUsageResponse(auth, deadline.signal, false))
+  } finally {
+    deadline.dispose()
+  }
 }
 
 /** Read one bounded account response; public quota and Reserve decisions share these exact bytes. */
@@ -258,36 +264,40 @@ export async function readOpenAICodexUsageResponse(
   auth: { access: string; accountId: string },
   signal: AbortSignal,
   supportsReserve: boolean,
+  backendRequests: OpenAICodexBackendRequestLayer = fallbackBackendRequests,
 ): Promise<unknown> {
-  const deadline = AbortSignal.any([signal, AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)])
-  deadline.throwIfAborted()
-  const response = await fetch(OPENAI_CODEX_USAGE_URL, {
-    method: 'GET',
-    redirect: 'error',
-    headers: {
-      authorization: `Bearer ${auth.access}`,
-      'chatgpt-account-id': auth.accountId,
-      ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
-      accept: 'application/json',
-      'cache-control': 'no-store',
-      'user-agent': 'dsh-codex-connect',
-    },
-    signal: deadline,
-  })
-  if (!response.ok) {
-    await cancelDiscardedResponseBody(response)
-    if (response.status === 401 || response.status === 403) {
-      throw new OpenAICodexReauthRequiredError()
-    }
-    throw new OpenAICodexUsageHttpError(response.status, readRetryAfterMs(response.headers))
-  }
+  const deadline = openAICodexBackendDeadline(signal, USAGE_REQUEST_TIMEOUT_MS)
   try {
-    const bytes = await readOpenAICodexBoundedBody(response, OPENAI_CODEX_USAGE_MAX_BYTES)
-    deadline.throwIfAborted()
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
-  } catch {
-    throw new Error('OpenAI Codex returned an unreadable usage response')
+    deadline.signal.throwIfAborted()
+    const response = await backendRequests.fetch('quota', OPENAI_CODEX_USAGE_URL, {
+      method: 'GET',
+      redirect: 'error',
+      headers: {
+        authorization: `Bearer ${auth.access}`,
+        'chatgpt-account-id': auth.accountId,
+        ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
+        accept: 'application/json',
+        'cache-control': 'no-store',
+      },
+      signal: deadline.signal,
+    })
+    if (!response.ok) {
+      await cancelDiscardedResponseBody(response)
+      if (response.status === 401 || response.status === 403) {
+        throw new OpenAICodexReauthRequiredError()
+      }
+      throw new OpenAICodexUsageHttpError(response.status, readRetryAfterMs(response.headers))
+    }
+    try {
+      const bytes = await readOpenAICodexBoundedBody(response, OPENAI_CODEX_USAGE_MAX_BYTES)
+      deadline.signal.throwIfAborted()
+      return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
+    } catch {
+      throw new Error('OpenAI Codex returned an unreadable usage response')
+    } finally {
+      await cancelDiscardedResponseBody(response)
+    }
   } finally {
-    await cancelDiscardedResponseBody(response)
+    deadline.dispose()
   }
 }

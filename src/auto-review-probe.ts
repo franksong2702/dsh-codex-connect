@@ -1,6 +1,8 @@
 /** Fixed, standalone probe for the hidden Codex approval reviewer. */
 
 import type { Dispatcher } from 'undici'
+import type { FetchFunction } from '@earendil-works/pi-ai'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
 import { Agent, ProxyAgent, fetch } from './undici-runtime.ts'
 
@@ -118,32 +120,20 @@ export async function probeCodexAutoReview(
   createDispatcher: (proxyUrl: string | undefined) => Dispatcher = proxyUrl => proxyUrl === undefined ? new Agent() : new ProxyAgent(proxyUrl),
 ): Promise<AutoReviewProbeEvidence> {
   const dispatcher = createDispatcher(request.proxyUrl)
-  const controller = new AbortController()
-  let timedOut = false
-  let cancelled = request.signal?.aborted ?? false
-  const cancel = (): void => {
-    cancelled = true
-    controller.abort()
-  }
-  request.signal?.addEventListener('abort', cancel, { once: true })
-  if (cancelled) controller.abort()
-  const timer = setTimeout(() => {
-    timedOut = true
-    controller.abort()
-  }, request.timeoutMs)
+  const deadline = openAICodexBackendDeadline(request.signal, request.timeoutMs)
+  const backendRequests = new OpenAICodexBackendRequestLayer()
   let httpStatus: number | undefined
   try {
-    const response = await fetch(`${OPENAI_CODEX_BASE_URL}/responses`, {
+    const response = await backendRequests.fetch('auto-review-probe', `${OPENAI_CODEX_BASE_URL}/responses`, {
       dispatcher,
       method: 'POST',
       redirect: 'manual',
-      signal: controller.signal,
+      signal: deadline.signal,
       headers: {
         authorization: `Bearer ${request.access}`,
         'chatgpt-account-id': request.accountId,
         'content-type': 'application/json',
         accept: 'text/event-stream',
-        originator: 'deepseek-harness',
       },
       body: JSON.stringify({
         model: CODEX_AUTO_REVIEW_MODEL,
@@ -160,7 +150,7 @@ export async function probeCodexAutoReview(
         stream: true,
         store: false,
       }),
-    })
+    } as RequestInit, fetch as unknown as FetchFunction)
     httpStatus = response.status
     if (!response.ok) {
       await response.body?.cancel()
@@ -192,11 +182,10 @@ export async function probeCodexAutoReview(
     return { outcome: completedStream(text) ? 'completed' : 'incomplete', httpStatus }
   } catch {
     // Network, decoding, and cancellation errors can contain credentials or response text.
-    const outcome = cancelled ? 'cancelled' : timedOut ? 'timeout' : 'network-error'
+    const outcome = request.signal?.aborted === true ? 'cancelled' : deadline.timedOut() ? 'timeout' : 'network-error'
     return { outcome, ...httpStatus === undefined ? {} : { httpStatus } }
   } finally {
-    clearTimeout(timer)
-    request.signal?.removeEventListener('abort', cancel)
+    deadline.dispose()
     await dispatcher.destroy()
   }
 }

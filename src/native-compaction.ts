@@ -20,6 +20,8 @@ import {
   convertResponsesTools,
 } from '@earendil-works/pi-ai/api/openai-responses-shared'
 import type { GenerateOptions, Message, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
+import { openAICodexBackoffDelay, readRetryAfterMs, waitForOpenAICodexBackoff } from './request-backoff.ts'
 
 export const OPENAI_CODEX_NATIVE_COMPACTION_URL = 'https://chatgpt.com/backend-api/codex/responses'
 export const OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES = 64_000
@@ -335,24 +337,21 @@ function responseHeaders(headers: Headers): Record<string, string> {
   return result
 }
 
-function requestSignal(signal: AbortSignal | undefined, timeoutMs: number | undefined): AbortSignal | undefined {
-  if (timeoutMs === undefined || timeoutMs <= 0) return signal
-  const timeout = AbortSignal.timeout(timeoutMs)
-  return signal === undefined ? timeout : AbortSignal.any([signal, timeout])
+function requestDeadline(
+  signal: AbortSignal | undefined,
+  timeoutMs: number | undefined,
+): ReturnType<typeof openAICodexBackendDeadline> | undefined {
+  if (timeoutMs === undefined || timeoutMs <= 0) return undefined
+  return openAICodexBackendDeadline(signal, timeoutMs)
 }
 
 function retryDelayMs(response: Response, attempt: number): number {
-  const retryAfterMsHeader = response.headers.get('retry-after-ms')
-  if (retryAfterMsHeader !== null) {
-    const retryAfterMs = Number(retryAfterMsHeader)
-    if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) return retryAfterMs
-  }
-  const retryAfter = response.headers.get('retry-after')
-  if (retryAfter !== null) {
-    const seconds = Number(retryAfter)
-    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
-  }
-  return Math.min(4_000, 500 * 2 ** attempt)
+  const retryAfterMs = readRetryAfterMs(response.headers)
+  return openAICodexBackoffDelay(attempt, {
+    baseMs: 500,
+    maxMs: 4_000,
+    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+  })
 }
 
 function retryableStatus(status: number): boolean {
@@ -360,25 +359,7 @@ function retryableStatus(status: number): boolean {
 }
 
 async function waitForRetry(delay: number, signal?: AbortSignal): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    if (signal === undefined) {
-      setTimeout(resolve, delay)
-      return
-    }
-    if (signal.aborted) {
-      reject(signal.reason)
-      return
-    }
-    const onAbort = (): void => {
-      clearTimeout(timeout)
-      reject(signal.reason)
-    }
-    const timeout = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort)
-      resolve()
-    }, delay)
-    signal.addEventListener('abort', onAbort, { once: true })
-  })
+  await waitForOpenAICodexBackoff(delay, signal)
 }
 
 function accountIdFromToken(access: string): string {
@@ -480,6 +461,7 @@ async function requestNativeCompaction(
   context: PiContext,
   options: SimpleStreamOptions | undefined,
   scope: NativeCompactionScope,
+  backendRequests: OpenAICodexBackendRequestLayer,
 ): Promise<CompactResponse> {
   const access = options?.apiKey
   if (access === undefined || access.length === 0) throw new Error('OpenAI Codex native compaction request has no OAuth token')
@@ -521,49 +503,60 @@ async function requestNativeCompaction(
   if (options?.onPayload !== undefined) body = await options.onPayload(body, model) ?? body
   if (!isRecord(body)) throw new Error('OpenAI Codex generated a non-object native compaction payload')
 
-  const headers = new Headers(model.headers)
+  const rawHeaders = new Headers(model.headers)
   for (const [key, value] of Object.entries(options?.headers ?? {})) {
-    if (value === null) headers.delete(key)
-    else headers.set(key, value)
+    if (value === null) rawHeaders.delete(key)
+    else rawHeaders.set(key, value)
   }
-  headers.set('authorization', `Bearer ${access}`)
-  headers.set('chatgpt-account-id', accountIdFromToken(access))
-  headers.set('originator', 'deepseek-harness')
-  headers.set('accept', 'text/event-stream')
-  headers.set('content-type', 'application/json')
-  headers.set('openai-beta', 'responses=experimental')
+  rawHeaders.set('authorization', `Bearer ${access}`)
+  rawHeaders.set('chatgpt-account-id', accountIdFromToken(access))
+  rawHeaders.set('accept', 'text/event-stream')
+  rawHeaders.set('content-type', 'application/json')
+  rawHeaders.set('openai-beta', 'responses=experimental')
   if (options?.sessionId !== undefined) {
-    headers.set('session-id', options.sessionId)
-    headers.set('thread-id', options.sessionId)
-    headers.set('x-client-request-id', options.sessionId)
+    rawHeaders.set('session-id', options.sessionId)
+    rawHeaders.set('thread-id', options.sessionId)
   }
-  headers.set('x-codex-routing-hint', `model=${model.id}`)
+  rawHeaders.set('x-codex-routing-hint', `model=${model.id}`)
+  const networkFetch = backendRequests.wrapFetch('native-compaction', options?.fetch ?? globalThis.fetch)
 
   const maxRetries = Math.min(MAX_NATIVE_COMPACTION_RETRIES, Math.max(0, options?.maxRetries ?? MAX_NATIVE_COMPACTION_RETRIES))
   let lastError: unknown
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    let response: Response
+    let response: Response | undefined
+    let delay: number | undefined
+    const deadline = requestDeadline(options?.signal, options?.timeoutMs)
     try {
-      const signal = requestSignal(options?.signal, options?.timeoutMs)
-      response = await (options?.fetch ?? globalThis.fetch)(OPENAI_CODEX_NATIVE_COMPACTION_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        ...(signal === undefined ? {} : { signal }),
-      })
-    } catch (error: unknown) {
-      if (options?.signal?.aborted === true || attempt === maxRetries) throw error
-      lastError = error
-      await waitForRetry(Math.min(4_000, 500 * 2 ** attempt), options?.signal)
-      continue
+      try {
+        response = await networkFetch(OPENAI_CODEX_NATIVE_COMPACTION_URL, {
+          method: 'POST',
+          headers: rawHeaders,
+          body: JSON.stringify(body),
+          ...(deadline === undefined
+            ? options?.signal === undefined ? {} : { signal: options.signal }
+            : { signal: deadline.signal }),
+        })
+      } catch (error: unknown) {
+        if (options?.signal?.aborted === true || attempt === maxRetries) throw error
+        lastError = error
+        delay = openAICodexBackoffDelay(attempt, { baseMs: 500, maxMs: 4_000 })
+      }
+      if (response !== undefined) {
+        await options?.onResponse?.({ status: response.status, headers: responseHeaders(response.headers) }, model)
+        if (response.ok) return await compactResponse(response, retained)
+        const error = new Error(`OpenAI Codex native compaction request failed with HTTP ${response.status}`)
+        await response.body?.cancel()
+        if (!retryableStatus(response.status) || attempt === maxRetries) throw error
+        lastError = error
+        delay = retryDelayMs(response, attempt)
+      }
+    } finally {
+      deadline?.dispose()
     }
-    await options?.onResponse?.({ status: response.status, headers: responseHeaders(response.headers) }, model)
-    if (response.ok) return compactResponse(response, retained)
-    const error = new Error(`OpenAI Codex native compaction request failed with HTTP ${response.status}`)
-    await response.body?.cancel()
-    if (!retryableStatus(response.status) || attempt === maxRetries) throw error
-    lastError = error
-    await waitForRetry(retryDelayMs(response, attempt), options?.signal)
+    if (delay === Infinity) {
+      throw lastError instanceof Error ? lastError : new Error('OpenAI Codex native compaction retry delay is not bounded')
+    }
+    if (delay !== undefined) await waitForRetry(delay, options?.signal)
   }
   throw lastError instanceof Error ? lastError : new Error('OpenAI Codex native compaction request failed')
 }
@@ -592,12 +585,13 @@ function nativeCompactionStream(
   context: PiContext,
   options: SimpleStreamOptions | undefined,
   scope: NativeCompactionScope,
+  backendRequests: OpenAICodexBackendRequestLayer,
 ): AssistantMessageEventStream {
   const target = createAssistantMessageEventStream()
   void (async () => {
     let source: AssistantMessageEventStream
     try {
-      const response = await requestNativeCompaction(model, context, options, scope)
+      const response = await requestNativeCompaction(model, context, options, scope, backendRequests)
       options?.signal?.throwIfAborted()
       // Encoding/validation can fail too; keep it inside the pre-emission fallback boundary.
       source = markerStream(model, response)
@@ -615,13 +609,16 @@ function nativeCompactionStream(
 }
 
 /** Add native-compaction behavior while keeping ordinary provider requests unchanged. */
-export function withOpenAICodexNativeCompaction(provider: Provider): Provider {
+export function withOpenAICodexNativeCompaction(
+  provider: Provider,
+  backendRequests: OpenAICodexBackendRequestLayer = new OpenAICodexBackendRequestLayer(),
+): Provider {
   return {
     ...provider,
     streamSimple(model, context, options) {
       const scope = nativeCompactionScope.getStore()
       if (scope?.useNativeCompaction === true) {
-        return nativeCompactionStream(provider, model, context, options, scope)
+        return nativeCompactionStream(provider, model, context, options, scope, backendRequests)
       }
       return standardStream(provider, model, context, options, scope)
     },

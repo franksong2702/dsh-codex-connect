@@ -203,7 +203,7 @@ describe('OpenAICodexQuotaState acceptance', () => {
     const h = setup(); h.setEnabled(false); await h.state.read()
     await vi.advanceTimersByTimeAsync(120_000)
     expect(readResponse).toHaveBeenCalledTimes(1)
-    expect(readResponse).toHaveBeenCalledWith(expect.anything(), expect.anything(), false)
+    expect(readResponse).toHaveBeenCalledWith(expect.anything(), expect.anything(), false, expect.anything())
     await h.state.dispose()
   })
 
@@ -345,7 +345,7 @@ describe('OpenAICodexQuotaState acceptance', () => {
     const h = setup()
     readAuth.mockResolvedValueOnce({ access: 'opaque-token-without-jwt-claims', accountId: 'acct' })
     await h.state.read()
-    expect(readResponse).toHaveBeenCalledWith(expect.anything(), expect.anything(), false)
+    expect(readResponse).toHaveBeenCalledWith(expect.anything(), expect.anything(), false, expect.anything())
     await h.state.dispose()
   })
 

@@ -12,6 +12,7 @@ import {
   isValidOpenAICodexProxyUrl,
   normalizeOpenAICodexProxyUrl,
 } from './settings-contract.ts'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 
 /** Canonical first-party endpoint used for a no-auth, no-model reachability probe. */
 export const OPENAI_CODEX_PROXY_PROBE_URL = 'https://chatgpt.com/backend-api/codex'
@@ -187,6 +188,8 @@ export function listOpenAICodexProxyCandidates(): readonly string[] {
   return candidates
 }
 
+const proxyProbeRequests = new OpenAICodexBackendRequestLayer()
+
 /** One plugin instance owns its proxy agents and contributes one global wrapper owner. */
 export class OpenAICodexProxyManager {
   private readonly agents = new Map<string, ProxyAgent>()
@@ -324,12 +327,13 @@ export class OpenAICodexProxyManager {
     if (normalized === undefined) {
       return { proxyUrl, reachable: false, classification: 'invalid' }
     }
+    const deadline = openAICodexBackendDeadline(undefined, OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS)
     try {
-      const response = await this.run(normalized, () => fetch(OPENAI_CODEX_PROXY_PROBE_URL, {
+      const response = await this.run(normalized, () => proxyProbeRequests.fetch('proxy-probe', OPENAI_CODEX_PROXY_PROBE_URL, {
         method: 'GET',
         redirect: 'manual',
         headers: { accept: 'application/json' },
-        signal: AbortSignal.timeout(OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS),
+        signal: deadline.signal,
       }))
       await response.body?.cancel()
       return {
@@ -344,6 +348,8 @@ export class OpenAICodexProxyManager {
         reachable: false,
         classification: classifyProbeError(error),
       }
+    } finally {
+      deadline.dispose()
     }
   }
 

@@ -26,6 +26,18 @@ When `enableImageTool: true`, `view_image` is registered only after tools, files
 
 Each remote-image redirect hop has one 30-second deadline covering DNS, connection, and body consumption. Cancellation settles the caller's wait immediately; an operating-system DNS lookup may still finish later, but its result cannot start a new HTTP request after cancellation or timeout.
 
+## Backend request layer
+
+All plugin-owned traffic to `https://chatgpt.com/backend-api/` goes through one request-policy implementation. A running plugin instance shares one `OpenAICodexBackendRequestLayer` across model, search, quota, image generation, Auto-review, and native compaction. Standalone capability/reviewer probes use the same policy with their explicitly owned dispatcher, and proxy detection uses the same policy inside its already selected proxy scope.
+
+The layer owns per-attempt `x-client-request-id` generation, bounded HTTP/SSE diagnostics, an abort-aware concurrency gate, backend URL validation, shared deadline/backoff primitives, and proxy-scope composition. The runtime ceiling is eight simultaneously open backend responses per plugin instance; a slot remains occupied through body EOF or cancellation, and a queued request cancelled by its caller is removed without later dispatch. This is a local traffic-smoothing guard, not a claim about an upstream rate limit or account policy.
+
+Identity is centralized but deliberately not disguised. The pi-ai model route keeps pi-ai's own `originator` and User-Agent. Plugin-owned HTTP routes use `dsh-codex-connect` as their User-Agent; Search, Auto-review, native compaction, and their existing diagnostic probes retain the previously shipped `deepseek-harness` originator in one policy table. Quota, image generation, and the credential-free proxy probe do not invent an originator. The plugin does not copy first-party Codex client names, installation ids, attestation fields, or reverse-engineered headers.
+
+Route semantics remain explicit instead of being flattened into one retry policy. Search, image generation, and Auto-review do not gain automatic request replay. Quota state keeps its credential-bound cache/coalescing and 60/120/240/480/900-second failure backoff; native compaction keeps its bounded retry behavior while using the shared Retry-After parser and abortable wait primitive. The ordinary model route continues to use pi-ai's provider retry semantics. Search, quota, image generation, and Auto-review keep their existing total deadlines; model/native-compaction timeouts remain request-option controlled where applicable.
+
+Diagnostics retain only allowlisted status, request-id, Retry-After, and bounded SSE error code/type fields. Raw response bodies, OAuth credentials, account ids, generated text, and arbitrary headers are not added to diagnostic records. A malformed, oversized, or terminal SSE frame stops further attribution rather than guessing which later frame caused an error.
+
 ## Conflicts and diagnostics
 
 Before registration the plugin checks current provider ids. An existing `openai-codex` adapter produces a focused message naming the likely legacy-bundle or manual-provider cause. The boot-free CLI `doctor` reports package/runtime version, OAuth path metadata, capability defaults, and safe conflict guidance without returning auth content.

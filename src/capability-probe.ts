@@ -1,6 +1,8 @@
 /** Bounded, standalone Responses probe; never used by conversation routing. */
 
 import type { Dispatcher } from 'undici'
+import type { FetchFunction } from '@earendil-works/pi-ai'
+import { OpenAICodexBackendRequestLayer, openAICodexBackendDeadline } from './backend-request.ts'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
 import { Agent, ProxyAgent, fetch } from './undici-runtime.ts'
 
@@ -80,21 +82,20 @@ export async function probeCodexResponses(
   createDispatcher: (proxyUrl: string | undefined) => Dispatcher = proxyUrl => proxyUrl === undefined ? new Agent() : new ProxyAgent(proxyUrl),
 ): Promise<ResponsesProbeEvidence> {
   const dispatcher = createDispatcher(request.proxyUrl)
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), request.timeoutMs)
+  const deadline = openAICodexBackendDeadline(undefined, request.timeoutMs)
+  const backendRequests = new OpenAICodexBackendRequestLayer()
   let httpStatus: number | undefined
   try {
-    const response = await fetch(`${OPENAI_CODEX_BASE_URL}/responses`, {
+    const response = await backendRequests.fetch('capability-probe', `${OPENAI_CODEX_BASE_URL}/responses`, {
       dispatcher,
       method: 'POST',
       redirect: 'manual',
-      signal: controller.signal,
+      signal: deadline.signal,
       headers: {
         authorization: `Bearer ${request.access}`,
         'chatgpt-account-id': request.accountId,
         'content-type': 'application/json',
         accept: 'text/event-stream',
-        originator: 'deepseek-harness',
       },
       body: JSON.stringify({
         model: request.model,
@@ -103,7 +104,7 @@ export async function probeCodexResponses(
         stream: true,
         store: false,
       }),
-    })
+    } as RequestInit, fetch as unknown as FetchFunction)
     httpStatus = response.status
     if (!response.ok) {
       await response.body?.cancel()
@@ -134,9 +135,9 @@ export async function probeCodexResponses(
     return { outcome: completedStream(text, request.model) ? 'completed' : 'incomplete', httpStatus }
   } catch {
     // Network, decoding, and cancellation errors can contain credentials or response text.
-    return { outcome: controller.signal.aborted ? 'timeout' : 'network-error', ...httpStatus === undefined ? {} : { httpStatus } }
+    return { outcome: deadline.timedOut() ? 'timeout' : 'network-error', ...httpStatus === undefined ? {} : { httpStatus } }
   } finally {
-    clearTimeout(timer)
+    deadline.dispose()
     await dispatcher.destroy()
   }
 }
