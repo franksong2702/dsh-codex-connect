@@ -1,3 +1,15 @@
+# Think T1 mechanism extraction — 2026-09-20
+
+This independent `franksong2702/think-replay-mechanism` branch starts from exact post-4.37 main `e5772cd8a5c47f30b5ab14fe73d2901914348463`, not the deployed Split worktree. The user requested parallel development while accepting Split on 3081. See [the T1 contract and subsequent slices](../design/think-replay-mechanism.md).
+
+T1 extracts canonical notice parsing, original-position wire replay and per-request provider scope from #167 `7315795`, with a separate exact admitted-history guard. The eager-provider-construction regression was reproduced against the extracted old code and repaired; three notice-movement/background-edit cases drove full-surface validation. There is no production registration, proposal policy/UI, history migration, changed default, dependency/version change or changed generated `lib/` output. The old #167 remains open and conflicting; this slice does not silently replace its full scope.
+
+Final-code local `pnpm run check` passed **102 files / 1,032 tests**, including **57 mechanism/projection/scope tests**, on Node 22.22.3 / DSH 0.1.2-rc.1 / pi-ai 0.84.4 (`wc_job_05928S9Rez_oHGQM`). All source lint, TypeScript, build, CLI, package and workflow checks passed. The tests use real in-memory Session append/JSON restoration and synthetic provider hooks; no disk/process-restart, four-host Think or live-provider acceptance is implied. Remote delivery CI must be read back for the eventual exact PR head rather than inherited from these local results.
+
+Split #200 remains at `83f6a021a754e18e076a7d003d6ae98ca58dbd20`; #199 remains `cc979bc`. Their branch files, the 3081 synthetic acceptance process and 3080 are outside this task. No new live-model requests, real credential access, merge, release, deployment or service restart. Next: T2 host-owned admission/cancellation/manual selection plus explicit default-off activation; Remember/Split composition and real task-value measurements remain separate.
+
+---
+
 # Alpha 4.37 published checkpoint — 2026-09-19
 
 Alpha `0.1.0-alpha.4.37` was published from `5cbd0d330d12c81f0bf37515b65bc799e480aa78` through successful workflow `35439115133`. The npm archive equals the final tested artifact; the Git tag and published GitHub prerelease match the release commit. `alpha` is 4.37; `latest` remains 4.34. See [publication verification](../../.github/ALPHA_437_PUBLICATION.md). No service or default changed, and no new live-model request was made. The local DSH repair, Think and Split are not included.
