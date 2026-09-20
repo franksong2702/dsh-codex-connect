@@ -289,17 +289,24 @@ it('does not publish a request header when selection changes inside admission', 
 
 it('refuses proposals from an actually owned child, not only forged identities', async () => {
   const f = await setup(); await f.send()
-  const child = await f.agent.ctx.get('agents')!.create({ sessionId: SessionId('owned-think-child'), meta: { cwd: root! },
-    agentOptions: { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('low') } })
+  // Baseline infers ownership from caller scope; newer hosts require an explicit live parent.
+  const childOptions = { sessionId: SessionId('owned-think-child'), parentAgent: f.agent, meta: { cwd: root! },
+    agentOptions: { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('low') } }
+  const child = await f.agent.ctx.get('agents')!.create(childOptions)
   try {
     expect(f.context.agents.isOwnedBy(child.agent.id, f.agent)).toBe(true)
+    expect(f.context.agents.roots()).not.toContain(child.agent)
     child.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Synthetic child task.' }] }))
     await child.agent.whenIdle()
     const questions = vi.fn(async () => approve()); f.context.on('user-questions/request', questions)
     const result = await f.context.tools.execute({ name: ASTRA_REASONING_TOOL_NAME, callId: 'owned-child' as never,
       arguments: { effort: 'high', reason: 'Not a root.' }, agent: child.agent, signal: new AbortController().signal })
     expect(result.isError).toBe(true); expect(questions).not.toHaveBeenCalled()
-  } finally { await child.dispose() }
+  } finally {
+    await child.dispose()
+    expect(f.context.agents.get(child.agent.id)).toBeUndefined()
+    expect(f.context.sessions.get(child.agent.id)).toBeUndefined()
+  }
 })
 
 it('guards direct prepared adapter dispatch after the host integration is disposed', async () => {

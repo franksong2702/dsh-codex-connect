@@ -1,3 +1,15 @@
+# Think dedicated exact-host lifecycle gate — 2026-09-20
+
+Branch `franksong2702/think-exact-host-matrix` is stacked on #221 at `b60327391ac337af3aa72755cef87124651d7a05`. Read [the dedicated matrix and remaining product gate](../experiments/think-exact-host-matrix.md). The same native admission spec and implementation bundle now run on all four declared hosts, independently of ordinary installation regression. The tested third-party framework may come from the development installation; runtime modules, versions and actual in-process identities must come from each selected host.
+
+The new matrix first exposed fixture ESM/manifest resolution defects and then an actual test-composition difference: newer Agent factories require an explicit `parentAgent`. The fixture now creates a genuine owned child and verifies rejection plus complete owned cleanup, rather than misclassifying another root as a child. Think permission code is unchanged. A transient registry transport failure remains historical infrastructure evidence.
+
+Final local full check passed **106 files / 1,092 tests**; the final exact-host matrix passed **31 functional cases + 1 runtime identity check on each of four hosts**, all with zero actual test-network attempts. Accepted report: `docs/experiments/think-host-matrix-acceptance.json`; bundle SHA-256 `8bd32b61e85de63886fda443ded04221b4fc8e560ab66e8dd9692388e229e069`. Both Node CI jobs now require this gate. New exact-head remote CI must be independently read back after delivery.
+
+No product source/bundle/dependency/default or support-range changes, no new live model/credential access, and no merge/release/deployment. The #200 Split worktree and 3081 acceptance process (10758), and 3080 (1755), were rechecked unchanged. Next remains the explicit saved opt-in and real browser question/selector lifecycle, then separately scoped durability/composition/usefulness work. These synthetic host tests do not establish browser, disk/restart or real-provider acceptance.
+
+---
+
 # Think T2a native host admission — 2026-09-20
 
 The `franksong2702/think-host-admission` branch is stacked on T1 #220 `4cf94eab9da5f3ed16e140b3921e669ae7913294`, not on Split. Read [the T2a contract and remaining gates](../design/think-host-admission.md). It composes real root ownership, native human questions, pending/durable request admission, cancellation/disable/disposal and subsequent manual effort selection with T1's exact-history replay. A narrow optional adapter seam is inactive unless explicitly supplied by the internal host integration. No product entry or user setting registers it.
