@@ -1,3 +1,15 @@
+# Think T2a native host admission — 2026-09-20
+
+The `franksong2702/think-host-admission` branch is stacked on T1 #220 `4cf94eab9da5f3ed16e140b3921e669ae7913294`, not on Split. Read [the T2a contract and remaining gates](../design/think-host-admission.md). It composes real root ownership, native human questions, pending/durable request admission, cancellation/disable/disposal and subsequent manual effort selection with T1's exact-history replay. A narrow optional adapter seam is inactive unless explicitly supplied by the internal host integration. No product entry or user setting registers it.
+
+Final-code local `pnpm run check` passed **105 files / 1,073 tests** on Node 22.22.3, including **31 new real-host/synthetic-SSE admission cases**, the 57 T1 cases and supplemental CI contracts (`wc_job_FELGOj_s16j1DVJD`). The runtime test host is DSH 0.1.2-rc.1 / pi-ai 0.84.4. It exercises native question service and configured request headers, not an actual browser answerer or real provider. The newly reproduced dropped-first-notice fault now fails before model dispatch; altered notices and later requests in the same integrity-failed runtime also fail closed without repairing the log. Fault-quarantine persistence/restart remains unaccepted.
+
+The adapter source and its generated files change; production registration, frontend, feature defaults, release version, runtime dependencies and declared hosts do not. The lockfile adds only the exact native-question development package. Supplemental read-only CodeQL and its tested SARIF gate are reused from #200 because this PR targets another feature branch; final-head remote results must be read independently after delivery.
+
+Remaining: T2b product opt-in and real browser question/selector flow, a dedicated newer-host Think matrix, durable fault/restart acceptance, T3 Remember/Split composition and separately authorized real-model usefulness. Do not call the ordinary install matrix four-host Think acceptance. #167 and #220 remain unmerged; no merge, release, deployment, real credential access or real model traffic is authorized here. The separate Split worktree and both 3080/3081 services remain untouched.
+
+---
+
 # Think T1 mechanism extraction — 2026-09-20
 
 This independent `franksong2702/think-replay-mechanism` branch starts from exact post-4.37 main `e5772cd8a5c47f30b5ab14fe73d2901914348463`, not the deployed Split worktree. The user requested parallel development while accepting Split on 3081. See [the T1 contract and subsequent slices](../design/think-replay-mechanism.md).

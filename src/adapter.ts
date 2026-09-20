@@ -20,6 +20,12 @@ import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 
+/** Internal optional replay seam. Omission preserves the ordinary product adapter. */
+export interface OpenAICodexRequestReplay {
+  wrapProvider(provider: Provider): Provider
+  stream(options: GenerateOptions, delegate: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
+}
+
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
 
@@ -247,8 +253,10 @@ export function createOpenAICodexAdapter(
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
   reservePermits?: ReserveRequestPermits,
   nativeCompactionEnabled?: () => boolean,
+  requestReplay?: OpenAICodexRequestReplay,
 ): PiAiAdapter {
-  const baseline = withOpenAICodexAstra(openaiCodexProvider())
+  const original = withOpenAICodexAstra(openaiCodexProvider())
+  const baseline = requestReplay?.wrapProvider(original) ?? original
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
@@ -267,7 +275,8 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
-      return streamWithNativeCompactionScope(stream, options, nativeCompactionEnabled?.() === true)
+      const delegate = () => streamWithNativeCompactionScope(stream, options, nativeCompactionEnabled?.() === true)
+      return requestReplay?.stream(options, delegate) ?? delegate()
     }
 
     override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
