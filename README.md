@@ -104,6 +104,10 @@ Model HTTP/SSE failures include bounded, request-local diagnostic metadata after
 
 Account permissions, plugin/host compatibility, and network conditions all affect availability. Access on another client does not guarantee this integration will work. OpenAI controls model access, quota, context capacity, and service behavior; catalog entries are not proof of entitlement.
 
+### Does changing client headers prevent persistent authorization failures?
+
+No such guarantee is established. Codex Connect is a third-party integration; it does not impersonate Codex Desktop or fabricate installation/attestation headers. The pi-ai model/OAuth route and auxiliary routes currently identify themselves differently. OpenAI's [App Server documentation](https://developers.openai.com/codex/app-server/) asks integrations to identify their own client with `clientInfo`; it does not establish acceptance rules for this plugin's direct backend calls. An `overloaded` message is not proof of a block. Capture the bounded error metadata and compare successful and failed windows before attributing the cause; share request IDs privately, never tokens or full session archives.
+
 ### Can I keep the original `dsh-codex` plugin installed?
 
 Not in the same effective configuration: both register `openai-codex`. Follow [MIGRATION.md](MIGRATION.md); remove only the confirmed conflicting entry, not credentials or unrelated providers.

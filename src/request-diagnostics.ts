@@ -32,13 +32,13 @@ function errorCode(value: unknown): string | undefined {
   return typeof value === 'string' && /^[a-z][a-z0-9_]{0,79}$/u.test(value) ? value : undefined
 }
 
-/** Observe only complete bounded frames, discarding oversized frames until the next blank line. */
+/** Observe bounded frames only while their attribution is unambiguous; never scan past a terminal. */
 class ErrorFrameObserver {
   private readonly decoder = new TextDecoder()
   private line = ''
   private data = ''
   private size = 0
-  private skip = false
+  private stopped = false
   private previousCR = false
   private lineHasText = false
 
@@ -46,7 +46,7 @@ class ErrorFrameObserver {
 
   feed(chunk: Uint8Array): void {
     // Slicing bounds temporary decoding even when a custom fetch returns a very large chunk.
-    for (let offset = 0; offset < chunk.byteLength; offset += 4096) {
+    for (let offset = 0; !this.stopped && offset < chunk.byteLength; offset += 4096) {
       this.text(this.decoder.decode(chunk.subarray(offset, offset + 4096), { stream: true }))
     }
   }
@@ -57,8 +57,14 @@ class ErrorFrameObserver {
     this.line = ''; this.data = ''; this.size = 0
   }
 
+  private stop(): void {
+    this.stopped = true
+    this.line = ''; this.data = ''; this.size = 0
+  }
+
   private text(text: string): void {
     for (const character of text) {
+      if (this.stopped) return
       if (character === '\n' && this.previousCR) { this.previousCR = false; continue }
       this.previousCR = character === '\r'
       if (character === '\r' || character === '\n') {
@@ -66,30 +72,33 @@ class ErrorFrameObserver {
       } else {
         this.lineHasText = true
         this.size += 1
-        if (this.size > MAX_FRAME_CHARS) { this.skip = true; this.line = ''; this.data = '' }
-        if (!this.skip) this.line += character
+        if (this.size > MAX_FRAME_CHARS) { this.stop(); return }
+        this.line += character
       }
     }
   }
 
   private completeLine(): void {
     if (!this.lineHasText) {
-      if (!this.skip && this.data) this.observe(this.data)
-      this.data = ''; this.size = 0; this.skip = false
-    } else if (!this.skip && this.line.startsWith('data:')) {
+      if (this.data) this.observe(this.data)
+      this.data = ''; this.size = 0
+    } else if (this.line.startsWith('data:')) {
       this.data += this.line.slice(5).replace(/^ /u, '') + '\n'
       // Empty data lines still consume memory, so count their separators too.
       this.size += 1
-      if (this.size > MAX_FRAME_CHARS) { this.skip = true; this.data = '' }
+      if (this.size > MAX_FRAME_CHARS) this.stop()
     }
     this.line = ''; this.lineHasText = false
   }
 
   private observe(data: string): void {
-    if (this.diagnostic.eventType !== undefined) return // Match the first terminal error the provider consumes.
+    if (data.trim() === '[DONE]') { this.stop(); return }
     let event: unknown
-    try { event = JSON.parse(data) } catch { return }
-    if (!record(event) || (event['type'] !== 'error' && event['type'] !== 'response.failed')) return
+    try { event = JSON.parse(data) } catch { this.stop(); return }
+    if (!record(event)) { this.stop(); return }
+    if (['response.completed', 'response.done', 'response.incomplete'].includes(String(event['type']))) { this.stop(); return }
+    if (event['type'] !== 'error' && event['type'] !== 'response.failed') return
+    this.stop()
     const response = record(event['response']) ? event['response'] : undefined
     const nested = record(event['error']) ? event['error'] : response !== undefined && record(response['error']) ? response['error'] : undefined
     this.diagnostic.eventType = event['type']

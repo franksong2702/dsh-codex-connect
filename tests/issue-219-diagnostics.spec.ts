@@ -92,6 +92,22 @@ describe('issue 219 provider-to-DSH diagnostics', () => {
   })
 })
 
+describe('issue 219 diagnostic attribution boundaries', () => {
+  it.each([
+    ['malformed JSON', 'data: broken\n\n'],
+    ['oversized first error', 'data: ' + JSON.stringify({ type: 'error', code: 'actual_first_error', message: overloaded, extra: 'x'.repeat(100_000) }) + '\n\n'],
+    ['completed empty response', 'data: ' + JSON.stringify({ type: 'response.completed', response: { status: 'completed', output: [] } }) + '\n\n'],
+  ])('never attributes an unread later error after %s', async (_name, first) => {
+    const raw = first + 'data: ' + JSON.stringify({ type: 'error', code: 'unread_later_error', message: overloaded, request_id: 'req-unread' }) + '\n\n'
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(raw, { headers: { 'content-type': 'text/event-stream', 'x-request-id': 'req-http-boundary' } })))
+    const chunks = await collect(createOpenAICodexAdapter(credentials, () => undefined).stream(options))
+    expect(diagnostic(chunks)).toMatchObject({ httpStatus: 200, httpRequestId: 'req-http-boundary' })
+    expect(diagnostic(chunks)['eventType']).toBeUndefined()
+    expect(diagnostic(chunks)['errorCode']).toBeUndefined()
+    expect(diagnostic(chunks)['sseRequestId']).toBeUndefined()
+  })
+})
+
 describe('bounded non-destructive SSE observation', () => {
   async function observe(text: string, oneByte = false) {
     const bytes = new TextEncoder().encode(text)
@@ -120,10 +136,10 @@ describe('bounded non-destructive SSE observation', () => {
     expect(JSON.stringify(result)).not.toMatch(/private-body|秘密|sk-secret/u)
   })
 
-  it('discards oversized and malformed frames, then recovers at a frame boundary', async () => {
+  it('stops SSE attribution after oversized or malformed frames while preserving bytes', async () => {
     const text = 'data: ' + JSON.stringify({ type: 'error', code: 'ignored', extra: 'x'.repeat(100_000) })
       + '\n\ndata: broken\n\ndata: {"type":"error","code":"recovered","request_id":"eyJfake_token"}\n\n'
-    expect(await observe(text)).toMatchObject({ errorCode: 'recovered' })
+    expect((await observe(text))['errorCode']).toBeUndefined()
     expect((await observe(text))['sseRequestId']).toBeUndefined()
   })
 

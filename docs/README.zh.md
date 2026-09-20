@@ -104,6 +104,10 @@ OAuth 凭据保存在运行 DSH 的主机上，由该主机用于向 OpenAI 认�
 
 账户权限、插件与宿主兼容性、网络条件都会影响可用性。其他客户端可以使用，不代表此集成一定可用。OpenAI 控制模型权限、额度、上下文容量和服务行为；目录条目不是账户权限证明。
 
+### 修改客户端请求头就能避免持续授权失败吗？
+
+目前没有这样的保证。Codex Connect 是第三方集成，不冒充 Codex Desktop，也不伪造安装标识或 attestation 请求头。pi-ai 模型/OAuth 路由与辅助路由目前采用不同的客户端身份。OpenAI 的 [App Server 文档](https://developers.openai.com/codex/app-server/)要求集成通过 `clientInfo` 标识自己的客户端，但这不能证明本插件直接调用后端接口的接受规则。`overloaded` 本身不是封锁证据。应保留有界诊断信息，对照成功和失败时段后再判断原因；请求 ID 仅私下提供，不公开 token 或完整会话归档。
+
 ### 可以保留原来的 `dsh-codex` 插件吗？
 
 不能在同一份有效配置中并存：两者都会注册 `openai-codex`。请遵循 [MIGRATION.md](../MIGRATION.md)，只移除已经确认冲突的条目，不删除凭据或无关提供方。
