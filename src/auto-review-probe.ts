@@ -3,6 +3,7 @@
 import type { Dispatcher } from 'undici'
 import { OPENAI_CODEX_BASE_URL } from './search.ts'
 import { Agent, ProxyAgent, fetch } from './undici-runtime.ts'
+import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
 
 /** Hidden reviewer route selected by the first-party Codex catalog. */
 export const CODEX_AUTO_REVIEW_MODEL = 'codex-auto-review'
@@ -133,18 +134,20 @@ export async function probeCodexAutoReview(
   }, request.timeoutMs)
   let httpStatus: number | undefined
   try {
+    const { headers } = prepareOpenAICodexBackendHeaders({
+      authorization: `Bearer ${request.access}`,
+      'chatgpt-account-id': request.accountId,
+      'content-type': 'application/json',
+      accept: 'text/event-stream',
+    }, 'plugin')
+    const requestHeaders: Record<string, string> = {}
+    headers.forEach((value, key) => { requestHeaders[key] = value })
     const response = await fetch(`${OPENAI_CODEX_BASE_URL}/responses`, {
       dispatcher,
       method: 'POST',
       redirect: 'manual',
       signal: controller.signal,
-      headers: {
-        authorization: `Bearer ${request.access}`,
-        'chatgpt-account-id': request.accountId,
-        'content-type': 'application/json',
-        accept: 'text/event-stream',
-        originator: 'deepseek-harness',
-      },
+      headers: requestHeaders,
       body: JSON.stringify({
         model: CODEX_AUTO_REVIEW_MODEL,
         instructions,

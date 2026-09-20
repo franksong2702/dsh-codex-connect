@@ -14,6 +14,7 @@ import {
   readOpenAICodexBoundedBody,
 } from '../src/transport.ts'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from '../src/store.ts'
+import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 
 let root: string | undefined
 let context: Context | undefined
@@ -50,7 +51,12 @@ async function credentialStore(authenticated = true): Promise<OpenAICodexCredent
   return store
 }
 
-async function transport(authenticated = true, imageModelHint: string | (() => string) = '', authGate?: { entered: () => void; wait: Promise<void> }): Promise<OpenAICodexTransport> {
+async function transport(
+  authenticated = true,
+  imageModelHint: string | (() => string) = '',
+  authGate?: { entered: () => void; wait: Promise<void> },
+  backendRequests?: OpenAICodexBackendRequests,
+): Promise<OpenAICodexTransport> {
   const store = await credentialStore(authenticated)
   if (authGate !== undefined) {
     const capture = store.captureActiveAccount.bind(store)
@@ -64,7 +70,11 @@ async function transport(authenticated = true, imageModelHint: string | (() => s
   context = ctx
   let service: OpenAICodexTransport | undefined
   await ctx.plugin((pluginCtx) => {
-    service = new OpenAICodexTransport(pluginCtx, store, undefined, undefined, typeof imageModelHint === 'function' ? imageModelHint : () => imageModelHint)
+    service = new OpenAICodexTransport(
+      pluginCtx, store, undefined, undefined,
+      typeof imageModelHint === 'function' ? imageModelHint : () => imageModelHint,
+      backendRequests,
+    )
   })
   if (service === undefined) throw new Error('transport service did not start')
   return service
@@ -101,6 +111,19 @@ describe('OpenAI Codex image transport', () => {
     expect(headers.get('chatgpt-account-id')).toBe('account-1')
     expect(JSON.stringify(result)).not.toContain('account-1')
     expect(JSON.stringify(result)).not.toContain('access-secret')
+  })
+
+  it('routes image generation through the shared governor with the plugin identity policy', async () => {
+    const requests = new OpenAICodexBackendRequests()
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => jsonResponse({ data: [{ b64_json: 'aGVsbG8=' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      await (await transport(true, '', undefined, requests)).generateImages({ prompt: 'governed' }, {})
+      const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
+      expect(headers.get('originator')).toBe('deepseek-harness')
+      expect(headers.get('user-agent')).toBe('dsh-codex-connect')
+      expect(headers.get('x-client-request-id')).toMatch(/^[0-9a-f-]{36}$/u)
+    } finally { requests.dispose() }
   })
 
   it.each(['gpt-image-custom', 'gpt_image.v2'])('sends a valid profile image model hint once', async imageModelHint => {

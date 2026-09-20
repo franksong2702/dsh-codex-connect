@@ -12,6 +12,7 @@ import {
   isValidOpenAICodexProxyUrl,
   normalizeOpenAICodexProxyUrl,
 } from './settings-contract.ts'
+import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
 
 /** Canonical first-party endpoint used for a no-auth, no-model reachability probe. */
 export const OPENAI_CODEX_PROXY_PROBE_URL = 'https://chatgpt.com/backend-api/codex'
@@ -325,10 +326,11 @@ export class OpenAICodexProxyManager {
       return { proxyUrl, reachable: false, classification: 'invalid' }
     }
     try {
+      const { headers } = prepareOpenAICodexBackendHeaders({ accept: 'application/json' }, 'probe')
       const response = await this.run(normalized, () => fetch(OPENAI_CODEX_PROXY_PROBE_URL, {
         method: 'GET',
         redirect: 'manual',
-        headers: { accept: 'application/json' },
+        headers,
         signal: AbortSignal.timeout(OPENAI_CODEX_PROXY_PROBE_TIMEOUT_MS),
       }))
       await response.body?.cancel()

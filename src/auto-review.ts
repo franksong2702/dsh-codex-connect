@@ -11,6 +11,7 @@ import { AutoReviewState, buildAutoReviewContext, resolveAutoReviewAction } from
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
 
 const REJECTION_GUIDANCE = 'Do not attempt the same outcome through a workaround, indirect execution, or policy circumvention. Stop this action and work that depends on it; continue independent, already-authorized work. Report the blocked dependency. Retrying the denied action requires exact-action user approval and must still respect higher-priority restrictions.'
 
@@ -91,9 +92,10 @@ export function registerOpenAICodexAutoReview(
   proxyManager: OpenAICodexProxyManager,
   resolveProxyUrl: () => string | undefined,
   enabled: () => boolean,
+  backendRequests?: OpenAICodexBackendRequests,
 ): OpenAICodexAutoReviewAnswerer {
   const answerer = new OpenAICodexAutoReviewAnswerer(
-    new OpenAICodexAutoReviewBackend(credentials, proxyManager, resolveProxyUrl),
+    new OpenAICodexAutoReviewBackend(credentials, proxyManager, resolveProxyUrl, credentials, backendRequests),
     new AutoReviewState(),
     message => { ctx.logger.info(message) },
   )

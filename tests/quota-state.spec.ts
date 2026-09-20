@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { OpenAICodexQuotaState } from '../src/quota-state.ts'
 import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError } from '../src/usage.ts'
+import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 
 const { readAuth, readResponse } = vi.hoisted(() => ({ readAuth: vi.fn(), readResponse: vi.fn() }))
 vi.mock('../src/auth.ts', async importOriginal => ({
@@ -37,7 +38,7 @@ async function flush(): Promise<void> {
   await Promise.resolve()
 }
 
-function setup() {
+function setup(backendRequests?: OpenAICodexBackendRequests) {
   let account = 'acct'
   let user = 'user'
   let enabled = true
@@ -50,6 +51,7 @@ function setup() {
     credentials: captured as unknown as OpenAICodexCredentialStore,
     proxyManager: proxyManager as never,
     resolveProxyUrl: () => proxy,
+    backendRequests,
     enabled: () => enabled,
   })
   return {
@@ -75,6 +77,20 @@ describe('OpenAICodexQuotaState acceptance', () => {
     await vi.advanceTimersByTimeAsync(1)
     await flush(); expect(readResponse).toHaveBeenCalledTimes(2)
     await state.dispose()
+  })
+
+  it('routes usage GETs through the shared governor when one is installed', async () => {
+    const requests = new OpenAICodexBackendRequests()
+    const run = vi.spyOn(requests, 'run')
+    const h = setup(requests)
+    try {
+      await h.state.read()
+      expect(run).toHaveBeenCalledWith(expect.objectContaining({ lane: 'quota' }), expect.any(Function))
+      expect(readResponse.mock.calls[0]?.[3]).toEqual(expect.any(Function))
+    } finally {
+      await h.state.dispose()
+      requests.dispose()
+    }
   })
 
   it.each([[75, 30_000], [90, 15_000], [99, 5_000]])('refreshes at the %s%% cadence boundary', async (used, delay) => {

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OpenAICodexRequestAuthError } from './auth-error.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
 import { parseReserveUsage, reserveIdentity, type ReserveIdentity, type ReserveUsageDecision } from './reserve-usage.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError, parseOpenAICodexUsage, readOpenAICodexUsageResponse, type OpenAICodexUsage } from './usage.ts'
@@ -82,6 +83,7 @@ export class OpenAICodexQuotaState {
     credentials: OpenAICodexCredentialStore
     proxyManager: OpenAICodexProxyManager
     resolveProxyUrl: () => string | undefined
+    backendRequests?: OpenAICodexBackendRequests | undefined
     enabled: () => boolean
   }) {}
 
@@ -154,7 +156,12 @@ export class OpenAICodexQuotaState {
     const candidate = enabled ? reserveIdentity(auth.access) : undefined
     const identity = candidate?.accountId === auth.accountId ? candidate : undefined
     const fetch = async (authoritySignal = epoch): Promise<OpenAICodexQuotaSnapshot> => {
-      const value = await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, authoritySignal, enabled && identity !== undefined))
+      const value = this.options.backendRequests === undefined
+        ? await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, authoritySignal, enabled && identity !== undefined))
+        : await this.options.backendRequests.run(
+            { lane: 'quota', signal: authoritySignal },
+            context => readOpenAICodexUsageResponse(auth, context.signal, enabled && identity !== undefined, context.fetch),
+          )
       epoch.throwIfAborted()
       return { usage: parseOpenAICodexUsage(value), ...(identity === undefined ? {} : { identity }),
         decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal }

@@ -16,6 +16,7 @@ import type { FastModeRegistry } from './fast-mode.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './model-contract.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
 import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
@@ -145,6 +146,7 @@ function requestProvider(
   fastMode?: FastModeRegistry,
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
+  backendRequests?: OpenAICodexBackendRequests,
 ): Provider {
   const configured = withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode)
   const streamSimple = configured.streamSimple
@@ -152,8 +154,8 @@ function requestProvider(
     ...configured,
     streamSimple(model, context: PiContext, options?: SimpleStreamOptions) {
       const proxyUrl = resolveProxyUrl?.()
-      const operation = () => streamSimple.call(configured, model, context, withCodexDiagnosticFetch(options))
-      return proxyManager?.runStream(proxyUrl, operation) ?? operation()
+      const operation = () => streamSimple.call(configured, model, context, withCodexDiagnosticFetch(options, backendRequests))
+      return backendRequests?.runStream(operation) ?? proxyManager?.runStream(proxyUrl, operation) ?? operation()
     },
     auth: {
       ...provider.auth,
@@ -177,6 +179,7 @@ export function createOpenAICodexProfile(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: Readonly<Record<string, number>> | undefined,
+  backendRequests?: OpenAICodexBackendRequests,
 ): ResolvedPiAiProviderProfile & { piProvider: Provider } {
   const effectiveProvider = contextWindowOverrides === undefined
     ? provider
@@ -192,7 +195,7 @@ export function createOpenAICodexProfile(
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
     modelErrors: new Map<string, string>(),
-    piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl),
+    piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl, backendRequests),
   }
   return profile
 }
@@ -248,6 +251,7 @@ export function createOpenAICodexAdapter(
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
   reservePermits?: ReserveRequestPermits,
   nativeCompactionEnabled?: () => boolean,
+  backendRequests?: OpenAICodexBackendRequests,
 ): PiAiAdapter {
   const baseline = withOpenAICodexAstra(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
@@ -256,7 +260,7 @@ export function createOpenAICodexAdapter(
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {
     const overrides = contextWindowOverrides?.()
     if (profiles === undefined || !deepEqualJson(previousOverrides, overrides)) {
-      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides)
+      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides, backendRequests)
       previousOverrides = overrides === undefined ? undefined : { ...overrides }
       // PiAiAdapter keys snapshots by map identity; captured calls keep the old map.
       profiles = new Map([[OPENAI_CODEX_PROVIDER, profile]])

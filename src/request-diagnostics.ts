@@ -1,9 +1,13 @@
 /** Request-local, bounded diagnostics for Codex HTTP/SSE failures. Never logs payloads. */
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { randomUUID } from 'node:crypto'
 import type { SimpleStreamOptions } from '@earendil-works/pi-ai'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { readRetryAfterMs } from './request-backoff.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
+import {
+  assertOpenAICodexBackendUrl,
+  openAICodexBackendResponseMeta,
+  prepareOpenAICodexBackendHeaders,
+} from './backend-request-policy.ts'
 
 interface SafeDiagnostic {
   clientRequestId: string
@@ -143,24 +147,49 @@ function observeResponse(response: Response, diagnostic: SafeDiagnostic): Respon
 }
 
 /** Inject a request-local fetch seam, preserving existing provider hooks and dispatchers. */
-export function withCodexDiagnosticFetch(options?: SimpleStreamOptions): SimpleStreamOptions | undefined {
+export function withCodexDiagnosticFetch(
+  options?: SimpleStreamOptions,
+  requests?: OpenAICodexBackendRequests,
+): SimpleStreamOptions | undefined {
   const scope = requestScope.getStore()
   if (scope === undefined) return options
   const fetch = options?.fetch ?? globalThis.fetch
+  if (requests !== undefined) {
+    const governed = requests.wrapFetch({
+      lane: 'model',
+      identity: 'preserve',
+      fetch,
+      onAttempt(meta) { scope.current = { clientRequestId: meta.clientRequestId } },
+      onResponse(meta) {
+        if (scope.current?.clientRequestId !== meta.clientRequestId) return
+        scope.current.httpStatus = meta.httpStatus
+        if (meta.httpRequestId !== undefined) scope.current.httpRequestId = meta.httpRequestId
+        if (meta.retryAfterMs !== undefined) scope.current.retryAfterMs = meta.retryAfterMs
+      },
+    })
+    return {
+      ...options,
+      async fetch(input, init) {
+        const response = await governed(input, init)
+        return scope.current === undefined ? response : observeResponse(response, scope.current)
+      },
+    }
+  }
   return {
     ...options,
     async fetch(input, init) {
-      const diagnostic: SafeDiagnostic = { clientRequestId: randomUUID() }
+      assertOpenAICodexBackendUrl(input)
+      const { headers, clientRequestId } = prepareOpenAICodexBackendHeaders(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        'preserve',
+      )
+      const diagnostic: SafeDiagnostic = { clientRequestId }
       scope.current = diagnostic
-      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
-      // Correlate each HTTP attempt independently; never change session affinity or client identity.
-      headers.set('x-client-request-id', diagnostic.clientRequestId)
       const response = await fetch(input, { ...init, headers })
-      diagnostic.httpStatus = response.status
-      const id = requestId(response.headers.get('x-request-id')) ?? requestId(response.headers.get('request-id'))
-      if (id !== undefined) diagnostic.httpRequestId = id
-      const retry = readRetryAfterMs(response.headers)
-      if (retry !== undefined && Number.isFinite(retry)) diagnostic.retryAfterMs = retry
+      const meta = openAICodexBackendResponseMeta(response, clientRequestId)
+      diagnostic.httpStatus = meta.httpStatus
+      if (meta.httpRequestId !== undefined) diagnostic.httpRequestId = meta.httpRequestId
+      if (meta.retryAfterMs !== undefined) diagnostic.retryAfterMs = meta.retryAfterMs
       return observeResponse(response, diagnostic)
     },
   }
