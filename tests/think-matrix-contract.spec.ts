@@ -10,19 +10,19 @@ import { readThinkHostIdentity } from '../scripts/check-think-matrix.mjs'
 const version = '0.1.5-rc.1'
 const digest = 'a'.repeat(64)
 const tests = () => ({ success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0,
-  numTotalTests: 36, numPassedTests: 36,
+  numTotalTests: 43, numPassedTests: 43,
   testResults: [{ assertionResults: [...THINK_HOST_CASES, THINK_IDENTITY_CASE].map((title: string) => ({ title, status: 'passed' })) }],
 })
-const host = () => ({ version, bundleDigest: digest, cases: [...THINK_HOST_CASES], tests: 36,
+const host = () => ({ version, bundleDigest: digest, cases: [...THINK_HOST_CASES], tests: 43,
   pid: 1001, node: 'v22.22.3', runtimePackages: Object.fromEntries(THINK_RUNTIME_PACKAGES.map((name: string) => [name, version])),
   piAiVersion: '0.85.1', syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0 })
 const report = () => ({ schemaVersion: 2, kind: 'think-native-host-matrix', bundleDigest: digest,
   syntheticOnly: true, productSettingsExercised: true, productionDefaultsChanged: false, realProviderDispatches: 0, reports: [host()] })
 
-it('requires 31 native Think cases, four product settings cases and exact runtime identity', () => {
-  expect(THINK_HOST_CASES).toHaveLength(35)
-  expect(new Set(THINK_HOST_CASES).size).toBe(35)
-  expect(inspectThinkTestReport(tests())).toEqual({ cases: THINK_HOST_CASES, tests: 36 })
+it('requires 38 native Think/M2 cases, four product settings cases and exact runtime identity', () => {
+  expect(THINK_HOST_CASES).toHaveLength(42)
+  expect(new Set(THINK_HOST_CASES).size).toBe(42)
+  expect(inspectThinkTestReport(tests())).toEqual({ cases: THINK_HOST_CASES, tests: 43 })
   expect(assertThinkMatrix(report(), [version], digest)).toEqual(report())
 })
 it.each(['failed', 'skipped', 'todo', 'missing', 'duplicate', 'renamed'])(

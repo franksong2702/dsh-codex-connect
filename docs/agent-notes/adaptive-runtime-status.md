@@ -1,3 +1,13 @@
+# Adaptive Runtime M2 candidate — 2026-09-21
+
+Branch `franksong2702/adaptive-runtime-m2` builds on M1 PR #232 at `2f135e7`; main remains the separately released Alpha 4.39 baseline. M2 adds a thin internal Observe → Recommend → Admit → Apply flow to the existing Think host integration. Explicit `keep` and same-effort proposals produce no confirmation or configuration change. Actual changes still require the exact native human answer, a current host observation and the validated journal/request header; local application is not remote request success.
+
+Content-free, per-live-Agent memory observations retain at most 64 decision transitions and 64 adapter-stream results (elapsed time, bounded outcome and available usage fields). There is no extra model call, persistence/telemetry upload, price estimate or new default. Missing usage is not zero, stream endings are not task correctness, and synthetic fixtures do not establish savings. M1's journal/compaction/restart authority and the #227 backend governor are unchanged.
+
+See [M2 scope and measurement limits](../experiments/adaptive-runtime-m2.md) and `.github/ADAPTIVE_RUNTIME_M2_VALIDATION.md` for exact candidate evidence. M1 and M2 remain unmerged engineering candidates; complete authenticated Session-page human experience and live Astra acceptance remain separate. M3 is the approved next milestone: one bounded read-only Split action under the same decision vocabulary, without bypassing its independent host permission/source/budget/cleanup contract. The original #220–224 and #199/#200 branches are preserved. No daily service, release, credential or live model call is changed here.
+
+---
+
 # Adaptive Runtime M1 candidate — 2026-09-21
 
 Isolated branch `franksong2702/adaptive-runtime-m1` reconciles Think #224 `c279420` (including #220/#221/#222) with released main `1748bec`; the original draft PR branches are unchanged. The integration merge is `c00755f`.

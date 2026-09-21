@@ -335,6 +335,86 @@ it('applies an approved decrease after an increase without resetting the wire ba
   expect(f.saveDefault).not.toHaveBeenCalled()
 })
 
+it('records explicit keep without confirmation or a configuration mutation', async () => {
+  const f = await setup(); await f.send()
+  const questions = vi.fn(async () => approve()); f.context.on('user-questions/request', questions)
+  const count = wires.length
+  for (const target of ['keep', 'low']) expect((await f.execute(undefined, target)).isError).not.toBe(true)
+  expect(questions).not.toHaveBeenCalled(); expect(wires).toHaveLength(count)
+  expect(f.notices()).toHaveLength(0); expect(f.effort()).toBe('low')
+  const snapshot = f.integration.adaptiveSnapshot(f.agent)!
+  expect(snapshot.decisions.map(event => event.phase)).toEqual(['unchanged', 'unchanged'])
+  expect(snapshot.requestCount).toBe(1)
+  await f.send()
+  expect(f.integration.adaptiveSnapshot(f.agent)!.decisionCount).toBe(2)
+  expect(wireUpdates()).toEqual([]); expect(f.saveDefault).not.toHaveBeenCalled()
+})
+
+it('separates adaptive consent, queued state, local application and request outcome', async () => {
+  const f = await setup(); await f.send()
+  f.context.on('user-questions/request', async () => approve())
+  expect((await f.execute()).isError).not.toBe(true)
+  const before = f.integration.adaptiveSnapshot(f.agent)!
+  expect(before.decisions.map(event => event.phase)).toEqual(['recommended', 'awaiting-user', 'queued'])
+  expect(before.requestCount).toBe(1); expect(f.effort()).toBe('low')
+  await f.send()
+  const after = f.integration.adaptiveSnapshot(f.agent)!
+  expect(after.decisions.at(-1)?.phase).toBe('applied')
+  expect(after.requests.at(-1)).toMatchObject({ purpose: 'task', effort: 'high', outcome: 'stop',
+    usage: { inputTokens: 20, outputTokens: 10 } })
+  expect(after.requestCount).toBe(2)
+  expect(JSON.stringify(after)).not.toMatch(/synthetic-think|call_explicit|Inspect this bounded task|Synthetic completion/)
+  expect(before.decisions).toHaveLength(3)
+})
+
+it.each(['decline', 'cancel'] as const)('records an unapplied adaptive decision after %s', async action => {
+  const f = await setup(); await f.send()
+  f.context.on('user-questions/request', async () => action === 'decline'
+    ? { answers: [{ id: 'astra-reasoning-effort', selected: ['Keep current effort'] }] } : approve())
+  const controller = new AbortController()
+  expect((await f.execute(controller.signal)).isError).not.toBe(true)
+  if (action === 'cancel') controller.abort(new Error('Synthetic cancellation'))
+  await f.send()
+  expect(f.integration.adaptiveSnapshot(f.agent)!.decisions.at(-1)?.phase).toBe(action === 'decline' ? 'declined' : 'cancelled')
+  expect(f.notices()).toHaveLength(0); expect(f.effort()).toBe('low')
+})
+
+it('records provider failure separately from an applied reasoning change', async () => {
+  const f = await setup(); await f.send(); f.context.on('user-questions/request', async () => approve())
+  expect((await f.execute()).isError).not.toBe(true)
+  transport(() => new Response('data: {"type":"error","message":"Synthetic overloaded","code":"overloaded"}\n\n',
+    { headers: { 'content-type': 'text/event-stream' } }))
+  await f.send()
+  const snapshot = f.integration.adaptiveSnapshot(f.agent)!
+  expect(snapshot.decisions.at(-1)?.phase).toBe('applied')
+  expect(snapshot.requests.at(-1)?.outcome).toBe('error')
+  expect(f.effort()).toBe('high'); expect(f.notices()).toHaveLength(1)
+})
+
+it('keeps adaptive observations isolated to the live root', async () => {
+  const f = await setup(); await f.send()
+  await f.execute(undefined, 'keep')
+  const other = await f.context.agents.create({ sessionId: SessionId('other-adaptive-root'), meta: { cwd: root! },
+    agentOptions: { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('medium') } })
+  other.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Independent task.' }] }))
+  await other.agent.whenIdle()
+  expect(f.integration.adaptiveSnapshot(f.agent)!.requestCount).toBe(1)
+  expect(f.integration.adaptiveSnapshot(other.agent)!.requestCount).toBe(1)
+  expect(f.integration.adaptiveSnapshot(other.agent)!.decisionCount).toBe(0)
+  expect(() => f.integration.adaptiveSnapshot(Object.create(f.agent) as typeof f.agent)).toThrow()
+})
+
+it('restores Think from the journal without restoring adaptive telemetry', async () => {
+  let f = await setup(); f.context.on('user-questions/request', async () => approve())
+  transport(() => wires.length === 1 ? proposal() : final()); await f.send()
+  expect(f.integration.adaptiveSnapshot(f.agent)!.decisions.at(-1)?.phase).toBe('applied')
+  const seed = JSON.parse(JSON.stringify(f.agent.session.snapshotEvents())) as SessionEvent[]
+  await f.context.fiber.dispose(); await rm(root!, { recursive: true, force: true })
+  f = await setup(false, 'low', seed); transport(); await f.send()
+  expect(f.effort()).toBe('high'); expect(wireUpdates()).toHaveLength(1)
+  expect(f.integration.adaptiveSnapshot(f.agent)).toBeUndefined()
+})
+
 it.each(['removed', 'changed'] as const)('rejects a first approved notice %s by a later pre-step transform', async fault => {
   const f = await setup(); await f.send()
   f.context.on('user-questions/request', async () => approve())

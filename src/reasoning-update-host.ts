@@ -13,6 +13,8 @@ import type { OpenAICodexRequestReplay } from './adapter.ts'
 import { prepareReasoningReplay } from './reasoning-update-history.ts'
 import { planCheckpointReasoningAdmission, recordedReasoningBase } from './reasoning-update-checkpoint.ts'
 import { AstraReasoningRequestScope } from './reasoning-update-provider.ts'
+import { AdaptiveDecisionFlow } from './adaptive-decision.ts'
+import type { AdaptiveDecisionSnapshot, AdaptiveRecommendation } from './adaptive-decision.ts'
 import {
   ASTRA_REASONING_EFFORTS, createReasoningUpdateMessage, isAstraReasoningEffort,
   readReasoningSelectionOrdinal, readReasoningUpdate, reasoningUpdateError,
@@ -39,6 +41,7 @@ function pendingSelection(session: Session) {
 }
 
 interface PendingChange {
+  recommendation: AdaptiveRecommendation
   generation: number
   notice: UserMessage
   revision: number
@@ -56,6 +59,8 @@ interface PreparedStep {
 /** Runtime activation driven by the saved product setting or an isolated test. */
 export interface ThinkHostIntegration {
   readonly adapterReplay: OpenAICodexRequestReplay
+  /** Internal observation, not a public endpoint, permission handle or restored state. */
+  adaptiveSnapshot(agent: Agent): AdaptiveDecisionSnapshot | undefined
   setEnabled(enabled: boolean): Promise<void>
 }
 
@@ -68,6 +73,12 @@ export interface ThinkHostIntegration {
  */
 export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration {
   const scope = new AstraReasoningRequestScope()
+  const flows = new WeakMap<Agent, AdaptiveDecisionFlow>()
+  const flowFor = (agent: Agent): AdaptiveDecisionFlow => {
+    let flow = flows.get(agent)
+    if (flow === undefined) { flow = new AdaptiveDecisionFlow(); flows.set(agent, flow) }
+    return flow
+  }
   const pending = new Map<Agent, PendingChange>()
   const invalidAdmissions = new WeakSet<Session>()
   const prepared = new WeakMap<Agent, PreparedStep>()
@@ -87,6 +98,12 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     }
   }
 
+  function discardPending(agent: Agent, phase: 'cancelled' | 'stale' | 'failed'): void {
+    const queued = pending.get(agent)
+    if (queued !== undefined) flows.get(agent)?.discard(queued.recommendation, phase)
+    pending.delete(agent)
+  }
+
   ctx.on('agent/pre-step', async ({ agent, turn, step, signal }, next) => {
     prepared.delete(agent)
     const decision = await next()
@@ -102,7 +119,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     if (queued !== undefined) {
       if (enabled && !queued.signal.aborted && queued.revision === selectionRevision(agent.session)
         && queued.generation === agent.session.surface.replaceGeneration) additions.push(queued.notice)
-      else pending.delete(agent)
+      else discardPending(agent, queued.signal.aborted || !enabled ? 'cancelled' : 'stale')
     }
     const selected = pendingSelection(agent.session)
     if (selected !== undefined && base !== undefined) {
@@ -153,7 +170,6 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       || selected.reasoningEffort !== plan.effectiveEffort)) {
       reasoningUpdateError('The latest manual selection was not preserved by Think admission.')
     }
-    if (current?.pending !== undefined && ids.has(current.pending.notice.id)) pending.delete(agent)
     return { ...config, reasoningEffort: ReasoningEffortId(plan.effectiveEffort) }
   }, { prepend: true })
 
@@ -178,7 +194,13 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       assertOwner(agent)
       if (stopped) reasoningUpdateError('Think integration was disposed before dispatch.')
       const queued = pending.get(agent)
-      if (queued !== undefined && session?.deriveMessages().some(message => message.id === queued.notice.id)) pending.delete(agent)
+      if (queued !== undefined && options.purpose === undefined
+        && session?.deriveMessages().some(message => message.id === queued.notice.id)
+        && session.requestHeader()?.config.reasoningEffort === plan.effectiveEffort) {
+        // Local application is not evidence of successful remote execution.
+        flowFor(agent).applied(queued.recommendation)
+        pending.delete(agent)
+      }
     }
     return session
   }
@@ -186,10 +208,10 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     replaySession(options)
     return next()
   }, { prepend: true })
-  const forget = ({ agent }: { agent: Agent }) => { pending.delete(agent); prepared.delete(agent) }
+  const forget = ({ agent }: { agent: Agent }) => { discardPending(agent, 'cancelled'); prepared.delete(agent) }
   ctx.on('agent/error', forget)
   ctx.on('agent/turn-stopping', forget)
-  ctx.on('agent/disposed', forget)
+  ctx.on('agent/disposed', event => { forget(event); flows.delete(event.agent) })
 
   function selection(agent: Agent) {
     assertOwner(agent)
@@ -211,19 +233,25 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
   }
 
   async function change(agent: Agent, effort: string, reason: string, signal?: AbortSignal) {
-    if (!isAstraReasoningEffort(effort) || reason.trim().length === 0 || reason.length > 2000) reasoningUpdateError('Provide a supported effort and a reason of 1–2000 characters.')
+    if ((effort !== 'keep' && !isAstraReasoningEffort(effort)) || reason.trim().length === 0 || reason.length > 2000) reasoningUpdateError('Provide keep or a supported effort and a reason of 1–2000 characters.')
     const combined = signal === undefined ? questionLifetime.signal : AbortSignal.any([signal, questionLifetime.signal])
     combined.throwIfAborted()
     const before = selection(agent)
-    if (effort === before.effectiveEffort) return { status: 'unchanged', effort, message: 'The selected effort is already effective.' }
     if (busy.has(agent)) reasoningUpdateError('A Think decision is already pending for this Agent.')
-    const questions = ctx.get('userQuestions')
-    if (questions === undefined) reasoningUpdateError('No native human-question service is available.')
+    const flow = flowFor(agent)
+    const recommendation = flow.recommend(before, effort === 'keep' ? { kind: 'keep' } : { kind: 'reasoning', effort })
+    if (recommendation.action.kind === 'keep') {
+      return { status: 'unchanged', effort: before.effectiveEffort, message: 'Keep the current effort. No confirmation or configuration change is needed.' }
+    }
+    const target = recommendation.action.effort
     busy.add(agent)
     try {
-      const approve = `Change to ${effort}`
+      const questions = ctx.get('userQuestions')
+      if (questions === undefined) reasoningUpdateError('No native human-question service is available.')
+      flow.requestConsent(recommendation)
+      const approve = `Change to ${target}`
       const answer = await questions.ask({ agent, signal: combined, questions: [{ id: 'astra-reasoning-effort',
-        header: 'Astra reasoning', question: `Change this conversation from ${before.effectiveEffort} to ${effort}?`,
+        header: 'Astra reasoning', question: `Change this conversation from ${before.effectiveEffort} to ${target}?`,
         detail: `Reason: ${reason}\n\nThis affects later requests in this conversation only. The selector updates with the next recorded request, not this approval. Other conversations and defaults are unchanged. Quality, latency and quota savings are not guaranteed. Source-validated prefix compaction preserves admitted state. Model switches, child inheritance, and unverified history rewrites remain unsupported.`,
         options: [{ label: approve, description: 'Approve this exact change.' },
           { label: 'Keep current effort', description: 'Continue without changing effort.' }], multiSelect: false }] })
@@ -231,24 +259,25 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       if (answer.answers.length !== 1 || answer.answers[0]?.id !== 'astra-reasoning-effort'
         || answer.answers[0].selected.length !== 1 || answer.answers[0].selected[0] !== approve
         || (answer.answers[0].custom !== undefined && answer.answers[0].custom.trim() !== '')) {
+        flow.discard(recommendation, 'declined')
         return { status: 'declined', effort: before.effectiveEffort, message: 'No reasoning change was approved.' }
       }
       const after = selection(agent)
-      if (after.baseEffort !== before.baseEffort || after.effectiveEffort !== before.effectiveEffort || after.revision !== before.revision
-        || after.generation !== before.generation) {
-        reasoningUpdateError('The conversation changed during the decision; this approval was not applied.')
-      }
-      pending.set(agent, { generation: before.generation, revision: before.revision, signal: combined, notice: createReasoningUpdateMessage({
-        version: 1, sessionId: agent.id, baseEffort: before.baseEffort, previousEffort: before.effectiveEffort, effort,
+      flow.admit(recommendation, after)
+      pending.set(agent, { recommendation, generation: before.generation, revision: before.revision, signal: combined, notice: createReasoningUpdateMessage({
+        version: 1, sessionId: agent.id, baseEffort: before.baseEffort, previousEffort: before.effectiveEffort, effort: target,
       }) })
-      return { status: 'queued', effort, message: `The user approved ${effort}. It becomes effective only when the next request is recorded; cancellation or a later manual choice can discard this pending change.` }
+      return { status: 'queued', effort: target, message: `The user approved ${target}. It becomes effective only when the next request is recorded; cancellation or a later manual choice can discard this pending change.` }
+    } catch (error: unknown) {
+      flow.discard(recommendation, combined.aborted ? 'cancelled' : 'failed')
+      throw error
     } finally { busy.delete(agent) }
   }
 
   function registerTool(toolCtx: Context): void {
     toolCtx.tools.register(defineTool({ name: ASTRA_REASONING_TOOL_NAME,
-      description: 'Propose one reasoning-effort change for the next work in this Astra conversation. Give a concrete reason. The native human-question service must approve the exact change; ordinary text and Auto-review cannot authorize it. Respect refusal and the latest manual choice. No defaults or other sessions change. Requires an explicit initial effort, a host-owned root Agent, and a complete canonical journal. Only verified prefix compaction is supported. Do not promise quality or quota savings.',
-      parameters: { effort: { type: 'string', enum: ASTRA_REASONING_EFFORTS, required: true, description: 'Requested effort.' },
+      description: 'Recommend effort for the next meaningful phase, balancing task correctness, failure cost and unnecessary work. Consider an increase for unresolved difficult work and a decrease once it is resolved; no fixed effort is required by task phase. Keeping the current effort is valid: normally continue without calling this tool, or use keep for an explicit no-change decision. Do not poll or repeatedly interrupt after refusal without materially new work. Any actual change still needs the exact native human answer; ordinary text and Auto-review are not approval. Manual choices take priority. No defaults or other sessions change. Requires Astra, an explicit initial effort, a live root Agent and canonical journal; only verified prefix compaction is supported. Do not promise quality or quota savings.',
+      parameters: { effort: { type: 'string', enum: ['keep', ...ASTRA_REASONING_EFFORTS], required: true, description: 'Keep current effort or recommend one supported level.' },
         reason: { type: 'string', required: true, description: 'Reason for the next unit of work.' } },
       output: { schema: { type: 'object', additionalProperties: false, properties: {
         status: { type: 'string', required: true }, effort: { type: 'string', required: true }, message: { type: 'string', required: true },
@@ -267,12 +296,26 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
   const integration: ThinkHostIntegration = {
     adapterReplay: {
       wrapProvider: provider => scope.wrapProvider(provider),
-      stream: (options, delegate) => scope.stream(options, delegate, replaySession(options)),
+      stream: (options, delegate) => {
+        const session = replaySession(options)
+        const stream = scope.stream(options, delegate, session)
+        const agent = options.sessionId === undefined ? undefined : ctx.get('agents')?.get(options.sessionId)
+        if (agent === undefined || stopped || (!enabled && !flows.has(agent))
+          || options.provider !== 'openai-codex' || options.model !== 'gpt-6-astra'
+          || !ctx.get('agents')?.roots().includes(agent) || agent.session !== session) return stream
+        return flowFor(agent).measure({ purpose: options.purpose === undefined ? 'task'
+          : options.purpose === 'compaction' ? 'compaction' : 'auxiliary',
+        effort: options.reasoningEffort, signal: options.signal }, stream)
+      },
     },
+    adaptiveSnapshot(agent) { assertOwner(agent); return flows.get(agent)?.snapshot() },
     setEnabled(value) {
       if (enabled === (value === true && !stopped)) return activation
       enabled = value === true && !stopped
-      if (!enabled) { questionLifetime.abort(new Error('Think proposals disabled')); pending.clear() }
+      if (!enabled) {
+        questionLifetime.abort(new Error('Think proposals disabled'))
+        for (const agent of pending.keys()) discardPending(agent, 'cancelled')
+      }
       activation = activation.then(async () => {
         const previous = toolFiber
         toolFiber = undefined
