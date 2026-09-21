@@ -1,7 +1,8 @@
 /** Runtime request governor for authenticated chatgpt.com/backend-api traffic. */
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { readRetryAfterMs } from './request-backoff.ts'
 import {
-  assertOpenAICodexBackendUrl,
+  prepareOpenAICodexBackendRequest,
   openAICodexBackendResponseMeta,
   prepareOpenAICodexBackendHeaders,
   type OpenAICodexBackendIdentity,
@@ -9,6 +10,7 @@ import {
 } from './backend-request-policy.ts'
 
 export const OPENAI_CODEX_BACKEND_MAX_CONCURRENT_REQUESTS = 8
+// Limit each timer slice, never shorten a service-directed deadline.
 export const OPENAI_CODEX_BACKEND_MAX_SERVER_COOLDOWN_MS = 15 * 60_000
 
 export type OpenAICodexBackendLane =
@@ -55,40 +57,65 @@ async function waitUntil(deadline: number, signal: AbortSignal): Promise<void> {
   if (delay <= 0) return
   await new Promise<void>((resolve, reject) => {
     if (signal.aborted) { reject(abortError(signal)); return }
-    const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve() }, delay)
+    const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve() },
+      Math.min(delay, OPENAI_CODEX_BACKEND_MAX_SERVER_COOLDOWN_MS))
     const onAbort = (): void => { clearTimeout(timer); reject(abortError(signal)) }
     signal.addEventListener('abort', onAbort, { once: true })
   })
 }
 
-function wrapResponseLifecycle(response: Response, release: () => void): Response {
+function wrapResponseLifecycle(response: Response, release: () => void, signal: AbortSignal): Response {
   if (response.body === null) { release(); return response }
   const reader = response.body.getReader()
-  let released = false
+  let finished = false
+  let output: ReadableStreamDefaultController<Uint8Array>
   const finish = (): void => {
-    if (released) return
-    released = true
-    try { reader.releaseLock() } catch { /* best effort */ }
+    if (finished) return
+    finished = true
+    signal.removeEventListener('abort', onAbort)
+    try { reader.releaseLock() } catch { /* pending read cleanup is completed by cancel */ }
     release()
   }
+  const onAbort = (): void => {
+    if (finished) return
+    const error = abortError(signal)
+    output.error(error)
+    void reader.cancel(error).catch(() => undefined)
+    finish()
+  }
   const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      output = controller
+      signal.addEventListener('abort', onAbort, { once: true })
+      if (signal.aborted) onAbort()
+    },
     async pull(controller) {
+      if (finished) return
       try {
         const { done, value } = await reader.read()
+        if (finished) return
         if (done) { finish(); controller.close(); return }
         controller.enqueue(value)
       } catch (error: unknown) {
-        finish()
-        controller.error(error)
+        if (!finished) { controller.error(error); finish() }
       }
     },
     async cancel(reason: unknown) {
+      if (finished) return
       try { await reader.cancel(reason) } finally { finish() }
     },
   }, { highWaterMark: 0 })
-  const wrapped = new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
-  for (const key of ['url', 'redirected', 'type'] as const) Object.defineProperty(wrapped, key, { value: response[key] })
-  return wrapped
+  // A paused consumer may never issue another read after a network failure.
+  void reader.closed.catch(error => { if (!finished) { output.error(error); finish() } })
+  try {
+    const wrapped = new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
+    for (const key of ['url', 'redirected', 'type'] as const) Object.defineProperty(wrapped, key, { value: response[key] })
+    return wrapped
+  } catch (error: unknown) {
+    void reader.cancel(error).catch(() => undefined)
+    finish()
+    throw error
+  }
 }
 
 /** One plugin instance owns one governor; it never guesses account-level service policy. */
@@ -107,13 +134,8 @@ export class OpenAICodexBackendRequests {
     if (!Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1) throw new TypeError('maxConcurrent must be a positive safe integer')
   }
 
-  private combinedSignal(signal?: AbortSignal, timeoutMs?: number): AbortSignal {
-    const signals = [this.lifecycle.signal, ...(signal === undefined ? [] : [signal])]
-    if (timeoutMs !== undefined) {
-      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError('timeoutMs must be a positive finite number')
-      signals.push(AbortSignal.timeout(timeoutMs))
-    }
-    return signals.length === 1 ? signals[0]! : AbortSignal.any(signals)
+  private combinedSignal(signal?: AbortSignal): AbortSignal {
+    return signal === undefined ? this.lifecycle.signal : AbortSignal.any([this.lifecycle.signal, signal])
   }
 
   private drain(): void {
@@ -157,14 +179,29 @@ export class OpenAICodexBackendRequests {
   }
 
   private async beforeRequest(lane: OpenAICodexBackendLane, signal: AbortSignal): Promise<void> {
-    const deadline = this.cooldowns.get(lane) ?? 0
-    await waitUntil(deadline, signal)
+    while (Date.now() < (this.cooldowns.get(lane) ?? 0)) {
+      await waitUntil(this.cooldowns.get(lane)!, signal)
+    }
+    signal.throwIfAborted()
   }
 
-  private recordResponse(lane: OpenAICodexBackendLane, meta: OpenAICodexBackendResponseMeta): void {
-    if ((meta.httpStatus !== 429 && meta.httpStatus !== 503) || meta.retryAfterMs === undefined || meta.retryAfterMs <= 0) return
-    const deadline = Date.now() + Math.min(meta.retryAfterMs, OPENAI_CODEX_BACKEND_MAX_SERVER_COOLDOWN_MS)
-    this.cooldowns.set(lane, Math.max(this.cooldowns.get(lane) ?? 0, deadline))
+  private async admit(lane: OpenAICodexBackendLane, signal: AbortSignal): Promise<() => void> {
+    while (true) {
+      await this.beforeRequest(lane, signal)
+      const release = await this.acquire(signal)
+      if (signal.aborted) { release(); throw abortError(signal) }
+      // The preceding response may have started/extended cooling while we queued.
+      if (Date.now() < (this.cooldowns.get(lane) ?? 0)) { release(); continue }
+      return release
+    }
+  }
+
+  private recordResponse(lane: OpenAICodexBackendLane, response: Response): void {
+    if (response.status !== 429 && response.status !== 503) return
+    const delay = readRetryAfterMs(response.headers)
+    if (delay === undefined || delay <= 0) return
+    // Overflow is conservative: callers can cancel or reach their own deadline.
+    this.cooldowns.set(lane, Math.max(this.cooldowns.get(lane) ?? 0, Date.now() + delay))
   }
 
   private async fetchAttempt(
@@ -174,60 +211,80 @@ export class OpenAICodexBackendRequests {
     init: RequestInit | undefined,
     options: Omit<OpenAICodexBackendFetchOptions, 'lane'> = {},
   ): Promise<Response> {
-    assertOpenAICodexBackendUrl(input)
-    signal.throwIfAborted()
-    await this.beforeRequest(lane, signal)
     signal.throwIfAborted()
     const { headers, clientRequestId } = prepareOpenAICodexBackendHeaders(
       init?.headers ?? (input instanceof Request ? input.headers : undefined),
       options.identity ?? 'plugin',
     )
     options.onAttempt?.({ clientRequestId })
+    signal.throwIfAborted()
     const response = await (options.fetch ?? globalThis.fetch)(input, { ...init, headers, signal })
-    const meta = openAICodexBackendResponseMeta(response, clientRequestId)
-    this.recordResponse(lane, meta)
-    await options.onResponse?.(meta)
-    return response
+    try {
+      signal.throwIfAborted()
+      const meta = openAICodexBackendResponseMeta(response, clientRequestId)
+      this.recordResponse(lane, response)
+      await options.onResponse?.(meta)
+      signal.throwIfAborted()
+      return response
+    } catch (error: unknown) {
+      // Hook/cancellation failures must not orphan an undispatched response body.
+      void response.body?.cancel(error).catch(() => undefined)
+      throw error
+    }
   }
 
-  /** Run one logical direct request under one concurrency slot and one proxy scope. */
+  /** Own one logical deadline/proxy scope; each HTTP attempt acquires its own slot. */
   async run<T>(
     options: OpenAICodexBackendRunOptions,
     operation: (context: OpenAICodexBackendRunContext) => Promise<T>,
   ): Promise<T> {
-    const signal = this.combinedSignal(options.signal, options.timeoutMs)
-    await this.beforeRequest(options.lane, signal)
-    const release = await this.acquire(signal)
+    const scope = new AbortController()
+    const parent = this.combinedSignal(options.signal)
+    const signal = AbortSignal.any([parent, scope.signal])
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (options.timeoutMs !== undefined) {
+      if (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs <= 0 || options.timeoutMs > 2_147_483_647) {
+        throw new TypeError('timeoutMs must be a positive timer-safe integer')
+      }
+      timer = setTimeout(() => scope.abort(new DOMException('Backend request deadline exceeded', 'TimeoutError')), options.timeoutMs)
+    }
     try {
+      signal.throwIfAborted()
       const execute = () => operation({
         signal,
         fetch: (input, init, fetchOptions) => {
-          const nested = init?.signal
+          const nested = init?.signal ?? (input instanceof Request ? input.signal : undefined)
           const fetchSignal = nested == null || nested === signal ? signal : AbortSignal.any([signal, nested])
-          return this.fetchAttempt(options.lane, fetchSignal, input, init, fetchOptions)
+          return this.wrapFetch({ lane: options.lane, ...fetchOptions })(input, { ...init, signal: fetchSignal })
         },
       })
-      try {
-        return await (this.proxyManager?.run(this.resolveProxyUrl(), execute) ?? execute())
-      } catch (error: unknown) {
-        if (signal.aborted) throw abortError(signal)
-        throw error
-      }
+      const result = await (this.proxyManager?.run(this.resolveProxyUrl(), execute) ?? execute())
+      signal.throwIfAborted()
+      return result
+    } catch (error: unknown) {
+      if (signal.aborted) throw abortError(signal)
+      throw error
     } finally {
-      release()
+      clearTimeout(timer)
+      // Consumers parse inside this scope. Discarded/partially-read bodies cannot outlive it.
+      scope.abort(new DOMException('Backend request scope finished', 'AbortError'))
     }
   }
 
   /** Wrap provider-owned fetch while preserving provider identity and stream proxy lifetime. */
   wrapFetch(options: OpenAICodexBackendFetchOptions): BackendFetch {
     return async (input, init) => {
-      const inputSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
-      const signal = this.combinedSignal(inputSignal ?? undefined)
-      await this.beforeRequest(options.lane, signal)
-      const release = await this.acquire(signal)
+      const prepared = prepareOpenAICodexBackendRequest(input, init)
+      const signal = this.combinedSignal(prepared.init.signal ?? undefined)
+      let release = await this.admit(options.lane, signal)
+      // Recheck in this continuation too: another response can arrive after admission resolves.
+      while (Date.now() < (this.cooldowns.get(options.lane) ?? 0)) {
+        release()
+        release = await this.admit(options.lane, signal)
+      }
       try {
-        const response = await this.fetchAttempt(options.lane, signal, input, init, options)
-        return wrapResponseLifecycle(response, release)
+        const response = await this.fetchAttempt(options.lane, signal, prepared.input, prepared.init, options)
+        return wrapResponseLifecycle(response, release, signal)
       } catch (error: unknown) {
         release()
         throw error

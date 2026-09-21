@@ -255,7 +255,7 @@ export class OpenAICodexTransport extends Service implements OpenAICodexTranspor
     if (this.backendRequests !== undefined) {
       try {
         return await this.backendRequests.run(
-          { lane: 'image', signal: context.signal },
+          { lane: 'image', signal: context.signal, timeoutMs: OPENAI_CODEX_IMAGE_REQUEST_TIMEOUT_MS },
           request => this.generateImagesWithoutProxy(input, { signal: request.signal }, request.fetch),
         )
       } catch (error: unknown) {

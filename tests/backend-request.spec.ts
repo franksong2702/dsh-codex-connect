@@ -61,20 +61,18 @@ describe('shared Codex backend request policy', () => {
     manager.dispose()
   })
 
-  it('keeps queued work abortable without dispatching it', async () => {
+  it('keeps queued network work abortable without dispatching it', async () => {
     const manager = new OpenAICodexBackendRequests(undefined, () => undefined, 1)
-    let release!: () => void
-    const gate = new Promise<void>(resolve => { release = resolve })
-    const first = manager.run({ lane: 'search' }, async () => { await gate; return 'first' })
-    await flush()
+    const first = await manager.wrapFetch({ lane: 'model', fetch: async () => new Response(new ReadableStream()) })(URL)
     const controller = new AbortController()
-    const secondOperation = vi.fn(async () => 'second')
-    const second = manager.run({ lane: 'image', signal: controller.signal }, secondOperation)
+    const secondFetch = vi.fn(async () => new Response(null))
+    const second = manager.run({ lane: 'image', signal: controller.signal }, async context => {
+      return context.fetch(URL, undefined, { fetch: secondFetch })
+    })
     controller.abort(new DOMException('cancelled', 'AbortError'))
     await expect(second).rejects.toMatchObject({ name: 'AbortError' })
-    expect(secondOperation).not.toHaveBeenCalled()
-    release()
-    await expect(first).resolves.toBe('first')
+    expect(secondFetch).not.toHaveBeenCalled()
+    await first.body!.cancel()
     manager.dispose()
   })
 
@@ -113,8 +111,9 @@ describe('shared Codex backend request policy', () => {
         context.signal.addEventListener('abort', () => reject(context.signal.reason), { once: true })
       })
     })
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'TimeoutError' })
     await vi.advanceTimersByTimeAsync(1_000)
-    await expect(pending).rejects.toMatchObject({ name: 'TimeoutError' })
+    await rejected
     manager.dispose()
   })
 
@@ -134,16 +133,16 @@ describe('shared Codex backend request policy', () => {
 
   it('disposal aborts active and queued managed work and prevents new admission', async () => {
     const manager = new OpenAICodexBackendRequests(undefined, () => undefined, 1)
-    const active = manager.run({ lane: 'quota' }, async context => {
-      await new Promise<void>((_resolve, reject) => {
-        context.signal.addEventListener('abort', () => reject(context.signal.reason), { once: true })
-      })
-    })
+    const base = vi.fn(async () => new Response(new ReadableStream<Uint8Array>()))
+    const fetch = manager.wrapFetch({ lane: 'model', fetch: base })
+    const response = await fetch(URL)
+    const active = response.text().catch(error => error)
+    const queued = manager.run({ lane: 'search' }, context => context.fetch(URL, undefined, { fetch: base })).catch(error => error)
     await flush()
-    const queued = manager.run({ lane: 'search' }, async () => undefined)
     manager.dispose()
-    await expect(active).rejects.toMatchObject({ name: 'AbortError' })
-    await expect(queued).rejects.toMatchObject({ name: 'AbortError' })
+    expect(await active).toMatchObject({ name: 'AbortError' })
+    expect(await queued).toMatchObject({ name: 'AbortError' })
+    expect(base).toHaveBeenCalledOnce()
     await expect(manager.run({ lane: 'image' }, async () => undefined)).rejects.toMatchObject({ name: 'AbortError' })
   })
 })

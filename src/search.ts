@@ -277,7 +277,12 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
       return this.options.backendRequests.run(
         { lane: 'search', signal, timeoutMs: OPENAI_CODEX_SEARCH_TIMEOUT_MS },
         context => this.searchWithoutProxy(request, context.signal, context.fetch),
-      )
+      ).catch((error: unknown) => {
+        if (signal?.aborted || (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name))) {
+          throw searchAborted(signal, error)
+        }
+        throw error
+      })
     }
     const deadline = new AbortController()
     const combined = signal === undefined ? deadline.signal : AbortSignal.any([signal, deadline.signal])

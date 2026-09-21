@@ -541,6 +541,7 @@ async function requestNativeCompaction(
       response = await (options?.fetch ?? globalThis.fetch)(OPENAI_CODEX_NATIVE_COMPACTION_URL, {
         method: 'POST',
         headers: preparedHeaders,
+        redirect: 'error',
         body: JSON.stringify(body),
         ...(signal === undefined ? {} : { signal }),
       })

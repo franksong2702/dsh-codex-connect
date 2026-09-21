@@ -4,7 +4,7 @@ import type { SimpleStreamOptions } from '@earendil-works/pi-ai'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { OpenAICodexBackendRequests } from './backend-request.ts'
 import {
-  assertOpenAICodexBackendUrl,
+  prepareOpenAICodexBackendRequest,
   openAICodexBackendResponseMeta,
   prepareOpenAICodexBackendHeaders,
 } from './backend-request-policy.ts'
@@ -152,8 +152,10 @@ export function withCodexDiagnosticFetch(
   requests?: OpenAICodexBackendRequests,
 ): SimpleStreamOptions | undefined {
   const scope = requestScope.getStore()
-  if (scope === undefined) return options
   const fetch = options?.fetch ?? globalThis.fetch
+  if (scope === undefined) return requests === undefined ? options : {
+    ...options, fetch: requests.wrapFetch({ lane: 'model', identity: 'preserve', fetch }),
+  }
   if (requests !== undefined) {
     const governed = requests.wrapFetch({
       lane: 'model',
@@ -178,14 +180,14 @@ export function withCodexDiagnosticFetch(
   return {
     ...options,
     async fetch(input, init) {
-      assertOpenAICodexBackendUrl(input)
+      const prepared = prepareOpenAICodexBackendRequest(input, init)
       const { headers, clientRequestId } = prepareOpenAICodexBackendHeaders(
-        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        prepared.init.headers,
         'preserve',
       )
       const diagnostic: SafeDiagnostic = { clientRequestId }
       scope.current = diagnostic
-      const response = await fetch(input, { ...init, headers })
+      const response = await fetch(prepared.input, { ...prepared.init, headers })
       const meta = openAICodexBackendResponseMeta(response, clientRequestId)
       diagnostic.httpStatus = meta.httpStatus
       if (meta.httpRequestId !== undefined) diagnostic.httpRequestId = meta.httpRequestId

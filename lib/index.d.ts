@@ -175,9 +175,10 @@ declare class OpenAICodexBackendRequests {
   private release;
   private acquire;
   private beforeRequest;
+  private admit;
   private recordResponse;
   private fetchAttempt;
-  /** Run one logical direct request under one concurrency slot and one proxy scope. */
+  /** Own one logical deadline/proxy scope; each HTTP attempt acquires its own slot. */
   run<T>(options: OpenAICodexBackendRunOptions, operation: (context: OpenAICodexBackendRunContext) => Promise<T>): Promise<T>;
   /** Wrap provider-owned fetch while preserving provider identity and stream proxy lifetime. */
   wrapFetch(options: OpenAICodexBackendFetchOptions): BackendFetch;

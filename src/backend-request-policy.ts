@@ -25,9 +25,26 @@ function requestUrl(input: string | URL | Request): URL {
 /** Fail closed before credentials can be sent to a non-Codex origin. */
 export function assertOpenAICodexBackendUrl(input: string | URL | Request): void {
   const url = requestUrl(input)
-  if (url.origin !== OPENAI_CODEX_BACKEND_ORIGIN || !url.pathname.startsWith(OPENAI_CODEX_BACKEND_PATH_PREFIX)) {
+  if (url.username !== '' || url.password !== '' || url.origin !== OPENAI_CODEX_BACKEND_ORIGIN
+    || !url.pathname.startsWith(OPENAI_CODEX_BACKEND_PATH_PREFIX)) {
     throw new TypeError('OpenAI Codex backend request must target chatgpt.com/backend-api')
   }
+}
+
+/** Snapshot mutable routing inputs before any queue wait; never follow authenticated redirects. */
+export function prepareOpenAICodexBackendRequest(input: string | URL | Request, init?: RequestInit): {
+  input: string | Request; init: RequestInit
+} {
+  const target = input instanceof URL ? input.href : input
+  assertOpenAICodexBackendUrl(target)
+  const request = target instanceof Request ? target : undefined
+  const redirect = init?.redirect ?? request?.redirect
+  return { input: target, init: {
+    ...init,
+    headers: new Headers(init?.headers ?? request?.headers),
+    signal: init?.signal ?? request?.signal ?? null,
+    redirect: redirect === 'manual' ? 'manual' : 'error',
+  } }
 }
 
 /** Accept only compact request ids; never retain token-shaped values. */

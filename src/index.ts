@@ -503,6 +503,7 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
+    backendRequests.dispose()
     await stopReserveRouting()
     await quota.dispose()
     await Promise.all([searchTail, imageTail, imageGenerationTail])
@@ -517,7 +518,6 @@ export function apply(ctx: Context, config: Config): void {
       image?.dispose() ?? Promise.resolve(),
       imageGeneration?.dispose() ?? Promise.resolve(),
     ])
-    backendRequests.dispose()
     await proxyManager.dispose()
   }, 'dsh-codex-connect: optional capability lifecycle')
 

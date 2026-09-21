@@ -159,7 +159,7 @@ export class OpenAICodexQuotaState {
       const value = this.options.backendRequests === undefined
         ? await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, authoritySignal, enabled && identity !== undefined))
         : await this.options.backendRequests.run(
-            { lane: 'quota', signal: authoritySignal },
+            { lane: 'quota', signal: authoritySignal, timeoutMs: 15_000 },
             context => readOpenAICodexUsageResponse(auth, context.signal, enabled && identity !== undefined, context.fetch),
           )
       epoch.throwIfAborted()
