@@ -294,6 +294,7 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
       || !/^    enableNativeCompaction: false$/mu.test(pluginBlock)
       || !/^    enableImageTool: false$/mu.test(pluginBlock)
       || !/^    enableImageGeneration: false$/mu.test(pluginBlock)
+      || !/^    enableReasoningUpdates: false$/mu.test(pluginBlock)
       || !/^    enableAutoReview: false$/mu.test(pluginBlock)) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
@@ -354,6 +355,7 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
         enableImageTool: false,
         enableImageGeneration: false,
         enableAutoReview: false,
+        enableReasoningUpdates: false,
       },
       runtime: runtimeReport,
     }

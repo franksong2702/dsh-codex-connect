@@ -39,7 +39,7 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.phases) !== '["write","resume-fork","verify-child","failure-paths","automatic"]'
       || report.runtime?.schemaVersion !== 1 || report.runtime?.provider !== 'openai-codex'
-      || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableNativeCompaction', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview'].some(key => report.capabilities?.[key] !== false)
+      || ['enableProxy', 'enableSearch', 'enableReserveFallback', 'enableNativeCompaction', 'enableImageTool', 'enableImageGeneration', 'enableAutoReview', 'enableReasoningUpdates'].some(key => report.capabilities?.[key] !== false)
       || !Number.isInteger(report.runtime?.modelCount) || report.runtime.modelCount < 1
       || report.runtime.reasoningModelCount !== report.runtime.modelCount
       || report.runtime.preparedModelCount !== report.runtime.modelCount) {

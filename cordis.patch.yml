@@ -8,6 +8,7 @@
         enableSearch: false
         enableReserveFallback: false
         enableNativeCompaction: false
+        enableReasoningUpdates: false
         enableImageTool: false
         enableImageGeneration: false
         enableAutoReview: false

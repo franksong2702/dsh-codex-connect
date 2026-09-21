@@ -9,6 +9,7 @@ describe('bundle defaults', () => {
     expect(patch).toContain('enableSearch: false')
     expect(patch).toContain('enableReserveFallback: false')
     expect(patch).toContain('enableNativeCompaction: false')
+    expect(patch).toContain('enableReasoningUpdates: false')
     expect(patch).toContain('enableImageTool: false')
     expect(patch).toContain('enableImageGeneration: false')
     expect(patch).toContain('enableAutoReview: false')

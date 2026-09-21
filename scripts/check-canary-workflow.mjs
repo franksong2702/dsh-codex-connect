@@ -43,7 +43,7 @@ const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
-  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
+  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false, enableReasoningUpdates: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true,
     thinkRememberLifecycle: { syntheticOnly: true, freshProcesses: 16, encodings: ['none', 'zstd'], modes: ['native', 'fallback'], phases: ['write', 'resume', 'verify', 'faults'] },
     nativeCompactionLifecycle: { syntheticOnly: true, freshProcesses: 10, encodings: ['none', 'zstd'], phases: ['write', 'resume-fork', 'verify-child', 'failure-paths', 'automatic'] },
@@ -76,6 +76,8 @@ for (const [name, change] of [
   ['changed optional default', reports => { reports[1].capabilities.enableSearch = true }],
   ['enabled Reserve default', reports => { reports[1].capabilities.enableReserveFallback = true }],
   ['missing Reserve default', reports => { delete reports[1].capabilities.enableReserveFallback }],
+  ['enabled Think default', reports => { reports[1].capabilities.enableReasoningUpdates = true }],
+  ['missing Think default', reports => { delete reports[1].capabilities.enableReasoningUpdates }],
 ]) {
   const reports = structuredClone(matrixReports)
   change(reports)
