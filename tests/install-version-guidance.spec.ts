@@ -14,10 +14,10 @@ describe('installation version guidance', () => {
     ['0.1.1-rc.2', '0.1.0-alpha.4.21'],
     ['0.1.2-alpha.2', '0.1.0-alpha.4.23'],
     ['0.1.2-alpha.5', '0.1.0-alpha.4.25'],
-    ['0.1.2-rc.1', '0.1.0-alpha.4.38'],
-    ['0.1.5-alpha.1', '0.1.0-alpha.4.38'],
-    ['0.1.5-rc.1', '0.1.0-alpha.4.38'],
-    ['0.1.5-rc.2', '0.1.0-alpha.4.38'],
+    ['0.1.2-rc.1', '0.1.0-alpha.4.39'],
+    ['0.1.5-alpha.1', '0.1.0-alpha.4.39'],
+    ['0.1.5-rc.1', '0.1.0-alpha.4.39'],
+    ['0.1.5-rc.2', '0.1.0-alpha.4.39'],
   ])('selects the recorded DSH %s / Codex Connect %s pair before installation', (dsh, plugin) => {
     expect(firstInstall).toBeGreaterThan(0)
     expect(compatibility.pluginVersions).toContainEqual(expect.objectContaining({
@@ -36,7 +36,7 @@ describe('installation version guidance', () => {
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
     ])
     for (const guide of [english, chinese]) {
-      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.38')
+      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.39')
       expect(guide).toContain('`latest`')
     }
     expect(english).toContain('**Published experiment:**')
@@ -61,6 +61,6 @@ describe('installation version guidance', () => {
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.21/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.23/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.25/iu)
-    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.38/iu)
+    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.39/iu)
   })
 })

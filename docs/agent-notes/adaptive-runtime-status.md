@@ -1,6 +1,6 @@
-# Alpha 4.39 preparation checkpoint — 2026-09-21
+# Alpha 4.39 published checkpoint — 2026-09-21
 
-Remote main is `6ce8a37ca7c28640a43b9189b767e4f6212cea7e`, the normal merge of #227. Published Alpha `0.1.0-alpha.4.38` remains the current public recommendation while 4.39 is prepared; `latest` remains separately managed at 4.34. #227 centralizes authenticated `chatgpt.com/backend-api` request governance across Model/pi-ai, Search, quota, image generation, Auto-review and native compaction. It preserves pi-ai's model identity, uses honest plugin identity on plugin-owned direct routes, adds per-attempt correlation, bounded admission, cancellation/deadline composition, proxy lifetime and server-directed lane cooldown. It does not establish the unverified risk-control hypothesis from #219.
+Alpha `0.1.0-alpha.4.39` was published from `e78f934b77685fd653a91d0109a043b489d52116` through successful workflow `35552461838`; exact-main CI `35552132368` passed first. npm `alpha` now points to 4.39 while `latest` remains separately managed at 4.34. The public npm archive, tag and GitHub prerelease were independently read back and match the release commit and tested artifact. See [publication verification](../../.github/ALPHA_439_PUBLICATION.md). #227 centralizes authenticated `chatgpt.com/backend-api` request governance across Model/pi-ai, Search, quota, image generation, Auto-review and native compaction. It preserves pi-ai's model identity, uses honest plugin identity on plugin-owned direct routes, adds per-attempt correlation, bounded admission, cancellation/deadline composition, proxy lifetime and server-directed lane cooldown. It does not establish the unverified risk-control hypothesis from #219.
 
 The second review of #227 found and fixed response-lifetime/cancellation leaks, cooldown admission races, queued deadline gaps, Request-signal propagation and authenticated redirect risks before merge. All eight exact-head GitHub checks passed on the corrected head. The overlapping #226 is now closed as superseded and must not be revived independently.
 
@@ -20,7 +20,7 @@ Declared DSH hosts remain exactly `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, a
 
 #219 remains open for the external reporter to confirm whether the original persistent overloaded condition recurs under comparable normal use. #215 remains primarily blocked on the reporter's missing local profile archive evidence. #194 waits for natural Luna Reserve eligibility rather than manufactured exhaustion. #208 remains an independent opt-in “new session Fast Mode default” enhancement.
 
-Alpha 4.39 preparation is authorized through normal review/merge/OIDC publication. It must not change daily services, use live credentials/models, promote `latest`, or silently enable experimental defaults. Candidate verification and publication evidence belong in [.github/ALPHA_439_RELEASE_READINESS.md](../../.github/ALPHA_439_RELEASE_READINESS.md) and the eventual publication record.
+Alpha 4.39 is released; the post-publication documentation update changes repository guidance only and does not republish npm. No daily service, live credential/model, `latest` promotion, or experimental default changed. Candidate evidence remains in [.github/ALPHA_439_RELEASE_READINESS.md](../../.github/ALPHA_439_RELEASE_READINESS.md); immutable publication identity is in [.github/ALPHA_439_PUBLICATION.md](../../.github/ALPHA_439_PUBLICATION.md).
 
 The dated checkpoints below are historical and retain their original scope.
 
