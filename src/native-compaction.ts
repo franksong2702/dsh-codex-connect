@@ -20,6 +20,8 @@ import {
   convertResponsesTools,
 } from '@earendil-works/pi-ai/api/openai-responses-shared'
 import type { GenerateOptions, Message, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
+import { readRetryAfterMs } from './request-backoff.ts'
 
 export const OPENAI_CODEX_NATIVE_COMPACTION_URL = 'https://chatgpt.com/backend-api/codex/responses'
 export const OPENAI_CODEX_NATIVE_COMPACTION_RETAINED_BYTES = 64_000
@@ -342,16 +344,8 @@ function requestSignal(signal: AbortSignal | undefined, timeoutMs: number | unde
 }
 
 function retryDelayMs(response: Response, attempt: number): number {
-  const retryAfterMsHeader = response.headers.get('retry-after-ms')
-  if (retryAfterMsHeader !== null) {
-    const retryAfterMs = Number(retryAfterMsHeader)
-    if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) return retryAfterMs
-  }
-  const retryAfter = response.headers.get('retry-after')
-  if (retryAfter !== null) {
-    const seconds = Number(retryAfter)
-    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
-  }
+  const retry = readRetryAfterMs(response.headers)
+  if (retry !== undefined && Number.isFinite(retry)) return retry
   return Math.min(4_000, 500 * 2 ** attempt)
 }
 
@@ -528,14 +522,12 @@ async function requestNativeCompaction(
   }
   headers.set('authorization', `Bearer ${access}`)
   headers.set('chatgpt-account-id', accountIdFromToken(access))
-  headers.set('originator', 'deepseek-harness')
   headers.set('accept', 'text/event-stream')
   headers.set('content-type', 'application/json')
   headers.set('openai-beta', 'responses=experimental')
   if (options?.sessionId !== undefined) {
     headers.set('session-id', options.sessionId)
     headers.set('thread-id', options.sessionId)
-    headers.set('x-client-request-id', options.sessionId)
   }
   headers.set('x-codex-routing-hint', `model=${model.id}`)
 
@@ -545,9 +537,11 @@ async function requestNativeCompaction(
     let response: Response
     try {
       const signal = requestSignal(options?.signal, options?.timeoutMs)
+      const preparedHeaders = prepareOpenAICodexBackendHeaders(headers, 'plugin').headers
       response = await (options?.fetch ?? globalThis.fetch)(OPENAI_CODEX_NATIVE_COMPACTION_URL, {
         method: 'POST',
-        headers,
+        headers: preparedHeaders,
+        redirect: 'error',
         body: JSON.stringify(body),
         ...(signal === undefined ? {} : { signal }),
       })

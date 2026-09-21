@@ -278,9 +278,14 @@ describe('assembled Reserve agent routing', () => {
     vi.stubGlobal('fetch', fetch)
     await setAccount('fixture-account', '')
     expect(await request()).toEqual(proposal)
-    await setAccount('fixture-account', 'fixture-user', { chatgpt_account_is_fedramp: true })
     expect(await request()).toEqual(proposal)
     expect(fetch).toHaveBeenCalledOnce()
+    await setAccount('fixture-account', 'fixture-user', { chatgpt_account_is_fedramp: true })
+    expect(await request()).toEqual(proposal)
+    expect(await request()).toEqual(proposal)
+    // Distinct credentials cannot reuse a previous token's quota snapshot.
+    // Each credential still coalesces reads and neither negotiates Reserve.
+    expect(fetch).toHaveBeenCalledTimes(2)
   })
 
   it('rejects unsupported model metadata and keeps failed usage checks from granting Reserve', async () => {

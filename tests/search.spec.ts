@@ -212,7 +212,7 @@ describe('OpenAI Codex composite plugin', () => {
       expires: Date.now() + 3_600_000,
       accountId: 'plugin-account',
     }))
-    const fetchMock = vi.fn(async () => jsonResponse(searchPayload))
+    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => jsonResponse(searchPayload))
     vi.stubGlobal('fetch', fetchMock)
     const ctx = new Context()
     context = ctx
@@ -236,6 +236,10 @@ describe('OpenAI Codex composite plugin', () => {
       sources: [{ url: 'https://example.com/a', title: 'A', snippet: 'First' }],
       truncated: true,
     })
+    const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers)
+    expect(headers.get('originator')).toBe('deepseek-harness')
+    expect(headers.get('user-agent')).toBe('dsh-codex-connect')
+    expect(headers.get('x-client-request-id')).toMatch(/^[0-9a-f-]{36}$/u)
     await fiber.dispose()
     await expect(ctx.web.search({ query: 'q' }))
       .rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_CONFIGURED_MISSING' }))

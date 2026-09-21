@@ -66,7 +66,7 @@ async function setup(enabled = true, initialEffort: 'low' | 'default' = 'low', s
   const plugin = await context.plugin(function ThinkHost(host: Context) { integration = registerThinkHostIntegration(host) })
   await integration.setEnabled(enabled)
   const adapter = createOpenAICodexAdapter(store, () => undefined,
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, integration.adapterReplay)
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, integration.adapterReplay)
   context.llm.registerAdapter([OPENAI_CODEX_PROVIDER], adapter)
   await context.plugin(AgentLoop, { agents: [] })
   const handle = await context.agents.create({ sessionId: SessionId('think-host'), meta: { cwd: root }, ...(seed === undefined ? {} : { seed }),

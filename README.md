@@ -16,17 +16,17 @@ This guide describes the published pairings below. Check `dsh --version` first a
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.37` |
+| Codex Connect | `0.1.0-alpha.4.39` |
 | DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-19, npm `alpha` points to 4.37 while `latest` intentionally remains on 4.34. Use the exact version below for 4.37; this recommendation does not promote the default installation channel.
+As of 2026-09-21, npm `alpha` points to 4.39 while `latest` intentionally remains on 4.34. Use the exact version below for 4.39; this recommendation does not promote the default installation channel.
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.37
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.39
 dsh web
 ```
 
@@ -56,7 +56,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 - **Accounts:** save up to 16 accounts on the DSH host and manually select the active account for subsequent requests. Account selection is not a per-session binding. Requests keep their captured account; the plugin does not rotate accounts or silently fail over.
 - **Models and Astra support:** the currently verified DSH and plugin combination supports `gpt-6-astra`. The plugin supplies its missing model definition with Low, Medium, High, Xhigh, and Max reasoning levels; Default preserves the provider default. Saved Off/Minimal selections require an [explicit update](MIGRATION.md#astra-reasoning-selections). When the installed dependency catalog includes Astra, the plugin preserves its native metadata while retaining these five calibrated reasoning choices. A model appearing in the list does not mean the current account has permission to use it; overall compatibility with new dependency versions still requires separate verification.
 - **Fast Mode:** request priority service for one conversation, off by default. Actual speed and quota consumption depend on the service; no fixed speed multiplier is guaranteed.
-- **Quota:** show the server-returned `5h` and `7d` windows and reset times, normally refreshed every 60 seconds while signed in. Missing windows are not invented; Spark uses its separate quota bucket.
+- **Quota:** show the server-returned `5h` and `7d` windows and reset times, normally refreshed every 60 seconds while signed in and the tab is visible; failures back off. Missing windows are not invented; Spark uses its separate quota bucket.
 - **Plugin updates:** check for newer Codex Connect releases without installing anything or recommending changes to DSH. Host compatibility is available through explicit local diagnostics.
 
 <p align="center">
@@ -78,7 +78,7 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 
 **Published experiment:** Alpha 4.35 includes Luna Reserve fallback, disabled by default. Real-account Reserve entry and recovery remain unverified; Alpha 4.34 does not include this feature.
 
-With `enableReserveFallback: true`, the account UI and agent routing share one identity-bound quota state. Background refresh follows the returned quota windows; fresh state is reused across agent steps. The plugin enters `gpt-reserve` only with complete, non-FedRAMP account/user identity and backend Luna Reserve authorization, then restores the session's previous model and reasoning effort after confirmed ordinary-usage recovery. Reserve has its own allowance, is hidden from the model picker, and is not unlimited. The backend decides eligibility; reset times alone do not authorize a switch. This version supports known `gpt-5.6-luna` metadata only. See [Luna Reserve fallback](docs/reference.md#luna-reserve-fallback) for refresh, identity, and verification limits.
+With `enableReserveFallback: true`, the account UI and agent routing share one identity-bound quota state. Background refresh follows the returned quota windows while recently in use; fresh state is reused across agent steps. Ordinary quota reads also share the cache, even with Reserve disabled. The plugin enters `gpt-reserve` only with complete, non-FedRAMP account/user identity and backend Luna Reserve authorization, then restores the session's previous model and reasoning effort after confirmed ordinary-usage recovery. Reserve has its own allowance, is hidden from the model picker, and is not unlimited. The backend decides eligibility; reset times alone do not authorize a switch. This version supports known `gpt-5.6-luna` metadata only. See [Luna Reserve fallback](docs/reference.md#luna-reserve-fallback) for refresh, identity, and verification limits.
 
 Use the image generation capability included with your current GPT subscription. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
 
@@ -100,7 +100,13 @@ Subsequent Codex requests use the selected active account; conversations do not 
 
 ### Why does a listed model fail?
 
+Model HTTP/SSE failures include bounded, request-local diagnostic metadata after the existing error message. An `overloaded` message alone does not establish an account block. See [persistent-error diagnostics](docs/experiments/issue-219-diagnostics.md) for scope and reproduction.
+
 Account permissions, plugin/host compatibility, and network conditions all affect availability. Access on another client does not guarantee this integration will work. OpenAI controls model access, quota, context capacity, and service behavior; catalog entries are not proof of entitlement.
+
+### Does changing client headers prevent persistent authorization failures?
+
+No such guarantee is established. Codex Connect is a third-party integration; it does not impersonate Codex Desktop or fabricate installation/attestation headers. The pi-ai model/OAuth route and auxiliary routes currently identify themselves differently. OpenAI's [App Server documentation](https://developers.openai.com/codex/app-server/) asks integrations to identify their own client with `clientInfo`; it does not establish acceptance rules for this plugin's direct backend calls. An `overloaded` message is not proof of a block. Capture the bounded error metadata and compare successful and failed windows before attributing the cause; share request IDs privately, never tokens or full session archives.
 
 ### Can I keep the original `dsh-codex` plugin installed?
 

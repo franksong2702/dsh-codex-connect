@@ -39,6 +39,7 @@ import { viewImageTool } from './view-image.ts'
 import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
+import { OpenAICodexBackendRequests } from './backend-request.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { registerThinkHostIntegration } from './reasoning-update-host.ts'
@@ -322,6 +323,7 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
+  const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl)
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
   const credentials = new OpenAICodexCredentialStore()
   const imageAssets = new OpenAICodexImageAssetStore()
@@ -334,6 +336,7 @@ export function apply(ctx: Context, config: Config): void {
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
+    backendRequests,
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
     resolveProxyUrl: resolveProviderProxyUrl,
   })
@@ -345,13 +348,21 @@ export function apply(ctx: Context, config: Config): void {
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
   })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
-  new OpenAICodexTransport(ctx, credentials, proxyManager, resolveProviderProxyUrl, () => resolveOpenAICodexSettings(current()).imageModelHint)
+  new OpenAICodexTransport(
+    ctx,
+    credentials,
+    proxyManager,
+    resolveProviderProxyUrl,
+    () => resolveOpenAICodexSettings(current()).imageModelHint,
+    backendRequests,
+  )
   registerOpenAICodexAutoReview(
     ctx,
     credentials,
     proxyManager,
     resolveProviderProxyUrl,
     () => resolveOpenAICodexSettings(current()).enableAutoReview,
+    backendRequests,
   )
   ctx.llm.registerAdapter(
     [OPENAI_CODEX_PROVIDER],
@@ -365,6 +376,7 @@ export function apply(ctx: Context, config: Config): void {
       () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
       reservePermits,
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
+      backendRequests,
       think.adapterReplay,
     ),
   )
@@ -412,6 +424,7 @@ export function apply(ctx: Context, config: Config): void {
         resolveRequestId: () => String(webCtx.get('agents')?.currentInitiator()?.session.id ?? randomUUID()),
         proxyManager,
         resolveProxyUrl: resolveProviderProxyUrl,
+        backendRequests,
       })
       const unregister = webCtx.web.registerSearchProvider(provider)
       try {
@@ -502,6 +515,7 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.effect(() => async () => {
     stopped = true
+    backendRequests.dispose()
     await think.setEnabled(false)
     await stopReserveRouting()
     await quota.dispose()

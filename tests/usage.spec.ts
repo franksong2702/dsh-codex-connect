@@ -178,15 +178,14 @@ describe('OpenAI Codex usage', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, init] = fetchMock.mock.calls[0] ?? []
     expect(url).toBe(OPENAI_CODEX_USAGE_URL)
-    expect(init).toMatchObject({
-      method: 'GET',
-      redirect: 'error',
-      headers: {
-        authorization: 'Bearer access-secret',
-        'chatgpt-account-id': 'account-1',
-        'cache-control': 'no-store',
-      },
-    })
+    expect(init).toMatchObject({ method: 'GET', redirect: 'error' })
+    const headers = new Headers(init?.headers)
+    expect(headers.get('authorization')).toBe('Bearer access-secret')
+    expect(headers.get('chatgpt-account-id')).toBe('account-1')
+    expect(headers.get('cache-control')).toBe('no-store')
+    expect(headers.get('originator')).toBe('deepseek-harness')
+    expect(headers.get('user-agent')).toBe('dsh-codex-connect')
+    expect(headers.get('x-client-request-id')).toMatch(/^[0-9a-f-]{36}$/u)
   })
 
   it('keeps the access token paired with its account when the active account switches', async () => {

@@ -1,48 +1,32 @@
-# Think T2b saved opt-in and native controls — 2026-09-20
+# Adaptive Runtime M1 integration started — 2026-09-21
 
-Branch `franksong2702/think-user-controls` builds on #222 `93d3b0f402075322f04b385a63b1de961ab663a6`. Read [the product behavior, evidence scopes and remaining gates](../experiments/think-user-controls.md). The product now registers host-owned replay guards while new proposals require the saved, default-off `enableReasoningUpdates` flag. Each target still requires an exact native human answer. Bilingual peer-level settings distinguish staged and saved choices; failed save, cancellation, disabling and admitted-history replay are covered. No other feature switch or model default is changed.
+Isolated branch `franksong2702/adaptive-runtime-m1` combines Think #224 `c279420` (including #220/#221/#222) with released main `1748bec` without rewriting the existing draft branches. M1 is IN PROGRESS: Think/Remember composition and current-head validation are not yet accepted. M2 (thin decision API) and M3 (bounded Split composition) are approved follow-ups, not completed or enabled. No release, deployment, live credential/model call or default change.
 
-The final expanded schema-2 matrix passed all four hosts locally: **35 functional cases plus one runtime identity check per host**, including actual product settings, failed enable/disable and plugin remount, with zero test-network attempts. Evidence is in `docs/experiments/think-user-controls-host-acceptance.json`; bundle digest `bb02b1fe987cd9d4e7b4a50a3a11a4b06bc3f115fae1574a489b1d7dc1714743`. Final-code `pnpm run check` passed **108 files / 1,099 tests**; Chromium passed **38 regressions plus four native-control flows**. The prior schema-1 report below remains historical. Exact-head remote CI must be read independently after finalization.
+# Alpha 4.39 published checkpoint — 2026-09-21
 
-The native-control Chromium checker uses actual product/host code and published question/selector components, but a bounded test-only Playwright transport, not the authenticated Gateway/session page. It proves approval/refusal/disable/dismissal and recorded-request selector behavior, not full deployed-browser, process-restart or live provider acceptance. Six additional settings browser cases cover English/Chinese and narrow/desktop layout. Native question controls are exercised in English. The two added development dependencies do not change runtime dependencies or supported-host declarations.
+Alpha `0.1.0-alpha.4.39` was published from `e78f934b77685fd653a91d0109a043b489d52116` through successful workflow `35552461838`; exact-main CI `35552132368` passed first. npm `alpha` now points to 4.39 while `latest` remains separately managed at 4.34. The public npm archive, tag and GitHub prerelease were independently read back and match the release commit and tested artifact. See [publication verification](../../.github/ALPHA_439_PUBLICATION.md). #227 centralizes authenticated `chatgpt.com/backend-api` request governance across Model/pi-ai, Search, quota, image generation, Auto-review and native compaction. It preserves pi-ai's model identity, uses honest plugin identity on plugin-owned direct routes, adds per-attempt correlation, bounded admission, cancellation/deadline composition, proxy lifetime and server-directed lane cooldown. It does not establish the unverified risk-control hypothesis from #219.
 
-No merge, release, deployment, real credential access or real model traffic. The separate Split worktree and 3080/3081 services remain outside this task. Remaining: authenticated session-page transport and human experience, durable fault/restart recovery, Think/Remember/Split composition, then separately authorized usefulness measurement. Disabling suggestions does not reset admitted effort or lift the experimental-history limits.
+The second review of #227 found and fixed response-lifetime/cancellation leaks, cooldown admission races, queued deadline gaps, Request-signal propagation and authenticated redirect risks before merge. All eight exact-head GitHub checks passed on the corrected head. The overlapping #226 is now closed as superseded and must not be revived independently.
 
----
+## Current Adaptive Runtime tracks
 
-# Think dedicated exact-host lifecycle gate — 2026-09-20
+| Track | Current state | Next gate |
+| --- | --- | --- |
+| Remember #65 / #196 | Native compaction mechanism is merged, released and default-off; bounded real A/B and preview evidence exist. | Real-provider durable restart/fork/fault/accounting/long-task acceptance remains broader than current synthetic and bounded live controls. |
+| Think #220 → #221 → #222 → #224 | Four stacked draft PRs cover replay isolation, native admission/cancellation, four-host lifecycle, saved default-off opt-in and native UI controls. #167 is now historical/conflicting. | Rebase/replay the stack onto current main after #227, then verify authenticated Session-page transport and human experience before considering merge. |
+| Split #199 → #200 | Draft design plus bounded read-only worker; exact-host and Chromium/Gateway/Conversation synthetic acceptance are substantial. | Human usefulness, persistent permission/budget reconstruction, restart/resume and real-task value remain unaccepted. |
 
-Branch `franksong2702/think-exact-host-matrix` is stacked on #221 at `b60327391ac337af3aa72755cef87124651d7a05`. Read [the dedicated matrix and remaining product gate](../experiments/think-exact-host-matrix.md). The same native admission spec and implementation bundle now run on all four declared hosts, independently of ordinary installation regression. The tested third-party framework may come from the development installation; runtime modules, versions and actual in-process identities must come from each selected host.
+The umbrella remains #195. Think/Split are not included in Alpha 4.39. Do not infer composability merely because Remember is already on main.
 
-The new matrix first exposed fixture ESM/manifest resolution defects and then an actual test-composition difference: newer Agent factories require an explicit `parentAgent`. The fixture now creates a genuine owned child and verifies rejection plus complete owned cleanup, rather than misclassifying another root as a child. Think permission code is unchanged. A transient registry transport failure remains historical infrastructure evidence.
+## Compatibility and open acceptance
 
-Final local full check passed **106 files / 1,092 tests**; the final exact-host matrix passed **31 functional cases + 1 runtime identity check on each of four hosts**, all with zero actual test-network attempts. Accepted report: `docs/experiments/think-host-matrix-acceptance.json`; bundle SHA-256 `8bd32b61e85de63886fda443ded04221b4fc8e560ab66e8dd9692388e229e069`. Both Node CI jobs now require this gate. New exact-head remote CI must be independently read back after delivery.
+Declared DSH hosts remain exactly `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2`. #211 remains an upstream DSH 0.1.6-alpha.2 peer-resolution repair tracker; the proposed host-side repair was delivered to the upstream Discussion but is not a stock release. #207/#183 retain their separate broader acceptance scopes.
 
-No product source/bundle/dependency/default or support-range changes, no new live model/credential access, and no merge/release/deployment. The #200 Split worktree and 3081 acceptance process (10758), and 3080 (1755), were rechecked unchanged. Next remains the explicit saved opt-in and real browser question/selector lifecycle, then separately scoped durability/composition/usefulness work. These synthetic host tests do not establish browser, disk/restart or real-provider acceptance.
+#219 remains open for the external reporter to confirm whether the original persistent overloaded condition recurs under comparable normal use. #215 remains primarily blocked on the reporter's missing local profile archive evidence. #194 waits for natural Luna Reserve eligibility rather than manufactured exhaustion. #208 remains an independent opt-in “new session Fast Mode default” enhancement.
 
----
+Alpha 4.39 is released; the post-publication documentation update changes repository guidance only and does not republish npm. No daily service, live credential/model, `latest` promotion, or experimental default changed. Candidate evidence remains in [.github/ALPHA_439_RELEASE_READINESS.md](../../.github/ALPHA_439_RELEASE_READINESS.md); immutable publication identity is in [.github/ALPHA_439_PUBLICATION.md](../../.github/ALPHA_439_PUBLICATION.md).
 
-# Think T2a native host admission — 2026-09-20
-
-The `franksong2702/think-host-admission` branch is stacked on T1 #220 `4cf94eab9da5f3ed16e140b3921e669ae7913294`, not on Split. Read [the T2a contract and remaining gates](../design/think-host-admission.md). It composes real root ownership, native human questions, pending/durable request admission, cancellation/disable/disposal and subsequent manual effort selection with T1's exact-history replay. A narrow optional adapter seam is inactive unless explicitly supplied by the internal host integration. No product entry or user setting registers it.
-
-Final-code local `pnpm run check` passed **105 files / 1,073 tests** on Node 22.22.3, including **31 new real-host/synthetic-SSE admission cases**, the 57 T1 cases and supplemental CI contracts (`wc_job_FELGOj_s16j1DVJD`). The runtime test host is DSH 0.1.2-rc.1 / pi-ai 0.84.4. It exercises native question service and configured request headers, not an actual browser answerer or real provider. The newly reproduced dropped-first-notice fault now fails before model dispatch; altered notices and later requests in the same integrity-failed runtime also fail closed without repairing the log. Fault-quarantine persistence/restart remains unaccepted.
-
-The adapter source and its generated files change; production registration, frontend, feature defaults, release version, runtime dependencies and declared hosts do not. The lockfile adds only the exact native-question development package. Supplemental read-only CodeQL and its tested SARIF gate are reused from #200 because this PR targets another feature branch; final-head remote results must be read independently after delivery.
-
-Remaining: T2b product opt-in and real browser question/selector flow, a dedicated newer-host Think matrix, durable fault/restart acceptance, T3 Remember/Split composition and separately authorized real-model usefulness. Do not call the ordinary install matrix four-host Think acceptance. #167 and #220 remain unmerged; no merge, release, deployment, real credential access or real model traffic is authorized here. The separate Split worktree and both 3080/3081 services remain untouched.
-
----
-
-# Think T1 mechanism extraction — 2026-09-20
-
-This independent `franksong2702/think-replay-mechanism` branch starts from exact post-4.37 main `e5772cd8a5c47f30b5ab14fe73d2901914348463`, not the deployed Split worktree. The user requested parallel development while accepting Split on 3081. See [the T1 contract and subsequent slices](../design/think-replay-mechanism.md).
-
-T1 extracts canonical notice parsing, original-position wire replay and per-request provider scope from #167 `7315795`, with a separate exact admitted-history guard. The eager-provider-construction regression was reproduced against the extracted old code and repaired; three notice-movement/background-edit cases drove full-surface validation. There is no production registration, proposal policy/UI, history migration, changed default, dependency/version change or changed generated `lib/` output. The old #167 remains open and conflicting; this slice does not silently replace its full scope.
-
-Final-code local `pnpm run check` passed **102 files / 1,032 tests**, including **57 mechanism/projection/scope tests**, on Node 22.22.3 / DSH 0.1.2-rc.1 / pi-ai 0.84.4 (`wc_job_05928S9Rez_oHGQM`). All source lint, TypeScript, build, CLI, package and workflow checks passed. The tests use real in-memory Session append/JSON restoration and synthetic provider hooks; no disk/process-restart, four-host Think or live-provider acceptance is implied. Remote delivery CI must be read back for the eventual exact PR head rather than inherited from these local results.
-
-Split #200 remains at `83f6a021a754e18e076a7d003d6ae98ca58dbd20`; #199 remains `cc979bc`. Their branch files, the 3081 synthetic acceptance process and 3080 are outside this task. No new live-model requests, real credential access, merge, release, deployment or service restart. Next: T2 host-owned admission/cancellation/manual selection plus explicit default-off activation; Remember/Split composition and real task-value measurements remain separate.
+The dated checkpoints below are historical and retain their original scope.
 
 ---
 
@@ -107,3 +91,56 @@ Original CI run `35322318396` retained only the JSON-framing symptom. Concrete m
 This delivery covers the [Astra context audit](astra-context-audit.md), scoped denial guidance and bounded Remember acceptance preparation. Preparing and pushing the two delivery PRs is authorized; merge, release, deployment, enabled experimental defaults, live credentials and new model requests are outside this task. The previously blocked real durable probe is not retried or routed elsewhere.
 
 Capture fresh local validation separately from historical PR checks. A successful synthetic fixture does not establish user value, token savings or live provider acceptance. The [pre-split record](adaptive-runtime-validation-2026-09-18.md) preserves historical scope; use the delivery PR's exact head and Checks for its current remote CI.
+
+
+---
+
+## Historical Think-stack evidence (before integration)
+
+# Think T2b saved opt-in and native controls — 2026-09-20
+
+Branch `franksong2702/think-user-controls` builds on #222 `93d3b0f402075322f04b385a63b1de961ab663a6`. Read [the product behavior, evidence scopes and remaining gates](../experiments/think-user-controls.md). The product now registers host-owned replay guards while new proposals require the saved, default-off `enableReasoningUpdates` flag. Each target still requires an exact native human answer. Bilingual peer-level settings distinguish staged and saved choices; failed save, cancellation, disabling and admitted-history replay are covered. No other feature switch or model default is changed.
+
+The final expanded schema-2 matrix passed all four hosts locally: **35 functional cases plus one runtime identity check per host**, including actual product settings, failed enable/disable and plugin remount, with zero test-network attempts. Evidence is in `docs/experiments/think-user-controls-host-acceptance.json`; bundle digest `bb02b1fe987cd9d4e7b4a50a3a11a4b06bc3f115fae1574a489b1d7dc1714743`. Final-code `pnpm run check` passed **108 files / 1,099 tests**; Chromium passed **38 regressions plus four native-control flows**. The prior schema-1 report below remains historical. Exact-head remote CI must be read independently after finalization.
+
+The native-control Chromium checker uses actual product/host code and published question/selector components, but a bounded test-only Playwright transport, not the authenticated Gateway/session page. It proves approval/refusal/disable/dismissal and recorded-request selector behavior, not full deployed-browser, process-restart or live provider acceptance. Six additional settings browser cases cover English/Chinese and narrow/desktop layout. Native question controls are exercised in English. The two added development dependencies do not change runtime dependencies or supported-host declarations.
+
+No merge, release, deployment, real credential access or real model traffic. The separate Split worktree and 3080/3081 services remain outside this task. Remaining: authenticated session-page transport and human experience, durable fault/restart recovery, Think/Remember/Split composition, then separately authorized usefulness measurement. Disabling suggestions does not reset admitted effort or lift the experimental-history limits.
+
+---
+
+# Think dedicated exact-host lifecycle gate — 2026-09-20
+
+Branch `franksong2702/think-exact-host-matrix` is stacked on #221 at `b60327391ac337af3aa72755cef87124651d7a05`. Read [the dedicated matrix and remaining product gate](../experiments/think-exact-host-matrix.md). The same native admission spec and implementation bundle now run on all four declared hosts, independently of ordinary installation regression. The tested third-party framework may come from the development installation; runtime modules, versions and actual in-process identities must come from each selected host.
+
+The new matrix first exposed fixture ESM/manifest resolution defects and then an actual test-composition difference: newer Agent factories require an explicit `parentAgent`. The fixture now creates a genuine owned child and verifies rejection plus complete owned cleanup, rather than misclassifying another root as a child. Think permission code is unchanged. A transient registry transport failure remains historical infrastructure evidence.
+
+Final local full check passed **106 files / 1,092 tests**; the final exact-host matrix passed **31 functional cases + 1 runtime identity check on each of four hosts**, all with zero actual test-network attempts. Accepted report: `docs/experiments/think-host-matrix-acceptance.json`; bundle SHA-256 `8bd32b61e85de63886fda443ded04221b4fc8e560ab66e8dd9692388e229e069`. Both Node CI jobs now require this gate. New exact-head remote CI must be independently read back after delivery.
+
+No product source/bundle/dependency/default or support-range changes, no new live model/credential access, and no merge/release/deployment. The #200 Split worktree and 3081 acceptance process (10758), and 3080 (1755), were rechecked unchanged. Next remains the explicit saved opt-in and real browser question/selector lifecycle, then separately scoped durability/composition/usefulness work. These synthetic host tests do not establish browser, disk/restart or real-provider acceptance.
+
+---
+
+# Think T2a native host admission — 2026-09-20
+
+The `franksong2702/think-host-admission` branch is stacked on T1 #220 `4cf94eab9da5f3ed16e140b3921e669ae7913294`, not on Split. Read [the T2a contract and remaining gates](../design/think-host-admission.md). It composes real root ownership, native human questions, pending/durable request admission, cancellation/disable/disposal and subsequent manual effort selection with T1's exact-history replay. A narrow optional adapter seam is inactive unless explicitly supplied by the internal host integration. No product entry or user setting registers it.
+
+Final-code local `pnpm run check` passed **105 files / 1,073 tests** on Node 22.22.3, including **31 new real-host/synthetic-SSE admission cases**, the 57 T1 cases and supplemental CI contracts (`wc_job_FELGOj_s16j1DVJD`). The runtime test host is DSH 0.1.2-rc.1 / pi-ai 0.84.4. It exercises native question service and configured request headers, not an actual browser answerer or real provider. The newly reproduced dropped-first-notice fault now fails before model dispatch; altered notices and later requests in the same integrity-failed runtime also fail closed without repairing the log. Fault-quarantine persistence/restart remains unaccepted.
+
+The adapter source and its generated files change; production registration, frontend, feature defaults, release version, runtime dependencies and declared hosts do not. The lockfile adds only the exact native-question development package. Supplemental read-only CodeQL and its tested SARIF gate are reused from #200 because this PR targets another feature branch; final-head remote results must be read independently after delivery.
+
+Remaining: T2b product opt-in and real browser question/selector flow, a dedicated newer-host Think matrix, durable fault/restart acceptance, T3 Remember/Split composition and separately authorized real-model usefulness. Do not call the ordinary install matrix four-host Think acceptance. #167 and #220 remain unmerged; no merge, release, deployment, real credential access or real model traffic is authorized here. The separate Split worktree and both 3080/3081 services remain untouched.
+
+---
+
+# Think T1 mechanism extraction — 2026-09-20
+
+This independent `franksong2702/think-replay-mechanism` branch starts from exact post-4.37 main `e5772cd8a5c47f30b5ab14fe73d2901914348463`, not the deployed Split worktree. The user requested parallel development while accepting Split on 3081. See [the T1 contract and subsequent slices](../design/think-replay-mechanism.md).
+
+T1 extracts canonical notice parsing, original-position wire replay and per-request provider scope from #167 `7315795`, with a separate exact admitted-history guard. The eager-provider-construction regression was reproduced against the extracted old code and repaired; three notice-movement/background-edit cases drove full-surface validation. There is no production registration, proposal policy/UI, history migration, changed default, dependency/version change or changed generated `lib/` output. The old #167 remains open and conflicting; this slice does not silently replace its full scope.
+
+Final-code local `pnpm run check` passed **102 files / 1,032 tests**, including **57 mechanism/projection/scope tests**, on Node 22.22.3 / DSH 0.1.2-rc.1 / pi-ai 0.84.4 (`wc_job_05928S9Rez_oHGQM`). All source lint, TypeScript, build, CLI, package and workflow checks passed. The tests use real in-memory Session append/JSON restoration and synthetic provider hooks; no disk/process-restart, four-host Think or live-provider acceptance is implied. Remote delivery CI must be read back for the eventual exact PR head rather than inherited from these local results.
+
+Split #200 remains at `83f6a021a754e18e076a7d003d6ae98ca58dbd20`; #199 remains `cc979bc`. Their branch files, the 3081 synthetic acceptance process and 3080 are outside this task. No new live-model requests, real credential access, merge, release, deployment or service restart. Next: T2 host-owned admission/cancellation/manual selection plus explicit default-off activation; Remember/Split composition and real task-value measurements remain separate.
+
+---

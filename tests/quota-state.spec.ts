@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { OpenAICodexQuotaState } from '../src/quota-state.ts'
+import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError } from '../src/usage.ts'
+import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 
 const { readAuth, readResponse } = vi.hoisted(() => ({ readAuth: vi.fn(), readResponse: vi.fn() }))
 vi.mock('../src/auth.ts', async importOriginal => ({
@@ -36,7 +38,7 @@ async function flush(): Promise<void> {
   await Promise.resolve()
 }
 
-function setup() {
+function setup(backendRequests?: OpenAICodexBackendRequests) {
   let account = 'acct'
   let user = 'user'
   let enabled = true
@@ -49,6 +51,7 @@ function setup() {
     credentials: captured as unknown as OpenAICodexCredentialStore,
     proxyManager: proxyManager as never,
     resolveProxyUrl: () => proxy,
+    backendRequests,
     enabled: () => enabled,
   })
   return {
@@ -60,8 +63,8 @@ function setup() {
 }
 
 describe('OpenAICodexQuotaState acceptance', () => {
-  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0); vi.resetAllMocks() })
-  afterEach(() => { vi.useRealTimers() })
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0); vi.resetAllMocks(); vi.spyOn(Math, 'random').mockReturnValue(0) })
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
   it('keeps sequential cache reads from postponing the t=60 refresh', async () => {
     const { state } = setup()
@@ -74,6 +77,20 @@ describe('OpenAICodexQuotaState acceptance', () => {
     await vi.advanceTimersByTimeAsync(1)
     await flush(); expect(readResponse).toHaveBeenCalledTimes(2)
     await state.dispose()
+  })
+
+  it('routes usage GETs through the shared governor when one is installed', async () => {
+    const requests = new OpenAICodexBackendRequests()
+    const run = vi.spyOn(requests, 'run')
+    const h = setup(requests)
+    try {
+      await h.state.read()
+      expect(run).toHaveBeenCalledWith(expect.objectContaining({ lane: 'quota' }), expect.any(Function))
+      expect(readResponse.mock.calls[0]?.[3]).toEqual(expect.any(Function))
+    } finally {
+      await h.state.dispose()
+      requests.dispose()
+    }
   })
 
   it.each([[75, 30_000], [90, 15_000], [99, 5_000]])('refreshes at the %s%% cadence boundary', async (used, delay) => {
@@ -108,7 +125,7 @@ describe('OpenAICodexQuotaState acceptance', () => {
     await flush(); expect(readResponse).toHaveBeenCalledTimes(2)
     await expect(state.read()).rejects.toThrow('temporarily unavailable')
     expect(readResponse).toHaveBeenCalledTimes(2)
-    await vi.advanceTimersByTimeAsync(4_999)
+    await vi.advanceTimersByTimeAsync(59_999)
     expect(readResponse).toHaveBeenCalledTimes(2)
     readResponse.mockResolvedValueOnce(response())
     await vi.advanceTimersByTimeAsync(1)
@@ -347,4 +364,168 @@ describe('OpenAICodexQuotaState acceptance', () => {
     expect(readResponse).toHaveBeenCalledWith(expect.anything(), expect.anything(), false)
     await h.state.dispose()
   })
+
+  it('coalesces and caches ordinary quota reads with Reserve disabled', async () => {
+    const h = setup(); h.setEnabled(false)
+    const get = deferred<Record<string, unknown>>()
+    readResponse.mockReturnValueOnce(get.promise)
+    const reads = Array.from({ length: 6 }, () => h.state.read())
+    await flush(); expect(readResponse).toHaveBeenCalledTimes(1)
+    get.resolve(response()); await Promise.all(reads)
+    await h.state.read(); expect(readResponse).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(readResponse).toHaveBeenCalledTimes(1)
+    await h.state.read(); expect(readResponse).toHaveBeenCalledTimes(2)
+    expect(readResponse.mock.calls.every(call => call[2] === false)).toBe(true)
+    await h.state.dispose()
+  })
+
+  it.each([false, true])('stops autonomous refresh after demand expires (Reserve %s)', async enabled => {
+    const h = setup(); h.setEnabled(enabled)
+    readResponse.mockImplementation(async () => response('acct', 'user', 99))
+    await h.state.read()
+    await vi.advanceTimersByTimeAsync(120_000)
+    const calls = readResponse.mock.calls.length
+    await vi.advanceTimersByTimeAsync(3_600_000)
+    expect(readResponse).toHaveBeenCalledTimes(calls)
+    await h.state.read(); expect(readResponse).toHaveBeenCalledTimes(calls + 1)
+    await h.state.dispose()
+  })
+
+  it('revokes late snapshots at expiry without restarting an idle poller', async () => {
+    const h = setup()
+    const get = deferred<Record<string, unknown>>()
+    readResponse.mockReturnValueOnce(get.promise)
+    const pending = h.state.read(); await flush()
+    await vi.advanceTimersByTimeAsync(120_000)
+    get.resolve(response())
+    const snapshot = await pending
+    expect(snapshot.authoritySignal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(snapshot.authoritySignal.aborted).toBe(true)
+    expect(readResponse).toHaveBeenCalledTimes(1)
+    await h.state.dispose()
+  })
+
+  it('expires all idle account snapshots at their own deadlines without another GET', async () => {
+    const h = setup()
+    const first = deferred<Record<string, unknown>>()
+    const second = deferred<Record<string, unknown>>()
+    readResponse.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const a = h.state.read(); await flush()
+    h.setAccount('other-account')
+    const b = h.state.read(); await flush()
+    await vi.advanceTimersByTimeAsync(120_000)
+    first.resolve(response('acct', 'user', 99))
+    second.resolve(response('other-account', 'user', 20))
+    const [aResult, bResult] = await Promise.all([a, b])
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(aResult.authoritySignal.aborted).toBe(true)
+    expect(bResult.authoritySignal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(55_000)
+    expect(bResult.authoritySignal.aborted).toBe(true)
+    expect(readResponse).toHaveBeenCalledTimes(2)
+    await h.state.dispose()
+  })
+
+  it('does not let an old expiry timer abort a foreground refresh already in flight', async () => {
+    const h = setup()
+    const get = deferred<Record<string, unknown>>()
+    let fresh: ReturnType<typeof h.state.read> | undefined
+    let refreshSignal: AbortSignal | undefined
+    // Queue the foreground consumer before the cache installs its same-deadline timer.
+    setTimeout(() => {
+      fresh = h.state.read()
+      void fresh.catch(() => undefined)
+    }, 60_000)
+    try {
+      const previous = await h.state.read()
+      readResponse.mockImplementationOnce((_auth: unknown, signal: AbortSignal) => {
+        refreshSignal = signal
+        signal.addEventListener('abort', () => get.reject(new DOMException('Refresh cancelled', 'AbortError')), { once: true })
+        return get.promise
+      })
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(readResponse).toHaveBeenCalledTimes(2)
+      expect(previous.authoritySignal.aborted).toBe(true)
+      expect(refreshSignal).toBeDefined()
+      expect(refreshSignal?.aborted).toBe(false)
+      get.resolve(response('acct', 'user', 25))
+      await expect(fresh).resolves.toMatchObject({ usage: { rateLimits: [{ windows: [{ remainingPercent: 75 }] }] } })
+      expect((await h.state.read()).authoritySignal.aborted).toBe(false)
+      expect(readResponse).toHaveBeenCalledTimes(2)
+    } finally {
+      get.resolve(response())
+      await fresh?.catch(() => undefined)
+      await h.state.dispose()
+    }
+  })
+
+  it('backs off repeated failures exponentially even when foreground callers keep polling', async () => {
+    const h = setup(); h.setEnabled(false)
+    readResponse.mockRejectedValue(new OpenAICodexUsageHttpError(503))
+    await expect(h.state.read()).rejects.toThrow('503')
+    for (const delay of [60_000, 120_000, 240_000, 480_000, 900_000, 900_000]) {
+      const count = readResponse.mock.calls.length
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      await expect(h.state.read()).rejects.toThrow('503')
+      expect(readResponse).toHaveBeenCalledTimes(count)
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(h.state.read()).rejects.toThrow('503')
+      expect(readResponse).toHaveBeenCalledTimes(count + 1)
+    }
+    readResponse.mockResolvedValue(response())
+    await vi.advanceTimersByTimeAsync(900_000); await h.state.read()
+    await vi.advanceTimersByTimeAsync(60_000)
+    readResponse.mockRejectedValue(new OpenAICodexUsageHttpError(503))
+    await expect(h.state.read()).rejects.toThrow('503')
+    const count = readResponse.mock.calls.length
+    await vi.advanceTimersByTimeAsync(60_000)
+    await expect(h.state.read()).rejects.toThrow('503')
+    expect(readResponse).toHaveBeenCalledTimes(count + 1)
+    await h.state.dispose()
+  })
+
+  it('adds nonnegative bounded jitter without shortening the base delay', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    const h = setup(); h.setEnabled(false)
+    readResponse.mockRejectedValue(new Error('offline failure'))
+    await expect(h.state.read()).rejects.toThrow()
+    await vi.advanceTimersByTimeAsync(62_999)
+    await expect(h.state.read()).rejects.toThrow()
+    expect(readResponse).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(h.state.read()).rejects.toThrow()
+    expect(readResponse).toHaveBeenCalledTimes(2)
+    await h.state.dispose()
+  })
+
+  it('honors Retry-After even when it exceeds the local backoff', async () => {
+    const h = setup(); h.setEnabled(false)
+    readResponse.mockRejectedValue(new OpenAICodexUsageHttpError(429, 300_000))
+    await expect(h.state.read()).rejects.toThrow('429')
+    await vi.advanceTimersByTimeAsync(299_999)
+    await expect(h.state.read()).rejects.toThrow('429')
+    expect(readResponse).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(h.state.read()).rejects.toThrow('429')
+    expect(readResponse).toHaveBeenCalledTimes(2)
+    await h.state.dispose()
+  })
+
+  it.each([new OpenAICodexReauthRequiredError(), new OpenAICodexUsageHttpError(400)])('latches terminal errors until credentials or configuration change (%s)', async error => {
+    const h = setup()
+    readResponse.mockRejectedValue(error)
+    await expect(h.state.read()).rejects.toThrow()
+    await vi.advanceTimersByTimeAsync(86_400_000)
+    await expect(h.state.read()).rejects.toThrow()
+    expect(readResponse).toHaveBeenCalledTimes(1)
+    readResponse.mockResolvedValue(response('acct', 'new-user'))
+    h.setAccount('acct', 'new-user')
+    await h.state.read(); expect(readResponse).toHaveBeenCalledTimes(2)
+    h.state.invalidate(); await h.state.read()
+    expect(readResponse).toHaveBeenCalledTimes(3)
+    await h.state.dispose()
+  })
+
 })

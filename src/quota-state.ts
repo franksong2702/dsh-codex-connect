@@ -1,10 +1,12 @@
 /** Shared, identity-bound Codex quota state for one plugin instance. */
+import { createHash } from 'node:crypto'
 import { readOpenAICodexRequestAuth } from './auth.ts'
 import { OpenAICodexRequestAuthError } from './auth-error.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
 import { parseReserveUsage, reserveIdentity, type ReserveIdentity, type ReserveUsageDecision } from './reserve-usage.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
-import { OpenAICodexReauthRequiredError, parseOpenAICodexUsage, readOpenAICodexUsageResponse, type OpenAICodexUsage } from './usage.ts'
+import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError, parseOpenAICodexUsage, readOpenAICodexUsageResponse, type OpenAICodexUsage } from './usage.ts'
 
 /** Public usage and private routing authority from the same response. */
 export interface OpenAICodexQuotaSnapshot {
@@ -22,6 +24,7 @@ interface Entry {
   pending?: Promise<OpenAICodexQuotaSnapshot>
   fetchedAt: number
   refreshAt: number
+  failures: number
 }
 
 function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -35,7 +38,7 @@ function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
 }
 
 function safeFailure(error: unknown): Error {
-  if (error instanceof OpenAICodexReauthRequiredError) return error
+  if (error instanceof OpenAICodexReauthRequiredError || error instanceof OpenAICodexUsageHttpError) return error
   if (error instanceof OpenAICodexRequestAuthError) {
     return error.code === 'REAUTH_REQUIRED' ? new OpenAICodexReauthRequiredError() : error
   }
@@ -43,7 +46,8 @@ function safeFailure(error: unknown): Error {
   return new Error('OpenAI Codex quota is temporarily unavailable')
 }
 
-function refreshDeadline(snapshot: OpenAICodexQuotaSnapshot, model: string | undefined, fetchedAt: number): number {
+function refreshDeadline(snapshot: OpenAICodexQuotaSnapshot, model: string | undefined, fetchedAt: number, adaptive: boolean): number {
+  if (!adaptive) return fetchedAt + 60_000
   const windows = snapshot.usage.rateLimits.filter(limit => limit.id === 'codex' || (model !== undefined && limit.name === model)
     || ((snapshot.decision.kind === 'reserve' || snapshot.decision.kind === 'exhausted') && limit.name === 'gpt-reserve'))
     .flatMap(limit => limit.windows)
@@ -53,7 +57,16 @@ function refreshDeadline(snapshot: OpenAICodexQuotaSnapshot, model: string | und
   return Math.max(fetchedAt + 1_000, Math.min(fetchedAt + interval, ...resets))
 }
 
-/** Owns quota cache, Reserve negotiation, and lazy adaptive background refresh. */
+function failureDelay(error: Error, failures: number): number {
+  if (error instanceof OpenAICodexReauthRequiredError) return Infinity
+  if (error instanceof OpenAICodexUsageHttpError && error.status >= 400 && error.status < 500
+    && error.status !== 408 && error.status !== 429) return Infinity
+  const backoff = Math.min(15 * 60_000, 60_000 * 2 ** Math.min(failures - 1, 4))
+  const jittered = Math.min(15 * 60_000, backoff + Math.floor(Math.random() * backoff * 0.1))
+  return Math.max(jittered, error instanceof OpenAICodexUsageHttpError ? error.retryAfterMs ?? 0 : 0)
+}
+
+/** Owns quota cache, Reserve negotiation, and demand-bounded background refresh. */
 export class OpenAICodexQuotaState {
   private readonly cache = new Map<string, Entry>()
   private readonly operations = new Set<Promise<OpenAICodexQuotaSnapshot>>()
@@ -61,6 +74,7 @@ export class OpenAICodexQuotaState {
   private configuration: string | undefined
   private timer: ReturnType<typeof setTimeout> | undefined
   private timerAt = Infinity
+  private activeUntil = 0
   private model: string | undefined
   private disposed = false
   private disposal: Promise<void> | undefined
@@ -69,6 +83,7 @@ export class OpenAICodexQuotaState {
     credentials: OpenAICodexCredentialStore
     proxyManager: OpenAICodexProxyManager
     resolveProxyUrl: () => string | undefined
+    backendRequests?: OpenAICodexBackendRequests | undefined
     enabled: () => boolean
   }) {}
 
@@ -77,25 +92,43 @@ export class OpenAICodexQuotaState {
     this.epoch.abort()
     this.epoch = new AbortController()
     this.cache.clear()
+    this.activeUntil = 0
     if (this.timer !== undefined) clearTimeout(this.timer)
     this.timer = undefined
     this.timerAt = Infinity
   }
 
   private schedule(at: number): void {
-    if (this.disposed || !this.options.enabled() || this.timerAt <= at) return
+    if (this.disposed || !this.options.enabled() || !Number.isFinite(at) || this.timerAt <= at) return
     if (this.timer !== undefined) clearTimeout(this.timer)
     this.timerAt = at
     this.timer = setTimeout(() => {
       this.timer = undefined
       this.timerAt = Infinity
-      void this.read(undefined, undefined, this.model).catch(() => undefined)
+      // Expiry still revokes stale permits even when there is no demand for another GET.
+      for (const entry of this.cache.values()) {
+        // A refresh revokes the old snapshot before replacing its controller.
+        // An already-due timer must not cancel that replacement request.
+        if (entry.pending === undefined && Date.now() >= entry.refreshAt) entry.authority?.abort()
+      }
+      // A later account snapshot must still expire after the earliest timer fires.
+      const nextExpiry = Math.min(...[...this.cache.values()]
+        .filter(entry => entry.snapshot !== undefined && entry.authority?.signal.aborted === false && entry.refreshAt > Date.now())
+        .map(entry => entry.refreshAt))
+      if (Number.isFinite(nextExpiry)) this.schedule(nextExpiry)
+      if (Date.now() >= this.activeUntil) return
+      void this.readSnapshot(undefined, undefined, this.model, true).catch(() => undefined)
     }, Math.max(0, at - Date.now()))
     this.timer.unref?.()
   }
 
   /** Read a fresh snapshot, coalescing GETs without tying shared work to one caller. */
   read(snapshot?: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>, signal?: AbortSignal, model?: string): Promise<OpenAICodexQuotaSnapshot> {
+    return this.readSnapshot(snapshot, signal, model, false)
+  }
+
+  private readSnapshot(snapshot: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'> | undefined, signal: AbortSignal | undefined,
+    model: string | undefined, background: boolean): Promise<OpenAICodexQuotaSnapshot> {
     if (this.disposed) return Promise.reject(new Error('OpenAI Codex quota state has been disposed'))
     if (signal?.aborted) return Promise.reject(new DOMException('The operation was aborted', 'AbortError'))
     const enabled = this.options.enabled()
@@ -103,6 +136,8 @@ export class OpenAICodexQuotaState {
     const configuration = JSON.stringify([enabled, proxy])
     if (this.configuration !== undefined && this.configuration !== configuration) this.invalidate()
     this.configuration = configuration
+    // Only foreground consumers renew demand; background timers cannot keep themselves alive.
+    if (!background) this.activeUntil = Date.now() + 120_000
     if (model !== undefined) this.model = model
     const epoch = this.epoch.signal
     const operation = this.readInternal(snapshot ?? this.options.credentials, enabled, proxy, epoch, model).catch((error: unknown) => {
@@ -121,13 +156,18 @@ export class OpenAICodexQuotaState {
     const candidate = enabled ? reserveIdentity(auth.access) : undefined
     const identity = candidate?.accountId === auth.accountId ? candidate : undefined
     const fetch = async (authoritySignal = epoch): Promise<OpenAICodexQuotaSnapshot> => {
-      const value = await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, epoch, enabled && identity !== undefined))
+      const value = this.options.backendRequests === undefined
+        ? await this.options.proxyManager.run(proxy, () => readOpenAICodexUsageResponse(auth, authoritySignal, enabled && identity !== undefined))
+        : await this.options.backendRequests.run(
+            { lane: 'quota', signal: authoritySignal, timeoutMs: 15_000 },
+            context => readOpenAICodexUsageResponse(auth, context.signal, enabled && identity !== undefined, context.fetch),
+          )
       epoch.throwIfAborted()
       return { usage: parseOpenAICodexUsage(value), ...(identity === undefined ? {} : { identity }),
         decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal }
     }
-    if (!enabled) return fetch()
-    const key = JSON.stringify([auth.accountId, identity?.key])
+    // Renewed credentials do not inherit a rejected session's cooldown; keys never retain raw tokens.
+    const key = JSON.stringify([auth.accountId, createHash('sha256').update(auth.access).digest('hex')])
     let entry = this.cache.get(key)
     if (entry === undefined) {
       if (this.cache.size >= 16) {
@@ -136,17 +176,17 @@ export class OpenAICodexQuotaState {
         victim[1].authority?.abort()
         this.cache.delete(victim[0])
       }
-      entry = { fetchedAt: 0, refreshAt: 0 }
+      entry = { fetchedAt: 0, refreshAt: 0, failures: 0 }
       this.cache.set(key, entry)
     }
     if (entry.pending !== undefined) {
       const result = await entry.pending
       epoch.throwIfAborted()
-      entry.refreshAt = Math.min(entry.refreshAt, refreshDeadline(result, model, entry.fetchedAt))
+      entry.refreshAt = Math.min(entry.refreshAt, refreshDeadline(result, model, entry.fetchedAt, enabled))
       this.schedule(entry.refreshAt)
       return result
     }
-    if (entry.snapshot !== undefined) entry.refreshAt = Math.min(entry.refreshAt, refreshDeadline(entry.snapshot, model, entry.fetchedAt))
+    if (entry.snapshot !== undefined) entry.refreshAt = Math.min(entry.refreshAt, refreshDeadline(entry.snapshot, model, entry.fetchedAt, enabled))
     if (Date.now() < entry.refreshAt) {
       this.schedule(entry.refreshAt)
       if (entry.error !== undefined) throw entry.error
@@ -163,14 +203,16 @@ export class OpenAICodexQuotaState {
       current.snapshot = result
       delete current.error
       current.fetchedAt = Date.now()
-      current.refreshAt = refreshDeadline(result, model, current.fetchedAt)
+      current.failures = 0
+      current.refreshAt = refreshDeadline(result, model, current.fetchedAt, enabled)
       this.schedule(current.refreshAt)
       return result
     }, (error: unknown) => {
       epoch.throwIfAborted()
       delete current.snapshot
       current.error = safeFailure(error)
-      current.refreshAt = Date.now() + 5_000
+      current.failures += 1
+      current.refreshAt = Date.now() + failureDelay(current.error, current.failures)
       this.schedule(current.refreshAt)
       throw current.error
     }).finally(() => { delete current.pending })
