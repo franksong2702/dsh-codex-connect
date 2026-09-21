@@ -120,14 +120,20 @@ describe('Reserve identity and backend authority', () => {
   })
 
   it('negotiates only at the fixed usage endpoint with the captured identity and no redirects', async () => {
-    const fetch = vi.fn(async () => Response.json(reserveUsage()))
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => Response.json(reserveUsage()))
     vi.stubGlobal('fetch', fetch)
     await expect(readReserveResponse()).resolves.toEqual(expect.objectContaining({ account_id: identity.accountId }))
     expect(fetch).toHaveBeenCalledOnce()
-    expect(fetch).toHaveBeenCalledWith(OPENAI_CODEX_USAGE_URL, expect.objectContaining({
-      method: 'GET', redirect: 'error',
-      headers: expect.objectContaining({ authorization: `Bearer ${access}`, 'chatgpt-account-id': identity.accountId, 'x-openai-codex-luna-reserve': '1' }),
-    }))
+    const [url, init] = fetch.mock.calls[0] ?? []
+    expect(url).toBe(OPENAI_CODEX_USAGE_URL)
+    expect(init).toMatchObject({ method: 'GET', redirect: 'error' })
+    const headers = new Headers(init?.headers)
+    expect(headers.get('authorization')).toBe(`Bearer ${access}`)
+    expect(headers.get('chatgpt-account-id')).toBe(identity.accountId)
+    expect(headers.get('x-openai-codex-luna-reserve')).toBe('1')
+    expect(headers.get('originator')).toBe('deepseek-harness')
+    expect(headers.get('user-agent')).toBe('dsh-codex-connect')
+    expect(headers.get('x-client-request-id')).toMatch(/^[0-9a-f-]{36}$/u)
   })
 
   it.each([401, 403, 429, 500])('does not grant a route or expose an HTTP %i response body', async status => {

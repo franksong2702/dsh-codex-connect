@@ -6,6 +6,7 @@ export { OPENAI_CODEX_REAUTH_REQUIRED_CODE } from './auth-error.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { readOpenAICodexBoundedBody } from './transport.ts'
 import { readRetryAfterMs } from './request-backoff.ts'
+import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
 
 /** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
 export const OPENAI_CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -258,20 +259,21 @@ export async function readOpenAICodexUsageResponse(
   auth: { access: string; accountId: string },
   signal: AbortSignal,
   supportsReserve: boolean,
+  requestFetch: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<unknown> {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)])
   deadline.throwIfAborted()
-  const response = await fetch(OPENAI_CODEX_USAGE_URL, {
+  const { headers } = prepareOpenAICodexBackendHeaders({
+    authorization: `Bearer ${auth.access}`,
+    'chatgpt-account-id': auth.accountId,
+    ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
+    accept: 'application/json',
+    'cache-control': 'no-store',
+  }, 'plugin')
+  const response = await requestFetch(OPENAI_CODEX_USAGE_URL, {
     method: 'GET',
     redirect: 'error',
-    headers: {
-      authorization: `Bearer ${auth.access}`,
-      'chatgpt-account-id': auth.accountId,
-      ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
-      accept: 'application/json',
-      'cache-control': 'no-store',
-      'user-agent': 'dsh-codex-connect',
-    },
+    headers,
     signal: deadline,
   })
   if (!response.ok) {

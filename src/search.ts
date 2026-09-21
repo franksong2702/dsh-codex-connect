@@ -15,6 +15,8 @@ import type {
 import type { OpenAICodexCredentialStore } from './store.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
+import type { OpenAICodexBackendRequests } from './backend-request.ts'
+import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
 import {
   DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
   DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS,
@@ -90,6 +92,8 @@ export interface OpenAICodexSearchProviderOptions {
   readonly proxyManager?: OpenAICodexProxyManager
   /** Resolve the active proxy for each search request. */
   readonly resolveProxyUrl?: () => string | undefined
+  /** Shared runtime request governor; preferred over the legacy proxy-only path. */
+  readonly backendRequests?: OpenAICodexBackendRequests
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void
 }
@@ -269,6 +273,17 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
   /** @inheritdoc */
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
     throwIfSearchAborted(signal)
+    if (this.options.backendRequests !== undefined) {
+      return this.options.backendRequests.run(
+        { lane: 'search', signal, timeoutMs: OPENAI_CODEX_SEARCH_TIMEOUT_MS },
+        context => this.searchWithoutProxy(request, context.signal, context.fetch),
+      ).catch((error: unknown) => {
+        if (signal?.aborted || (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name))) {
+          throw searchAborted(signal, error)
+        }
+        throw error
+      })
+    }
     const deadline = new AbortController()
     const combined = signal === undefined ? deadline.signal : AbortSignal.any([signal, deadline.signal])
     const timer = setTimeout(() => { deadline.abort(new DOMException('Search deadline exceeded', 'TimeoutError')) }, OPENAI_CODEX_SEARCH_TIMEOUT_MS)
@@ -278,7 +293,11 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
     } finally { clearTimeout(timer) }
   }
 
-  private async searchWithoutProxy(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
+  private async searchWithoutProxy(
+    request: WebSearchRequest,
+    signal?: AbortSignal,
+    requestFetch: typeof globalThis.fetch = globalThis.fetch,
+  ): Promise<WebSearchResult> {
     throwIfSearchAborted(signal)
     let auth
     try {
@@ -319,16 +338,16 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
 
     let response: Response
     try {
-      response = await abortable(fetch(OPENAI_CODEX_SEARCH_URL, {
+      const { headers } = prepareOpenAICodexBackendHeaders({
+        authorization: `Bearer ${access}`,
+        'chatgpt-account-id': accountId,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      }, 'plugin')
+      response = await abortable(requestFetch(OPENAI_CODEX_SEARCH_URL, {
         method: 'POST',
         redirect: 'error',
-        headers: {
-          authorization: `Bearer ${access}`,
-          'chatgpt-account-id': accountId,
-          'content-type': 'application/json',
-          accept: 'application/json',
-          originator: 'deepseek-harness',
-        },
+        headers,
         body: JSON.stringify(body),
         ...signal === undefined ? {} : { signal },
       }), signal)

@@ -131,6 +131,65 @@ export declare class OpenAICodexProxyManager {
 /** Probe the bounded automatic candidate set in parallel. */
 export declare function detectOpenAICodexProxies(manager: OpenAICodexProxyManager): Promise<readonly OpenAICodexProxyProbeResult[]>;
 //#endregion
+//#region src/backend-request-policy.d.ts
+type OpenAICodexBackendIdentity = 'plugin' | 'preserve' | 'probe';
+interface OpenAICodexBackendResponseMeta {
+  readonly clientRequestId: string;
+  readonly httpStatus: number;
+  readonly httpRequestId?: string;
+  readonly retryAfterMs?: number;
+}
+//#endregion
+//#region src/backend-request.d.ts
+type OpenAICodexBackendLane = 'model' | 'search' | 'quota' | 'image' | 'auto-review';
+type BackendFetch = typeof globalThis.fetch;
+interface OpenAICodexBackendRunOptions {
+  readonly lane: OpenAICodexBackendLane;
+  readonly signal?: AbortSignal | undefined;
+  readonly timeoutMs?: number | undefined;
+}
+interface OpenAICodexBackendFetchOptions {
+  readonly lane: OpenAICodexBackendLane;
+  readonly identity?: OpenAICodexBackendIdentity;
+  readonly fetch?: BackendFetch;
+  readonly onAttempt?: (meta: Pick<OpenAICodexBackendResponseMeta, 'clientRequestId'>) => void;
+  readonly onResponse?: (meta: OpenAICodexBackendResponseMeta) => void | Promise<void>;
+}
+interface OpenAICodexBackendRunContext {
+  readonly signal: AbortSignal;
+  fetch(input: string | URL | Request, init?: RequestInit, options?: Omit<OpenAICodexBackendFetchOptions, 'lane'>): Promise<Response>;
+}
+/** One plugin instance owns one governor; it never guesses account-level service policy. */
+declare class OpenAICodexBackendRequests {
+  private readonly proxyManager?;
+  private readonly resolveProxyUrl;
+  private readonly maxConcurrent;
+  private active;
+  private readonly waiters;
+  private readonly cooldowns;
+  private readonly lifecycle;
+  private disposed;
+  constructor(proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, maxConcurrent?: number);
+  private combinedSignal;
+  private drain;
+  private release;
+  private acquire;
+  private beforeRequest;
+  private admit;
+  private recordResponse;
+  private fetchAttempt;
+  /** Own one logical deadline/proxy scope; each HTTP attempt acquires its own slot. */
+  run<T>(options: OpenAICodexBackendRunOptions, operation: (context: OpenAICodexBackendRunContext) => Promise<T>): Promise<T>;
+  /** Wrap provider-owned fetch while preserving provider identity and stream proxy lifetime. */
+  wrapFetch(options: OpenAICodexBackendFetchOptions): BackendFetch;
+  /** Keep the existing proxy lease for the complete provider stream. */
+  runStream<T extends {
+    result(): Promise<unknown>;
+  }>(operation: () => T): T;
+  /** Abort queued/in-flight managed requests and prevent new admission. */
+  dispose(): void;
+}
+//#endregion
 //#region src/transport.d.ts
 /** Cordis service name owned by the core plugin fiber. */
 export declare const OPENAI_CODEX_TRANSPORT_SERVICE = "openaiCodexTransport";
@@ -208,8 +267,9 @@ export declare class OpenAICodexTransport extends Service implements OpenAICodex
   private readonly proxyManager?;
   private readonly resolveProxyUrl;
   private readonly resolveImageModelHint;
+  private readonly backendRequests?;
   readonly apiVersion: 1;
-  constructor(ctx: Context, credentials: OpenAICodexCredentialStore, proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, resolveImageModelHint?: () => string);
+  constructor(ctx: Context, credentials: OpenAICodexCredentialStore, proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, resolveImageModelHint?: () => string, backendRequests?: OpenAICodexBackendRequests | undefined);
   generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
   private generateImagesWithoutProxy;
 }
@@ -528,6 +588,8 @@ interface OpenAICodexSearchProviderOptions {
   readonly proxyManager?: OpenAICodexProxyManager;
   /** Resolve the active proxy for each search request. */
   readonly resolveProxyUrl?: () => string | undefined;
+  /** Shared runtime request governor; preferred over the legacy proxy-only path. */
+  readonly backendRequests?: OpenAICodexBackendRequests;
   /** Record the exact secret-free request before dispatch. */
   readonly recordRequest?: (request: OpenAICodexSearchRequestRecord) => void;
 }

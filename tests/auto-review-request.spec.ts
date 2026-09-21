@@ -7,6 +7,7 @@ import { OpenAICodexAutoReviewBackend } from '../src/auto-review-backend.ts'
 import type { AutoReviewBackendInput } from '../src/auto-review-backend.ts'
 import { OpenAICodexCredentialStore, OPENAI_CODEX_PROVIDER } from '../src/store.ts'
 import { OpenAICodexProxyManager } from '../src/provider-proxy.ts'
+import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 import { fetch as reviewFetch } from '../src/undici-runtime.ts'
 
 vi.mock('../src/undici-runtime.ts', async original => ({
@@ -17,6 +18,7 @@ it('keeps refresh and the full reviewer stream inside one proxy operation', asyn
   const root = await mkdtemp(join(tmpdir(), 'codex-review-request-'))
   const store = new OpenAICodexCredentialStore(join(root, 'auth.json'))
   const proxy = new OpenAICodexProxyManager()
+  const requests = new OpenAICodexBackendRequests(proxy, () => 'http://127.0.0.1:8899')
   let inScope = false
   const phases: Array<[string, boolean]> = []
   const sentAccounts: string[] = []
@@ -57,7 +59,9 @@ it('keeps refresh and the full reviewer stream inside one proxy operation', asyn
       action: { toolName: 'fixture', callId: 'fixture' as AutoReviewBackendInput['action']['callId'], turn: 1, arguments: {}, fingerprint: 'fixture' },
       context: { transcript: '', tools: '', transcriptEntriesOmitted: 0, toolEntriesOmitted: 0, entriesTruncated: 0 },
     }
-    await expect(new OpenAICodexAutoReviewBackend(store, proxy, () => 'http://127.0.0.1:8899').review(input)).resolves.toEqual({ status: 'unavailable' })
+    await expect(new OpenAICodexAutoReviewBackend(
+      store, proxy, () => 'http://127.0.0.1:8899', store, requests,
+    ).review(input)).resolves.toEqual({ status: 'unavailable' })
     expect(phases).toEqual([['refresh', true], ['headers', true], ['body', true]])
     expect(sentAccounts).toEqual(['a'])
     expect(await store.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'b' })
@@ -65,6 +69,7 @@ it('keeps refresh and the full reviewer stream inside one proxy operation', asyn
   } finally {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    requests.dispose()
     await proxy.dispose()
     await rm(root, { recursive: true, force: true })
   }

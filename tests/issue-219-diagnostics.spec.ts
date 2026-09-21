@@ -5,6 +5,7 @@ import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-code
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from '../src/request-diagnostics.ts'
 import { readRetryAfterMs } from '../src/request-backoff.ts'
+import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 
 const token = 'header.' + Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'fixture-account' } })).toString('base64url') + '.signature'
 const credentials = {
@@ -89,6 +90,23 @@ describe('issue 219 provider-to-DSH diagnostics', () => {
     const headers = new Headers(custom.mock.calls[0]?.[1]?.headers)
     expect(headers.get('session-id')).toBe('fixture-session')
     expect(headers.get('x-client-request-id')).not.toBe('fixture-session')
+  })
+
+  it('keeps pi-ai identity while routing the model HTTP attempt through the shared governor', async () => {
+    const fetch = vi.fn(async (_input: unknown, _init?: RequestInit) => eventResponse({ type: 'error', code, message: overloaded }))
+    vi.stubGlobal('fetch', fetch)
+    const requests = new OpenAICodexBackendRequests()
+    try {
+      const adapter = createOpenAICodexAdapter(
+        credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, requests,
+      )
+      const chunks = await collect(adapter.stream(options))
+      expect(error(chunks).code).toBe('PI_AI_ERROR')
+      const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers)
+      expect(headers.get('originator')).toBe('pi')
+      expect(headers.get('user-agent')).toContain('pi')
+      expect(headers.get('x-client-request-id')).toBe(diagnostic(chunks)['clientRequestId'])
+    } finally { requests.dispose() }
   })
 })
 
