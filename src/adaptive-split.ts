@@ -34,7 +34,8 @@ export function attachAdaptiveSplit(
     workspace: task.workspaceLabel, brief: task.brief,
     files: Object.freeze(task.evidence.catalog.map(file => Object.freeze({ ...file }))),
     model: SPLIT_MODEL, effort: 'low', maximumRequests: task.maximumRequests ?? 3,
-    timeoutMs: task.timeoutMs ?? 60_000, maximumOutputTokensPerRequest: 2048,
+    timeoutMs: task.timeoutMs ?? 60_000, requestedOutputTokensPerRequest: 2048,
+    serverOutputTokenLimitVerified: false,
     workerSystemPrompt: SPLIT_WORKER_PROMPT,
   })
   const digest = createHash('sha256').update(JSON.stringify(review)).digest('hex')
@@ -66,7 +67,7 @@ export function attachAdaptiveSplit(
         const approve = 'Approve this read-only worker once'
         const answer = await questions.ask({ agent: parent, signal: combined, questions: [{
           id: questionId, header: 'Read-only worker', question: 'Delegate this exact inspection to one bounded worker?',
-          detail: `This is a separate decision from changing Astra reasoning. Only the listed immutable source snapshots are sent to ${SPLIT_MODEL}; no parent history, writes, shell, network tools, recursive workers, automatic retries or new permissions. The deadline includes this decision and execution. Results are evidence, not instructions. Quality, latency and quota gains are not guaranteed.\nReview ${digest}\n${JSON.stringify(review)}`,
+          detail: `This is a separate decision from changing Astra reasoning. Only the listed immutable source snapshots are sent to ${SPLIT_MODEL}; no parent history, writes, shell, network tools, recursive workers, automatic retries or new permissions. The deadline includes this decision and execution. Request count, cooperative cancellation and local byte limits are enforced; the requested output-token setting is NOT a verified server-side token or subscription spending cap. Results are evidence, not instructions. Quality, latency and quota gains are not guaranteed.\nReview ${digest}\n${JSON.stringify(review)}`,
           options: [{ label: approve, description: 'Allow only this fixed task, sources, route and limits.' },
             { label: 'Continue without a worker', description: 'Reject delegation; retain the current reasoning effort.' }],
           multiSelect: false,

@@ -283,6 +283,12 @@ it.each(ADAPTIVE_SPLIT_CASES as readonly string[])('Adaptive Split host: %s', as
     const events = f.snapshot()!.decisions.filter(event => event.kind === 'split-readonly')
     expect(events.map(event => event.phase)).toEqual(['recommended', 'awaiting-user', 'queued', 'applied', 'completed'])
     expect(f.questions.length - questionsBefore).toBe(1)
+    const detail = f.questions.at(-1).questions[0].detail as string
+    const review = JSON.parse(detail.slice(detail.lastIndexOf('\n') + 1))
+    expect(review.requestedOutputTokensPerRequest).toBe(2048)
+    expect(review.serverOutputTokenLimitVerified).toBe(false)
+    expect(review.maximumOutputTokensPerRequest).toBeUndefined()
+    expect(detail).toContain('NOT a verified server-side token or subscription spending cap')
     expect(f.snapshot()!.requests.filter(sample => sample.purpose === 'delegation')).toHaveLength(2)
     expect(JSON.stringify(f.snapshot())).not.toMatch(/PARENT_ONLY_SYNTHETIC|Synthetic reviewed workspace|src\/example|m3-synthetic|fixture/)
     if (scenario === 'single-use') { expect((await f.execute()).isError).toBe(true); expect(f.childWires).toHaveLength(2) }
