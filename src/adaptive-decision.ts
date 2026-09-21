@@ -12,14 +12,15 @@ export interface AdaptiveObservation {
   readonly revision: number
   readonly generation: number
 }
-export type AdaptiveAction = Readonly<{ kind: 'keep' } | { kind: 'reasoning'; effort: AstraReasoningEffort }>
+export type AdaptiveAction = Readonly<{ kind: 'keep' } | { kind: 'reasoning'; effort: AstraReasoningEffort }
+  | { kind: 'split-readonly' }>
 export interface AdaptiveRecommendation {
   readonly ordinal: number
   readonly observation: AdaptiveObservation
   readonly action: AdaptiveAction
 }
 export type AdaptiveDecisionPhase = 'recommended' | 'awaiting-user' | 'queued' | 'applied'
-  | 'unchanged' | 'declined' | 'cancelled' | 'stale' | 'failed'
+  | 'unchanged' | 'declined' | 'cancelled' | 'stale' | 'failed' | 'completed'
 export interface AdaptiveDecisionEvent {
   readonly ordinal: number
   readonly kind: AdaptiveAction['kind']
@@ -30,7 +31,7 @@ export interface AdaptiveDecisionEvent {
 export type AdaptiveRequestOutcome = 'stop' | 'tool-calls' | 'max-tokens' | 'error' | 'aborted' | 'incomplete' | 'unknown'
 export interface AdaptiveRequestSample {
   readonly ordinal: number
-  readonly purpose: 'task' | 'compaction' | 'auxiliary'
+  readonly purpose: 'task' | 'compaction' | 'auxiliary' | 'delegation'
   readonly effort: AstraReasoningEffort | 'unknown'
   readonly outcome: AdaptiveRequestOutcome
   readonly durationMs: number
@@ -68,6 +69,8 @@ function actionFor(value: unknown, observation: AdaptiveObservation): AdaptiveAc
   if (!object(value)) invalid('expected an action object')
   const keys = Object.keys(value).sort().join(',')
   if (value.kind === 'keep' && keys === 'kind') return Object.freeze({ kind: 'keep' })
+  // Advice selects only the action; source scope, route, budget and consent stay host-owned.
+  if (value.kind === 'split-readonly' && keys === 'kind') return Object.freeze({ kind: 'split-readonly' })
   if (value.kind !== 'reasoning' || keys !== 'effort,kind' || !isAstraReasoningEffort(value.effort)) {
     invalid('unsupported action or authority-bearing extra fields')
   }
@@ -110,7 +113,7 @@ export class AdaptiveDecisionFlow {
     this.phases.set(recommendation, phase)
     appendBounded(this.decisions, Object.freeze({ ordinal: recommendation.ordinal, kind: recommendation.action.kind,
       from: recommendation.observation.effectiveEffort,
-      target: recommendation.action.kind === 'keep' ? recommendation.observation.effectiveEffort : recommendation.action.effort,
+      target: recommendation.action.kind === 'reasoning' ? recommendation.action.effort : recommendation.observation.effectiveEffort,
       phase }))
   }
 
@@ -141,6 +144,16 @@ export class AdaptiveDecisionFlow {
     const previous = this.phases.get(recommendation)
     if (previous === undefined) invalid('unknown recommendation')
     if (previous === 'recommended' || previous === 'awaiting-user' || previous === 'queued') this.record(recommendation, phase)
+  }
+
+  /** A started worker's result/cleanup is separate from admitting or starting the action. */
+  settleDelegation(recommendation: AdaptiveRecommendation, outcome: 'completed' | 'failed' | 'cancelled'): void {
+    if (recommendation.action.kind !== 'split-readonly') invalid('only delegation has a worker outcome')
+    const phase = this.phases.get(recommendation)
+    if (phase === undefined) invalid('unknown recommendation')
+    if (phase === 'applied') this.record(recommendation, outcome)
+    else if (outcome === 'completed') invalid('a worker cannot complete before verified start')
+    else this.discard(recommendation, outcome)
   }
 
   /** Observe the existing adapter stream once, without a second model call or changing its chunks/errors. */

@@ -13,7 +13,7 @@ import type { OpenAICodexRequestReplay } from './adapter.ts'
 import { prepareReasoningReplay } from './reasoning-update-history.ts'
 import { planCheckpointReasoningAdmission, recordedReasoningBase } from './reasoning-update-checkpoint.ts'
 import { AstraReasoningRequestScope } from './reasoning-update-provider.ts'
-import { AdaptiveDecisionFlow } from './adaptive-decision.ts'
+import { AdaptiveDecisionFlow, observeAdaptiveState } from './adaptive-decision.ts'
 import type { AdaptiveDecisionSnapshot, AdaptiveRecommendation } from './adaptive-decision.ts'
 import {
   ASTRA_REASONING_EFFORTS, createReasoningUpdateMessage, isAstraReasoningEffort,
@@ -56,11 +56,22 @@ interface PreparedStep {
   pending?: PendingChange
 }
 
+/** Internal host-only lease over the same per-Agent flow; it grants no Split permission. */
+export interface AdaptiveSplitDecisionLease {
+  readonly flow: AdaptiveDecisionFlow
+  readonly recommendation: AdaptiveRecommendation
+  readonly signal: AbortSignal
+  observe(): ReturnType<typeof observeAdaptiveState>
+  release(): void
+}
+
 /** Runtime activation driven by the saved product setting or an isolated test. */
 export interface ThinkHostIntegration {
   readonly adapterReplay: OpenAICodexRequestReplay
   /** Internal observation, not a public endpoint, permission handle or restored state. */
   adaptiveSnapshot(agent: Agent): AdaptiveDecisionSnapshot | undefined
+  /** The caller independently fixes and authorizes the Split task. Not a model-facing entry. */
+  beginAdaptiveSplit(agent: Agent): AdaptiveSplitDecisionLease
   setEnabled(enabled: boolean): Promise<void>
 }
 
@@ -84,6 +95,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
   const prepared = new WeakMap<Agent, PreparedStep>()
   const busy = new WeakSet<Agent>()
   const operations = new Set<Promise<unknown>>()
+  const lifecycle = new AbortController()
   let enabled = false
   let stopped = false
   let questionLifetime = new AbortController()
@@ -213,9 +225,9 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
   ctx.on('agent/turn-stopping', forget)
   ctx.on('agent/disposed', event => { forget(event); flows.delete(event.agent) })
 
-  function selection(agent: Agent) {
+  function selection(agent: Agent, requireThinkEnabled = true) {
     assertOwner(agent)
-    if (!enabled || stopped) reasoningUpdateError('Think proposals are disabled.')
+    if (stopped || (requireThinkEnabled && !enabled)) reasoningUpdateError('Think proposals are disabled.')
     if (pending.has(agent)) reasoningUpdateError('A confirmed Think change is already pending.')
     const header = agent.session.requestHeader()
     const config = header?.config
@@ -243,6 +255,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     if (recommendation.action.kind === 'keep') {
       return { status: 'unchanged', effort: before.effectiveEffort, message: 'Keep the current effort. No confirmation or configuration change is needed.' }
     }
+    if (recommendation.action.kind !== 'reasoning') reasoningUpdateError('Think cannot authorize another adaptive action.')
     const target = recommendation.action.effort
     busy.add(agent)
     try {
@@ -309,6 +322,21 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       },
     },
     adaptiveSnapshot(agent) { assertOwner(agent); return flows.get(agent)?.snapshot() },
+    beginAdaptiveSplit(agent) {
+      const observation = observeAdaptiveState(selection(agent, false))
+      if (busy.has(agent)) reasoningUpdateError('An adaptive decision is already pending for this Agent.')
+      const flow = flowFor(agent)
+      const recommendation = flow.recommend(observation, { kind: 'split-readonly' })
+      busy.add(agent)
+      let released = false
+      return Object.freeze({ flow, recommendation, signal: lifecycle.signal,
+        observe() {
+          if (released) reasoningUpdateError('The adaptive decision lease was released.')
+          return observeAdaptiveState(selection(agent, false))
+        },
+        release() { if (!released) { released = true; busy.delete(agent) } },
+      })
+    },
     setEnabled(value) {
       if (enabled === (value === true && !stopped)) return activation
       enabled = value === true && !stopped
@@ -329,6 +357,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
   }
   ctx.effect(() => async () => {
     stopped = true
+    lifecycle.abort(new Error('Adaptive runtime disposed'))
     await integration.setEnabled(false)
     await Promise.allSettled([...operations])
   }, 'Think native admission lifecycle')

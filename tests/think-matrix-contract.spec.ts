@@ -6,23 +6,29 @@ import { expect, it } from 'vitest'
 import { assertThinkMatrix, inspectThinkTestReport, THINK_HOST_CASES, THINK_IDENTITY_CASE, THINK_RUNTIME_PACKAGES } from '../scripts/think-matrix-contract.mjs'
 // @ts-expect-error Plain Node matrix helper is outside the source build.
 import { readThinkHostIdentity } from '../scripts/check-think-matrix.mjs'
+// @ts-expect-error Plain Node case contract is outside the source build.
+import { ADAPTIVE_SPLIT_CASES } from '../scripts/adaptive-split-cases.mjs'
+
+const caseCount = 42 + ADAPTIVE_SPLIT_CASES.length
 
 const version = '0.1.5-rc.1'
 const digest = 'a'.repeat(64)
 const tests = () => ({ success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0,
-  numTotalTests: 43, numPassedTests: 43,
+  numTotalTests: caseCount + 1, numPassedTests: caseCount + 1,
   testResults: [{ assertionResults: [...THINK_HOST_CASES, THINK_IDENTITY_CASE].map((title: string) => ({ title, status: 'passed' })) }],
 })
-const host = () => ({ version, bundleDigest: digest, cases: [...THINK_HOST_CASES], tests: 43,
+const host = () => ({ version, bundleDigest: digest, cases: [...THINK_HOST_CASES], tests: caseCount + 1,
   pid: 1001, node: 'v22.22.3', runtimePackages: Object.fromEntries(THINK_RUNTIME_PACKAGES.map((name: string) => [name, version])),
   piAiVersion: '0.85.1', syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0 })
 const report = () => ({ schemaVersion: 2, kind: 'think-native-host-matrix', bundleDigest: digest,
-  syntheticOnly: true, productSettingsExercised: true, productionDefaultsChanged: false, realProviderDispatches: 0, reports: [host()] })
+  syntheticOnly: true, productSettingsExercised: true, adaptiveSplitExercised: true,
+  productionDefaultsChanged: false, realProviderDispatches: 0, reports: [host()] })
 
-it('requires 38 native Think/M2 cases, four product settings cases and exact runtime identity', () => {
-  expect(THINK_HOST_CASES).toHaveLength(42)
-  expect(new Set(THINK_HOST_CASES).size).toBe(42)
-  expect(inspectThinkTestReport(tests())).toEqual({ cases: THINK_HOST_CASES, tests: 43 })
+it('requires the existing 42 Think/M2 cases plus every adaptive Split case and exact runtime identity', () => {
+  expect(THINK_HOST_CASES).toHaveLength(caseCount)
+  expect(new Set(THINK_HOST_CASES).size).toBe(caseCount)
+  expect(THINK_HOST_CASES.slice(42)).toEqual(ADAPTIVE_SPLIT_CASES.map((name: string) => `Adaptive Split host: ${name}`))
+  expect(inspectThinkTestReport(tests())).toEqual({ cases: THINK_HOST_CASES, tests: caseCount + 1 })
   expect(assertThinkMatrix(report(), [version], digest)).toEqual(report())
 })
 it.each(['failed', 'skipped', 'todo', 'missing', 'duplicate', 'renamed'])(
@@ -36,7 +42,7 @@ it.each(['failed', 'skipped', 'todo', 'missing', 'duplicate', 'renamed'])(
     if (kind === 'renamed') value.testResults[0]!.assertionResults[0]!.title = 'ordinary install succeeded'
     expect(() => inspectThinkTestReport(value)).toThrow()
   })
-it.each(['wrong-kind', 'wrong-host', 'mixed-runtime', 'missing-runtime', 'different-bundle', 'live', 'network', 'enabled', 'missing-case', 'old-schema', 'no-product'])(
+it.each(['wrong-kind', 'wrong-host', 'mixed-runtime', 'missing-runtime', 'different-bundle', 'live', 'network', 'enabled', 'missing-case', 'old-schema', 'no-product', 'no-split'])(
   'rejects unsupported matrix evidence: %s', kind => {
     const value = report(); const result = value.reports[0]!
     if (kind === 'wrong-kind') value.kind = 'ordinary-install-matrix'
@@ -49,6 +55,7 @@ it.each(['wrong-kind', 'wrong-host', 'mixed-runtime', 'missing-runtime', 'differ
     if (kind === 'enabled') value.productionDefaultsChanged = true
     if (kind === 'old-schema') value.schemaVersion = 1
     if (kind === 'no-product') value.productSettingsExercised = false
+    if (kind === 'no-split') value.adaptiveSplitExercised = false
     if (kind === 'missing-case') result.cases.pop()
     expect(() => assertThinkMatrix(value, [version], digest)).toThrow()
   })

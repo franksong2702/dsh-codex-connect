@@ -21,6 +21,7 @@ import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
+import { withSplitProviderBounds } from './split-dispatch.ts'
 
 /** Internal optional replay seam. Omission preserves the ordinary product adapter. */
 export interface OpenAICodexRequestReplay {
@@ -156,7 +157,7 @@ function requestProvider(
   requestReplay?: OpenAICodexRequestReplay,
 ): Provider {
   const native = withOpenAICodexNativeCompaction(provider)
-  const configured = withOpenAICodexFastMode(requestReplay?.wrapProvider(native) ?? native, fastMode)
+  const configured = withSplitProviderBounds(withOpenAICodexFastMode(requestReplay?.wrapProvider(native) ?? native, fastMode))
   const streamSimple = configured.streamSimple
   return {
     ...configured,

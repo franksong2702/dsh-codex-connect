@@ -26,11 +26,13 @@ Direct plugin routes use the honest shared identity `originator: deepseek-harnes
 
 Standalone capability/Auto-review probes reuse the same pure URL/header policy but keep their isolated one-shot dispatcher and deadline instead of depending on a running plugin governor. The proxy reachability probe is also a bootstrap exception because it tests the proxy primitive used by the governor itself. OAuth authorization/refresh and credential-free public image fetching are outside `backend-api` and keep their separate security boundaries. Browser calls to this plugin's own local HTTP routes are likewise not upstream backend traffic.
 
-## Adaptive decisions (unreleased M2 candidate)
+## Adaptive decisions (unreleased M2/M3 candidates)
 
 The internal `AdaptiveDecisionFlow` supplies reasoning-first Observe → Recommend → Admit → Apply bookkeeping to the existing Think host integration. Host journal/selection state supplies the observation; model advice may choose `keep` or one supported effort but cannot supply authority. The exact native human-question result is still required for a change, followed by current-state checks and canonical request admission. A valid local change is distinct from the subsequent model request outcome. No-op advice adds no confirmation or configuration notice, and ordinary unchanged work needs no tool invocation.
 
-The flow retains only bounded, content-free process-local decision/request observations. It does not create another durable state store, extra model request, automatic approval, pricing rule or scheduler. M1's verified Think/Remember composition and the existing backend governor remain the execution path. The [M2 contract](experiments/adaptive-runtime-m2.md) specifies measurement limits; M3 delegation and live value evaluation are still separate milestones.
+The flow retains only bounded, content-free process-local decision/request observations. It does not create another durable state store, extra model request, automatic approval, pricing rule or scheduler. M1's verified Think/Remember composition and the existing backend governor remain the execution path. The [M2 contract](experiments/adaptive-runtime-m2.md) specifies measurement limits.
+
+The [M3 candidate](experiments/adaptive-runtime-m3.md) adds one independently authorized `split-readonly` action to the same live-root flow. Host staging fixes source snapshots, task, exact provider and limits; a separate native human question is required. Shared locking prevents concurrent reasoning/delegation admission, and a completed decision requires validated structured findings and awaited child cleanup. A fresh ordinary Luna/low child receives only approved snapshots, never the parent's Think authority or checkpoint. The normal adapter's bounded Split dispatch wrapper is inert outside a host-owned child scope. Public plugin registration and settings do not install the internal staging entry. Mounted worker persistence is still refused; authenticated product UI, durable child recovery and live value evaluation remain separate work.
 
 ## Search and images
 

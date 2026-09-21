@@ -1,3 +1,13 @@
+# Adaptive Runtime M3 candidate — 2026-09-21
+
+Branch `franksong2702/adaptive-runtime-m3` builds on M2 #233 `725cd93`, still stacked on M1 #232. It connects one host-staged, independently confirmed read-only Split offer to the same per-live-Agent decision flow as Think. The original #199/#200 source primitives are reused without importing their separate browser/HTTP delivery or rewriting any prior branch. There is no merged, released or automatically enabled M3 feature.
+
+Astra may request the staged task or continue alone; the host fixes immutable sources, route, deadlines and request limits. Exact native consent is separate from reasoning approval. Shared decision locking, pre-spawn state checks, child isolation, per-attempt governor limits, structured observed-source findings and awaited cleanup retain authority in the host. `applied` means verified local start, while `completed` requires a validated result and cleanup. A cleanup failure blocks further adaptive actions instead of reporting success. Child streams add content-free delegation samples, not claimed savings.
+
+Native and ordinary-fallback parent compaction compose with a fresh unseeded child in synthetic host tests. Mounted worker persistence remains refused; production offer creation, authenticated M3 Session UI, durable worker restart and real model/value comparisons remain unaccepted. See [M3 delivery and boundaries](../experiments/adaptive-runtime-m3.md) and the exact-head validation record when available. M1/M2 remain unmerged drafts; published 4.39, defaults, daily services, real credentials and original branches are unchanged.
+
+---
+
 # Adaptive Runtime M2 candidate — 2026-09-21
 
 Branch `franksong2702/adaptive-runtime-m2` builds on M1 PR #232 at `2f135e7`; main remains the separately released Alpha 4.39 baseline. M2 adds a thin internal Observe → Recommend → Admit → Apply flow to the existing Think host integration. Explicit `keep` and same-effort proposals produce no confirmation or configuration change. Actual changes still require the exact native human answer, a current host observation and the validated journal/request header; local application is not remote request success.
