@@ -1,3 +1,31 @@
+# Alpha 4.39 preparation checkpoint — 2026-09-21
+
+Remote main is `6ce8a37ca7c28640a43b9189b767e4f6212cea7e`, the normal merge of #227. Published Alpha `0.1.0-alpha.4.38` remains the current public recommendation while 4.39 is prepared; `latest` remains separately managed at 4.34. #227 centralizes authenticated `chatgpt.com/backend-api` request governance across Model/pi-ai, Search, quota, image generation, Auto-review and native compaction. It preserves pi-ai's model identity, uses honest plugin identity on plugin-owned direct routes, adds per-attempt correlation, bounded admission, cancellation/deadline composition, proxy lifetime and server-directed lane cooldown. It does not establish the unverified risk-control hypothesis from #219.
+
+The second review of #227 found and fixed response-lifetime/cancellation leaks, cooldown admission races, queued deadline gaps, Request-signal propagation and authenticated redirect risks before merge. All eight exact-head GitHub checks passed on the corrected head. The overlapping #226 is now closed as superseded and must not be revived independently.
+
+## Current Adaptive Runtime tracks
+
+| Track | Current state | Next gate |
+| --- | --- | --- |
+| Remember #65 / #196 | Native compaction mechanism is merged, released and default-off; bounded real A/B and preview evidence exist. | Real-provider durable restart/fork/fault/accounting/long-task acceptance remains broader than current synthetic and bounded live controls. |
+| Think #220 → #221 → #222 → #224 | Four stacked draft PRs cover replay isolation, native admission/cancellation, four-host lifecycle, saved default-off opt-in and native UI controls. #167 is now historical/conflicting. | Rebase/replay the stack onto current main after #227, then verify authenticated Session-page transport and human experience before considering merge. |
+| Split #199 → #200 | Draft design plus bounded read-only worker; exact-host and Chromium/Gateway/Conversation synthetic acceptance are substantial. | Human usefulness, persistent permission/budget reconstruction, restart/resume and real-task value remain unaccepted. |
+
+The umbrella remains #195. Think/Split are not included in Alpha 4.39. Do not infer composability merely because Remember is already on main.
+
+## Compatibility and open acceptance
+
+Declared DSH hosts remain exactly `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2`. #211 remains an upstream DSH 0.1.6-alpha.2 peer-resolution repair tracker; the proposed host-side repair was delivered to the upstream Discussion but is not a stock release. #207/#183 retain their separate broader acceptance scopes.
+
+#219 remains open for the external reporter to confirm whether the original persistent overloaded condition recurs under comparable normal use. #215 remains primarily blocked on the reporter's missing local profile archive evidence. #194 waits for natural Luna Reserve eligibility rather than manufactured exhaustion. #208 remains an independent opt-in “new session Fast Mode default” enhancement.
+
+Alpha 4.39 preparation is authorized through normal review/merge/OIDC publication. It must not change daily services, use live credentials/models, promote `latest`, or silently enable experimental defaults. Candidate verification and publication evidence belong in [.github/ALPHA_439_RELEASE_READINESS.md](../../.github/ALPHA_439_RELEASE_READINESS.md) and the eventual publication record.
+
+The dated checkpoints below are historical and retain their original scope.
+
+---
+
 # Alpha 4.37 published checkpoint — 2026-09-19
 
 Alpha `0.1.0-alpha.4.37` was published from `5cbd0d330d12c81f0bf37515b65bc799e480aa78` through successful workflow `35439115133`. The npm archive equals the final tested artifact; the Git tag and published GitHub prerelease match the release commit. `alpha` is 4.37; `latest` remains 4.34. See [publication verification](../../.github/ALPHA_437_PUBLICATION.md). No service or default changed, and no new live-model request was made. The local DSH repair, Think and Split are not included.
