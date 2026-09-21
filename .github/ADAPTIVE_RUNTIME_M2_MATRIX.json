@@ -1,0 +1,204 @@
+{
+  "sourceHead": "bbd02a389a5efd276d21ae0bcbc45c325d8be24b",
+  "syntheticOnly": true,
+  "sameArtifact": true,
+  "pluginVersion": "0.1.0-alpha.4.39",
+  "reports": [
+    {
+      "dshVersion": "0.1.2-rc.1",
+      "nodeVersion": "v22.22.3",
+      "artifact": "f749c6eb35ba659ac5673c9ebae19d6af960a59b13a38d5c4fd673257a89740f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false,
+        "enableReasoningUpdates": false
+      },
+      "modelCount": 8,
+      "disposalVerified": true,
+      "reserveTransitionsVerified": true,
+      "thinkRemember": {
+        "syntheticOnly": true,
+        "freshProcesses": 16,
+        "encodings": [
+          "none",
+          "zstd"
+        ],
+        "modes": [
+          "native",
+          "fallback"
+        ],
+        "phases": [
+          "write",
+          "resume",
+          "verify",
+          "faults"
+        ]
+      },
+      "nativeCompactionProcesses": 10,
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "codeRuns": 1,
+        "dispatchEvent": "tool/code-dispatch",
+        "originalDownloadVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "realProviderRequests": 0
+      }
+    },
+    {
+      "dshVersion": "0.1.5-alpha.1",
+      "nodeVersion": "v22.22.3",
+      "artifact": "f749c6eb35ba659ac5673c9ebae19d6af960a59b13a38d5c4fd673257a89740f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false,
+        "enableReasoningUpdates": false
+      },
+      "modelCount": 8,
+      "disposalVerified": true,
+      "reserveTransitionsVerified": true,
+      "thinkRemember": {
+        "syntheticOnly": true,
+        "freshProcesses": 16,
+        "encodings": [
+          "none",
+          "zstd"
+        ],
+        "modes": [
+          "native",
+          "fallback"
+        ],
+        "phases": [
+          "write",
+          "resume",
+          "verify",
+          "faults"
+        ]
+      },
+      "nativeCompactionProcesses": 10,
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "codeRuns": 1,
+        "dispatchEvent": "tool/ptc-dispatch",
+        "originalDownloadVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "realProviderRequests": 0
+      }
+    },
+    {
+      "dshVersion": "0.1.5-rc.1",
+      "nodeVersion": "v22.22.3",
+      "artifact": "f749c6eb35ba659ac5673c9ebae19d6af960a59b13a38d5c4fd673257a89740f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false,
+        "enableReasoningUpdates": false
+      },
+      "modelCount": 8,
+      "disposalVerified": true,
+      "reserveTransitionsVerified": true,
+      "thinkRemember": {
+        "syntheticOnly": true,
+        "freshProcesses": 16,
+        "encodings": [
+          "none",
+          "zstd"
+        ],
+        "modes": [
+          "native",
+          "fallback"
+        ],
+        "phases": [
+          "write",
+          "resume",
+          "verify",
+          "faults"
+        ]
+      },
+      "nativeCompactionProcesses": 10,
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "codeRuns": 1,
+        "dispatchEvent": "tool/ptc-dispatch",
+        "originalDownloadVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "realProviderRequests": 0
+      }
+    },
+    {
+      "dshVersion": "0.1.5-rc.2",
+      "nodeVersion": "v22.22.3",
+      "artifact": "f749c6eb35ba659ac5673c9ebae19d6af960a59b13a38d5c4fd673257a89740f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false,
+        "enableReasoningUpdates": false
+      },
+      "modelCount": 8,
+      "disposalVerified": true,
+      "reserveTransitionsVerified": true,
+      "thinkRemember": {
+        "syntheticOnly": true,
+        "freshProcesses": 16,
+        "encodings": [
+          "none",
+          "zstd"
+        ],
+        "modes": [
+          "native",
+          "fallback"
+        ],
+        "phases": [
+          "write",
+          "resume",
+          "verify",
+          "faults"
+        ]
+      },
+      "nativeCompactionProcesses": 10,
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "codeRuns": 1,
+        "dispatchEvent": "tool/ptc-dispatch",
+        "originalDownloadVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "realProviderRequests": 0
+      }
+    }
+  ]
+}
