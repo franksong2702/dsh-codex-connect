@@ -29,6 +29,11 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.runtime.images.earlierForkDenied !== true
       || report.runtime.images.unrelatedSessionDenied !== true
       || report.runtime.images.realProviderRequests !== 0
+      || report.runtime?.thinkRememberLifecycle?.syntheticOnly !== true
+      || report.runtime.thinkRememberLifecycle.freshProcesses !== 16
+      || JSON.stringify(report.runtime.thinkRememberLifecycle.encodings) !== '["none","zstd"]'
+      || JSON.stringify(report.runtime.thinkRememberLifecycle.modes) !== '["native","fallback"]'
+      || JSON.stringify(report.runtime.thinkRememberLifecycle.phases) !== '["write","resume","verify","faults"]'
       || report.runtime?.nativeCompactionLifecycle?.syntheticOnly !== true
       || report.runtime?.nativeCompactionLifecycle?.freshProcesses !== 10
       || JSON.stringify(report.runtime?.nativeCompactionLifecycle?.encodings) !== '["none","zstd"]'

@@ -11,10 +11,11 @@ import type {} from '@deepseek-ai/dsh-user-questions'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { OpenAICodexRequestReplay } from './adapter.ts'
 import { prepareReasoningReplay } from './reasoning-update-history.ts'
+import { planCheckpointReasoningAdmission, recordedReasoningBase } from './reasoning-update-checkpoint.ts'
 import { AstraReasoningRequestScope } from './reasoning-update-provider.ts'
 import {
   ASTRA_REASONING_EFFORTS, createReasoningUpdateMessage, isAstraReasoningEffort,
-  planReasoningUpdates, readReasoningSelectionOrdinal, readReasoningUpdate, reasoningUpdateError,
+  readReasoningSelectionOrdinal, readReasoningUpdate, reasoningUpdateError,
 } from './reasoning-update.ts'
 
 export const ASTRA_REASONING_TOOL_NAME = 'codex_connect_set_reasoning_effort'
@@ -38,6 +39,7 @@ function pendingSelection(session: Session) {
 }
 
 interface PendingChange {
+  generation: number
   notice: UserMessage
   revision: number
   signal: AbortSignal
@@ -62,7 +64,7 @@ export interface ThinkHostIntegration {
  * @param ctx - trusted host context containing real Session and live Agent ownership services.
  * @returns an initially disabled integration and optional Codex adapter seam.
  * @remarks The product entry retains replay guards when proposals are disabled. It neither edits defaults nor supplies
- * an automatic proposal policy. Native compaction and child-agent composition remain unsupported.
+ * an automatic proposal policy. Validated prefix compaction is supported; child-agent composition remains separate.
  */
 export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration {
   const scope = new AstraReasoningRequestScope()
@@ -91,15 +93,15 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     if (decision.kind !== 'enter' || signal.aborted || stopped) return decision
     if (invalidAdmissions.has(agent.session)) reasoningUpdateError('Think admission integrity failed; preserve this session for inspection and use a new conversation.')
     const history = agent.session.deriveMessages()
-    const base = history.map(readReasoningUpdate).find(value => value !== undefined)?.baseEffort
+    const base = recordedReasoningBase(agent.session)
     const queued = pending.get(agent)
     if (base === undefined && queued === undefined) return decision
     assertOwner(agent)
-    if (agent.session.surface.replaceGeneration !== 0) reasoningUpdateError('Think cannot enter a replaced or compacted surface.')
     const additions = [...decision.messages]
     // A later manual choice, disable, or cancellation wins over an unadmitted approval.
     if (queued !== undefined) {
-      if (enabled && !queued.signal.aborted && queued.revision === selectionRevision(agent.session)) additions.push(queued.notice)
+      if (enabled && !queued.signal.aborted && queued.revision === selectionRevision(agent.session)
+        && queued.generation === agent.session.surface.replaceGeneration) additions.push(queued.notice)
       else pending.delete(agent)
     }
     const selected = pendingSelection(agent.session)
@@ -108,8 +110,8 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
         || !isAstraReasoningEffort(selected.reasoningEffort)) {
         reasoningUpdateError('Think history requires the original Astra route and an explicit effort.')
       }
-      const previous = planReasoningUpdates({ provider: 'openai-codex', model: 'gpt-6-astra',
-        sessionId: agent.id, reasoningEffort: ReasoningEffortId(base), messages: [...history, ...additions] })!
+      const previous = planCheckpointReasoningAdmission({ provider: 'openai-codex', model: 'gpt-6-astra',
+        sessionId: agent.id, reasoningEffort: ReasoningEffortId(base), messages: [...history, ...additions] }, agent.session, additions)!
       if (selected.reasoningEffort !== previous.effectiveEffort) additions.push(createReasoningUpdateMessage({
         version: 1, sessionId: agent.id, baseEffort: base,
         previousEffort: previous.effectiveEffort, effort: selected.reasoningEffort,
@@ -130,21 +132,22 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     const ids = new Set(history.map(message => message.id))
     const additions = current?.messages.filter(message => !ids.has(message.id)) ?? []
     const messages = [...history, ...additions]
-    const first = messages.map(readReasoningUpdate).find(value => value !== undefined)
-    if (first === undefined) return config
+    const base = recordedReasoningBase(agent.session) ?? messages.map(readReasoningUpdate).find(value => value !== undefined)?.baseEffort
+    if (base === undefined) return config
     assertOwner(agent)
-    if (stopped || agent.session.surface.replaceGeneration !== 0) reasoningUpdateError('Think admission is unavailable for this surface.')
+    if (stopped) reasoningUpdateError('Think admission is unavailable for this surface.')
     if (current !== undefined && current.revision !== selectionRevision(agent.session)) {
       reasoningUpdateError('Manual selection changed during request admission; no new effort was published.')
     }
     if (current?.pending !== undefined && !ids.has(current.pending.notice.id)
-      && (!enabled || current.pending.signal.aborted || pending.get(agent) !== current.pending)) {
+      && (!enabled || current.pending.signal.aborted || pending.get(agent) !== current.pending
+          || current.pending.generation !== agent.session.surface.replaceGeneration)) {
       reasoningUpdateError('The pending Think approval was canceled before admission.')
     }
     // T1 still validates the complete durable prefix. Only this exact pre-step batch may be pending.
-    prepareReasoningReplay({ ...config, reasoningEffort: ReasoningEffortId(first.baseEffort),
+    prepareReasoningReplay({ ...config, reasoningEffort: ReasoningEffortId(base),
       sessionId: agent.id, messages: history }, agent.session)
-    const plan = planReasoningUpdates({ ...config, reasoningEffort: ReasoningEffortId(first.baseEffort), sessionId: agent.id, messages })!
+    const plan = planCheckpointReasoningAdmission({ ...config, reasoningEffort: ReasoningEffortId(base), sessionId: agent.id, messages }, agent.session, additions)!
     const selected = pendingSelection(agent.session)
     if (selected !== undefined && (selected.provider !== config.provider || selected.model !== config.model
       || selected.reasoningEffort !== plan.effectiveEffort)) {
@@ -159,7 +162,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     if (session !== undefined && invalidAdmissions.has(session)) reasoningUpdateError('Think admission integrity failed; this live session cannot dispatch further requests.')
     const agent = options.sessionId === undefined ? undefined : ctx.get('agents')?.get(options.sessionId)
     const captured = agent === undefined ? undefined : prepared.get(agent)
-    if (captured !== undefined && !captured.signal.aborted) {
+    if (options.purpose === undefined && captured !== undefined && !captured.signal.aborted) {
       for (const expected of captured.messages.filter(message => readReasoningUpdate(message) !== undefined)) {
         const actual = options.messages.find(message => message.id === expected.id)
         if (actual === undefined || !isDeepStrictEqual(actual.source, expected.source)
@@ -192,7 +195,6 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
     assertOwner(agent)
     if (!enabled || stopped) reasoningUpdateError('Think proposals are disabled.')
     if (pending.has(agent)) reasoningUpdateError('A confirmed Think change is already pending.')
-    if (agent.session.surface.replaceGeneration !== 0) reasoningUpdateError('Think requires an uncompacted conversation.')
     const header = agent.session.requestHeader()
     const config = header?.config
     if (config?.provider !== 'openai-codex' || config.model !== 'gpt-6-astra'
@@ -204,7 +206,8 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       || selected.reasoningEffort !== config.reasoningEffort)) reasoningUpdateError('A newer manual selection must enter a request first.')
     const plan = prepareReasoningReplay({ ...config, sessionId: agent.id, messages: agent.session.deriveMessages() }, agent.session)
     return { baseEffort: plan?.baseEffort ?? config.reasoningEffort,
-      effectiveEffort: plan?.effectiveEffort ?? config.reasoningEffort, revision: selectionRevision(agent.session) }
+      effectiveEffort: plan?.effectiveEffort ?? config.reasoningEffort, revision: selectionRevision(agent.session),
+      generation: agent.session.surface.replaceGeneration }
   }
 
   async function change(agent: Agent, effort: string, reason: string, signal?: AbortSignal) {
@@ -221,7 +224,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
       const approve = `Change to ${effort}`
       const answer = await questions.ask({ agent, signal: combined, questions: [{ id: 'astra-reasoning-effort',
         header: 'Astra reasoning', question: `Change this conversation from ${before.effectiveEffort} to ${effort}?`,
-        detail: `Reason: ${reason}\n\nThis affects later requests in this conversation only. The selector updates with the next recorded request, not this approval. Other conversations and defaults are unchanged. Quality, latency and quota savings are not guaranteed. Compaction and model switching are not supported with this experimental history.`,
+        detail: `Reason: ${reason}\n\nThis affects later requests in this conversation only. The selector updates with the next recorded request, not this approval. Other conversations and defaults are unchanged. Quality, latency and quota savings are not guaranteed. Source-validated prefix compaction preserves admitted state. Model switches, child inheritance, and unverified history rewrites remain unsupported.`,
         options: [{ label: approve, description: 'Approve this exact change.' },
           { label: 'Keep current effort', description: 'Continue without changing effort.' }], multiSelect: false }] })
       combined.throwIfAborted()
@@ -231,10 +234,11 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
         return { status: 'declined', effort: before.effectiveEffort, message: 'No reasoning change was approved.' }
       }
       const after = selection(agent)
-      if (after.baseEffort !== before.baseEffort || after.effectiveEffort !== before.effectiveEffort || after.revision !== before.revision) {
+      if (after.baseEffort !== before.baseEffort || after.effectiveEffort !== before.effectiveEffort || after.revision !== before.revision
+        || after.generation !== before.generation) {
         reasoningUpdateError('The conversation changed during the decision; this approval was not applied.')
       }
-      pending.set(agent, { revision: before.revision, signal: combined, notice: createReasoningUpdateMessage({
+      pending.set(agent, { generation: before.generation, revision: before.revision, signal: combined, notice: createReasoningUpdateMessage({
         version: 1, sessionId: agent.id, baseEffort: before.baseEffort, previousEffort: before.effectiveEffort, effort,
       }) })
       return { status: 'queued', effort, message: `The user approved ${effort}. It becomes effective only when the next request is recorded; cancellation or a later manual choice can discard this pending change.` }
@@ -243,7 +247,7 @@ export function registerThinkHostIntegration(ctx: Context): ThinkHostIntegration
 
   function registerTool(toolCtx: Context): void {
     toolCtx.tools.register(defineTool({ name: ASTRA_REASONING_TOOL_NAME,
-      description: 'Propose one reasoning-effort change for the next work in this Astra conversation. Give a concrete reason. The native human-question service must approve the exact change; ordinary text and Auto-review cannot authorize it. Respect refusal and the latest manual choice. No defaults or other sessions change. Requires explicit initial effort and full uncompacted root-Agent history. Do not promise quality or quota savings.',
+      description: 'Propose one reasoning-effort change for the next work in this Astra conversation. Give a concrete reason. The native human-question service must approve the exact change; ordinary text and Auto-review cannot authorize it. Respect refusal and the latest manual choice. No defaults or other sessions change. Requires an explicit initial effort, a host-owned root Agent, and a complete canonical journal. Only verified prefix compaction is supported. Do not promise quality or quota savings.',
       parameters: { effort: { type: 'string', enum: ASTRA_REASONING_EFFORTS, required: true, description: 'Requested effort.' },
         reason: { type: 'string', required: true, description: 'Reason for the next unit of work.' } },
       output: { schema: { type: 'object', additionalProperties: false, properties: {

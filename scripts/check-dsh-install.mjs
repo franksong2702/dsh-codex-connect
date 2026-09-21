@@ -326,6 +326,9 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
     if (runtimeReport?.['reserveTransitionsVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
+    if (runtimeReport?.thinkRememberLifecycle?.syntheticOnly !== true || runtimeReport.thinkRememberLifecycle.freshProcesses !== 16) {
+      throw new CompatibilityCheckError('installed Think/Remember composition proof is missing')
+    }
     if (runtimeReport?.nativeCompactionLifecycle?.syntheticOnly !== true
       || runtimeReport.nativeCompactionLifecycle.freshProcesses !== 10) {
       throw new CompatibilityCheckError('installed native compaction lifecycle proof is missing')

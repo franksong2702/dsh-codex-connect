@@ -153,8 +153,10 @@ function requestProvider(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   backendRequests?: OpenAICodexBackendRequests,
+  requestReplay?: OpenAICodexRequestReplay,
 ): Provider {
-  const configured = withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode)
+  const native = withOpenAICodexNativeCompaction(provider)
+  const configured = withOpenAICodexFastMode(requestReplay?.wrapProvider(native) ?? native, fastMode)
   const streamSimple = configured.streamSimple
   return {
     ...configured,
@@ -186,6 +188,7 @@ export function createOpenAICodexProfile(
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: Readonly<Record<string, number>> | undefined,
   backendRequests?: OpenAICodexBackendRequests,
+  requestReplay?: OpenAICodexRequestReplay,
 ): ResolvedPiAiProviderProfile & { piProvider: Provider } {
   const effectiveProvider = contextWindowOverrides === undefined
     ? provider
@@ -201,7 +204,7 @@ export function createOpenAICodexProfile(
     retryPolicy: resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
     configuredMaxTokens: new Map(),
     modelErrors: new Map<string, string>(),
-    piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl, backendRequests),
+    piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl, backendRequests, requestReplay),
   }
   return profile
 }
@@ -260,15 +263,14 @@ export function createOpenAICodexAdapter(
   backendRequests?: OpenAICodexBackendRequests,
   requestReplay?: OpenAICodexRequestReplay,
 ): PiAiAdapter {
-  const original = withOpenAICodexAstra(openaiCodexProvider())
-  const baseline = requestReplay?.wrapProvider(original) ?? original
+  const baseline = withOpenAICodexAstra(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {
     const overrides = contextWindowOverrides?.()
     if (profiles === undefined || !deepEqualJson(previousOverrides, overrides)) {
-      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides, backendRequests)
+      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides, backendRequests, requestReplay)
       previousOverrides = overrides === undefined ? undefined : { ...overrides }
       // PiAiAdapter keys snapshots by map identity; captured calls keep the old map.
       profiles = new Map([[OPENAI_CODEX_PROVIDER, profile]])

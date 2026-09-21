@@ -1,6 +1,12 @@
-# Adaptive Runtime M1 integration started — 2026-09-21
+# Adaptive Runtime M1 candidate — 2026-09-21
 
-Isolated branch `franksong2702/adaptive-runtime-m1` combines Think #224 `c279420` (including #220/#221/#222) with released main `1748bec` without rewriting the existing draft branches. M1 is IN PROGRESS: Think/Remember composition and current-head validation are not yet accepted. M2 (thin decision API) and M3 (bounded Split composition) are approved follow-ups, not completed or enabled. No release, deployment, live credential/model call or default change.
+Isolated branch `franksong2702/adaptive-runtime-m1` reconciles Think #224 `c279420` (including #220/#221/#222) with released main `1748bec`; the original draft PR branches are unchanged. The integration merge is `c00755f`.
+
+M1 now derives admitted reasoning state from the original host journal and validates correlated prefix-compaction checkpoints instead of requiring every approval to stay in model-visible history. Ordinary/native-summary fallback, disabled replay, lower-effort continuation, cancellation, pending invalidation and manual priority have dedicated synthetic tests. Provider serialization, backend governance and real DSH persistence remain the execution path. Cross-process/four-host acceptance is a mandatory candidate gate; consult the exact-head PR and `.github/ADAPTIVE_RUNTIME_M1_VALIDATION.md` when available rather than reusing historical passes. No live Astra acceptance or savings are established.
+
+M2 (thin Observe → Recommend → Admit → Apply interface, reasoning first) and M3 (bounded read-only Split integration) remain approved follow-ups, not completed, merged or enabled. The goal is task quality per unit of resource/time, not independent switches; M1 establishes composition, not an optimizer. No release, deployment, real credential/model call, default change or 3080/3081 service operation belongs to this candidate. See [M1 design and validation boundaries](../experiments/adaptive-runtime-m1.md).
+
+---
 
 # Alpha 4.39 published checkpoint — 2026-09-21
 

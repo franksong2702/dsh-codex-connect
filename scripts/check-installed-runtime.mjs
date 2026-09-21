@@ -6,6 +6,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { checkInstalledReserve } from './check-installed-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
+import { checkInstalledThinkRemember } from './check-installed-think-remember.mjs'
 import { checkInstalledImages } from './check-installed-images.mjs'
 
 const JSON_SCHEMA_VERSION = 1
@@ -94,6 +95,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
 
     const reserveTransitionsVerified = await checkInstalledReserve(specifier => importFromProfile(hostPath, specifier), OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
+    const thinkRememberLifecycle = await checkInstalledThinkRemember(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
     const images = await checkInstalledImages(specifier => importFromProfile(hostPath, specifier), OpenAICodex, toolsManifest)
 
@@ -105,6 +107,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       disposalVerified: true,
       reserveTransitionsVerified,
       nativeCompactionLifecycle,
+      thinkRememberLifecycle,
       images,
     }
   } finally {

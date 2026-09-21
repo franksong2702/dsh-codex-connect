@@ -5,6 +5,7 @@ import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { planReasoningUpdates, readReasoningUpdate, reasoningUpdateError } from './reasoning-update.ts'
 import type { AstraReasoningPlan } from './reasoning-update.ts'
+import { prepareCheckpointReasoningReplay } from './reasoning-update-checkpoint.ts'
 
 /**
  * Validate the durable source before any provider/delegate can be constructed.
@@ -23,9 +24,13 @@ export function prepareReasoningReplay(options: GenerateOptions, session?: Sessi
   if (session === undefined || options.sessionId !== session.id) {
     reasoningUpdateError('Think replay requires the original host-owned session.')
   }
-  if (options.purpose !== undefined || session.surface.replaceGeneration !== 0) {
-    reasoningUpdateError('Compaction and auxiliary requests are not supported by this Think replay mechanism.')
+  if (requested.length > 0 && recorded.length === 0) {
+    reasoningUpdateError('An unrecorded Think notice cannot enter a compaction or replaced-surface request.')
   }
+  if (options.purpose === 'compaction' || session.surface.replaceGeneration !== 0) {
+    return prepareCheckpointReasoningReplay(options, session)
+  }
+  if (options.purpose !== undefined) reasoningUpdateError('Auxiliary requests are not supported by this Think replay mechanism.')
   const surface = session.deriveMessages()
   const visible = surface.filter(message => readReasoningUpdate(message) !== undefined)
   if (requested.length !== recorded.length || visible.length !== recorded.length) {

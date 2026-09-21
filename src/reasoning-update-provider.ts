@@ -21,7 +21,8 @@ export function projectReasoningPlan(plan: AstraReasoningPlan, context: Context)
     || context.systemPrompt !== (plan.leadingSystemText || undefined)) {
     reasoningUpdateError('The Astra context conversion did not preserve its user-message positions or leading system prompt.')
   }
-  return { ...plan, userCount, updates: plan.updates.map(update => ({ ...update, userIndex: update.userIndex - 1 })) }
+  return { ...plan, userCount, updates: plan.updates.map(update => ({ ...update, userIndex: update.userIndex - 1 })),
+    ...(plan.checkpoints === undefined ? {} : { checkpoints: plan.checkpoints.map(checkpoint => ({ ...checkpoint, userIndex: checkpoint.userIndex - 1 })) }) }
 }
 
 /** Captures each stream independently, including prepared calls and concurrent sessions. */
@@ -44,6 +45,8 @@ export class AstraReasoningRequestScope {
         const previous = options?.onPayload
         return streamSimple.call(provider, model, context, {
           ...options,
+          // DSH's compaction call omits effort; its source-validated prefix determines the replay level.
+          ...(plan.compaction ? { reasoning: plan.requestEffort } : {}),
           async onPayload(payload, payloadModel) {
             const replaced = await previous?.(payload, payloadModel)
             return applyReasoningUpdates(replaced === undefined ? payload : replaced, plan)

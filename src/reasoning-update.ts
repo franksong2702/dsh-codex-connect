@@ -2,6 +2,8 @@
 
 import { createUserMessage, LlmError } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, Message, UserMessage } from '@deepseek-ai/dsh-llm'
+import { isDeepStrictEqual } from 'node:util'
+import type { ThinkCheckpointProjection } from './reasoning-update-checkpoint.ts'
 
 /** Reasoning levels accepted by Astra configuration updates. */
 export const ASTRA_REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
@@ -26,6 +28,8 @@ export interface AstraReasoningPlan {
   requestEffort: AstraReasoningEffort
   effectiveEffort: AstraReasoningEffort
   userCount: number
+  checkpoints?: readonly ThinkCheckpointProjection[]
+  compaction?: true
   /** Leading history prompt eligible for promotion to the provider's system prompt. */
   leadingSystemText?: string
   updates: ReadonlyArray<{ userIndex: number; text: string; effort: AstraReasoningEffort }>
@@ -184,13 +188,39 @@ export function applyReasoningUpdates(payload: unknown, plan: AstraReasoningPlan
   }
   if (payload.context_management !== undefined || (payload.truncation !== undefined && payload.truncation !== 'disabled')
     || payload.previous_response_id !== undefined || payload.agents !== undefined || payload.agent !== undefined
-    || payload.input.some(item => record(item) && ['configuration_update', 'compaction', 'compaction_trigger'].includes(String(item.type)))) {
-    reasoningUpdateError('Astra reasoning updates require a complete, uncompacted, single-agent request history.')
+    || payload.input.some(item => record(item) && item.type === 'configuration_update')) {
+    reasoningUpdateError('Astra reasoning updates require source-validated, single-agent request history.')
   }
+  const checkpoints = plan.checkpoints ?? []
+  const native = plan.compaction === true && record(payload.input.at(-1)) && payload.input.at(-1).type === 'compaction_trigger'
+  const expectedUsers = plan.userCount - (native ? 1 : 0)
   let userIndex = 0
   let updateIndex = 0
+  let checkpointIndex = 0
   const input: unknown[] = []
-  for (const item of payload.input) {
+  for (let i = 0; i < payload.input.length; i += 1) {
+    const item: unknown = payload.input[i]
+    const checkpoint = checkpoints[checkpointIndex]
+    if (checkpoint?.userIndex === userIndex) {
+      // DSH's all-text user conversion joins blocks without separators before pi-ai serialization.
+      const expected = checkpoint.nativeItems ?? [{ role: 'user', content: [{ type: 'input_text', text: checkpoint.content.map(block => {
+        if (block.type !== 'text') reasoningUpdateError('Think checkpoint contains unsupported non-text summary content.')
+        return block.text
+      }).join('') }] }]
+      if (isDeepStrictEqual(payload.input.slice(i, i + expected.length), expected)) {
+        input.push(...payload.input.slice(i, i + expected.length))
+        if (checkpoint.effort !== undefined) input.push({ type: 'configuration_update', reasoning: { effort: checkpoint.effort } })
+        checkpointIndex += 1; userIndex += 1; i += expected.length - 1
+        continue
+      }
+      if (record(item) && (item.role === 'user' || item.type === 'compaction')) {
+        reasoningUpdateError('Think checkpoint projection differs from its verified host source.')
+      }
+    }
+    if (record(item) && (item.type === 'compaction' || item.type === 'compaction_trigger')) {
+      if (native && i === payload.input.length - 1 && item.type === 'compaction_trigger') { input.push(item); continue }
+      reasoningUpdateError('Unverified compaction items cannot carry Think state.')
+    }
     if (record(item) && item.role === 'user') {
       const update = plan.updates[updateIndex]
       if (update?.userIndex === userIndex) {
@@ -199,14 +229,14 @@ export function applyReasoningUpdates(payload: unknown, plan: AstraReasoningPlan
           reasoningUpdateError('The Astra reasoning notice changed position during request conversion.')
         }
         input.push({ type: 'configuration_update', reasoning: { effort: update.effort } })
-        updateIndex++
+        updateIndex += 1
       }
-      userIndex++
+      userIndex += 1
     }
     input.push(item)
   }
-  if (userIndex !== plan.userCount || updateIndex !== plan.updates.length) {
-    reasoningUpdateError('The Astra request conversion did not preserve its user-message positions.')
+  if (userIndex !== expectedUsers || updateIndex !== plan.updates.length || checkpointIndex !== checkpoints.length) {
+    reasoningUpdateError('The Astra request conversion did not preserve its user-message positions and checkpoints.')
   }
   return { ...payload, input, reasoning: plan.requestEffort === plan.baseEffort
     ? payload.reasoning : { ...payload.reasoning, effort: plan.baseEffort } }
