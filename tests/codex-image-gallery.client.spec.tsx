@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
@@ -45,11 +45,18 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 describe('Codex image gallery', () => {
   it('loads once, opens the lightbox, and restores focus after Escape', async () => {
-    const load = vi.fn(async () => 'blob:gallery')
+    const loaded = Promise.withResolvers<string>()
+    const load = vi.fn(() => loaded.promise)
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
     await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
     const thumbnail = screen.getByRole('button', { name: 'Open gallery.png' })
+    // A loader invocation is not readiness. Exercise the pending state deterministically.
+    fireEvent.click(thumbnail)
+    expect(screen.queryByRole('dialog', { name: labels.lightbox.dialog })).toBeNull()
+    expect(screen.getByText(labels.loading)).toBeTruthy()
+    await act(async () => { loaded.resolve('blob:gallery') })
+    await screen.findByRole('img', { name: 'gallery.png' })
     fireEvent.click(thumbnail)
     const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })
     expect(dialog.parentElement?.parentElement).toBe(document.body)
@@ -66,7 +73,8 @@ describe('Codex image gallery', () => {
     const load = vi.fn(async () => 'blob:gallery')
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
-    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    await screen.findByRole('img', { name: 'gallery.png' })
+    expect(load).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Open gallery.png' }))
     const mask = document.body.querySelector('[aria-hidden="true"]')
     expect(mask).not.toBeNull()
@@ -78,7 +86,8 @@ describe('Codex image gallery', () => {
     const load = vi.fn(async () => 'blob:gallery')
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
-    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    await screen.findByRole('img', { name: 'gallery.png' })
+    expect(load).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Open gallery.png' }))
     const viewport = screen.getByTestId('codex-image-lightbox-viewport')
     const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })

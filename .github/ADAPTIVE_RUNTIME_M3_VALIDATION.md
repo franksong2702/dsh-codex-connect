@@ -44,6 +44,12 @@ Initial missing-import/test-type errors were corrected before the passing final 
 
 This is implementing-agent source review plus executable negative/regression gates, **not** an independent human or separate-agent approval.
 
+## CI-discovered test readiness correction
+
+The first PR CI run `35592667958` on head `f3a8dc1` failed its Node 22.19.0 ordinary test step: 1,340/1,341 passed, with the existing gallery focus test asserting a dialog while its thumbnail still displayed `Loading image`. Its test and product component were byte-unchanged relative to M2. Waiting for the loader mock to have been called did not wait for its Promise to settle or React to render the loaded image.
+
+The follow-up changes only `tests/codex-image-gallery.client.spec.tsx`: a controlled unresolved Promise now proves that an early click does not open the lightbox; the test explicitly resolves it, waits for the actual image, and retains every portal/style/Escape/focus/single-load assertion. Two neighboring opening tests also await the actual image instead of invocation count. No product component, timeout, skip, retry allowance or assertion was weakened. Final-head CI must pass anew; the initial failed run remains historical evidence. This test/evidence-only correction does not change the packed artifact hash above.
+
 ## Remaining acceptance and delivery boundaries
 
 - Public staging/workspace selection, the full authenticated M3 conversation UI, and production registration are not implemented by this candidate. The host must stage a fixed task and evidence explicitly; the parent model does not autonomously invent subtask scope or budgets.
