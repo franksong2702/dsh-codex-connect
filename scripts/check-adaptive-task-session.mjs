@@ -39,14 +39,12 @@ for (const [name, expected] of Object.entries(f.vendorPackages ?? {})) {
   const path = hostRequire.resolve(name + '/package.json')
   const { version } = JSON.parse(await readFile(path, 'utf8'))
   assert.equal(version, expected)
-  assert.equal(await realpath(pluginRequire.resolve(name + '/package.json')), await realpath(path))
   identity[name] = { path, version }
 }
 for (const name of ['dsh', 'dsh-agent', 'dsh-session', 'dsh-client-ui-conversation', 'dsh-api-session-controller', 'dsh-host-webserver']) {
   const path = hostRequire.resolve(`@deepseek-ai/${name}/package.json`)
   const { version } = JSON.parse(await readFile(path, 'utf8'))
   assert.equal(version, f.version)
-  assert.equal(await realpath(pluginRequire.resolve(`@deepseek-ai/${name}/package.json`)), await realpath(path))
   identity[name] = { path, version }
 }
 const path = '/plugins/dsh-codex-connect/task'
@@ -224,6 +222,13 @@ try {
   const existing = await readFile(join(f.home, 'storages/workspace.json'), 'utf8').catch(() => '')
   assert.ok(!existing || JSON.parse(existing).global.workspaceIds.length === 0, 'Use a fresh fixture, never reuse user sessions')
   await start()
+  // Stock boot creates the profile's module fallback links. Resolve the
+  // plugin's peers only after that public boot path has completed.
+  for (const [name, value] of Object.entries(identity)) {
+    if (!value?.path || name === 'dsh') continue
+    const packageName = name.startsWith('@') ? name : '@deepseek-ai/' + name
+    assert.equal(await realpath(pluginRequire.resolve(packageName + '/package.json')), await realpath(value.path))
+  }
   await writeFile(join(f.directory, 'host-origin.json'), JSON.stringify({ origin: host.origin }), { mode: 0o600 })
   assert.ok(!['3080', '3081'].includes(new URL(host.origin).port))
   context = await chromium.launchPersistentContext(join(f.directory, 'browser'), { headless: true, viewport: { width: 1400, height: 1000 } })

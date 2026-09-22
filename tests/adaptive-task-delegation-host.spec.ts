@@ -23,9 +23,12 @@ class SyntheticAdapter extends LlmAdapter {
     return { provider, id: model, name: 'Synthetic model', reasoning: { efforts: [{ id: ReasoningEffortId('medium'), name: 'medium' }] } }
   }
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
-    expect(options.system).toContain('bounded read-only evidence helper')
-    expect(options.system).not.toContain('parent persona')
-    expect(JSON.stringify(options.messages)).not.toContain('unapproved ambient context')
+    // Baseline sends system separately; newer hosts project it into history.
+    // Inspect the complete model-visible request, not one version's envelope.
+    const visible = JSON.stringify({ system: options.system, messages: options.messages })
+    expect(visible).toContain('bounded read-only evidence helper')
+    expect(visible).not.toContain('parent persona')
+    expect(visible).not.toContain('unapproved ambient context')
     yield { type: 'block-start', index: 0, blockType: 'text' }
     yield { type: 'text-delta', index: 0, text: 'synthetic complete' }
     yield { type: 'block-end', index: 0, block: { type: 'text', text: 'synthetic complete' } }
@@ -35,7 +38,7 @@ class SyntheticAdapter extends LlmAdapter {
 
 const roots: string[] = []
 const contexts: Context[] = []
-async function setup() {
+async function setup(ptc = true) {
   const root = await mkdtemp(join(tmpdir(), 'task-host-')); roots.push(root)
   const ctx = new Context()
   contexts.push(ctx)
@@ -49,7 +52,10 @@ async function setup() {
     output: { schema: { type: 'object' }, render: () => [{ type: 'text', text: '{}' }] }, async execute() { return { executed: true } } } as ToolDefinition)
   const parentHandle = await ctx.agents.create({ sessionId: SessionId('task-host-parent'), meta: { cwd: root },
     agentOptions: { provider: 'openai-codex', model: 'synthetic-model', reasoningEffort: ReasoningEffortId('medium') },
-    setup: agentCtx => { agentCtx.tools.presentAs('ptc') } })
+    setup: agentCtx => {
+      agentCtx.systemPrompt.section({ name: 'deployment:persona', order: 0, text: 'parent persona needs {{cwd}}' })
+      if (ptc) agentCtx.tools.presentAs('ptc')
+    } })
   const host = new TaskDelegationHost(ctx)
   const run: TaskChildRun = { id: 'run-0000000000000001', callId: 'call-00000000000001', argumentDigest: taskIdentity('args'),
     grantRevision: 1, revocationGeneration: 0, epoch: taskIdentity('epoch'), childSessionId: null, childSessionKey: null,
@@ -71,9 +77,6 @@ it('creates an unpublished-tool-scoped child, runs it through the real loop, and
   expect(child.isLive()).toBe(true)
   expect(child.agent.session.header.parentSession).toBe(f.parent.id)
   expect(child.agent.session.header.cwd).toBeUndefined()
-  const parentPrompt = await f.parent.ctx.systemPrompt.assemble({ scope: f.parent })
-  expect(parentPrompt.sections.some(section => section.text.includes('parent persona'))).toBe(true)
-  expect(parentPrompt.contexts.some(section => section.text.includes('unapproved ambient context'))).toBe(true)
   expect(f.ctx.agents.isOwnedBy(child.agent.id, f.parent)).toBe(true)
   expect(child.agent.ctx.tools.schemas(child.agent).map(schema => schema.name).sort()).toEqual(['read_task_evidence', 'submit_task_findings'])
   await child.run('Synthetic brief', new AbortController().signal)
@@ -102,7 +105,16 @@ it('fails closed for non-live or foreign parents and setup checks', async () => 
 })
 
 it('rejects a live child in assertNoChildren until its handle is disposed', async () => {
-  const f = await setup(); const child = await f.host.create(f.parent, f.run, new AbortController().signal, { check() {}, execute() { return {} } })
+  // Inspect the actual parent scope without requiring an unrelated PTC code
+  // runtime. The first case separately checks inheritance from a PTC parent.
+  const f = await setup(false)
+  const parentPrompt = await f.parent.ctx.systemPrompt.assemble({ scope: f.parent, agent: f.parent })
+  expect(parentPrompt.sections.some(section => section.text.includes('parent persona'))).toBe(true)
+  expect(parentPrompt.contexts.some(section => section.text.includes('unapproved ambient context'))).toBe(true)
+  const child = await f.host.create(f.parent, f.run, new AbortController().signal, { check() {}, execute() { return {} } })
+  expect(await f.parent.ctx.systemPrompt.assemble({ scope: f.parent, agent: f.parent })).toEqual(parentPrompt)
   expect(() => f.host.assertNoChildren(f.parent)).toThrow('TASK_CHILDREN_LIVE')
-  await child.dispose(); expect(() => f.host.assertNoChildren(f.parent)).not.toThrow(); await f.parentHandle.dispose()
+  await child.dispose(); expect(() => f.host.assertNoChildren(f.parent)).not.toThrow()
+  expect(await f.parent.ctx.systemPrompt.assemble({ scope: f.parent, agent: f.parent })).toEqual(parentPrompt)
+  await f.parentHandle.dispose()
 })

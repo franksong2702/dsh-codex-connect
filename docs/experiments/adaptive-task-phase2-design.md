@@ -1,6 +1,6 @@
 # Phase 2: task-scoped read-only delegation
 
-Status: isolated A–D local candidate, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for schema/bounds; [the execution contract](adaptive-task-phase2-execution.md) and [recovery contract](adaptive-task-phase2-recovery.md) record B/C; [explicit consent and transition contract](adaptive-task-phase2-consent.md) records D. This does not enable Phase 2 in the product or authorize push, merge, release or deployment.
+Status: isolated A–E local candidate, 2026-09-23. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for schema/bounds; [the execution contract](adaptive-task-phase2-execution.md) and [recovery contract](adaptive-task-phase2-recovery.md) record B/C; [explicit consent and transition contract](adaptive-task-phase2-consent.md) records D; [exact-host and installed Session acceptance](adaptive-task-phase2-acceptance.md) records E and its vendor qualification. The local product now constructs one default-off v1/v2 composition; existing grants do not gain child permission. This does not authorize push, merge, release or deployment.
 
 ## Authority and working contract
 
@@ -12,7 +12,7 @@ This document supplies requirements, code map, architecture, decision rationale 
 
 The original design-only slice was followed by Phase 1 installed-page acceptance and UI corrections. #236 head `76c3c0c` subsequently passed all eight exact-head checks. The user then approved plugin-owned root-ledger persistence after an eight-process baseline-host probe showed unknown required Session events cannot be cold-loaded. Slice A is isolated from #236 at that exact baseline and does not change defaults or dependencies. Live credentials/models, daily profiles/services, push and publishing remain outside this slice; merge remains separately authorized.
 
-## Verified current state
+## Phase 1 baseline and required changes (historical planning map)
 
 | Surface | Existing behavior | Required Phase 2 change |
 | --- | --- | --- |
@@ -152,4 +152,4 @@ Initial parameter ceilings, migration encoding, journal correlation and host-ver
 
 ## Next gate
 
-Phase 1 #236 previously passed exact-head CI at `76c3c0c`. The user approved the plugin-ledger alternative after the required-event cold-load seam failed. A–D now have local ledger, restricted execution, recovery, safe transitions and authenticated consent coverage. E still requires the four-host/two-Node matrix and installed full Session acceptance before enabling the reviewed default-off composition in the product. Production v1 intentionally refuses a v2 record; downgrade is explicit and provenance-preserving. No stacked PR or main merge is needed for isolated development; the eventual candidate must state its approved integration baseline explicitly.
+Phase 1 #236 previously passed exact-head CI at `76c3c0c`. The user approved the plugin-ledger alternative after the required-event cold-load seam failed. A–E now have local ledger, restricted execution, recovery, safe transitions, authenticated consent, all eight exact-host/Node combinations and a baseline installed full Session journey. Integration followed the passing pre-integration matrix and remains default-off; explicit v2 upgrade and separate source/model consent are required. The full-page result uses pinned published-baseline Cordis vendor versions, not the independently failing newer stock loader closure. Legacy v1 intentionally refuses a v2 record; downgrade is explicit and provenance-preserving. Next is a separately reviewable Phase 2 candidate and exact-head remote CI after push/GitHub authorization, followed separately by bounded real-provider usefulness and human acceptance. No stacked PR or main merge is needed for isolated development; the eventual candidate must state its approved integration baseline explicitly.
