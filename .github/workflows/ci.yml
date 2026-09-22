@@ -91,6 +91,8 @@ jobs:
         run: pnpm run test:browser
       - name: Verify authenticated task controls and model handoff
         run: node scripts/check-adaptive-task-ui.mjs
+      - name: Verify isolated Phase 2 consent and safe downgrade
+        run: node scripts/check-adaptive-task-delegation-ui.mjs
 
   windows-canary-contract:
     runs-on: windows-latest

@@ -11,7 +11,7 @@ import type { TaskRoute } from './adaptive-task-contract.ts'
 import { portableTaskMessages } from './adaptive-task-context.ts'
 import { childUnresolved } from './adaptive-task-delegation-contract.ts'
 import type { TaskChildRun, TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
-import type { AdaptiveTaskDelegationLedger, ChildFence, LedgerIdentity } from './adaptive-task-delegation-ledger.ts'
+import type { AdaptiveTaskDelegationLedger, ChildFence, LedgerIdentity, TaskControlReceipt } from './adaptive-task-delegation-ledger.ts'
 import type { TaskDelegationHost, OwnedTaskChild } from './adaptive-task-delegation-host.ts'
 import { TaskEvidenceManifest, TaskEvidenceReader, parseTaskEvidence, parseTaskFindings } from './adaptive-task-evidence.ts'
 import type { TaskFindings } from './adaptive-task-evidence.ts'
@@ -285,26 +285,27 @@ export class AdaptiveTaskDelegation {
     return this.receipt(root, final, execution.callId)
   }
   /** Only normal host tool-result correlation can acknowledge delivery; the return value above cannot. */
-  async reconcile(parent: Agent): Promise<void> {
+  async reconcile(parent: Agent, requireAll = false): Promise<void> {
     const root = this.roots.get(parent)
     if (root === undefined) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     const doc = await this.document(root)
     for (const run of doc.delegation.runs) {
-      if (run.cleanup !== 'verified' || !['pending', 'unknown'].includes(run.delivery)) continue
+      const missing = () => { if (requireAll) taskFailure('TASK_DELIVERY_UNCONFIRMED') }
+      if (run.cleanup !== 'verified' || !['pending', 'unknown', ...(requireAll ? ['recorded'] : [])].includes(run.delivery)) { missing(); continue }
       const calls = parent.session.snapshotEvents().filter(event => event.type === 'tool/call' && taskIdentity(event.data.callId) === run.callId)
-      if (calls.length !== 1 || calls[0]!.type !== 'tool/call') continue
+      if (calls.length !== 1 || calls[0]!.type !== 'tool/call') { missing(); continue }
       const call = this.call(root, calls[0]!.data.callId)
       if (taskIdentity(JSON.stringify(input(JSON.parse(call.data.arguments)))) !== run.argumentDigest) taskFailure('TASK_OPERATION_CONFLICT')
       const expected = JSON.stringify(await this.receipt(root, run, call.data.callId))
       const results = parent.session.snapshotEvents().filter(event => event.type === 'tool/result' && event.data.message.source.callId === call.data.callId)
-      if (results.length !== 1 || results[0]!.type !== 'tool/result') continue
+      if (results.length !== 1 || results[0]!.type !== 'tool/result') { missing(); continue }
       const result = results[0]!
       const block = result.data.message.content[0]
       if (result.data.turn !== call.data.turn || result.data.step !== call.data.step || result.data.error !== undefined
         || block.toolCallId !== call.data.callId || block.isError === true || block.content.length !== 1
-        || block.content[0]?.type !== 'text' || block.content[0].text !== expected) continue
-      if (!await this.ctx.sessions.flush(parent.session)) continue
-      await this.options.ledger.delivery(root.identity, run.id, doc.runtime, run.delivery as 'pending' | 'unknown', 'recorded')
+        || block.content[0]?.type !== 'text' || block.content[0].text !== expected) { missing(); continue }
+      if (!await this.ctx.sessions.flush(parent.session)) { missing(); continue }
+      if (run.delivery !== 'recorded') await this.options.ledger.delivery(root.identity, run.id, doc.runtime, run.delivery as 'pending' | 'unknown', 'recorded')
     }
   }
   /** Adapter hook: the existing shared backend governor invokes this scope once per actual fetch. */
@@ -390,18 +391,18 @@ export class AdaptiveTaskDelegation {
     }
   }
   /** UI stop/manual hook must await this operation. Revision conflicts do not cancel unrelated work. */
-  async revoke(parent: Agent, expectedRevision: number, mode: 'manual' | 'stopped'): Promise<void> {
+  async revoke(parent: Agent, expectedRevision: number, mode: 'manual' | 'stopped', operation?: TaskControlReceipt): Promise<void> {
     const root = this.roots.get(parent)
     if (root === undefined) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     await this.document(root)
-    await this.options.ledger.revoke(root.identity, expectedRevision, mode, parent.session.seq)
+    await this.options.ledger.revoke(root.identity, expectedRevision, mode, parent.session.seq, operation)
     this.withdraw(root)
     parent.cancel({ kind: 'user' })
     await this.active.get(parent)?.done
     if (this.active.has(parent)) taskFailure('TASK_CHILD_CLEANUP_UNVERIFIED')
   }
   /** Same-owner explicit idle resume. Never called by recovery or by a model tool. */
-  async resume(parent: Agent, identity: LedgerIdentity, expectedRevision: number): Promise<void> {
+  async resume(parent: Agent, identity: LedgerIdentity, expectedRevision: number, operation?: TaskControlReceipt): Promise<void> {
     const root = this.roots.get(parent)
     if (root === undefined || root.identity.owner !== identity.owner || root.identity.sessionKey !== identity.sessionKey
       || root.identity.sessionId !== identity.sessionId) taskFailure('TASK_OWNER_MISMATCH')
@@ -415,7 +416,7 @@ export class AdaptiveTaskDelegation {
       await this.reconcile(parent)
       if (!await this.ctx.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
       signal.throwIfAborted()
-      const resumed = await this.options.ledger.resume(identity, expectedRevision, doc.runtime)
+      const resumed = await this.options.ledger.resume(identity, expectedRevision, doc.runtime, operation)
       root.stopThrough = parent.session.seq; root.life = new AbortController()
       try { this.installTools(root, resumed) }
       catch (error) {
@@ -450,6 +451,14 @@ export class AdaptiveTaskDelegation {
     // Owned handles remain retained on failure. Never claim cleanup from an abort signal alone.
     await Promise.all([...this.active.values()].map(async active => { await active.done }))
     if (this.active.size > 0) taskFailure('TASK_CHILD_CLEANUP_UNVERIFIED')
+  }
+  /** Caller holds native idle maintenance; never detach a live child or claim its cleanup. */
+  release(parent: Agent): void {
+    if (this.active.has(parent)) taskFailure('TASK_CHILD_UNRESOLVED')
+    this.options.host.assertNoChildren(parent)
+    const root = this.roots.get(parent)
+    if (root !== undefined) this.withdraw(root)
+    this.roots.delete(parent)
   }
   async unresolved(parent: Agent): Promise<boolean> {
     const root = this.roots.get(parent)

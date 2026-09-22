@@ -1,7 +1,8 @@
 /** Isolated fixture carrier for the actual product control, not a new shipping entry. */
 import { createRoot } from 'react-dom/client'
 import { AdaptiveTaskControl } from '../src/client/AdaptiveTaskControl.tsx'
-createRoot(document.getElementById('task-controls')!).render(<AdaptiveTaskControl language="zh" sessionId="authenticated-task-fixture" />)
+const controls = document.getElementById('task-controls')!
+createRoot(controls).render(<AdaptiveTaskControl language="zh" sessionId={controls.dataset.sessionId ?? 'authenticated-task-fixture'} />)
 const form = document.getElementById('task-form') as HTMLFormElement
 form.onsubmit = async event => {
   event.preventDefault()

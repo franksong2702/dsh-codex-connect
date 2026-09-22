@@ -151,8 +151,21 @@ it('shares the root lock for child/auxiliary debits and enforces child cap and p
   const f = await setup({ maximumRequests: 10, reserved: 0 }); await f.ready(); const { run, fence, child } = await f.running()
   const contenders = Array.from({ length: 12 }, () => new AdaptiveTaskDelegationLedger(f.path, () => 1000).reserveChild(identity, run.id, fence, child, randomUUID()))
   const results = await Promise.allSettled([...contenders, ...Array.from({ length: 2 }, () => f.ledger.reserveRoot(identity, fence.epoch, route, 'auxiliary'))])
-  const doc = await f.read(); expect(doc.reserved).toBe(8); expect(doc.delegation.runs[0]!.attempts).toHaveLength(6)
-  expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(8)
+  // The host lock has a bounded 2s wait: contention may safely reject a permit.
+  // Account for actual successful admission, never assume scheduler/IO throughput.
+  for (const result of results) if (result.status === 'rejected') expect(String(result.reason))
+    .toMatch(/TASK_CHILD_REQUEST_LIMIT|atomic-write: timed out waiting for the writer lock at/u)
+  const successful = results.filter(r => r.status === 'fulfilled').length
+  const children = results.slice(0, 12).filter(r => r.status === 'fulfilled').length
+  const auxiliaries = results.slice(12).filter(r => r.status === 'fulfilled').length
+  const doc = await f.read(); expect(successful).toBeGreaterThan(0)
+  expect(doc.reserved).toBe(successful); expect(doc.delegation.runs[0]!.attempts).toHaveLength(children)
+  expect(children).toBeLessThanOrEqual(6); expect(auxiliaries).toBeLessThanOrEqual(2)
+  // New independent attempts without contention prove the cap separately.
+  for (let n = children; n < 6; n++) await f.ledger.reserveChild(identity, run.id, fence, child, randomUUID())
+  for (let n = auxiliaries; n < 2; n++) await f.ledger.reserveRoot(identity, fence.epoch, route, 'auxiliary')
+  expect((await f.read()).reserved).toBe(8)
+  await expect(f.ledger.reserveChild(identity, run.id, fence, child, randomUUID())).rejects.toThrow('TASK_CHILD_REQUEST_LIMIT')
   await expect(f.ledger.reserveRoot(identity, fence.epoch, route, 'main')).rejects.toThrow('TASK_CHILD_UNRESOLVED')
   const g = await setup({ maximumRequests: 3, reserved: 0 }); await g.ready(); const child2 = await g.running()
   await g.ledger.reserveChild(identity, child2.run.id, child2.fence, child2.child, randomUUID())

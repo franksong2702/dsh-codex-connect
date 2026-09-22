@@ -1,6 +1,6 @@
 # Phase 2: task-scoped read-only delegation
 
-Status: isolated ledger and restricted-execution local candidate, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for schema/bounds; [the execution contract](adaptive-task-phase2-execution.md) records B/C implementation, evidence and remaining gaps. This does not enable Phase 2 in the product or authorize push, merge, release or deployment.
+Status: isolated A–D local candidate, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for schema/bounds; [the execution contract](adaptive-task-phase2-execution.md) and [recovery contract](adaptive-task-phase2-recovery.md) record B/C; [explicit consent and transition contract](adaptive-task-phase2-consent.md) records D. This does not enable Phase 2 in the product or authorize push, merge, release or deployment.
 
 ## Authority and working contract
 
@@ -152,4 +152,4 @@ Initial parameter ceilings, migration encoding, journal correlation and host-ver
 
 ## Next gate
 
-Phase 1 #236 passed exact-head CI at `76c3c0c`. The user approved the plugin-ledger alternative after the required-event cold-load seam failed. Slice A tests only ledger primitives; B/C lifecycle/evidence/result integration and D/E UI/host acceptance remain required. v2 migration is not exposed to existing sessions, and old v1 runtime intentionally refuses a v2 record. No stacked PR or main merge is needed for isolated development; the eventual candidate must state its approved integration baseline explicitly.
+Phase 1 #236 previously passed exact-head CI at `76c3c0c`. The user approved the plugin-ledger alternative after the required-event cold-load seam failed. A–D now have local ledger, restricted execution, recovery, safe transitions and authenticated consent coverage. E still requires the four-host/two-Node matrix and installed full Session acceptance before enabling the reviewed default-off composition in the product. Production v1 intentionally refuses a v2 record; downgrade is explicit and provenance-preserving. No stacked PR or main merge is needed for isolated development; the eventual candidate must state its approved integration baseline explicitly.

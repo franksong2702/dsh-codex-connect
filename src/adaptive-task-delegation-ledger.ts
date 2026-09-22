@@ -9,6 +9,7 @@ import { childTerminal, childUnresolved, ledgerHash, ledgerId, ledgerInteger, MA
 import type { ChildOutcome, DelegationGrant, TaskChildRun, TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
 
 export interface LedgerIdentity { sessionId: string; sessionKey: string; owner: string }
+export interface TaskControlReceipt { id: string; digest: string }
 export interface ChildFence { epoch: string; grantRevision: number; revocationGeneration: number }
 export interface PrepareChild {
   callId: string
@@ -97,19 +98,39 @@ export class AdaptiveTaskDelegationLedger {
     })
     return v2(result)
   }
-  async configure(identity: LedgerIdentity, expectedRevision: number, requested: DelegationGrant | null): Promise<TaskLedgerDocument> {
+  private control(doc: TaskLedgerDocument, expectedRevision: number, operation?: TaskControlReceipt, reducing = false): boolean {
+    if (operation !== undefined) {
+      if (!ledgerId(operation.id) || !ledgerHash(operation.digest)) taskFailure('TASK_COMMAND_INVALID')
+      const previous = doc.receipts.find(item => item.id === operation.id)
+      if (previous !== undefined) {
+        if (previous.digest !== operation.digest) taskFailure('TASK_OPERATION_CONFLICT')
+        return true
+      }
+    }
+    revision(doc, expectedRevision)
+    if (operation !== undefined) {
+      if (doc.receipts.length >= 64) {
+        // Never let replay-record capacity prevent safe withdrawal. No eviction;
+        // an unrecorded response loss requires a fresh read, not command replay.
+        if (!reducing) taskFailure('TASK_LEDGER_CAPACITY')
+      } else doc.receipts.push(structuredClone(operation))
+    }
+    return false
+  }
+  async configure(identity: LedgerIdentity, expectedRevision: number, requested: DelegationGrant | null, operation?: TaskControlReceipt): Promise<TaskLedgerDocument> {
     const grant = structuredClone(requested)
     return this.update(identity, doc => {
-      revision(doc, expectedRevision)
+      if (this.control(doc, expectedRevision, operation, grant === null)) return
       if (doc.delegation.runs.some(childUnresolved)) taskFailure('TASK_CHILD_UNRESOLVED')
       doc.delegation.grant = grant === null ? null : parseDelegationGrant(grant, doc.capabilities)
       doc.delegation.grantRevision++; doc.delegation.revocationGeneration++; doc.revision++
     })
   }
   /** Caller must additionally verify host-idle ownership before invoking this primitive. */
-  async resume(identity: LedgerIdentity, expectedRevision: number, expectedEpoch: string): Promise<TaskLedgerDocument> {
+  async resume(identity: LedgerIdentity, expectedRevision: number, expectedEpoch: string, operation?: TaskControlReceipt): Promise<TaskLedgerDocument> {
     return this.update(identity, doc => {
-      revision(doc, expectedRevision); epoch(doc, expectedEpoch)
+      if (this.control(doc, expectedRevision, operation)) return
+      epoch(doc, expectedEpoch)
       if (doc.mode !== 'interrupted' || doc.reserved >= doc.maximumRequests
         || doc.delegation.runs.some(childUnresolved)) taskFailure('TASK_RESUME_UNAVAILABLE')
       doc.mode = 'auto'; doc.revision++
@@ -240,9 +261,9 @@ export class AdaptiveTaskDelegationLedger {
       run.delivery = next; doc.revision++
     })
   }
-  async revoke(identity: LedgerIdentity, expectedRevision: number, mode: 'manual' | 'stopped', handoffSeq?: number): Promise<TaskLedgerDocument> {
+  async revoke(identity: LedgerIdentity, expectedRevision: number, mode: 'manual' | 'stopped', handoffSeq?: number, operation?: TaskControlReceipt): Promise<TaskLedgerDocument> {
     return this.update(identity, doc => {
-      revision(doc, expectedRevision)
+      if (this.control(doc, expectedRevision, operation, true)) return
       if (mode !== 'manual' && mode !== 'stopped') taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
       if (handoffSeq !== undefined && !ledgerInteger(handoffSeq, -1)) taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
       doc.mode = mode; doc.delegation.revocationGeneration++; doc.revision++
