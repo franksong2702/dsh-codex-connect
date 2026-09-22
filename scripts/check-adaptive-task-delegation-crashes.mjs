@@ -9,7 +9,12 @@ import { build } from 'tsdown'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 
-const root = fileURLToPath(new URL('../', import.meta.url)), cache = join(root, 'node_modules/.cache')
+const root = fileURLToPath(new URL('../', import.meta.url))
+const args = process.argv.slice(2)
+assert.ok(args.length === 0 || (args.length === 2 && args[0] === '--host'), 'usage: check-adaptive-task-delegation-crashes [--host isolated-host]')
+const runtimeRoot = args[1] === undefined ? root : await realpath(args[1])
+if (args[1] !== undefined) assert.equal(JSON.parse(await readFile(join(runtimeRoot, 'package.json'), 'utf8')).private, true, 'Requires a private disposable host')
+const cache = join(runtimeRoot, 'node_modules/.cache')
 await mkdir(cache, { recursive: true })
 const directory = await realpath(await mkdtemp(join(cache, 'task-crash-matrix-')))
 const stages = ['prepared', 'host-created-before-ledger-publish', 'published', 'child-reserved-before-fetch',
@@ -81,7 +86,7 @@ try {
   }
   const packages = {}
   for (const name of ['@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-session-persistence-jsonl', '@earendil-works/pi-ai']) {
-    packages[name] = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')).version
+    packages[name] = JSON.parse(await readFile(join(runtimeRoot, 'node_modules', name, 'package.json'), 'utf8')).version
   }
   console.log(JSON.stringify({ kind: 'task-delegation-independent-crash-matrix', passed: true, bundleSha256,
     node: process.version, packages, stages: stages.length, encodings: 2, cases: reports.length,

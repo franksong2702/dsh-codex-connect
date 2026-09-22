@@ -1,4 +1,4 @@
-/** Explicit Phase 2 composition for isolated acceptance. Not constructed by the product entry point. */
+/** Default-off composition: v1 main-task grants and explicitly upgraded v2 roots have one owner. */
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -14,7 +14,7 @@ import type { TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
 import { AdaptiveTaskDelegationLedger } from './adaptive-task-delegation-ledger.ts'
 import type { LedgerIdentity } from './adaptive-task-delegation-ledger.ts'
 import { AdaptiveTaskDelegation } from './adaptive-task-delegation.ts'
-import { TaskDelegationHost } from './adaptive-task-delegation-host.ts'
+import { TaskDelegationHost, taskHostServices } from './adaptive-task-delegation-host.ts'
 import { TaskEvidenceManifest } from './adaptive-task-evidence.ts'
 import type { TaskDelegationArtifacts } from './adaptive-task-artifacts.ts'
 import { AdaptiveTaskTransitions } from './adaptive-task-transitions.ts'
@@ -35,6 +35,8 @@ export class AdaptiveTaskControlRuntime {
   private readonly attaching = new WeakMap<Agent, Promise<void>>()
   private readonly commands = new Map<string, Promise<unknown>>()
   private stopped = false
+  private get agents() { return taskHostServices(this.ctx).agents }
+  private get sessions() { return taskHostServices(this.ctx).sessions }
   constructor(private readonly ctx: Context, private readonly options: TaskControlOptions) {
     this.store = new AtomicTaskDocumentStore(options.directory, parseTaskLedger)
     this.ledger = new AdaptiveTaskDelegationLedger(options.directory)
@@ -47,8 +49,8 @@ export class AdaptiveTaskControlRuntime {
     ctx.effect(() => () => { this.stopped = true }, 'Task consent composition lifecycle')
   }
   private root(id: string): Agent {
-    const agent = this.ctx.agents.get(SessionId(id))
-    if (agent === undefined || !this.ctx.agents.roots().includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+    const agent = this.agents.get(SessionId(id))
+    if (agent === undefined || !this.agents.roots().includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     return agent
   }
   private identity(agent: Agent, owner: string): LedgerIdentity {
@@ -83,26 +85,28 @@ export class AdaptiveTaskControlRuntime {
   }
   /** Both durable ancestry and actual live ownership route descendants to the rejecting executor. */
   private async managed(agent: Agent): Promise<boolean> {
-    for (const root of this.ctx.agents.roots()) {
+    for (const root of this.agents.roots()) {
       let current: Agent | undefined = agent
       const visited = new Set<string>()
-      let belongs = root === agent || this.ctx.agents.isOwnedBy(agent.id, root)
+      let belongs = root === agent || this.agents.isOwnedBy(agent.id, root)
       while (!belongs && current?.session.header.parentSession !== undefined) {
         const id = current.session.header.parentSession
         if (id === root.id) { belongs = true; break }
         if (visited.has(id) || visited.size >= 64) taskFailure('TASK_CHILD_BINDING_MISMATCH')
-        visited.add(id); current = this.ctx.agents.get(id)
+        visited.add(id); current = this.agents.get(id)
       }
       if (belongs && (await this.store.read(root.id))?.version === 2) { await this.ensure(root); return true }
     }
     return false
   }
   async *stream(options: GenerateOptions, delegate: (options: GenerateOptions) => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk> {
-    const agent = options.sessionId === undefined ? undefined : this.ctx.agents.get(options.sessionId)
+    const agent = options.sessionId === undefined ? undefined : this.ctx.get('agents')?.get(options.sessionId)
     yield* (agent !== undefined && await this.managed(agent) ? this.execution : this.legacy).stream(options, delegate)
   }
   async reserveAuxiliary(): Promise<void> {
-    const agent = this.ctx.agents.currentInitiator()
+    const registry = this.ctx.get('agents')
+    const agent = typeof registry?.currentInitiator === 'function' && typeof registry.get === 'function'
+      ? registry.currentInitiator() : undefined
     await (agent !== undefined && await this.managed(agent) ? this.execution : this.legacy).reserveAuxiliary()
   }
   async state(sessionId: string, principal: string): Promise<AdaptiveTaskState> {
@@ -166,7 +170,7 @@ export class AdaptiveTaskControlRuntime {
       await parent.runMaintenance(async signal => {
         const guard = () => { signal.throwIfAborted(); if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED'); this.host.assertRoot(parent, identity); this.host.assertNoChildren(parent) }
         guard()
-        if (!await this.ctx.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
+        if (!await this.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
         guard()
         if (command.action === 'upgrade') {
           await this.transitions.migrate(identity, command.revision, operation, guard, this.options.artifacts(identity))

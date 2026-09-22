@@ -29,6 +29,40 @@ import { ADAPTIVE_TASK_PATH, ADAPTIVE_TASK_TOOL } from '../src/adaptive-task-con
 import type { AdaptiveTaskCommand } from '../src/adaptive-task-contract.ts'
 import { TASK_DELEGATE_TOOL } from '../src/adaptive-task-delegation.ts'
 
+it('keeps standalone streams and auxiliary work ordinary without optional task services', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'task-standalone-'))); roots.push(root)
+  const ctx = new Context(); contexts.push(ctx)
+  let runtime!: AdaptiveTaskControlRuntime
+  await ctx.plugin((scope: Context) => {
+    runtime = new AdaptiveTaskControlRuntime(scope, { directory: join(root, 'tasks'), models: async () => [],
+      artifacts: () => { throw new Error('No artifact access without a task') } })
+  })
+  const options = { sessionId: SessionId('ordinary') } as Parameters<AdaptiveTaskControlRuntime['stream']>[0]
+  const delegate = vi.fn(async function* () { yield { type: 'finish' as const, reason: { kind: 'stop' as const } } })
+  const chunks = []
+  for await (const chunk of runtime.stream(options, delegate)) chunks.push(chunk)
+  expect(chunks).toEqual([{ type: 'finish', reason: { kind: 'stop' } }]); expect(delegate).toHaveBeenCalledWith(options)
+  await runtime.reserveAuxiliary()
+  await expect(runtime.state('ordinary', owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  expect(await readdir(root)).toEqual([])
+})
+
+it('rejects live task control and dispatch when the session service is missing', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'task-incomplete-host-'))); roots.push(root)
+  const ctx = new Context(); contexts.push(ctx)
+  const agent = { id: SessionId('incomplete') }
+  ctx.provide('agents', { get: () => agent, roots: () => [agent], currentInitiator: () => agent } as never)
+  const runtime = new AdaptiveTaskControlRuntime(ctx, { directory: join(root, 'tasks'), models: async () => [],
+    artifacts: () => { throw new Error('No artifact access with an incomplete host') } })
+  await expect(runtime.state(agent.id, owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  await expect(runtime.command({ sessionId: agent.id, action: 'manual', revision: 0, operationId: randomUUID() }, owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  await expect(runtime.reserveAuxiliary()).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  const delegate = vi.fn(async function* () { yield { type: 'finish' as const, reason: { kind: 'stop' as const } } })
+  const stream = runtime.stream({ sessionId: agent.id } as Parameters<AdaptiveTaskControlRuntime['stream']>[0], delegate) as AsyncIterator<unknown>
+  await expect(stream.next()).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED'); expect(delegate).not.toHaveBeenCalled()
+  expect(await readdir(root)).toEqual([])
+})
+
 const roots: string[] = [], contexts: Context[] = []
 const owner = taskIdentity('consent-owner'), main = 'gpt-5.6-sol', child = 'gpt-5.6-luna'
 afterEach(async () => {
@@ -63,8 +97,12 @@ async function setup() {
   await credentials.modify('openai-codex', async () => ({ type: 'oauth', access: `e30.${claim}.fixture`, refresh: 'fixture', accountId: 'synthetic-consent', expires: Date.now() + 3600000 }))
   const store = new AtomicTaskDocumentStore(join(root, 'tasks'), parseTaskLedger)
   const artifacts = new TaskDelegationArtifacts(join(root, 'artifacts'))
-  const runtime = new AdaptiveTaskControlRuntime(ctx, { directory: join(root, 'tasks'), artifacts: () => artifacts,
-    models: async () => Promise.all([main, child].map(model => ctx.llm.resolveModelInfo('openai-codex', model))) })
+  let runtime!: AdaptiveTaskControlRuntime
+  // Match the product's llm-only dependency contract, not a privileged root context.
+  await ctx.plugin({ inject: ['llm'], apply(pluginCtx: Context) {
+    runtime = new AdaptiveTaskControlRuntime(pluginCtx, { directory: join(root, 'tasks'), artifacts: () => artifacts,
+      models: async () => Promise.all([main, child].map(model => pluginCtx.llm.resolveModelInfo('openai-codex', model))) })
+  } })
   const governor = new OpenAICodexBackendRequests(undefined, undefined, 8, () => runtime.reserveAuxiliary())
   ctx.effect(() => () => governor.dispose())
   ctx.llm.registerAdapter(['openai-codex'], createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined,

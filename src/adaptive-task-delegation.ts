@@ -13,6 +13,7 @@ import { childUnresolved } from './adaptive-task-delegation-contract.ts'
 import type { TaskChildRun, TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
 import type { AdaptiveTaskDelegationLedger, ChildFence, LedgerIdentity, TaskControlReceipt } from './adaptive-task-delegation-ledger.ts'
 import type { TaskDelegationHost, OwnedTaskChild } from './adaptive-task-delegation-host.ts'
+import { taskHostServices } from './adaptive-task-delegation-host.ts'
 import { TaskEvidenceManifest, TaskEvidenceReader, parseTaskEvidence, parseTaskFindings } from './adaptive-task-evidence.ts'
 import type { TaskFindings } from './adaptive-task-evidence.ts'
 import type { TaskDelegationArtifacts } from './adaptive-task-artifacts.ts'
@@ -54,6 +55,8 @@ const capture = (doc: TaskLedgerDocument): ChildFence => ({ epoch: doc.runtime, 
 const selectionSeq = (parent: Agent): number => parent.session.snapshotEvents().findLast(event => event.type === 'model/selection')?.seq ?? -1
 
 export class AdaptiveTaskDelegation {
+  private get agents() { return taskHostServices(this.ctx).agents }
+  private get sessions() { return taskHostServices(this.ctx).sessions }
   private readonly roots = new Map<Agent, RootBinding>()
   private readonly active = new Map<Agent, ActiveChild>()
   private readonly removeRequest: () => void
@@ -159,12 +162,12 @@ export class AdaptiveTaskDelegation {
   }
   /** Follow both durable and live ownership, including descendants of already-disposed run IDs. */
   private async descendant(agent: Agent): Promise<boolean> {
-    const live = this.ctx.agents.list()
+    const live = this.agents.list()
     const pending: string[] = []
     const parents = (id: string) => {
-      const header = this.ctx.sessions.get(id as Agent['id'])?.header
+      const header = this.sessions.get(id as Agent['id'])?.header
       if (header?.parentSession !== undefined) pending.push(header.parentSession)
-      for (const owner of live) if (this.ctx.agents.isOwnedBy(id as Agent['id'], owner)) pending.push(owner.id)
+      for (const owner of live) if (this.agents.isOwnedBy(id as Agent['id'], owner)) pending.push(owner.id)
     }
     parents(agent.id)
     if (pending.length === 0) return false
@@ -218,7 +221,7 @@ export class AdaptiveTaskDelegation {
     if (Buffer.byteLength(brief) > 16 * 1024) taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
     execution.signal.throwIfAborted()
     // A root ledger receipt must never outlive an unflushed original parent call.
-    if (!await this.ctx.sessions.flush(root.parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
+    if (!await this.sessions.flush(root.parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
     execution.signal.throwIfAborted()
     const artifacts = this.options.artifacts(root.identity), evidenceDigest = await artifacts.put(snapshot)
     const prepared = await this.options.ledger.prepare(root.identity, capture(doc), { callId, argumentDigest,
@@ -304,7 +307,7 @@ export class AdaptiveTaskDelegation {
       if (result.data.turn !== call.data.turn || result.data.step !== call.data.step || result.data.error !== undefined
         || block.toolCallId !== call.data.callId || block.isError === true || block.content.length !== 1
         || block.content[0]?.type !== 'text' || block.content[0].text !== expected) { missing(); continue }
-      if (!await this.ctx.sessions.flush(parent.session)) { missing(); continue }
+      if (!await this.sessions.flush(parent.session)) { missing(); continue }
       if (run.delivery !== 'recorded') await this.options.ledger.delivery(root.identity, run.id, doc.runtime, run.delivery as 'pending' | 'unknown', 'recorded')
     }
   }
@@ -313,7 +316,7 @@ export class AdaptiveTaskDelegation {
     const active = [...this.active.values()].find(value => value.owned?.sessionId === options.sessionId)
     if (active === undefined) {
       // Unknown descendants of managed roots cannot borrow an inherited task or transport scope.
-      const agent = options.sessionId === undefined ? undefined : this.ctx.agents.get(options.sessionId)
+      const agent = options.sessionId === undefined ? undefined : this.agents.get(options.sessionId)
       if (agent !== undefined && await this.descendant(agent)) taskFailure('TASK_CHILD_BINDING_MISMATCH')
       const root = agent === undefined ? undefined : this.roots.get(agent)
       if (root !== undefined) {
@@ -370,7 +373,7 @@ export class AdaptiveTaskDelegation {
     finally { await inAdaptiveTaskDispatch(scope, () => iterator.return?.()) }
   }
   async reserveAuxiliary(): Promise<void> {
-    const agent = this.ctx.agents.currentInitiator()
+    const agent = this.agents.currentInitiator()
     const scope = currentAdaptiveTaskDispatch()
     const active = agent === undefined ? undefined : [...this.active.values()].find(value => value.owned?.agent === agent)
     if (active !== undefined) {
@@ -414,7 +417,7 @@ export class AdaptiveTaskDelegation {
       this.options.host.assertNoChildren(parent)
       await this.available(doc.route, signal)
       await this.reconcile(parent)
-      if (!await this.ctx.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
+      if (!await this.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
       signal.throwIfAborted()
       const resumed = await this.options.ledger.resume(identity, expectedRevision, doc.runtime, operation)
       root.stopThrough = parent.session.seq; root.life = new AbortController()

@@ -13,7 +13,14 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { TaskChildRun } from './adaptive-task-delegation-contract.ts'
 import type { LedgerIdentity } from './adaptive-task-delegation-ledger.ts'
-import { taskIdentity } from './adaptive-task-store.ts'
+import { taskFailure, taskIdentity } from './adaptive-task-store.ts'
+
+/** Optional host capabilities remain optional for ordinary standalone adapters. */
+export function taskHostServices(ctx: Context) {
+  const agents = ctx.get('agents'), sessions = ctx.get('sessions')
+  if (agents === undefined || sessions === undefined) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+  return { agents, sessions }
+}
 
 export interface TaskDelegationControls {
   execute(name: string, args: unknown): unknown | Promise<unknown>
@@ -78,26 +85,28 @@ const submitFindings = (controls: TaskDelegationControls, markSubmitted: () => v
  */
 export class TaskDelegationHost {
   constructor(private readonly ctx: Context) {}
+  private get agents() { return taskHostServices(this.ctx).agents }
+  private get sessions() { return taskHostServices(this.ctx).sessions }
 
   assertRoot(parent: Agent, identity: LedgerIdentity): void {
     const header = parent.session.header
     const expectedKey = taskIdentity(JSON.stringify([header.id, header.createdAt, header.cwd ?? '', header.isSeeded, header.parentSession ?? '']))
     if (parent.id !== identity.sessionId || identity.sessionKey !== expectedKey
-      || this.ctx.agents.get(parent.id) !== parent || this.ctx.sessions.get(parent.session.id) !== parent.session
-      || !this.ctx.agents.roots().includes(parent)
+      || this.agents.get(parent.id) !== parent || this.sessions.get(parent.session.id) !== parent.session
+      || !this.agents.roots().includes(parent)
       || header.parentSession !== undefined) throw new Error('TASK_PARENT_NOT_LIVE')
   }
 
   assertNoChildren(parent: Agent): void {
-    for (const candidate of this.ctx.agents.list()) {
+    for (const candidate of this.agents.list()) {
       if (candidate === parent) continue
-      if (candidate.session.header.parentSession === parent.id || this.ctx.agents.isOwnedBy(candidate.id, parent)) throw new Error('TASK_CHILDREN_LIVE')
+      if (candidate.session.header.parentSession === parent.id || this.agents.isOwnedBy(candidate.id, parent)) throw new Error('TASK_CHILDREN_LIVE')
     }
   }
 
   async create(parent: Agent, childRun: TaskChildRun, signal: AbortSignal, controls: TaskDelegationControls): Promise<OwnedTaskChild> {
     if (signal.aborted) throw abortError()
-    if (this.ctx.agents.get(parent.id) !== parent) throw new Error('TASK_PARENT_NOT_LIVE')
+    if (this.agents.get(parent.id) !== parent) throw new Error('TASK_PARENT_NOT_LIVE')
     controls.check()
     if (childRun.childSessionId !== null || childRun.childSessionKey !== null) throw new Error('TASK_CHILD_ALREADY_BOUND')
     const sessionId = SessionId(`task-child-${childRun.id}`)
@@ -111,12 +120,15 @@ export class TaskDelegationHost {
       reasoningEffort: childRun.route.effort as NonNullable<AgentOptions['reasoningEffort']>,
       provider: 'openai-codex' }
     const parentDepth = parent.session.header.delegationDepth ?? 0
-    // Use the parent's scoped context: the registry records exact runtime
-    // ownership only when create() is invoked from that scope.
-    const handle = await parent.ctx.agents.create({ sessionId, signal, meta: { parentSession: parent.id, origin: 'subagent', delegationDepth: parentDepth + 1 }, agentOptions: childOptions,
+    // Baseline hosts derive ownership from the caller scope; newer hosts
+    // require the explicit live parent. Supply both, then verify ownership.
+    const creation: Parameters<Context['agents']['create']>[0] & { parentAgent: Agent } = {
+      sessionId, signal, parentAgent: parent,
+      meta: { parentSession: parent.id, origin: 'subagent', delegationDepth: parentDepth + 1 }, agentOptions: childOptions,
       setup: agentCtx => {
-        const agent = agentCtx.agent
-        if (agent === undefined) throw new Error('TASK_CHILD_AGENT_CONTEXT_MISSING')
+        // Setup is an unpublished capability scope, not a running Agent.
+        // Newer hosts enforce that distinction and do not inject `agent`
+        // here. Validate the returned, published handle below instead.
         // `restrict(allow)` only accepts names already present in the inherited
         // global layer. Evidence/tool orchestration normally supplies those
         // definitions; a child-local fallback remains fail-closed through the
@@ -136,9 +148,10 @@ export class TaskDelegationHost {
         agentCtx.tools.register({ ...submitFindings(controls, () => { submitted = true }), isConcurrencySafe: () => false })
         return { commit: () => { signal.throwIfAborted(); controls.check() } }
       },
-    })
+    }
+    const handle = await parent.ctx.agents.create(creation)
     const agent = handle.agent
-    if (!this.ctx.agents.isOwnedBy(agent.id, parent)) {
+    if (!this.agents.isOwnedBy(agent.id, parent)) {
       await handle.dispose()
       throw new Error('TASK_CHILD_OWNER_MISMATCH')
     }
@@ -182,7 +195,7 @@ export class TaskDelegationHost {
   }
 
   private isLive(agent: Agent, sessionId: string, parent: Agent): boolean {
-    return agent.id === sessionId && this.ctx.agents.get(SessionId(sessionId)) === agent
-      && this.ctx.sessions.get(agent.session.id) === agent.session && this.ctx.agents.isOwnedBy(agent.id, parent)
+    return agent.id === sessionId && this.agents.get(SessionId(sessionId)) === agent
+      && this.sessions.get(agent.session.id) === agent.session && this.agents.isOwnedBy(agent.id, parent)
   }
 }

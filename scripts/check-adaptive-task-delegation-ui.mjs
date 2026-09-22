@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Actual Chromium and signed host auth, explicitly assembled dormant Phase 2 composition. */
+/** Actual Chromium and signed host auth, explicitly assembled Phase 2 composition. */
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -21,9 +21,9 @@ try {
   assert.equal(result.error, undefined); assert.equal(result.cleanupError, undefined)
   const report = JSON.parse(await readFile(join(directory, 'report.json'), 'utf8'))
   assert.equal(report.success, true)
-  assert.equal(report.numTotalTests, 13); assert.equal(report.numPassedTests, 13)
+  assert.equal(report.numTotalTests, 15); assert.equal(report.numPassedTests, 15)
   assert.equal(report.numPendingTests, 0); assert.equal(report.numTodoTests, 0)
   console.log(JSON.stringify({ kind: 'adaptive-task-delegation-authenticated-control', syntheticProvider: true,
-    realHostAuthentication: true, explicitPhase2Composition: true, productEntryEnabled: false,
+    realHostAuthentication: true, explicitPhase2Composition: true, usesProductEntry: false,
     fullDailyProfileAcceptance: false, realProviderRequests: 0, passed: true }))
 } finally { await rm(directory, { recursive: true, force: true }) }

@@ -14,11 +14,13 @@ import { prepareTaskSession } from './prepare-adaptive-task-session.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const f = process.argv[2] ? JSON.parse(await readFile(resolve(process.argv[2]), 'utf8')) : await prepareTaskSession(root)
+const args = process.argv.slice(2), phase2 = args.includes('--phase2'), manifests = args.filter(arg => arg !== '--phase2')
+assert.ok(manifests.length <= 1 && !manifests.some(arg => arg.startsWith('--')))
+const f = manifests[0] ? JSON.parse(await readFile(resolve(manifests[0]), 'utf8')) : await prepareTaskSession(root)
 assert.match(f.directory, /\/codex-task-session-[^/]+$/)
 for (const name of ['home', 'workspace', 'install', 'source']) assert.equal(f[name], join(f.directory, name))
 assert.equal(JSON.parse(await readFile(join(f.directory, 'fixture-owner.json'), 'utf8')).kind, 'codex-task-session-offline')
-const output = join(root, 'output/playwright/task-session', basename(f.directory))
+const output = join(root, 'output/playwright', phase2 ? 'task-session-phase2' : 'task-session', basename(f.directory))
 await mkdir(output, { recursive: true })
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 assert.equal(hash(await readFile(f.artifact)), f.artifactSha256)
@@ -54,6 +56,7 @@ async function until(predicate, message) {
 async function start(port = '0') {
   const env = { ...scrubCanaryEnvironment(process.env), PATH: dirname(process.execPath) + delimiter + process.env.PATH, DSH_HOME: f.home,
     DSH_TELEMETRY_MODE: 'DISABLED', OTEL_SDK_DISABLED: 'true', CODEX_TASK_SESSION_FIXTURE: f.directory,
+    CODEX_TASK_SESSION_PHASE2: phase2 ? '1' : '0',
     // Stock auto-picker chooses its browser backend on an unattended host.
     SSH_CONNECTION: '127.0.0.1 1 127.0.0.1 1',
     NODE_OPTIONS: '--import ' + fileURLToPath(new URL('./adaptive-task-session-mock.mjs', import.meta.url)) }
@@ -111,6 +114,101 @@ async function picker(kind, choice) {
   await page.getByRole('menuitem', { name: new RegExp(`^${kind} `) }).click()
   await page.getByRole('menuitemradio', { name: choice, exact: true }).click()
 }
+async function delegationJourney() {
+  await writeFile(join(f.workspace, 'notes.txt'), 'approved first\nsecond')
+  await page.getByRole('button', { name: 'Start with these limits', exact: true }).click()
+  await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).click()
+  await page.getByText('No delegation permission', { exact: true }).waitFor()
+  const grant = async (loseResponse = false) => {
+    await page.getByText('Set explicit helper scope', { exact: true }).click()
+    await page.getByRole('checkbox', { name: 'Child gpt-5.6-luna / max', exact: true }).check()
+    await page.getByRole('textbox', { name: 'Approved text files (workspace-relative, one per line)', exact: true }).fill('notes.txt')
+    assert.equal(await page.getByRole('button', { name: 'Authorize exactly this scope' }).isEnabled(), false)
+    await page.getByRole('checkbox', { name: /I reviewed these files/ }).check()
+    let dropped = 0
+    const lose = async route => {
+      if (route.request().method() !== 'POST') return route.continue()
+      const response = await route.fetch(); assert.equal(response.status(), 200)
+      assert.equal((await response.json()).delegation.enabled, true); dropped++; await route.abort('connectionreset')
+    }
+    const before = mutations.length
+    if (loseResponse) await page.route('**' + path, lose)
+    await page.getByRole('button', { name: 'Authorize exactly this scope', exact: true }).click()
+    if (loseResponse) {
+      await page.getByRole('alert').filter({ hasText: 'did not return a confirmed result' }).waitFor()
+      assert.equal(await page.getByRole('button', { name: 'Authorize exactly this scope' }).isEnabled(), false)
+      await page.unroute('**' + path, lose)
+      await page.getByRole('button', { name: 'Read state again', exact: true }).click()
+      assert.equal(dropped, 1); assert.equal(mutations.length, before + 1)
+    }
+    await page.getByText('Read-only delegation is authorized for:', { exact: true }).waitFor()
+  }
+  await grant(true)
+  assert.equal((await requests()).length, 0)
+  await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
+  await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
+  pass('explicit upgrade and file/model disclosure; lost consent response does not replay')
+  await send('ORIGINAL_REQUIREMENT_P2 DELEGATE_P2: inspect approved notes.', 4)
+  let wire = await requests()
+  assert.deepEqual(wire.map(r => [r.model, r.effort]), [['gpt-5.6-sol', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-sol', 'medium']])
+  assert.ok(wire.filter(r => !r.child).every(r => r.originalRetained))
+  assert.ok(wire.filter(r => r.child).every(r => r.tools.length === 2 && r.tools.includes('read_task_evidence') && r.tools.includes('submit_task_findings')))
+  const complete = await panel('auto', 4)
+  assert.equal(complete.delegation.runs.length, 1)
+  assert.equal(complete.delegation.runs[0].state, 'succeeded'); assert.equal(complete.delegation.runs[0].cleanup, 'verified')
+  assert.equal(complete.delegation.runs[0].delivery, 'recorded')
+  await page.screenshot({ path: join(output, 'delegation.png'), fullPage: true }); await closePanel()
+  pass('installed product Composer to actual owned child with restricted tools and shared four-request ledger')
+  await page.getByRole('button', { name: 'New session', exact: true }).last().click()
+  await page.getByRole('textbox', { name: /^Describe what you want to build/ }).waitFor()
+  assert.equal((await panel('off', 0)).delegation, undefined); await closePanel()
+  await page.getByRole('treeitem', { name: /^ORIGINAL_REQUIREMENT_P2/ }).click()
+  await panel('auto', 4); await closePanel()
+  const port = new URL(host.origin).port
+  await stop(); await start(port); await page.reload()
+  const restored = await panel('interrupted', 4)
+  assert.equal(restored.delegation.runs[0].id, complete.delegation.runs[0].id)
+  assert.equal((await requests()).length, 4); assert.notEqual(pids[0], pids[1])
+  await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
+  await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
+  await send('CONTINUE_P2: retain original requirement without another child.', 5)
+  assert.equal((await requests()).at(-1).originalRetained, true)
+  pass('new Session stays off; fresh host restores interrupted history and count without replay')
+  await panel('auto', 5)
+  await page.getByRole('button', { name: 'Take over manually', exact: true }).click()
+  await page.getByText('Manual selection; automation is off', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Remove helper permission', exact: true }).click()
+  await page.getByRole('button', { name: 'Archive and return to Phase 1 manual', exact: true }).click()
+  await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).waitFor()
+  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 5 /'))
+  await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).click()
+  await page.getByText('No delegation permission', { exact: true }).waitFor()
+  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 5 /'))
+  pass('verified archive downgrade and re-upgrade preserve spent count and child provenance without permission')
+  await grant()
+  await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
+  await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
+  await send('DELEGATE_P2 HOLD_CHILD_P2: wait for native Stop.', 7, false)
+  await page.getByRole('button', { name: 'Stop generating', exact: true }).click()
+  await until(async () => (await events()).some(e => e.kind === 'provider-aborted' && e.child), 'Native Stop did not abort the child')
+  const stopped = await panel('stopped', 7)
+  assert.equal(stopped.delegation.runs.length, 2)
+  assert.equal(stopped.delegation.runs[1].cleanup, 'verified')
+  await pause(400); assert.equal((await requests()).length, 7)
+  pass('native Session Stop aborts active child and preserves all seven debits')
+  await page.getByRole('button', { name: 'Take over manually', exact: true }).click()
+  await page.getByText('Manual selection; automation is off', { exact: true }).waitFor(); await closePanel()
+  await picker('Model', 'GPT-5.6 Terra'); await picker('Effort', 'High')
+  await send('MANUAL_P2: selected Terra High.', 8)
+  await picker('Effort', 'Default'); await send('DEFAULT_P2: provider default effort.', 9)
+  wire = await requests()
+  assert.deepEqual([wire[7].model, wire[7].effort], ['gpt-5.6-terra', 'high'])
+  assert.equal(wire[8].model, 'gpt-5.6-terra'); assert.equal(wire[8].effort, undefined)
+  assert.ok(!wire[8].tools.includes('delegate_task')); assert.ok(!wire[8].tools.includes('codex_connect_change_work_model'))
+  await panel('manual', 7)
+  await page.screenshot({ path: join(output, 'manual.png'), fullPage: true }); await closePanel()
+  pass('native picker honors manual Terra High and Default; no delegation or automatic debit remains')
+}
 try {
   // A fixture may be supplied to avoid repeating dependency installation, but must be unused.
   const existing = await readFile(join(f.home, 'storages/workspace.json'), 'utf8').catch(() => '')
@@ -152,6 +250,8 @@ try {
   assert.equal(initial.canStart, true)
   assert.equal((await requests()).length, 0)
   pass('stock installed shell, native empty Session, opt-in off')
+  if (phase2) await delegationJourney()
+  else {
   await page.getByText('Allowed main models and effort levels', { exact: true }).click()
   for (const label of await page.locator('details > label').all()) {
     const text = await label.innerText()
@@ -253,6 +353,7 @@ try {
   await panel('limit', 1)
   await pause(500); assert.equal((await requests()).length, 7)
   pass('shared one-request budget denies the post-handoff dispatch')
+  }
   assert.deepEqual(browserErrors, [])
   assert.deepEqual(blockedBrowser, [])
   assert.equal((await events()).filter(event => event.kind === 'blocked-network').length, 0)
@@ -287,7 +388,7 @@ try {
   if (!error && cleanup) {
     try { await rm(f.directory, { recursive: true, force: true }); fixtureRemoved = true } catch (cause) { error = cause }
   }
-  const report = { kind: 'installed-full-session-synthetic', checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
+  const report = { kind: 'installed-full-session-synthetic', phase: phase2 ? 2 : 1, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
     artifactSha256: f.artifactSha256, identity, node: process.version, checks, pids, wire, mutations: mutations.map(({ action, revision }) => ({ action, revision })),
     browserErrors, blockedBrowser, taskReads, cleanup, hostOrigin: host?.origin, syntheticCredentials: true, realProviderRequests: 0,
     fullInstalledSessionPage: true, fullDailyProfileAcceptance: false,
