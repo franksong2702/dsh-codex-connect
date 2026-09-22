@@ -1,3 +1,7 @@
+# Phase 2 A isolated ledger development — 2026-09-22
+
+This local branch starts at #236's tested `76c3c0c`, without changing that PR or main. The user approved root-owned plugin persistence after a required custom Session event could be written/flushed but not cold-loaded on baseline DSH. [Slice A](../experiments/adaptive-task-phase2-ledger.md) adds dormant strict v2 ledger primitives; no migration, child tools, transport, UI or real-profile change is enabled. The same atomic task file owns authorization, request counters and retained replay records. Evidence and remaining gates are in that contract. No push, merge, publish or deployment is included.
+
 # Consolidated Phase 1 candidate — 2026-09-22
 
 This branch starts directly from main `1748bec`. Its current product contract is [task-level model selection](../experiments/adaptive-task-phase1.md): default-off, Sol/Medium, one task grant, bounded main-model/effort changes and handoffs, shared request accounting, safe stop/manual takeover and interrupted restore. Candidate #236 at `0a09e04` passed all eight remote checks. Main remains `1748bec`; the candidate is unmerged. No Think/Split product setting or M2/M3 runtime is included.

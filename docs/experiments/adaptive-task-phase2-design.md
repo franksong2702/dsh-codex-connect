@@ -1,6 +1,6 @@
 # Phase 2: task-scoped read-only delegation
 
-Status: design proposal, 2026-09-22. Tracking: #198; umbrella: #195. Publishing this proposal with the Phase 1 acceptance record does not enable Phase 2 runtime or authorize merge, release or deployment.
+Status: plugin-ledger persistence approved, isolated Slice A implementation, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for the implemented schema and bounds. This does not enable Phase 2 runtime or authorize push, merge, release or deployment.
 
 ## Authority and working contract
 
@@ -10,7 +10,7 @@ Verified baseline: main `1748bec2d7cfd6ec72ef64ed6bf341bb47be0424`; Phase 1 cand
 
 This document supplies requirements, code map, architecture, decision rationale and implementation checklist in one place. Existing README, `docs/design.md`, Phase 1 contract, this proposal, acceptance note and dated runtime checkpoint cover the necessary document roles. A separate seven-file project-management skeleton is deliberately deferred: it would duplicate the same authority without adding a needed decision surface.
 
-The original design-only slice allowed these design/acceptance docs and correction of stale PR disposition, not product changes. The subsequent separately requested next step completed isolated installed-page Phase 1 acceptance and two UI corrections at local `2b1bd5d`; see the acceptance record for exact scope, evidence and an unresolved initial startup timeout. No Phase 2 runtime, defaults or dependencies changed. Live credentials/models, daily profiles/services and publishing remain outside scope. Next Phase 2 implementation requires a reviewed contract and a stable agreed baseline; merge remains separately authorized.
+The original design-only slice was followed by Phase 1 installed-page acceptance and UI corrections. #236 head `76c3c0c` subsequently passed all eight exact-head checks. The user then approved plugin-owned root-ledger persistence after an eight-process baseline-host probe showed unknown required Session events cannot be cold-loaded. Slice A is isolated from #236 at that exact baseline and does not change defaults or dependencies. Live credentials/models, daily profiles/services, push and publishing remain outside this slice; merge remains separately authorized.
 
 ## Verified current state
 
@@ -88,11 +88,11 @@ interface ChildBinding {
 }
 ```
 
-JSON decoders reject unknown fields, unsafe integers, unsupported model/effort, forged IDs and extra authority. Bind duplicate calls to the original parent tool-call ID plus argument digest; equal replay returns existing status, changed arguments fail. Persistent retired-run lookup belongs to the host journal, not only a bounded recent-receipts cache. Never evict the only replay guard and permit an old operation to spawn again.
+JSON decoders reject unknown fields, unsafe integers, unsupported model/effort, forged IDs and extra authority. Bind duplicate calls to the original parent tool-call ID plus argument digest; equal replay returns existing status, changed arguments fail. Keep every admitted run's replay evidence in the same root ledger, never in unknown native Session events or an evicting cache. The first implementation caps admission at 32 runs and the existing 64 KiB bound, refusing before publication while reserving future completion-field space. Failure/cancellation after admission consumes a retained slot; validation failures before admission do not.
 
 ## Ownership and accounting
 
-One root task document remains authoritative for grant mode, revocation generation, total reservations and active child metadata. Do not create an independent grant/budget store that can disagree with the root. Child transcripts/evidence/results use host persistence with content digests and causal IDs; they cannot grant authority. Keep the authority record within its existing bound, retaining at most one active and a bounded recent terminal index; older replay evidence stays in the durable journal. Fail closed on missing/corrupt linkage.
+One root document remains authoritative for mode, grant revision, revocation generation, total reservations and all admitted run metadata. Do not create a second grant/budget store. Normal transcripts/tool results remain with the host; immutable evidence/result artifacts need an explicit plugin-owned private artifact boundary in B/C and cannot grant authority. No authority record is an ordinary message or marked ignorable. Keep all replay receipts within the root bound, failing closed on capacity, missing or corrupt linkage. UI revision, grant revision, revocation generation and runtime epoch are distinct.
 
 Every child attempt uses the existing backend governor and task dispatch scope. In one root-lock transaction: validate live exact child and owning root, binding, revision/epoch, deadline, fixed route and unrevoked permission; check global and per-child caps; increment both counters; sync before fetch. Main/compaction/attributable auxiliary requests retain the existing root debit. Scoped child requests must not also enter `reserveAuxiliary` and double-count. Child unauthorized auxiliary routes fail before transport.
 
@@ -111,8 +111,8 @@ user task grant -> parent chooses work unit -> validate/snapshot + persist prepa
 2. Lifetime cancellation combines task revocation, parent tool signal, absolute child deadline and plugin disposal. Keep it alive after the host's creation-only signal is detached.
 3. Stop/manual takeover increments root revocation generation and aborts child work immediately. No queued fetch is admitted after the revocation linearization point. Already dispatched work may settle and retains its debit. Stop reports `stopping` until the owned handle and live registries are reconciled; cleanup failure remains visible and blocks new child creation.
 4. A result is untrusted content. Validate size/schema and references against actually observed snapshot ranges/hashes; success requires exactly one valid final submission and no extra tool actions. Parent review, not the child, determines final claims or actions.
-5. Durable result availability and delivery to the parent are separate. Correlate with the original tool call and persist the outcome before release. After a lost reply, reconcile the host journal; never rerun the child merely to obtain the reply. If the host cannot prove whether delivery committed, show `delivery: unknown` and require explicit reconciliation instead of promising exactly-once delivery.
-6. On process restart, first reconcile root grant, child records and host journals without provider calls. Nonterminal runs become `interrupted`, retain counters and do not respawn. Completed valid outcomes may be surfaced for explicit retrieval, not blindly reinjected as a new user instruction. The same authenticated owner must resume the root. A genuinely new child attempt gets a new operation identity and remaining budget; it never rewinds the old run.
+5. Persist result digest/status in the root ledger and correlate with the host's normal original tool call/result before release. After a lost reply, reconcile those records; never rerun the child merely to obtain the reply. If delivery cannot be proved, show `delivery: unknown`, not exactly-once delivery. Ledger acknowledgment methods are internal trusted primitives, not model/browser APIs.
+6. Recovery atomically compares the previous revision/epoch, adopts a fresh epoch, interrupts nonterminal runs and marks pending delivery unknown without provider calls. Same-target recovery is idempotent; stale competing epochs fail. Reservation lookup proves a debit, not network dispatch. Completed valid outcomes may be explicitly retrieved, not blindly reinjected. The same owner must resume the root; a new child attempt needs a new operation identity and remaining budget, never rewinding the old run.
 7. Cross-device/new-cookie transfer and resuming an interrupted child's internal reasoning are not v1. Safe persisted interruption plus explicit restart is the v1 recovery contract, not continuous child execution across a restart.
 
 ## Schema compatibility and rollback
@@ -127,7 +127,7 @@ Before enabling v2 in a real profile, implement and test an explicit quiescent d
 | --- | --- | --- |
 | A. Authority + ledger | extend contract/store; new `adaptive-task-delegation-contract.ts` | v1 disabled compatibility; v2 atomic migration; exact owner/scope; duplicate operations; concurrency-safe shared debit; no reset after restart |
 | B. Restricted host lifecycle | new `adaptive-task-delegation.ts`, `adaptive-task-evidence.ts`; narrow runtime/scope hooks | own handle/create rollback; only approved snapshot tools executable; all stop/publication/timeout/disposal races; zero post-revocation dispatch |
-| C. Durable result + recovery | same runtime/store, host journal integration | crash at each preparation/spawn/reserve/result/delivery boundary; no blind replay; terminal counters preserved; cleanup failure prevents new work |
+| C. Durable result + recovery | same root ledger, private artifacts and normal host tool-result correlation | crash at each preparation/spawn/reserve/result/delivery boundary; no blind replay; terminal counters preserved; cleanup failure prevents new work |
 | D. Consent + status | existing `AdaptiveTaskControl.tsx` and HTTP contract | explicit optional permission; precise model/effort/source scope; no parallel Split switch; lost response reconciled; root stop/manual visibly covers child |
 | E. Exact-host acceptance | new focused delegation tests and dedicated matrix | identical cases/artifact on four hosts, all failures counted, authenticated full Session journey, two Node targets; real usefulness separate |
 
@@ -152,4 +152,4 @@ Initial parameter ceilings, migration encoding, journal correlation and host-ver
 
 ## Next gate
 
-Design/code-map is prepared; Phase 2 implementation and live acceptance are not completed. Phase 1's baseline-host installed Session synthetic gate now passes locally; first synchronize its fixes and evidence to #236 and obtain exact-head CI. Then review this child authority/recovery contract, establish the approved implementation baseline, and implement slice A with tests. Any newly discovered host seam limitation must narrow the promised behavior or return for a design decision, not bypass permissions or revive the old ephemeral-only Split runtime.
+Phase 1 #236 passed exact-head CI at `76c3c0c`. The user approved the plugin-ledger alternative after the required-event cold-load seam failed. Slice A tests only ledger primitives; B/C lifecycle/evidence/result integration and D/E UI/host acceptance remain required. v2 migration is not exposed to existing sessions, and old v1 runtime intentionally refuses a v2 record. No stacked PR or main merge is needed for isolated development; the eventual candidate must state its approved integration baseline explicitly.
