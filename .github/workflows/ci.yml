@@ -44,6 +44,8 @@ jobs:
         run: pnpm run typecheck
       - name: Test
         run: pnpm run test
+      - name: Verify task grants across independent process restoration
+        run: node scripts/check-adaptive-task-persistence.mjs
       - name: Build
         run: pnpm run build
       - name: Verify built capability CLI and child exit
@@ -52,6 +54,8 @@ jobs:
         run: pnpm run pack:check
       - name: Validate declared DSH installation matrix
         run: pnpm --silent run check:dsh-matrix
+      - name: Verify task model selection on every declared host
+        run: node scripts/check-adaptive-task-matrix.mjs
       - name: Verify committed build output
         shell: bash
         run: |
@@ -81,6 +85,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run browser UI regression tests
         run: pnpm run test:browser
+      - name: Verify authenticated task controls and model handoff
+        run: node scripts/check-adaptive-task-ui.mjs
 
   windows-canary-contract:
     runs-on: windows-latest

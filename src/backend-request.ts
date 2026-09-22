@@ -1,6 +1,7 @@
 /** Runtime request governor for authenticated chatgpt.com/backend-api traffic. */
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { readRetryAfterMs } from './request-backoff.ts'
+import { reserveAdaptiveTaskAttempt } from './adaptive-task-scope.ts'
 import {
   prepareOpenAICodexBackendRequest,
   openAICodexBackendResponseMeta,
@@ -130,6 +131,7 @@ export class OpenAICodexBackendRequests {
     private readonly proxyManager?: OpenAICodexProxyManager,
     private readonly resolveProxyUrl: () => string | undefined = () => undefined,
     private readonly maxConcurrent = OPENAI_CODEX_BACKEND_MAX_CONCURRENT_REQUESTS,
+    private readonly beforeAuxiliaryAttempt?: () => Promise<void>,
   ) {
     if (!Number.isSafeInteger(maxConcurrent) || maxConcurrent < 1) throw new TypeError('maxConcurrent must be a positive safe integer')
   }
@@ -217,6 +219,9 @@ export class OpenAICodexBackendRequests {
       options.identity ?? 'plugin',
     )
     options.onAttempt?.({ clientRequestId })
+    signal.throwIfAborted()
+    await reserveAdaptiveTaskAttempt()
+    await this.beforeAuxiliaryAttempt?.()
     signal.throwIfAborted()
     const response = await (options.fetch ?? globalThis.fetch)(input, { ...init, headers, signal })
     try {
