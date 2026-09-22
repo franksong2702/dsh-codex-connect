@@ -40,6 +40,10 @@ import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexBackendRequests } from './backend-request.ts'
+import { AdaptiveTaskRuntime } from './adaptive-task-runtime.ts'
+import { AdaptiveTaskStore } from './adaptive-task-store.ts'
+import { registerAdaptiveTaskHttp } from './adaptive-task-http.ts'
+import { ADAPTIVE_TASK_MODELS } from './adaptive-task-contract.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
@@ -319,7 +323,9 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
-  const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl)
+  let taskRuntime: AdaptiveTaskRuntime | undefined
+  const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl, undefined,
+    async () => { await taskRuntime?.reserveAuxiliary() })
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
   const credentials = new OpenAICodexCredentialStore()
   const imageAssets = new OpenAICodexImageAssetStore()
@@ -327,6 +333,14 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  taskRuntime = new AdaptiveTaskRuntime(ctx, {
+    store: new AdaptiveTaskStore(join(dirname(credentials.filename), 'codex-connect-tasks')),
+    models: async () => {
+      const models = await ctx.llm.listModels(OPENAI_CODEX_PROVIDER)
+      return Promise.all(models.filter(model => ADAPTIVE_TASK_MODELS.some(id => id === model.id))
+        .map(model => ctx.llm.resolveModelInfo(OPENAI_CODEX_PROVIDER, model.id)))
+    },
+  })
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
@@ -371,6 +385,7 @@ export function apply(ctx: Context, config: Config): void {
       reservePermits,
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
       backendRequests,
+      taskRuntime,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
@@ -380,6 +395,9 @@ export function apply(ctx: Context, config: Config): void {
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
     registerOpenAICodexOriginalImageRoute(webCtx, trustedOrigins, imageAssets)
   })
+
+  const tasks = taskRuntime
+  ctx.inject(['webServer', 'connection'], webCtx => { registerAdaptiveTaskHttp(webCtx, tasks) })
 
   let stopped = false
   let searchFiber: Fiber | undefined

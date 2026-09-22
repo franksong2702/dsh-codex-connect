@@ -21,6 +21,12 @@ import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
+import { withAdaptiveTaskProvider } from './adaptive-task-scope.ts'
+
+/** Omission preserves ordinary dispatch; authority stays with the live task runtime. */
+export interface OpenAICodexTaskDispatch {
+  stream(options: GenerateOptions, delegate: (next: GenerateOptions) => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
+}
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
 export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
@@ -148,7 +154,7 @@ function requestProvider(
   resolveProxyUrl?: () => string | undefined,
   backendRequests?: OpenAICodexBackendRequests,
 ): Provider {
-  const configured = withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode)
+  const configured = withAdaptiveTaskProvider(withOpenAICodexFastMode(withOpenAICodexNativeCompaction(provider), fastMode))
   const streamSimple = configured.streamSimple
   return {
     ...configured,
@@ -252,6 +258,7 @@ export function createOpenAICodexAdapter(
   reservePermits?: ReserveRequestPermits,
   nativeCompactionEnabled?: () => boolean,
   backendRequests?: OpenAICodexBackendRequests,
+  taskDispatch?: OpenAICodexTaskDispatch,
 ): PiAiAdapter {
   const baseline = withOpenAICodexAstra(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
@@ -272,9 +279,10 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
-      return streamWithCodexRequestDiagnostics(
-        next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), options,
+      const dispatch = (request: GenerateOptions) => streamWithCodexRequestDiagnostics(
+        next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), request,
       )
+      return taskDispatch?.stream(options, dispatch) ?? dispatch(options)
     }
 
     override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {

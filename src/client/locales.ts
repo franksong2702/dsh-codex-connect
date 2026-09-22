@@ -1,5 +1,6 @@
 /** English copy for the OpenAI Codex Plugin configuration card. */
 export const en = {
+  adaptiveTaskLanguage: 'en',
   title: 'Codex Connect',
   modelsProviderName: 'Openai-Codex',
   modelsProviderSupport: 'Powered by the Codex Connect plugin.',
@@ -327,6 +328,7 @@ export type OpenAICodexSettingsKey = keyof typeof en
 
 /** Chinese copy for the OpenAI Codex Plugin configuration card. */
 export const zh: { [Key in OpenAICodexSettingsKey]: string } = {
+  adaptiveTaskLanguage: 'zh',
   title: 'Codex Connect',
   modelsProviderName: 'Openai-Codex',
   modelsProviderSupport: '由 Codex Connect 插件提供支持。',

@@ -35,6 +35,7 @@ import { OpenAICodexUpdateStore } from './update-store.ts'
 import { CODEX_CONNECT_VERSION } from '../version.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
 import { OpenAICodexModelsCard } from './OpenAICodexModelsCard.tsx'
+import { AdaptiveTaskControl } from './AdaptiveTaskControl.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -84,6 +85,13 @@ export function apply(ctx: ClientContext): void {
     locale: namespace,
     inject: (): { updater: OpenAICodexUpdateStore } => ({ updater }),
   }, OpenAICodexUpdateOverlay))
+
+  ctx.slots.inject('conversation.input.right', () => ctx.slots.register({
+    name: 'conversation.input.right',
+    id: 'codex-connect-task-models',
+    order: 30,
+    inject: () => ({ language: t('adaptiveTaskLanguage') }),
+  }, AdaptiveTaskControl))
 
   ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
     name: 'tool.call.toolview',
