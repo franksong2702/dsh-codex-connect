@@ -38,7 +38,9 @@ Local Node v24.13.0, installed baseline DSH packages `0.1.2-rc.1`, pi-ai `0.84.4
 
 During development, initial fixtures had an empty v1 receipt list, the wrong context-disposal/resume API fields, and a provider call-ID normalization mismatch. They were corrected against installed interfaces. A stop/publication test initially released its barrier before the revision-fenced stop committed; it now releases on cancellation, testing the intended ordering. These are not omitted or presented as previously passing evidence.
 
-## Remaining gates — not a Phase 2 release
+## Original remaining gates — updated by the subsequent C slice
+
+The [C process-recovery and v2 root-integration record](adaptive-task-phase2-recovery.md) supersedes the first two bullets below for the new local candidate: real-loop process termination, root compaction/title accounting, main handoff and manual portability are now locally verified. The bullets retain the boundary of this earlier B/C delivery; UI, safe migration/downgrade and compatibility acceptance still remain.
 
 - C still needs process-kill/fault injection at every child preparation/publication/dispatch/result/delivery boundary and real-process delivery reconciliation. This slice tests real host unload/resume and injected call failures, not arbitrary power loss.
 - V2 dispatch currently accepts ordinary exact-route requests only and rejects compaction/session-title purpose requests. Phase 1 compaction remains unchanged. Integrating those host-owned auxiliary scopes, v2 main-model change/manual portability and safe quiescent migration/downgrade is required before product enablement.

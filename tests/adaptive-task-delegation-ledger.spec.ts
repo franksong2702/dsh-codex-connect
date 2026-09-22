@@ -65,6 +65,18 @@ it('reads v1 unchanged and migrates only explicitly, preserving root authority/h
   await expect(f.old.update('root', base)).rejects.toThrow('TASK_STATE_INVALID')
   await expect(f.ledger.prepare(identity, captured(doc), f.input())).rejects.toThrow('TASK_DELEGATION_REVOKED')
 })
+it('main route changes preserve budget and fence stale queued attempts, selection and revision', async () => {
+  const f = await setup(), doc = await f.ready()
+  const selected = await f.ledger.selectRoot(identity, doc.revision, doc.runtime, luna, doc.selectionSeq, 20)
+  expect(selected).toMatchObject({ route: luna, portable: true, handoffSeq: 20, reserved: doc.reserved })
+  await expect(f.ledger.reserveRoot(identity, doc.runtime, route, 'main', doc.selectionSeq)).rejects.toThrow('TASK_REQUEST_STALE')
+  await expect(f.ledger.reserveRoot(identity, doc.runtime, luna, 'main', doc.selectionSeq + 1)).rejects.toThrow('TASK_REQUEST_STALE')
+  await expect(f.ledger.selectRoot(identity, doc.revision, doc.runtime, route, doc.selectionSeq, 21)).rejects.toThrow('TASK_STALE_REVISION')
+  await expect(f.ledger.selectRoot(identity, selected.revision, nextEpoch, route, doc.selectionSeq, 21)).rejects.toThrow('TASK_STALE_EPOCH')
+  await expect(f.ledger.selectRoot(identity, selected.revision, doc.runtime, route, doc.selectionSeq + 1, 21)).rejects.toThrow('TASK_MANUAL_SELECTION_CHANGED')
+  expect(await f.read()).toEqual(selected)
+  expect((await f.ledger.reserveRoot(identity, doc.runtime, luna, 'main', doc.selectionSeq)).reserved).toBe(doc.reserved + 1)
+})
 it.each(['manual', 'stopped', 'interrupted', 'limit'] as const)('migration preserves %s state', async mode => {
   const f = await setup({ mode }); expect((await f.migrate()).mode).toBe(mode)
 })

@@ -1,3 +1,7 @@
+# Phase 2 C recovery and root-integration local candidate — 2026-09-22
+
+Continued from local `a26a6d6`, without changing Phase 1 #236. [Recovery contract and evidence](../experiments/adaptive-task-phase2-recovery.md) records v2 main-model changes, root auxiliary accounting, original-history portability, manual takeover and same-owner idle resume. Real-loop SIGKILL recovery passed 18 cases across 36 fresh processes with two host encodings; no replay, counter rollback or fabricated delivery. Final local check passed 112 files / 1,200 tests. The executor remains internal: product entry point, v1 behavior and built runtime are unchanged. Next gates are migration/downgrade, authenticated optional UI/default-off integration, and full host/Node/installed-session acceptance. No push or GitHub/production changes in this slice.
+
 # Phase 2 restricted execution local candidate — 2026-09-22
 
 Continued from local A commit `6d21243` in the same isolated branch. [Execution contract and evidence](../experiments/adaptive-task-phase2-execution.md) records the new evidence/artifact store, real owned-host bridge and internal executor. The synthetic real-host path now goes parent → bounded child read/submit → cleanup → durable original tool-result reconciliation → parent continuation. No product entry point or built runtime is changed; C crash matrix, D/E UI/compatibility and migration gates remain open. No push or GitHub changes in this slice.

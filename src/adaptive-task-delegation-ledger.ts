@@ -115,6 +115,21 @@ export class AdaptiveTaskDelegationLedger {
       doc.mode = 'auto'; doc.revision++
     })
   }
+  /** Host verifies portable history and current model catalog before selecting a new main route. */
+  async selectRoot(identity: LedgerIdentity, expectedRevision: number, expectedEpoch: string, requested: TaskRoute,
+    selectionSeq: number, handoffSeq: number): Promise<TaskLedgerDocument> {
+    const route = structuredClone(requested)
+    return this.update(identity, doc => {
+      revision(doc, expectedRevision); epoch(doc, expectedEpoch)
+      if (doc.mode !== 'auto' || !taskRoute(route) || !allowsTaskRoute(doc.capabilities, route)) taskFailure('TASK_MODEL_NOT_ALLOWED')
+      if (doc.reserved >= doc.maximumRequests) taskFailure('TASK_REQUEST_LIMIT')
+      if (doc.delegation.runs.some(childUnresolved)) taskFailure('TASK_CHILD_UNRESOLVED')
+      if (!ledgerInteger(selectionSeq, -1) || selectionSeq !== doc.selectionSeq || !ledgerInteger(handoffSeq, -1)) taskFailure('TASK_MANUAL_SELECTION_CHANGED')
+      if (!sameRoute(doc.route, route)) {
+        doc.route = route; doc.portable = true; doc.handoffSeq = handoffSeq; doc.revision++
+      }
+    })
+  }
   async prepare(identity: LedgerIdentity, captured: ChildFence, request: PrepareChild): Promise<{ created: boolean; run: TaskChildRun }> {
     const fence = structuredClone(captured), input = structuredClone(request)
     let runId = '', created = false
@@ -178,11 +193,13 @@ export class AdaptiveTaskDelegationLedger {
     return run && { runId: run.id, epoch: run.epoch, debited: true, dispatch: 'unknown', delivery: run.delivery }
   }
   /** Later integration must call this once per managed root attempt, through the existing governor. */
-  async reserveRoot(identity: LedgerIdentity, expectedEpoch: string, route: TaskRoute, kind: 'main' | 'auxiliary'): Promise<TaskLedgerDocument> {
+  async reserveRoot(identity: LedgerIdentity, expectedEpoch: string, route: TaskRoute, kind: 'main' | 'auxiliary', expectedSelectionSeq?: number): Promise<TaskLedgerDocument> {
     const selected = structuredClone(route)
     return this.update(identity, doc => {
       epoch(doc, expectedEpoch)
       if (doc.mode !== 'auto' || !allowsTaskRoute(doc.capabilities, selected)) taskFailure('TASK_REQUIRES_USER_RESUME')
+      if ((kind === 'main' && !sameRoute(doc.route, selected))
+        || (expectedSelectionSeq !== undefined && doc.selectionSeq !== expectedSelectionSeq)) taskFailure('TASK_REQUEST_STALE')
       if (kind !== 'main' && kind !== 'auxiliary') taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
       if (kind === 'main' && doc.delegation.runs.some(childUnresolved)) taskFailure('TASK_CHILD_UNRESOLVED')
       if (doc.reserved >= doc.maximumRequests) taskFailure('TASK_REQUEST_LIMIT')
@@ -223,11 +240,13 @@ export class AdaptiveTaskDelegationLedger {
       run.delivery = next; doc.revision++
     })
   }
-  async revoke(identity: LedgerIdentity, expectedRevision: number, mode: 'manual' | 'stopped'): Promise<TaskLedgerDocument> {
+  async revoke(identity: LedgerIdentity, expectedRevision: number, mode: 'manual' | 'stopped', handoffSeq?: number): Promise<TaskLedgerDocument> {
     return this.update(identity, doc => {
       revision(doc, expectedRevision)
       if (mode !== 'manual' && mode !== 'stopped') taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
+      if (handoffSeq !== undefined && !ledgerInteger(handoffSeq, -1)) taskFailure('TASK_CHILD_ARGUMENTS_INVALID')
       doc.mode = mode; doc.delegation.revocationGeneration++; doc.revision++
+      if (mode === 'manual') { doc.portable = true; if (handoffSeq !== undefined) doc.handoffSeq = handoffSeq }
       for (const run of doc.delegation.runs) if (!childTerminal(run)) {
         run.state = 'settling'; run.outcome = 'cancelled'; run.resultDigest = null
       }

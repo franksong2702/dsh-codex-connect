@@ -48,6 +48,8 @@ jobs:
         run: node scripts/check-adaptive-task-persistence.mjs
       - name: Verify delegation ledger across independent process restoration
         run: node scripts/check-adaptive-task-delegation-ledger.mjs
+      - name: Verify real delegation execution across process termination boundaries
+        run: node scripts/check-adaptive-task-delegation-crashes.mjs
       - name: Build
         run: pnpm run build
       - name: Verify built capability CLI and child exit
