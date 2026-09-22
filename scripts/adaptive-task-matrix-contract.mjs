@@ -13,6 +13,7 @@ export const TASK_RUNTIME_PACKAGES = Object.freeze([
   '@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-compaction-basic',
   '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-session-persistence-jsonl',
   '@deepseek-ai/dsh-atomic-write',
+  '@deepseek-ai/dsh-home-paths',
 ])
 
 export function inspectTaskTestReport(report) {

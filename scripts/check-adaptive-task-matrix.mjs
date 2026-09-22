@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Run the SAME native-admission spec and bundled implementation on exact disposable DSH hosts. */
+/** Run the same task lifecycle contract and bundled implementation on exact disposable DSH runtimes. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -81,6 +81,10 @@ async function main() {
       const overrides = await resolveExactDshOverrides(version, readDshRegistryManifest)
       for (const name of TASK_RUNTIME_PACKAGES) assert.equal(overrides[name], version, `Missing Task root: ${name}`)
       const metadata = exactDshFixtureManifest(overrides)
+      // This gate exercises the task's actual runtime imports. The separate installed-
+      // artifact matrix owns full DSH CLI/profile installation. Keep the complete exact
+      // override closure, but do not install every unrelated host UI/remote backend here.
+      metadata.dependencies = Object.fromEntries(TASK_RUNTIME_PACKAGES.map(name => [name, version]))
       const adapter = await readDshRegistryManifest('@deepseek-ai/dsh-llm-pi-ai', version)
       metadata.dependencies['@earendil-works/pi-ai'] = adapter.dependencies['@earendil-works/pi-ai']
       metadata.dependencies.undici = pkg.dependencies.undici
@@ -92,7 +96,7 @@ async function main() {
       delete env.NODE_OPTIONS; delete env.NODE_PATH; delete env.CODEX_HOME
       await mkdir(env.HOME)
       await writeFile(env.npm_config_userconfig, '')
-      console.error(`Task ${version}: installing ${Object.keys(overrides).length} pinned DSH packages`)
+      console.error(`Task ${version}: installing ${TASK_RUNTIME_PACKAGES.length} runtime roots with ${Object.keys(overrides).length} exact DSH overrides`)
       const install = await runBoundedCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm',
         ['install', '--ignore-scripts', '--prefer-offline', '--no-audit', '--no-fund', '--package-lock=false', '--registry=https://registry.npmjs.org'],
         { cwd: host, env, timeoutMs: 600000 })
@@ -108,7 +112,7 @@ async function main() {
         test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
           isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
-      console.error(`Task ${version}: running identical native-admission cases`)
+      console.error(`Task ${version}: running identical task lifecycle cases`)
       const test = await runBoundedCommand(process.execPath, [join(vitest, 'vitest.mjs'), 'run', '--config', join(host, 'vitest.config.mjs'),
         '--reporter=json', '--outputFile', join(host, 'tests.json')], { cwd: host, env, timeoutMs: 180000, maxBuffer: 2*1024*1024 })
       if (test.error || test.cleanupError || test.status !== 0) {
