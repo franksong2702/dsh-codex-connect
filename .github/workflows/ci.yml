@@ -70,8 +70,6 @@ jobs:
           fi
 
   phase2-host-regression:
-    env:
-      MATRIX_NPM_CLI: ${{ runner.temp }}/phase2-npm/node_modules/npm/bin/npm-cli.js
     strategy:
       fail-fast: false
       matrix:
@@ -94,11 +92,11 @@ jobs:
       - name: Prepare pinned acceptance installer (peer checks remain enabled)
         run: npm install --prefix "${{ runner.temp }}/phase2-npm" --ignore-scripts --no-audit --no-fund npm@10.9.3
       - name: Verify exact-host delegation, consent and crash recovery
+        env:
+          MATRIX_NPM_CLI: ${{ runner.temp }}/phase2-npm/node_modules/npm/bin/npm-cli.js
         run: node scripts/check-adaptive-task-delegation-matrix.mjs --report docs/experiments/phase2-ci-matrix.json
 
   browser-ui-regression:
-    env:
-      MATRIX_NPM_CLI: ${{ runner.temp }}/phase2-npm/node_modules/npm/bin/npm-cli.js
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -125,6 +123,8 @@ jobs:
       - name: Prepare pinned installed-session acceptance installer
         run: npm install --prefix "${{ runner.temp }}/phase2-npm" --ignore-scripts --no-audit --no-fund npm@10.9.3
       - name: Verify installed full Session delegation and native controls
+        env:
+          MATRIX_NPM_CLI: ${{ runner.temp }}/phase2-npm/node_modules/npm/bin/npm-cli.js
         run: node scripts/check-adaptive-task-session.mjs --phase2
 
   windows-canary-contract:
