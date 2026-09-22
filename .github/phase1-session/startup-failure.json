@@ -1,0 +1,61 @@
+{
+  "kind": "installed-full-session-synthetic",
+  "checkedAt": "2026-09-22T10:47:57.114Z",
+  "passed": false,
+  "head": "2b1bd5d5de9952b4dd9f83434afd9d16af0dafa6",
+  "hostVersion": "0.1.2-rc.1",
+  "artifactSha256": "40284d656cc32834eab1515cbba6859769440ea6d8125809c58a401a9ba1cb9b",
+  "identity": {
+    "lib/bin.d.ts": "023d62b7b858839118d205c1cb7ab179c0a5882551f369201bc313f3f2eb9039",
+    "lib/bin.js": "6f303356640126041d72a7a3cd08412ffa5aeb754fb2554c7a4746f3cd72c882",
+    "lib/client.js": "bf8c62461f01388a23b1ad4f2622a7dd2d04fcaaaa43bdab5871c8a564880ff6",
+    "lib/index.d.ts": "d58db97d800207216624fdee30f67b5fc8a135c79bdecce759eeb3c5578357db",
+    "lib/index.js": "c94318e275f45113ef80fcc223b24464907b1a33a9cdc0d396e5adabf35a47ec",
+    "lib/invariant.d.ts": "cb61343f496a0735d9052a7447a596db17c106b65f2288e785306a79f57cb61f",
+    "lib/invariant.js": "7f87b7a1de7c8d071e15739a9f4223a7b41f2a79784c3b2de42c4acfee102c30",
+    "lib/src-Bl1MmnE_.js": "8fd3c3d83a32b660c19e290d65d258975fbc3e0483e7cfb5d000bb690f852efc",
+    "lib/undici-runtime-H2uktiw6.js": "3b01c7270aab526091a61245fe20b60abb28c040c514d7ac2341dbcae7b01131",
+    "dsh": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-agent": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-agent/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-session": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-session/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-client-ui-conversation": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-client-ui-conversation/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-api-session-controller": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-api-session-controller/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-host-webserver": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-host-webserver/package.json",
+      "version": "0.1.2-rc.1"
+    }
+  },
+  "node": "v24.13.0",
+  "checks": [],
+  "pids": [
+    69908
+  ],
+  "wire": [],
+  "mutations": [],
+  "browserErrors": [],
+  "blockedBrowser": [],
+  "taskReads": [],
+  "cleanup": false,
+  "syntheticCredentials": true,
+  "realProviderRequests": 0,
+  "fullInstalledSessionPage": true,
+  "fullDailyProfileAcceptance": false,
+  "fixtureDirectory": "<temporary-fixture>",
+  "fixtureRemoved": false,
+  "failure": "Host readiness deadline"
+}

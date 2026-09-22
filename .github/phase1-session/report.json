@@ -1,0 +1,399 @@
+{
+  "kind": "installed-full-session-synthetic",
+  "checkedAt": "2026-09-22T10:49:34.500Z",
+  "passed": true,
+  "head": "2b1bd5d5de9952b4dd9f83434afd9d16af0dafa6",
+  "hostVersion": "0.1.2-rc.1",
+  "artifactSha256": "40284d656cc32834eab1515cbba6859769440ea6d8125809c58a401a9ba1cb9b",
+  "identity": {
+    "lib/bin.d.ts": "023d62b7b858839118d205c1cb7ab179c0a5882551f369201bc313f3f2eb9039",
+    "lib/bin.js": "6f303356640126041d72a7a3cd08412ffa5aeb754fb2554c7a4746f3cd72c882",
+    "lib/client.js": "bf8c62461f01388a23b1ad4f2622a7dd2d04fcaaaa43bdab5871c8a564880ff6",
+    "lib/index.d.ts": "d58db97d800207216624fdee30f67b5fc8a135c79bdecce759eeb3c5578357db",
+    "lib/index.js": "c94318e275f45113ef80fcc223b24464907b1a33a9cdc0d396e5adabf35a47ec",
+    "lib/invariant.d.ts": "cb61343f496a0735d9052a7447a596db17c106b65f2288e785306a79f57cb61f",
+    "lib/invariant.js": "7f87b7a1de7c8d071e15739a9f4223a7b41f2a79784c3b2de42c4acfee102c30",
+    "lib/src-Bl1MmnE_.js": "8fd3c3d83a32b660c19e290d65d258975fbc3e0483e7cfb5d000bb690f852efc",
+    "lib/undici-runtime-H2uktiw6.js": "3b01c7270aab526091a61245fe20b60abb28c040c514d7ac2341dbcae7b01131",
+    "dsh": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-agent": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-agent/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-session": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-session/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-client-ui-conversation": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-client-ui-conversation/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-api-session-controller": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-api-session-controller/package.json",
+      "version": "0.1.2-rc.1"
+    },
+    "dsh-host-webserver": {
+      "path": "<temporary-fixture>/install/node_modules/@deepseek-ai/dsh-host-webserver/package.json",
+      "version": "0.1.2-rc.1"
+    }
+  },
+  "node": "v24.13.0",
+  "checks": [
+    "stock installed shell, native empty Session, opt-in off",
+    "explicit narrow consent; lost mutation response reconciles without replay",
+    "real Composer sends Sol/Medium then tool-led Luna/Max; one root counter",
+    "native Session switching and reload preserve isolation and do not dispatch",
+    "fresh host process requires same-browser resume; original history and budget survive",
+    "ordinary host Stop aborts wire and withdraws automatic work",
+    "native picker honors manual Terra/High and Default; automatic tool removed",
+    "shared one-request budget denies the post-handoff dispatch",
+    "no uncaught browser errors or unexpected network attempts"
+  ],
+  "pids": [
+    72483,
+    72615
+  ],
+  "wire": [
+    {
+      "pid": 72483,
+      "kind": "provider-request",
+      "model": "gpt-5.6-sol",
+      "effort": "medium",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a:task:1",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "codex_connect_change_work_model",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72483,
+      "kind": "provider-request",
+      "model": "gpt-5.6-luna",
+      "effort": "max",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a:task:2",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "codex_connect_change_work_model",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72615,
+      "kind": "provider-request",
+      "model": "gpt-5.6-luna",
+      "effort": "max",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a:task:4",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "codex_connect_change_work_model",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72615,
+      "kind": "provider-request",
+      "model": "gpt-5.6-luna",
+      "effort": "max",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a:task:4",
+      "originalRetained": true,
+      "hold": true,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "codex_connect_change_work_model",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72615,
+      "kind": "provider-request",
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72615,
+      "kind": "provider-request",
+      "model": "gpt-5.6-terra",
+      "cacheKey": "session-fe7a6aa2-9714-40b0-a957-f36519e9171a",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    },
+    {
+      "pid": 72615,
+      "kind": "provider-request",
+      "model": "gpt-5.6-sol",
+      "effort": "medium",
+      "cacheKey": "session-80dcb6ac-e233-46e4-b6aa-0b59e2cc69d8:task:1",
+      "originalRetained": true,
+      "hold": false,
+      "tools": [
+        "ask_user_question",
+        "bash",
+        "codex_connect_change_work_model",
+        "create_goal",
+        "edit",
+        "exit_plan_mode",
+        "get_goal",
+        "glob",
+        "grep",
+        "interrupt_agent",
+        "job_kill",
+        "job_list",
+        "job_output",
+        "list_agents",
+        "ralph",
+        "read",
+        "read_image",
+        "send_message",
+        "skill",
+        "subagent",
+        "subagent_fork",
+        "todo_write",
+        "update_goal",
+        "web_fetch",
+        "web_search",
+        "workflow",
+        "write"
+      ]
+    }
+  ],
+  "mutations": [
+    {
+      "action": "start",
+      "revision": 0
+    },
+    {
+      "action": "resume",
+      "revision": 3
+    },
+    {
+      "action": "manual",
+      "revision": 5
+    },
+    {
+      "action": "start",
+      "revision": 0
+    }
+  ],
+  "browserErrors": [],
+  "blockedBrowser": [],
+  "taskReads": [
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 409
+    },
+    {
+      "status": 409
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 409
+    },
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    }
+  ],
+  "cleanup": true,
+  "hostOrigin": "http://127.0.0.1:64344",
+  "syntheticCredentials": true,
+  "realProviderRequests": 0,
+  "fullInstalledSessionPage": true,
+  "fullDailyProfileAcceptance": false,
+  "fixtureDirectory": "<temporary-fixture>",
+  "fixtureRemoved": true
+}

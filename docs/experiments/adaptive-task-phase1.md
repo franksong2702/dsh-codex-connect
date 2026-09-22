@@ -25,7 +25,7 @@ The following immutable revisions were compared, including their incremental sou
 
 The backend governor, native compaction codec and host persistence already on main remain the reliability foundation. No additional runtime dependency or old Think question/CSS dependency is needed. The new CI matrix exercises only Phase 1 cases plus exact host identity; it cannot obtain credit from old Think/M2/M3 tests. Previous validation counts and artifacts are historical evidence, not this candidate's acceptance.
 
-This PR supersedes #232–#235 as the proposed Phase 1 integration route. Those PRs and their branches remain unchanged and open. This is a source consolidation, not a merge of their stacked commits.
+This PR supersedes #232–#235 as the proposed Phase 1 integration route. On 2026-09-22 the maintainer separately authorized closing those PRs, the historical Think chain (#167/#220/#221/#222/#224), and Split #199/#200. All eleven source branches and commits were retained. Closure retires the old integration paths; it does not claim that their remaining acceptance passed. This is a source consolidation, not a merge of their stacked commits. #195 remains the umbrella roadmap; #198 now tracks dynamic Phase 2 delegation.
 
 ## Context and lifecycle
 
@@ -49,4 +49,4 @@ The task POST contract now requires the exact `efforts` map for selected `models
 
 Run `pnpm run check`, `pnpm run test:browser`, `node scripts/check-adaptive-task-ui.mjs`, `node scripts/check-adaptive-task-persistence.mjs`, `node scripts/check-adaptive-task-matrix.mjs`, and `pnpm run check:dsh-matrix` on the candidate.
 
-Tests use actual host AgentLoop, persistence, authentication, plugin endpoint and adapter with synthetic responses/credentials. Chromium's enclosing page is an isolated fixture rather than the complete daily Gateway/Session page. Four exact supported hosts, cold processes and browser regressions establish the covered engineering behavior; they do not establish live account eligibility, model quality, economic benefit or human acceptance. The twelve-task evaluation plan remains unexecuted in `adaptive-task-evaluation.md`.
+Tests use actual host AgentLoop, persistence, authentication, plugin endpoint and adapter with synthetic responses/credentials. The local `2b1bd5d` follow-up additionally passes the stock installed Session shell, native Composer/model picker/Stop and cold restart on baseline DSH `0.1.2-rc.1`; see [the acceptance record](adaptive-task-phase1-acceptance.md). This is still an isolated synthetic profile, not the daily profile or a real account. Earlier four-host backend checks are not four-host full-page evidence; none establishes live account eligibility, model quality, economic benefit or human acceptance. The twelve-task evaluation plan remains unexecuted in `adaptive-task-evaluation.md`.
