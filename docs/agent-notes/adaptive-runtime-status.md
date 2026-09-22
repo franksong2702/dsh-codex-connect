@@ -1,3 +1,7 @@
+# Phase 2 restricted execution local candidate — 2026-09-22
+
+Continued from local A commit `6d21243` in the same isolated branch. [Execution contract and evidence](../experiments/adaptive-task-phase2-execution.md) records the new evidence/artifact store, real owned-host bridge and internal executor. The synthetic real-host path now goes parent → bounded child read/submit → cleanup → durable original tool-result reconciliation → parent continuation. No product entry point or built runtime is changed; C crash matrix, D/E UI/compatibility and migration gates remain open. No push or GitHub changes in this slice.
+
 # Phase 2 A isolated ledger development — 2026-09-22
 
 This local branch starts at #236's tested `76c3c0c`, without changing that PR or main. The user approved root-owned plugin persistence after a required custom Session event could be written/flushed but not cold-loaded on baseline DSH. [Slice A](../experiments/adaptive-task-phase2-ledger.md) adds dormant strict v2 ledger primitives; no migration, child tools, transport, UI or real-profile change is enabled. The same atomic task file owns authorization, request counters and retained replay records. Evidence and remaining gates are in that contract. No push, merge, publish or deployment is included.

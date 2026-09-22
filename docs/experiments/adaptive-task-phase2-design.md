@@ -1,12 +1,12 @@
 # Phase 2: task-scoped read-only delegation
 
-Status: plugin-ledger persistence approved, isolated Slice A implementation, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for the implemented schema and bounds. This does not enable Phase 2 runtime or authorize push, merge, release or deployment.
+Status: isolated ledger and restricted-execution local candidate, 2026-09-22. Tracking: #198; umbrella: #195. [Slice A's implementation contract](adaptive-task-phase2-ledger.md) is authoritative for schema/bounds; [the execution contract](adaptive-task-phase2-execution.md) records B/C implementation, evidence and remaining gaps. This does not enable Phase 2 in the product or authorize push, merge, release or deployment.
 
 ## Authority and working contract
 
 The user approved designing Phase 2 while preparing Phase 1 acceptance, beginning with bounded read-only investigation/independent review rather than concurrent file mutations. This document proposes technical defaults within that scope; it does not silently enable delegation or certify real usefulness.
 
-Verified baseline: main `1748bec2d7cfd6ec72ef64ed6bf341bb47be0424`; Phase 1 candidate #236 `0a09e04d09de60930e85f9e87b9a6c97b43f1647` (runtime `7bb8e28`), still an open draft with eight passing checks. Old PRs are closed with branches retained. No stacked PR ancestry is an implementation prerequisite.
+Historical planning snapshot: main `1748bec2d7cfd6ec72ef64ed6bf341bb47be0424`; then-Phase 1 candidate #236 `0a09e04d09de60930e85f9e87b9a6c97b43f1647` (runtime `7bb8e28`). The later local development baseline is `76c3c0c` plus ledger commit `6d21243`, as recorded below. Mutable GitHub disposition is not reverified by local execution work. No stacked PR ancestry is an implementation prerequisite.
 
 This document supplies requirements, code map, architecture, decision rationale and implementation checklist in one place. Existing README, `docs/design.md`, Phase 1 contract, this proposal, acceptance note and dated runtime checkpoint cover the necessary document roles. A separate seven-file project-management skeleton is deliberately deferred: it would duplicate the same authority without adding a needed decision surface.
 
