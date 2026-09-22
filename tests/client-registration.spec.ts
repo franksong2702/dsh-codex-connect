@@ -18,7 +18,8 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("name: 'settings.plugin.item'")
     expect(client).toContain('key: OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("id: 'openai-codex'")
-    expect(client).not.toContain('order: 30')
+    const settingsCard = client.split("ctx.slots.inject('settings.plugin.item'")[1]!.split("ctx.slots.inject('settings.models.footer'")[0]!
+    expect(settingsCard).not.toContain('order: 30')
     expect(client).toContain('ctx.settingsScope.bind')
     expect(client).toContain('OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("namespace: 'web'")

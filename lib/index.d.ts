@@ -164,12 +164,13 @@ declare class OpenAICodexBackendRequests {
   private readonly proxyManager?;
   private readonly resolveProxyUrl;
   private readonly maxConcurrent;
+  private readonly beforeAuxiliaryAttempt?;
   private active;
   private readonly waiters;
   private readonly cooldowns;
   private readonly lifecycle;
   private disposed;
-  constructor(proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, maxConcurrent?: number);
+  constructor(proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, maxConcurrent?: number, beforeAuxiliaryAttempt?: (() => Promise<void>) | undefined);
   private combinedSignal;
   private drain;
   private release;

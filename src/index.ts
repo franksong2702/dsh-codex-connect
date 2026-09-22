@@ -43,6 +43,9 @@ import { OpenAICodexBackendRequests } from './backend-request.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { registerThinkHostIntegration } from './reasoning-update-host.ts'
+import { AdaptiveTaskRuntime } from './adaptive-task-runtime.ts'
+import { AdaptiveTaskStore } from './adaptive-task-store.ts'
+import { registerAdaptiveTaskHttp } from './adaptive-task-http.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
 import { registerReserveRouting } from './reserve-routing.ts'
@@ -323,7 +326,9 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
-  const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl)
+  let taskRuntime: AdaptiveTaskRuntime | undefined
+  const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl, undefined,
+    async () => { await taskRuntime?.reserveAuxiliary() })
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
   const credentials = new OpenAICodexCredentialStore()
   const imageAssets = new OpenAICodexImageAssetStore()
@@ -333,6 +338,15 @@ export function apply(ctx: Context, config: Config): void {
   const fastMode = new FastModeRegistry()
   // Replay guards remain present after disabling new proposals; they never grant consent.
   const think = registerThinkHostIntegration(ctx)
+  taskRuntime = new AdaptiveTaskRuntime(ctx, {
+    store: new AdaptiveTaskStore(join(dirname(credentials.filename), 'codex-connect-tasks')),
+    legacyThinkEnabled: () => resolveOpenAICodexSettings(current()).enableReasoningUpdates,
+    models: async () => {
+      const models = await ctx.llm.listModels(OPENAI_CODEX_PROVIDER)
+      return Promise.all(models.filter(model => ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra'].includes(model.id))
+        .map(model => ctx.llm.resolveModelInfo(OPENAI_CODEX_PROVIDER, model.id)))
+    },
+  })
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
@@ -378,6 +392,7 @@ export function apply(ctx: Context, config: Config): void {
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
       backendRequests,
       think.adapterReplay,
+      taskRuntime,
     ),
   )
   ctx.inject(['webServer'], webCtx => {
@@ -387,6 +402,8 @@ export function apply(ctx: Context, config: Config): void {
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
     registerOpenAICodexOriginalImageRoute(webCtx, trustedOrigins, imageAssets)
   })
+  const tasks = taskRuntime
+  ctx.inject(['webServer', 'connection'], webCtx => { registerAdaptiveTaskHttp(webCtx, tasks) })
 
   let stopped = false
   let searchFiber: Fiber | undefined

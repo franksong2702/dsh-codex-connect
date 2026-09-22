@@ -1,0 +1,25 @@
+/** Required Phase 1 host behavior, independent from the generated test report. */
+export const ADAPTIVE_TASK_CASES = Object.freeze([
+  'is off without a task grant and preserves the ordinary selection',
+  'starts Sol/Medium only after task opt-in and adds no mandatory routing call',
+  ...[['gpt-5.6-sol', 'high'], ['gpt-5.6-terra', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-6-astra', 'low']]
+    .map(([model, effort]) => `lets the current model choose ${model}/${effort} within the approved task`),
+  'keeps another root untouched and refuses forged or extra-scope tool inputs',
+  'does not silently fall back when an allowed model disappears',
+  'reserves each real HTTP attempt durably and stops at the shared request limit',
+  'does not refund a failed request or automatically retry the model',
+  'requires the same authenticated browser and exact revision, with duplicate operation receipts',
+  'returns to ordinary manual model and Default selection after a handoff',
+  'manual selector changes withdraw automation rather than being overwritten',
+  'halts in-flight requests, retains their reservations, and does not auto-resume after stop',
+  'retains counters across runtime replacement but requires explicit same-owner resume',
+  'refuses old sessions, legacy Think and starting with unavailable Sol',
+  'fails closed on malformed stored state without creating a fresh budget',
+  'remembers missing task authority from the host journal after reload instead of resetting',
+  'does not let another browser interrupt a still-owned restored task by reading it',
+  'permits another model to choose the next route without preserving a fixed commander',
+  ...['none', 'zstd'].map(compression => `retains the task grant and exact original session through persisted unload/resume (${compression})`),
+  'expands pre-handoff checkpoints from original evidence and permits new target-route compaction',
+  'charges direct auxiliary backend work to the same initiating task',
+  'discards an unexecuted model choice when the user takes over',
+])

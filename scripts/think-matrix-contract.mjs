@@ -1,6 +1,7 @@
 /** Dedicated Think evidence; ordinary installation/browser checks cannot satisfy this contract. */
 import assert from 'node:assert/strict'
 import { ADAPTIVE_SPLIT_CASES } from './adaptive-split-cases.mjs'
+import { ADAPTIVE_TASK_CASES } from './adaptive-task-cases.mjs'
 
 export const THINK_HOST_CASES = Object.freeze([
   'is disabled by default and never rewrites an ordinary request',
@@ -36,6 +37,7 @@ export const THINK_HOST_CASES = Object.freeze([
   'saving disable aborts a real native question without admitting the late answer',
   'discarding a pending adjustment on disable does not reset an already admitted adjustment',
   ...ADAPTIVE_SPLIT_CASES.map(name => `Adaptive Split host: ${name}`),
+  ...ADAPTIVE_TASK_CASES,
 ])
 export const THINK_IDENTITY_CASE = 'uses the exact isolated host without a neighboring runtime'
 export const THINK_RUNTIME_PACKAGES = Object.freeze([
@@ -46,6 +48,8 @@ export const THINK_RUNTIME_PACKAGES = Object.freeze([
   '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-subagent-spawn-in-process',
   '@deepseek-ai/dsh-subagent-in-process-driver', '@deepseek-ai/dsh-token-meter',
   '@deepseek-ai/dsh-compaction', '@deepseek-ai/dsh-compaction-basic',
+  '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-session-persistence-jsonl',
+  '@deepseek-ai/dsh-atomic-write',
 ])
 
 export function inspectThinkTestReport(report) {
@@ -67,6 +71,7 @@ export function assertThinkMatrix(report, versions, bundleDigest) {
   assert.equal(report.syntheticOnly, true)
   assert.equal(report.productSettingsExercised, true)
   assert.equal(report.adaptiveSplitExercised, true)
+  assert.equal(report.adaptiveTaskExercised, true)
   assert.equal(report.productionDefaultsChanged, false)
   assert.equal(report.realProviderDispatches, 0)
   assert.ok(versions.length > 0 && new Set(versions).size === versions.length)

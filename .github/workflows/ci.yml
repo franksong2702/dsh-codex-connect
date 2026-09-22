@@ -95,6 +95,8 @@ jobs:
         run: pnpm --silent run check:dsh-matrix
       - name: Validate Think native lifecycle on every exact host
         run: node scripts/check-think-matrix.mjs
+      - name: Validate task authority and accounting across cold processes
+        run: node scripts/check-adaptive-task-persistence.mjs
       - name: Verify committed build output
         shell: bash
         run: |
@@ -126,6 +128,8 @@ jobs:
         run: pnpm run test:browser
       - name: Verify Think product settings and native question/selector controls
         run: node scripts/check-think-controls.mjs
+      - name: Verify authenticated task opt-in and model handoff controls
+        run: node scripts/check-adaptive-task-ui.mjs
 
   windows-canary-contract:
     runs-on: windows-latest

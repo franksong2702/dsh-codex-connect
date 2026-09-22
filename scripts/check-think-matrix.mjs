@@ -68,7 +68,8 @@ async function main() {
     const { build } = await import('tsdown')
     await build({ config: false, entry: { 'think-host-admission.spec': join(ROOT, 'tests/think-host-admission.spec.ts'),
       'think-product-settings.spec': join(ROOT, 'tests/think-product-settings.spec.ts'),
-      'adaptive-split-host.spec': join(ROOT, 'tests/adaptive-split-host.spec.ts') },
+      'adaptive-split-host.spec': join(ROOT, 'tests/adaptive-split-host.spec.ts'),
+      'adaptive-task-host.spec': join(ROOT, 'tests/adaptive-task-host.spec.ts') },
       outDir: bundle, platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true,
       report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
@@ -141,7 +142,7 @@ async function main() {
       await rm(host, { recursive: true, force: true })
     }
     const report = assertThinkMatrix({ schemaVersion: 2, kind: 'think-native-host-matrix', bundleDigest,
-      syntheticOnly: true, productSettingsExercised: true, adaptiveSplitExercised: true,
+      syntheticOnly: true, productSettingsExercised: true, adaptiveSplitExercised: true, adaptiveTaskExercised: true,
       productionDefaultsChanged: false, realProviderDispatches: 0, reports }, versions, bundleDigest)
     if (reportPath) await writeFile(reportPath, JSON.stringify(report, null, 2)+'\n')
     console.log(JSON.stringify(report))

@@ -1,3 +1,13 @@
+# Task-level Phase 1 candidate
+
+Branch `franksong2702/adaptive-task-phase1` builds on unchanged M3 #234 `535b8f5`. The product direction is now an explicitly opted-in new task starting Sol/Medium, with the current model free to continue or choose a supported next model/effort. No fixed model roles, compulsory router call or per-change confirmation inside the original grant. This is not merged, published or enabled for users.
+
+The candidate has an actual conversation-slot control and signed-cookie-authenticated product route, private task authority/reservation state, same-Agent next-request handoff with bounded source-preserving context projection, manual takeover, stop and cold-process interruption/resume. Only the selected task receives authority. Old Astra-only Think remains separate and requires a new conversation rather than silently converting approvals. Phase 1 does not create subagents or reset resource counts on model change. Account eligibility and real savings remain unknown.
+
+See [Phase 1 implementation and boundaries](../experiments/adaptive-task-phase1.md) and [unexecuted evaluation plan](../experiments/adaptive-task-evaluation.md). The exact-host gate now includes 25 Phase 1 scenarios in addition to old Think/Split checks. The actual authenticated Chromium control is exercised inside an isolated fixture carrier, not a fully accepted daily profile. Use current-head validation/PR evidence; historical green checks from M3 are not Phase 1 evidence. Published 4.39, main, daily services and original PRs remain unchanged. No live model or real credential access belongs to this work.
+
+---
+
 # Adaptive Runtime M3 candidate — 2026-09-21
 
 Branch `franksong2702/adaptive-runtime-m3` builds on M2 #233 `725cd93`, still stacked on M1 #232. It connects one host-staged, independently confirmed read-only Split offer to the same per-live-Agent decision flow as Think. The original #199/#200 source primitives are reused without importing their separate browser/HTTP delivery or rewriting any prior branch. There is no merged, released or automatically enabled M3 feature.

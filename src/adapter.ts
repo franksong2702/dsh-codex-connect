@@ -22,11 +22,17 @@ import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from '.
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
 import { withSplitProviderBounds } from './split-dispatch.ts'
+import { withAdaptiveTaskProvider } from './adaptive-task-scope.ts'
 
 /** Internal optional replay seam. Omission preserves the ordinary product adapter. */
 export interface OpenAICodexRequestReplay {
   wrapProvider(provider: Provider): Provider
   stream(options: GenerateOptions, delegate: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
+}
+
+/** Optional task wrapper preserves ordinary dispatch without an explicit task grant. */
+export interface OpenAICodexTaskDispatch {
+  stream(options: GenerateOptions, delegate: (next: GenerateOptions) => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
 }
 
 /** Official Codex id supplied when the installed pi-ai catalog predates Astra. */
@@ -157,7 +163,7 @@ function requestProvider(
   requestReplay?: OpenAICodexRequestReplay,
 ): Provider {
   const native = withOpenAICodexNativeCompaction(provider)
-  const configured = withSplitProviderBounds(withOpenAICodexFastMode(requestReplay?.wrapProvider(native) ?? native, fastMode))
+  const configured = withAdaptiveTaskProvider(withSplitProviderBounds(withOpenAICodexFastMode(requestReplay?.wrapProvider(native) ?? native, fastMode)))
   const streamSimple = configured.streamSimple
   return {
     ...configured,
@@ -263,6 +269,7 @@ export function createOpenAICodexAdapter(
   nativeCompactionEnabled?: () => boolean,
   backendRequests?: OpenAICodexBackendRequests,
   requestReplay?: OpenAICodexRequestReplay,
+  taskDispatch?: OpenAICodexTaskDispatch,
 ): PiAiAdapter {
   const baseline = withOpenAICodexAstra(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
@@ -283,10 +290,13 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
-      const delegate = () => streamWithCodexRequestDiagnostics(
-        next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), options,
-      )
-      return requestReplay?.stream(options, delegate) ?? delegate()
+      const dispatch = (request: GenerateOptions) => {
+        const delegate = () => streamWithCodexRequestDiagnostics(
+          next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), request,
+        )
+        return requestReplay?.stream(request, delegate) ?? delegate()
+      }
+      return taskDispatch?.stream(options, dispatch) ?? dispatch(options)
     }
 
     override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
