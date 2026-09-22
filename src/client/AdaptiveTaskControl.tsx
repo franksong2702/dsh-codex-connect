@@ -15,6 +15,7 @@ const words = {
     start: 'Start with these limits', manual: 'Take over manually', stop: 'Stop this task', resume: 'Resume with the same limits', close: 'Close', refresh: 'Read state again',
     active: 'Automatic selection is allowed', off: 'Manual selection; automation is off', stopped: 'Task stopped', interrupted: 'Interrupted; your confirmation is required before continuing', limit: 'Request limit reached',
     current: 'Last recorded request', requested: 'Next requested choice', counter: 'Requests reserved', notStarted: 'No model request yet',
+    unknown: 'Current task state has not been confirmed',
     newOnly: 'Start in an empty new conversation.',
     error: 'The operation did not return a confirmed result. Read state again before trying another action.',
     stopping: 'Stopping; cleanup has not yet been confirmed', busy: 'Applying…',
@@ -28,6 +29,7 @@ const words = {
     start: '按这些范围开始', manual: '切回手动', stop: '停止这项任务', resume: '按原范围继续', close: '关闭', refresh: '重新读取状态',
     active: '已允许系统自行选模型', off: '手动选择，尚未开启自动安排', stopped: '任务已停止', interrupted: '任务已中断，确认后才能继续', limit: '已达到请求上限',
     current: '上次记录的请求', requested: '下次请求的选择', counter: '已预留请求', notStarted: '尚未发起模型请求',
+    unknown: '尚未确认当前任务状态',
     newOnly: '请在空白的新会话中开始。',
     error: '没有收到可确认的操作结果。请先重新读取状态，再决定下一步。',
     stopping: '正在停止，尚未确认清理完成', busy: '正在应用…',
@@ -36,9 +38,20 @@ const words = {
 const buttonStyle: CSSProperties = { minHeight: 36, padding: '5px 10px', borderRadius: 8,
   border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', color: 'inherit', cursor: 'pointer' }
 const format = (value: { model: string; effort: string }) => `${value.model.replace('gpt-5.6-', '').replace('gpt-6-', '')} / ${value.effort}`
+/** A mounted host slot can precede live Session restoration. Never retry a mutation. */
+async function waitForSession(signal: AbortSignal, milliseconds: number): Promise<void> {
+  signal.throwIfAborted()
+  await new Promise<void>((resolve, reject) => {
+    const done = () => { signal.removeEventListener('abort', abort); resolve() }
+    const timer = setTimeout(done, milliseconds)
+    const abort = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); reject(signal.reason) }
+    signal.addEventListener('abort', abort, { once: true })
+  })
+}
 export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId: string; language?: string }) {
   const text = words[language === 'zh' ? 'zh' : 'en']
-  const [opened, setOpened] = useState(false)
+  const [openedFor, setOpenedFor] = useState<string>()
+  const opened = openedFor === sessionId
   const [state, setState] = useState<AdaptiveTaskState>()
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -58,10 +71,20 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
     setBusy(true)
     const timer = setTimeout(() => operation.abort(), 15_000)
     try {
-      const response = await fetch(`${ADAPTIVE_TASK_PATH}?sessionId=${encodeURIComponent(sessionId)}`, {
-        credentials: 'same-origin', signal: operation.signal, headers: { accept: 'application/json' },
-      })
-      const decoded = response.ok ? decodeTaskState(await response.json()) : undefined
+      let decoded: AdaptiveTaskState | undefined
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const response = await fetch(`${ADAPTIVE_TASK_PATH}?sessionId=${encodeURIComponent(sessionId)}`, {
+          credentials: 'same-origin', signal: operation.signal, headers: { accept: 'application/json' },
+        })
+        const body: unknown = await response.json()
+        if (response.status === 409 && typeof body === 'object' && body !== null
+          && 'error' in body && body.error === 'TASK_LIVE_ROOT_REQUIRED' && attempt < 2) {
+          await waitForSession(operation.signal, 250 * (attempt + 1))
+          continue
+        }
+        decoded = response.ok ? decodeTaskState(body) : undefined
+        break
+      }
       if (decoded === undefined) throw new Error('Invalid task state')
       if (token !== generation.current || operation.signal.aborted) return
       setState(decoded); setFailed(false)
@@ -78,7 +101,7 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
     generation.current++; controller.current?.abort()
     mutation.current = undefined
     setState(undefined); setModels([]); setEfforts({}); setMaximum(ADAPTIVE_TASK_REQUEST_LIMIT); setFailed(false)
-    setOpened(false); setBusy(false)
+    setOpenedFor(undefined); setBusy(false)
     return () => { generation.current++; controller.current?.abort() }
   }, [sessionId])
   useEffect(() => {
@@ -88,9 +111,13 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
     // Read-only refresh on focus; no hidden-page or indefinite quota polling.
     const refresh = () => { if (document.visibilityState === 'visible') void read() }
     window.addEventListener('focus', refresh)
-    return () => { window.removeEventListener('focus', refresh); dialog.current?.close() }
+    return () => {
+      window.removeEventListener('focus', refresh)
+      if (mutation.current === undefined) controller.current?.abort()
+      dialog.current?.close()
+    }
   }, [opened, read])
-  const close = () => { setOpened(false); opener.current?.focus() }
+  const close = () => { setOpenedFor(undefined); opener.current?.focus() }
   const mutate = async (action: AdaptiveTaskCommand['action']) => {
     if (state === undefined || busy || failed || mutation.current !== undefined) return
     const token = ++generation.current
@@ -115,13 +142,13 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
       if (token === generation.current) setBusy(false)
     }
   }
-  const label = state?.unavailable === 'TASK_STOPPING' ? text.stopping : state?.mode === 'auto' ? text.active
+  const label = state === undefined ? text.unknown : state.unavailable === 'TASK_STOPPING' ? text.stopping : state.mode === 'auto' ? text.active
     : state?.mode === 'interrupted' ? text.interrupted : state?.mode === 'stopped' ? text.stopped
       : state?.mode === 'limit' ? text.limit : text.off
   return <>
     <button ref={opener} type="button" style={buttonStyle} onClick={() => {
       // A reopened panel must not briefly offer stale actions before its fresh host read.
-      setState(undefined); setFailed(false); setBusy(true); setOpened(true)
+      setState(undefined); setFailed(false); setBusy(true); setOpenedFor(sessionId)
     }}>{text.button}</button>
     {opened ? <dialog ref={dialog} aria-label={text.title} onCancel={event => { event.preventDefault(); close() }}
       style={{ maxWidth: 560, width: 'calc(100vw - 40px)', boxSizing: 'border-box', maxHeight: '90vh', overflow: 'auto',
