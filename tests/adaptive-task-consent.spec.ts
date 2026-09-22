@@ -58,7 +58,7 @@ it('rejects live task control and dispatch when the session service is missing',
   await expect(runtime.command({ sessionId: agent.id, action: 'manual', revision: 0, operationId: randomUUID() }, owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
   await expect(runtime.reserveAuxiliary()).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
   const delegate = vi.fn(async function* () { yield { type: 'finish' as const, reason: { kind: 'stop' as const } } })
-  const stream = runtime.stream({ sessionId: agent.id } as Parameters<AdaptiveTaskControlRuntime['stream']>[0], delegate) as AsyncIterator<unknown>
+  const stream = runtime.stream({ sessionId: agent.id } as Parameters<AdaptiveTaskControlRuntime['stream']>[0], delegate) as ReturnType<AdaptiveTaskControlRuntime['stream']> & AsyncIterator<unknown>
   await expect(stream.next()).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED'); expect(delegate).not.toHaveBeenCalled()
   expect(await readdir(root)).toEqual([])
 })

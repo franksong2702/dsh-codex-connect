@@ -22,7 +22,10 @@ class SyntheticAdapter extends LlmAdapter {
   async resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
     return { provider, id: model, name: 'Synthetic model', reasoning: { efforts: [{ id: ReasoningEffortId('medium'), name: 'medium' }] } }
   }
-  async *stream(_options: GenerateOptions): AsyncIterable<StreamChunk> {
+  async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    expect(options.system).toContain('bounded read-only evidence helper')
+    expect(options.system).not.toContain('parent persona')
+    expect(JSON.stringify(options.messages)).not.toContain('unapproved ambient context')
     yield { type: 'block-start', index: 0, blockType: 'text' }
     yield { type: 'text-delta', index: 0, text: 'synthetic complete' }
     yield { type: 'block-end', index: 0, block: { type: 'text', text: 'synthetic complete' } }
@@ -36,7 +39,10 @@ async function setup() {
   const root = await mkdtemp(join(tmpdir(), 'task-host-')); roots.push(root)
   const ctx = new Context()
   contexts.push(ctx)
-  for (const plugin of [Llm, Sessions, Projection, AgentRegistry, Prompt, Tools]) await ctx.plugin(plugin)
+  for (const plugin of [Llm, Sessions, Projection, AgentRegistry]) await ctx.plugin(plugin)
+  await ctx.plugin(Prompt, { persona: 'parent persona needs {{cwd}}' })
+  await ctx.plugin(Tools)
+  ctx.systemPrompt.context({ name: 'fixture:ambient', order: 0, text: 'unapproved ambient context' })
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['openai-codex'], new SyntheticAdapter())
   ctx.tools.register({ name: 'host_shell', description: 'Inherited shell fixture', parameters: { type: 'object' },
@@ -64,6 +70,10 @@ it('creates an unpublished-tool-scoped child, runs it through the real loop, and
   })
   expect(child.isLive()).toBe(true)
   expect(child.agent.session.header.parentSession).toBe(f.parent.id)
+  expect(child.agent.session.header.cwd).toBeUndefined()
+  const parentPrompt = await f.parent.ctx.systemPrompt.assemble({ scope: f.parent })
+  expect(parentPrompt.sections.some(section => section.text.includes('parent persona'))).toBe(true)
+  expect(parentPrompt.contexts.some(section => section.text.includes('unapproved ambient context'))).toBe(true)
   expect(f.ctx.agents.isOwnedBy(child.agent.id, f.parent)).toBe(true)
   expect(child.agent.ctx.tools.schemas(child.agent).map(schema => schema.name).sort()).toEqual(['read_task_evidence', 'submit_task_findings'])
   await child.run('Synthetic brief', new AbortController().signal)

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Stock installed DSH Web -> native Composer/controller -> installed plugin -> fake wire. */
 import assert from 'node:assert/strict'
-import { readFile, writeFile, mkdir, readdir, rm } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir, rm, realpath } from 'node:fs/promises'
 import { join, dirname, resolve, delimiter, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
@@ -34,15 +34,24 @@ for (const file of sourceFiles.map(name => 'lib/' + name)) {
   identity[file] = installedHash
 }
 const hostRequire = createRequire(join(f.install, 'package.json'))
+const pluginRequire = createRequire(join(plugin, 'package.json'))
+for (const [name, expected] of Object.entries(f.vendorPackages ?? {})) {
+  const path = hostRequire.resolve(name + '/package.json')
+  const { version } = JSON.parse(await readFile(path, 'utf8'))
+  assert.equal(version, expected)
+  assert.equal(await realpath(pluginRequire.resolve(name + '/package.json')), await realpath(path))
+  identity[name] = { path, version }
+}
 for (const name of ['dsh', 'dsh-agent', 'dsh-session', 'dsh-client-ui-conversation', 'dsh-api-session-controller', 'dsh-host-webserver']) {
   const path = hostRequire.resolve(`@deepseek-ai/${name}/package.json`)
   const { version } = JSON.parse(await readFile(path, 'utf8'))
   assert.equal(version, f.version)
+  assert.equal(await realpath(pluginRequire.resolve(`@deepseek-ai/${name}/package.json`)), await realpath(path))
   identity[name] = { path, version }
 }
 const path = '/plugins/dsh-codex-connect/task'
 const checks = [], pids = [], browserErrors = [], blockedBrowser = [], mutations = [], taskReads = []
-const redact = value => String(value).replace(/(https?:\/\/127\.0\.0\.1:\d+)\?[^\s"'<>]+/g, '$1?[redacted]')
+const redact = value => String(value).replace(/(https?:\/\/127\.0\.0\.1:\d+\/?)\?[^\s"'<>]+/g, '$1?[redacted]')
 let child, context, page, host, error, cleanup = false
 const pass = name => { checks.push(name); console.log(`PASS ${name}`) }
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -71,7 +80,7 @@ async function start(port = '0') {
     if (authorized) result = { authorized, origin: new URL(authorized).origin }
   }
   child.stdout.on('data', read); child.stderr.on('data', read)
-  await until(() => { assert.equal(child.exitCode, null, 'temporary host exited before readiness'); return result }, 'Host readiness deadline')
+  await until(() => { assert.equal(child.exitCode, null, 'temporary host exited before readiness: ' + redact(buffer.slice(-6000))); return result }, 'Host readiness deadline')
   host = result
 }
 async function stop() {
@@ -148,64 +157,65 @@ async function delegationJourney() {
   await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
   await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
   pass('explicit upgrade and file/model disclosure; lost consent response does not replay')
-  await send('ORIGINAL_REQUIREMENT_P2 DELEGATE_P2: inspect approved notes.', 4)
+  await send('ORIGINAL_REQUIREMENT_P2 DELEGATE_P2: inspect approved notes.', 5)
   let wire = await requests()
-  assert.deepEqual(wire.map(r => [r.model, r.effort]), [['gpt-5.6-sol', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-sol', 'medium']])
+  assert.deepEqual(wire.filter(r => !r.auxiliary).map(r => [r.model, r.effort]), [['gpt-5.6-sol', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-luna', 'max'], ['gpt-5.6-sol', 'medium']])
+  assert.equal(wire.filter(r => r.auxiliary).length, 1)
   assert.ok(wire.filter(r => !r.child).every(r => r.originalRetained))
   assert.ok(wire.filter(r => r.child).every(r => r.tools.length === 2 && r.tools.includes('read_task_evidence') && r.tools.includes('submit_task_findings')))
-  const complete = await panel('auto', 4)
+  const complete = await panel('auto', 5)
   assert.equal(complete.delegation.runs.length, 1)
   assert.equal(complete.delegation.runs[0].state, 'succeeded'); assert.equal(complete.delegation.runs[0].cleanup, 'verified')
   assert.equal(complete.delegation.runs[0].delivery, 'recorded')
   await page.screenshot({ path: join(output, 'delegation.png'), fullPage: true }); await closePanel()
-  pass('installed product Composer to actual owned child with restricted tools and shared four-request ledger')
+  pass('installed Composer to restricted child; four model requests plus native title request share five debits')
   await page.getByRole('button', { name: 'New session', exact: true }).last().click()
   await page.getByRole('textbox', { name: /^Describe what you want to build/ }).waitFor()
   assert.equal((await panel('off', 0)).delegation, undefined); await closePanel()
   await page.getByRole('treeitem', { name: /^ORIGINAL_REQUIREMENT_P2/ }).click()
-  await panel('auto', 4); await closePanel()
+  await panel('auto', 5); await closePanel()
   const port = new URL(host.origin).port
   await stop(); await start(port); await page.reload()
-  const restored = await panel('interrupted', 4)
+  const restored = await panel('interrupted', 5)
   assert.equal(restored.delegation.runs[0].id, complete.delegation.runs[0].id)
-  assert.equal((await requests()).length, 4); assert.notEqual(pids[0], pids[1])
+  assert.equal((await requests()).length, 5); assert.notEqual(pids[0], pids[1])
   await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
   await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
-  await send('CONTINUE_P2: retain original requirement without another child.', 5)
+  await send('CONTINUE_P2: retain original requirement without another child.', 6)
   assert.equal((await requests()).at(-1).originalRetained, true)
   pass('new Session stays off; fresh host restores interrupted history and count without replay')
-  await panel('auto', 5)
+  await panel('auto', 6)
   await page.getByRole('button', { name: 'Take over manually', exact: true }).click()
   await page.getByText('Manual selection; automation is off', { exact: true }).waitFor()
   await page.getByRole('button', { name: 'Remove helper permission', exact: true }).click()
   await page.getByRole('button', { name: 'Archive and return to Phase 1 manual', exact: true }).click()
   await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).waitFor()
-  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 5 /'))
+  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 6 /'))
   await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).click()
   await page.getByText('No delegation permission', { exact: true }).waitFor()
-  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 5 /'))
+  assert.ok((await page.getByRole('dialog').innerText()).includes('Requests reserved: 6 /'))
   pass('verified archive downgrade and re-upgrade preserve spent count and child provenance without permission')
   await grant()
   await page.getByRole('button', { name: 'Resume with the same limits', exact: true }).click()
   await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()
-  await send('DELEGATE_P2 HOLD_CHILD_P2: wait for native Stop.', 7, false)
+  await send('DELEGATE_P2 HOLD_CHILD_P2: wait for native Stop.', 8, false)
   await page.getByRole('button', { name: 'Stop generating', exact: true }).click()
   await until(async () => (await events()).some(e => e.kind === 'provider-aborted' && e.child), 'Native Stop did not abort the child')
-  const stopped = await panel('stopped', 7)
+  const stopped = await panel('stopped', 8)
   assert.equal(stopped.delegation.runs.length, 2)
   assert.equal(stopped.delegation.runs[1].cleanup, 'verified')
-  await pause(400); assert.equal((await requests()).length, 7)
-  pass('native Session Stop aborts active child and preserves all seven debits')
+  await pause(400); assert.equal((await requests()).length, 8)
+  pass('native Session Stop aborts active child and preserves all eight debits')
   await page.getByRole('button', { name: 'Take over manually', exact: true }).click()
   await page.getByText('Manual selection; automation is off', { exact: true }).waitFor(); await closePanel()
   await picker('Model', 'GPT-5.6 Terra'); await picker('Effort', 'High')
-  await send('MANUAL_P2: selected Terra High.', 8)
-  await picker('Effort', 'Default'); await send('DEFAULT_P2: provider default effort.', 9)
+  await send('MANUAL_P2: selected Terra High.', 9)
+  await picker('Effort', 'Default'); await send('DEFAULT_P2: provider default effort.', 10)
   wire = await requests()
-  assert.deepEqual([wire[7].model, wire[7].effort], ['gpt-5.6-terra', 'high'])
-  assert.equal(wire[8].model, 'gpt-5.6-terra'); assert.equal(wire[8].effort, undefined)
-  assert.ok(!wire[8].tools.includes('delegate_task')); assert.ok(!wire[8].tools.includes('codex_connect_change_work_model'))
-  await panel('manual', 7)
+  assert.deepEqual([wire[8].model, wire[8].effort], ['gpt-5.6-terra', 'high'])
+  assert.equal(wire[9].model, 'gpt-5.6-terra'); assert.equal(wire[9].effort, undefined)
+  assert.ok(!wire[9].tools.includes('delegate_task')); assert.ok(!wire[9].tools.includes('codex_connect_change_work_model'))
+  await panel('manual', 8)
   await page.screenshot({ path: join(output, 'manual.png'), fullPage: true }); await closePanel()
   pass('native picker honors manual Terra High and Default; no delegation or automatic debit remains')
 }
@@ -389,7 +399,7 @@ try {
     try { await rm(f.directory, { recursive: true, force: true }); fixtureRemoved = true } catch (cause) { error = cause }
   }
   const report = { kind: 'installed-full-session-synthetic', phase: phase2 ? 2 : 1, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
-    artifactSha256: f.artifactSha256, identity, node: process.version, checks, pids, wire, mutations: mutations.map(({ action, revision }) => ({ action, revision })),
+    artifactSha256: f.artifactSha256, identity, installer: f.installer, node: process.version, checks, pids, wire, mutations: mutations.map(({ action, revision }) => ({ action, revision })),
     browserErrors, blockedBrowser, taskReads, cleanup, hostOrigin: host?.origin, syntheticCredentials: true, realProviderRequests: 0,
     fullInstalledSessionPage: true, fullDailyProfileAcceptance: false,
     fixtureDirectory: f.directory, fixtureRemoved, failure: error ? redact(error.message) : undefined }

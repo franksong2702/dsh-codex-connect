@@ -45,11 +45,13 @@ globalThis.fetch = async (input, init) => {
     const body = JSON.parse(raw)
     if (process.env.CODEX_TASK_SESSION_PHASE2 === '1') {
       const child = body.tools?.some(tool => tool.name === 'read_task_evidence') === true
+      const auxiliary = (body.tools ?? []).length === 0
       const texts = (body.input ?? []).filter(item => item.role === 'user').flatMap(item => item.content ?? []).map(item => item.text).filter(text => typeof text === 'string')
       const prompt = texts.findLast(text => text.includes('_P2')) ?? ''
       const hold = child && prompt.includes('HOLD_CHILD_P2')
-      record({ kind: 'provider-request', model: body.model, effort: body.reasoning?.effort, child, hold,
+      record({ kind: 'provider-request', model: body.model, effort: body.reasoning?.effort, child, hold, auxiliary,
         originalRetained: JSON.stringify(body.input).includes('ORIGINAL_REQUIREMENT_P2'), tools: (body.tools ?? []).map(tool => tool.name) })
+      if (auxiliary) return sse({ ...p2answer(), content: [{ type: 'output_text', text: 'ORIGINAL_REQUIREMENT_P2 task', annotations: [] }] }, body.model)
       if (hold) return new Promise((_, reject) => {
         const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
         assert.ok(signal)
