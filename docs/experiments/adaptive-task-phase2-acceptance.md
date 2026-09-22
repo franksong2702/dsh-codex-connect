@@ -1,5 +1,15 @@
 # Phase 2 E: exact-host and installed Session acceptance
 
+## Main-based integration gate
+
+2026-09-23: the maintainer authorized review and merge toward real 3081 experiment readiness. Phase 1 #236 is squash-merged as `3c3d176` with its exact reviewed tree preserved. Phase 2 #239 retains the original branch history, connects that identical main baseline without product changes, and must pass main-based exact-head checks including CodeQL before merge. This updates the historical authorization/status below; it does not authorize npm publication or live inference.
+
+Independent read-only pre-landing review of `76c3c0c..4b5d485` found no remaining confirmed blocker; focused checks passed 3 files / 40 tests. A suspected cancellation gap was withdrawn because the relevant entry check, guard, listener registration and followup have no asynchronous yield or actual reentrant revoke path.
+
+An additional immutable installed full-page run at `4b5d485` used DSH `0.1.5-rc.1`, Node `26.5.0`, npm `10.9.3` with peer checks and the selected host's published Cordis floors. Archive SHA-256: `b328a16446a2cb089dab4fba6ce1e90825fc7446d6a87fe42560cc1d1f01bffb`. All nine library hashes matched the candidate; all eight Phase 2 native Session groups passed, including native title accounting, lost-response reconciliation, downgrade/re-upgrade, restart, Stop, and manual Terra/Default. No uncaught browser errors, unexpected external attempts or real provider requests; cleanup and fixture removal both passed. Command: `node scripts/check-adaptive-task-session.mjs <prepared fixture>/fixture.json --phase2`, exit 0. Redacted report/events are retained in the task's `outputs/goal-rc1-node26-{report,events}.json`.
+
+This closes the isolated full-page gap for the currently installed 3081 host/Node version combination. It does not certify existing daily-profile state, local host patches, all four hosts' full pages, or real model behavior. Actual 3081 backup/install/restart remains separately approval-gated. The following sections preserve the original E-slice scope and evidence.
+
 Authority: user approved the next step on 2026-09-22 after local `dcd5cab`. Source of truth: Phase 2 design, A–D contracts, current isolated branch and declared compatibility. Existing README/design/contracts/checkpoint satisfy the documentation roles; no duplicate project skeleton.
 
 Goal: verify identical Phase 2 cases on all four declared hosts and Node 22.19.0/24.13.0, then integrate the reviewed default-off composition into the product and verify the installed authenticated full Session journey.

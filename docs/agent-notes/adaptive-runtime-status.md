@@ -1,3 +1,11 @@
+# Phase 1 merged / Phase 2 main-based review — 2026-09-23
+
+Phase 1 #236 was reviewed and squash-merged as `3c3d1762536efafaecefb36146e062dad5edd4f8`; its tree exactly equals reviewed `76c3c0c`. Main's active ruleset permits squash only. The Phase 2 branch retains its source history and connects that identical Phase 1 main tree without changing product bytes; #239 now proceeds through a main-based exact-head CI/CodeQL gate. Source branches remain intact. This supersedes the historical no-push/no-merge status below, not their evidence limitations.
+
+Fresh independent review found no remaining confirmed blocker in Phase 2 `76c3c0c..4b5d485` and the supplemental Phase 1 authority/stop/recovery pass. A suggested cancellation window was withdrawn after verifying the code executes synchronously with no reentrant revoke path. Focused Phase 2 checks passed 3 files / 40 tests. The exact installed `4b5d485` also passed all eight native Session groups on DSH `0.1.5-rc.1` / Node `26.5.0`, matching the actual 3081 version combination, with npm 10.9.3 peer checks and selected vendor floors. All nine installed library hashes were verified; cleanup and fixture removal passed; real provider requests were zero.
+
+This is still isolated synthetic acceptance, not acceptance of existing 3081 sessions/host patches or real model quality. Actual 3081 installation/restart awaits its explicit scoped approval; 3080, npm release/publish and real model requests remain untouched. See the [updated acceptance gate](../experiments/adaptive-task-phase2-acceptance.md#main-based-integration-gate).
+
 # Phase 2 E exact-host and installed Session local candidate — 2026-09-23
 
 Continued from local `dcd5cab`, without changing Phase 1 #236 or main. [E acceptance and evidence](../experiments/adaptive-task-phase2-acceptance.md) records the pre-integration gate, single default-off product composition, per-root artifacts, optional-service compatibility and child prompt isolation. Product bytes are `20e6ecf`; the final test/checker/docs changes do not alter them. Legacy grants gain no delegation permission; explicit v2 upgrade and separate source/model/effort consent remain mandatory.
