@@ -237,6 +237,7 @@ try {
   assert.equal(manual.model, 'gpt-5.6-terra'); assert.equal(manual.effort, undefined)
   assert.equal(manual.tools.includes('codex_connect_change_work_model'), false)
   await panel('manual', 4)
+  assert.ok(!(await page.getByRole('dialog').innerText()).includes('No model request yet'))
   await page.screenshot({ path: join(output, 'manual.png'), fullPage: true })
   await closePanel()
   pass('native picker honors manual Terra/High and Default; automatic tool removed')

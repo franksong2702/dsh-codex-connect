@@ -132,6 +132,13 @@ it('cancels a pending restoration retry when the panel is closed', async () => {
   await new Promise(resolve => setTimeout(resolve, 800))
   expect(fetch).toHaveBeenCalledTimes(1)
 })
+it('does not confuse manual Default effort with a task that has never requested a model', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...initial(), mode: 'manual', canStart: false, reserved: 4 })))
+  mount('en'); await page.getByRole('button', { name: 'Model choice', exact: true }).click()
+  await expect.element(page.getByText('Manual selection; automation is off', { exact: true })).toBeVisible()
+  expect(document.body.textContent).toContain('No explicit Codex model/effort pair recorded')
+  expect(document.body.textContent).not.toContain('No model request yet')
+})
 it('does not carry an old session response or authority into a new conversation', async () => {
   let release!: (response: Response) => void
   vi.stubGlobal('fetch', vi.fn(async () => new Promise<Response>(resolve => { release = resolve })))

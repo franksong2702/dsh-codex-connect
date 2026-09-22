@@ -16,6 +16,7 @@ const words = {
     active: 'Automatic selection is allowed', off: 'Manual selection; automation is off', stopped: 'Task stopped', interrupted: 'Interrupted; your confirmation is required before continuing', limit: 'Request limit reached',
     current: 'Last recorded request', requested: 'Next requested choice', counter: 'Requests reserved', notStarted: 'No model request yet',
     unknown: 'Current task state has not been confirmed',
+    notRecorded: 'No explicit Codex model/effort pair recorded (for example, Default)',
     newOnly: 'Start in an empty new conversation.',
     error: 'The operation did not return a confirmed result. Read state again before trying another action.',
     stopping: 'Stopping; cleanup has not yet been confirmed', busy: 'Applying…',
@@ -30,6 +31,7 @@ const words = {
     active: '已允许系统自行选模型', off: '手动选择，尚未开启自动安排', stopped: '任务已停止', interrupted: '任务已中断，确认后才能继续', limit: '已达到请求上限',
     current: '上次记录的请求', requested: '下次请求的选择', counter: '已预留请求', notStarted: '尚未发起模型请求',
     unknown: '尚未确认当前任务状态',
+    notRecorded: '未记录明确的 Codex 模型／档位组合（例如使用 Default）',
     newOnly: '请在空白的新会话中开始。',
     error: '没有收到可确认的操作结果。请先重新读取状态，再决定下一步。',
     stopping: '正在停止，尚未确认清理完成', busy: '正在应用…',
@@ -158,7 +160,8 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
       <p role="status">{busy ? text.busy : label}</p>
       {failed ? <p role="alert">{state === undefined ? text.unavailable : text.error}</p> : null}
       {state !== undefined ? <>
-        <p>{text.current}: {state.current ? format(state.current) : text.notStarted}<br />
+        <p>{text.current}: {state.current ? format(state.current)
+          : state.canStart || (state.mode === 'auto' && state.reserved === 0) ? text.notStarted : text.notRecorded}<br />
           {state.requested ? <>{text.requested}: {format(state.requested)}<br /></> : null}
           {text.counter}: {state.reserved} / {state.maximumRequests}</p>
         {state.mode === 'off' ? <>
