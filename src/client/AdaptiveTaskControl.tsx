@@ -10,10 +10,10 @@ import type { DelegationFields } from './TaskDelegationConsent.tsx'
 const words = {
   en: {
     button: 'Model choice', title: 'Models for this task', loading: 'Reading current state…', unavailable: 'Task controls are unavailable. No setting has been changed.',
-    intro: 'Start this new conversation with GPT-5.6 Sol / Medium. It may adjust effort or hand the remaining work to an allowed model without asking each time. Continuing with the same model is also valid.',
+    intro: 'Start this new conversation with GPT-5.6 Sol / Medium. Only that pair is selected by default. Choose additional models and effort levels below if you want it to adjust effort or hand off later.',
     boundary: 'This applies to this conversation only, including follow-up messages until you take over. It grants no new file, command, publishing or subagent permissions. Other settings and conversations stay unchanged.',
     budget: 'Request limit (whole task)', resources: 'This counts reserved Codex requests, including failures. It is not a spending or subscription quota cap. A lost request may still be counted.',
-    models: 'Allowed main models and effort levels', eligibility: 'Model capability is from the installed adapter. Your account eligibility has not been probed; an unavailable model will not be silently replaced. Existing search, image and review tools retain their own model settings and permissions; attributable Codex requests share this limit.',
+    models: 'Allowed main models and effort levels', scope: 'Main model and effort allowed if started now: ', eligibility: 'Model capability is from the installed adapter. Your account eligibility has not been probed; an unavailable model will not be silently replaced. Existing search, image and review tools retain their own model settings and permissions; attributable Codex requests share this limit.',
     start: 'Start with these limits', manual: 'Take over manually', stop: 'Stop this task', resume: 'Resume with the same limits', close: 'Close', refresh: 'Read state again',
     active: 'Automatic selection is allowed', off: 'Manual selection; automation is off', stopped: 'Task stopped', interrupted: 'Interrupted; your confirmation is required before continuing', limit: 'Request limit reached',
     current: 'Last recorded request', requested: 'Next requested choice', counter: 'Requests reserved', notStarted: 'No model request yet',
@@ -25,10 +25,10 @@ const words = {
   },
   zh: {
     button: '模型选择', title: '这项任务怎么选模型', loading: '正在读取当前状态…', unavailable: '当前环境暂不可用，未更改任何设置。',
-    intro: '这段新会话从 GPT-5.6 Sol / Medium 开始。它可以在你允许的模型与档位中自行调整，或交给另一模型继续，不必每次询问；也可以一直自己做完。',
+    intro: '这段新会话从 GPT-5.6 Sol / Medium 开始，默认只选择这一组合。如需之后自行调档或交接，请在下方明确勾选其他模型与档位。',
     boundary: '仅作用于这段会话，后续消息继续计入，直到你切回手动。不会新增文件、命令、发布或子任务权限，也不会改动其他功能或会话。',
     budget: '整项任务的请求上限', resources: '统计已预留的 Codex 请求，包含失败请求；不是金额或订阅额度上限。结果未知的请求也可能占用次数。',
-    models: '允许使用的主模型与档位', eligibility: '能力来自已安装的适配器，尚未探测你的账户资格。模型不可用时会报明原因，不会偷偷换成其他模型。已有搜索、图片和审查工具沿用各自的模型设置及权限；可归属的 Codex 请求共用此上限。',
+    models: '允许使用的主模型与档位', scope: '现在开始将授权的主模型与档位：', eligibility: '能力来自已安装的适配器，尚未探测你的账户资格。模型不可用时会报明原因，不会偷偷换成其他模型。已有搜索、图片和审查工具沿用各自的模型设置及权限；可归属的 Codex 请求共用此上限。',
     start: '按这些范围开始', manual: '切回手动', stop: '停止这项任务', resume: '按原范围继续', close: '关闭', refresh: '重新读取状态',
     active: '已允许系统自行选模型', off: '手动选择，尚未开启自动安排', stopped: '任务已停止', interrupted: '任务已中断，确认后才能继续', limit: '已达到请求上限',
     current: '上次记录的请求', requested: '下次请求的选择', counter: '已预留请求', notStarted: '尚未发起模型请求',
@@ -92,8 +92,8 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
       if (decoded === undefined) throw new Error('Invalid task state')
       if (token !== generation.current || operation.signal.aborted) return
       setState(decoded); setFailed(false)
-      setEfforts(previous => Object.keys(previous).length ? previous : Object.fromEntries(decoded.capabilities.map(item => [item.model, item.efforts])))
-      setModels(previous => previous.length ? previous : decoded.capabilities.map(model => model.model))
+      setEfforts(previous => Object.keys(previous).length ? previous : { [ADAPTIVE_TASK_START.model]: [ADAPTIVE_TASK_START.effort] })
+      setModels(previous => previous.length ? previous : [ADAPTIVE_TASK_START.model])
     } catch {
       if (token === generation.current) { setFailed(true); setState(undefined) }
     } finally {
@@ -169,6 +169,12 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
         {state.mode === 'off' ? <>
           <p>{text.intro}</p><p>{text.boundary}</p>
           {!state.canStart ? <p>{text.newOnly}</p> : null}
+          <p aria-live="polite" style={{ overflowWrap: 'anywhere' }}>{text.scope}{models.map(model =>
+            `${model}: ${(efforts[model] ?? []).join(', ') || '—'}`).join('; ')}</p>
+          <label style={{ display: 'block', paddingBlock: 10 }}>{text.budget}
+            <input aria-label={text.budget} type="number" min={1} max={ADAPTIVE_TASK_MAX_REQUESTS} value={maximum}
+              disabled={busy} onChange={event => setMaximum(Number(event.target.value))} style={{ width: 80, marginInlineStart: 12 }} />
+          </label>
           <details><summary>{text.models}</summary>
             {state.capabilities.map(model => <label key={model.model} style={{ display: 'block', paddingBlock: 6 }}>
               <input type="checkbox" checked={models.includes(model.model)} disabled={busy || model.model === ADAPTIVE_TASK_START.model}
@@ -184,10 +190,6 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
                     ? [...(value[item.model] ?? []), effort] : (value[item.model] ?? []).filter(level => level !== effort) }))} />{effort}
               </label>)}
             </fieldset>)}
-            <label style={{ display: 'block', paddingBlock: 10 }}>{text.budget}
-              <input aria-label={text.budget} type="number" min={1} max={ADAPTIVE_TASK_MAX_REQUESTS} value={maximum}
-                disabled={busy} onChange={event => setMaximum(Number(event.target.value))} style={{ width: 80, marginInlineStart: 12 }} />
-            </label>
             <p>{text.eligibility}</p>
           </details>
         </> : null}
