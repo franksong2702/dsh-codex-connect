@@ -6,6 +6,7 @@ import { constants } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
+import { CompactionId, compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 
 process.env.OTEL_SDK_DISABLED = 'true'
 process.env.DSH_TELEMETRY_MODE = 'DISABLED'
@@ -239,10 +240,10 @@ async function main() {
         baseline = await runStage('baseline', [first])
         expectedLabel = baseline.content.filter(block => block.type === 'text').map(block => block.text).join('').trim()
         if (!/^[A-Z0-9]{12}$/u.test(expectedLabel)) stop('BASELINE_LABEL_FORMAT_INVALID_NO_RETRY')
-        const instruction = user('Summarize the context, preserving the checkpoint label.', { kind: 'plugin', plugin: 'dsh-compaction-basic' })
+        const instruction = { role: 'user', content: [{ type: 'text', text: 'You are now acting as a compaction engine for this AI coding assistant. Condense the conversation ABOVE into a structured checkpoint that lets another model resume the work with no loss of essential context.' }] }
         const compacted = await runStage('native', [first, { ...baseline, source: { kind: 'model', provider: 'openai-codex', model: MODEL } }, instruction], true)
         const text = compacted.content.filter(block => block.type === 'text').map(block => block.text).join('')
-        const checkpoint = user(text, { kind: 'plugin', plugin: 'compact' })
+        const checkpoint = user(text, compactCheckpointSource(CompactionId('codex-connect-offline-smoke')))
         const items = native.decodeNativeCompactionCheckpoint(checkpoint)
         if (!items || metrics.at(-1)?.compaction_items !== 1) stop('NO_VALID_NATIVE_CHECKPOINT')
         if (JSON.stringify(items.filter(item => item.type !== 'compaction')).includes(expectedLabel)) stop('LABEL_EXPOSED_IN_RETAINED_TEXT')

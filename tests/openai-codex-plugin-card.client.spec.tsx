@@ -1,37 +1,26 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 import { OpenAICodexPluginCard } from '../src/client/OpenAICodexPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
 
-afterEach(() => {
-  cleanup()
-})
+vi.mock('../src/client/OpenAICodexSettings.tsx', () => ({
+  OpenAICodexSettings: ({ embedded }: { embedded?: boolean }) => <section data-testid="codex-settings-page" data-embedded={embedded} />,
+}))
 
-describe('OpenAI Codex Plugin configuration card', () => {
-  it('uses the DSH native 14px outline chevron for the disclosure control', () => {
-    render(
-      <OpenAICodexPluginCard
-        t={(key) => en[key]}
-        configScope={undefined as never}
-        useSessions={vi.fn() as never}
-        useWorkspaces={vi.fn() as never}
-        useSessionPendingInteraction={vi.fn() as never}
-        {...{ usePanelInfo: vi.fn() as never }}
-      />,
-    )
+afterEach(cleanup)
 
-    const header = screen.getByRole('button', { name: `${en.expand}: ${en.title}` })
-    expect(header.textContent).toContain('GPT Image')
-    expect(header.closest('li')?.style.background).toBe('var(--dsw-alias-bg-layer-3)')
-    fireEvent.click(header)
-    expect(header.closest('li')?.style.background).toBe('var(--dsw-alias-bg-layer-2)')
-    const icon = header.querySelector('svg')
+it('renders the settings page directly inside its dedicated Plugins tab', () => {
+  render(<OpenAICodexPluginCard
+    t={key => en[key]}
+    configScope={undefined as never}
+    useSessions={vi.fn() as never}
+    useSessionStatus={vi.fn() as never}
+    useSessionRetainInfo={vi.fn() as never}
+    useWorkspaces={vi.fn() as never}
+    usePanelInfo={vi.fn() as never}
+  />)
 
-    expect(icon?.getAttribute('viewBox')).toBe('0 0 14 14')
-    expect(icon?.getAttribute('width')).toBe('14')
-    expect(icon?.getAttribute('height')).toBe('14')
-    expect(icon?.querySelector('path')?.getAttribute('d')).toContain('M11.8486 5.5L11.4238 5.92383')
-  })
+  expect(screen.getByTestId('codex-settings-page').getAttribute('data-embedded')).toBe('true')
 })

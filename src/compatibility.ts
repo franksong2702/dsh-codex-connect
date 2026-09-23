@@ -4,16 +4,17 @@ import { fileURLToPath } from 'node:url'
 
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
-export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.2-rc.1'
-export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION, '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2'] as const
+export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-alpha.2'
+export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION] as const
 export const SUPPORTED_DSH_PLUGIN_API_RANGE = SUPPORTED_DSH_PLUGIN_API_VERSIONS.join(' || ')
-export const SUPPORTED_PI_AI_RANGE = '^0.84.2 || 0.85.1'
+export const SUPPORTED_PI_AI_RANGE = '0.85.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 
 export const DSH_PLUGIN_API_PACKAGES = [
   '@deepseek-ai/dsh-agent',
   '@deepseek-ai/dsh-atomic-write',
   '@deepseek-ai/dsh-attachment',
+  '@deepseek-ai/dsh-compaction',
   '@deepseek-ai/dsh-home-paths',
   '@deepseek-ai/dsh-host-webserver',
   '@deepseek-ai/dsh-invariants',
@@ -30,6 +31,7 @@ export const DSH_PLUGIN_API_PACKAGES = [
 export const COMPATIBILITY_PACKAGES = [
   '@deepseek-ai/dsh-llm',
   '@deepseek-ai/dsh-llm-pi-ai',
+  '@deepseek-ai/dsh-compaction',
   PI_AI_PACKAGE,
 ] as const
 
@@ -96,12 +98,7 @@ export function isSupportedDshPluginApiVersion(value: string): boolean {
 }
 
 function piAiVersionStatus(value: string): CompatibilityStatus {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(value.trim())
-  if (match === null) return 'unverified'
-  const major = Number(match[1])
-  const minor = Number(match[2])
-  const patch = Number(match[3])
-  return major === 0 && ((minor === 84 && patch >= 2) || (minor === 85 && patch === 1)) ? 'compatible' : 'unverified'
+  return value.trim() === SUPPORTED_PI_AI_RANGE ? 'compatible' : 'unverified'
 }
 
 function parseNodeVersion(value: string): [number, number, number] | undefined {
@@ -159,6 +156,7 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
   const packages = {
     '@deepseek-ai/dsh-llm': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-llm'], value => isSupportedDshPluginApiVersion(value) ? 'compatible' : 'unverified'),
     '@deepseek-ai/dsh-llm-pi-ai': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-llm-pi-ai'], value => isSupportedDshPluginApiVersion(value) ? 'compatible' : 'unverified'),
+    '@deepseek-ai/dsh-compaction': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-compaction'], value => isSupportedDshPluginApiVersion(value) ? 'compatible' : 'unverified'),
     [PI_AI_PACKAGE]: packageEntry(SUPPORTED_PI_AI_RANGE, suppliedPackages[PI_AI_PACKAGE], piAiVersionStatus),
   } as Record<CompatibilityPackageName, CompatibilityEntry>
   const node = nodeEntry(installedNode)
@@ -166,7 +164,9 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
   const dshVersion = packages['@deepseek-ai/dsh-llm'].installed
   const piVersion = packages[PI_AI_PACKAGE].installed
   const matchedPair = dshVersion === packages['@deepseek-ai/dsh-llm-pi-ai'].installed
-    && (dshVersion === SUPPORTED_DSH_PLUGIN_API_VERSION ? piVersion?.startsWith('0.84.') === true : piVersion === '0.85.1')
+    && dshVersion === packages['@deepseek-ai/dsh-compaction'].installed
+    && dshVersion === SUPPORTED_DSH_PLUGIN_API_VERSION
+    && piVersion === SUPPORTED_PI_AI_RANGE
   return {
     schemaVersion: COMPATIBILITY_SCHEMA_VERSION,
     status: status === 'compatible' && !matchedPair ? 'unverified' : status,

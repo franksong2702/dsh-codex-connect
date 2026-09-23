@@ -3,11 +3,12 @@ import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { readdir } from 'node:fs/promises'
 import { zstdDecompressSync } from 'node:zlib'
+import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 
 const PROVIDER = 'openai-codex'
 const MODEL = 'gpt-5.6-luna'
 export const AUTOMATIC_SCENARIOS = ['pressure', 'below-threshold', 'auto-disabled', 'overflow', 'other-error', 'overflow-bounded', 'overflow-no-progress', 'repeated-pressure', 'unshrinkable-tail']
-const checkpoint = session => session.deriveMessages().find(message => message.source.kind === 'plugin' && message.source.plugin === 'compact')
+const checkpoint = session => session.deriveMessages().find(message => isCompactCheckpointSource(message.source))
 const text = value => ({ type: 'message', id: 'msg_automatic', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: value, annotations: [] }] })
 function sse(item) {
   const events = [
@@ -71,7 +72,7 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
     await ctx.plugin(meter.default)
     await ctx.plugin(persistence.default, { root: join(root, scenario, 'sessions'), compression, packChunks: true })
     ctx.on('agent/request-error', async ({ failure }, next) => { failures.push(failure.code); return next() })
-    await ctx.plugin(compaction.default, { auto: scenario !== 'auto-disabled', thresholdRatio: 0.8, retainTokens: 0, compactionRetries: 0, maxOverflowRetries: 1 })
+    await ctx.plugin(compaction.default, { auto: scenario !== 'auto-disabled', thresholdRatio: 0.8, headroomTokens: 1024, maxTokens: 1024, retainTokens: 0, compactionRetries: 0, maxOverflowRetries: 1 })
     await ctx.plugin(plugin, { enableNativeCompaction: true, contextWindowOverrides: { [MODEL]: capacity } })
     const { agent } = await ctx.agents.create({ sessionId: sessions.SessionId(`automatic-${scenario}`), agentOptions: { provider: PROVIDER, model: MODEL, reasoningEffort: llm.ReasoningEffortId('low') } })
     const send = async value => {

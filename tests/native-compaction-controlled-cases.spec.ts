@@ -3,6 +3,7 @@ import { mkdtemp, rm, readFile, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CompactionId, compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { expect, it } from 'vitest'
 // @ts-expect-error Plain Node probe helper is not part of the shipped TypeScript API.
 import { parseDurableArgs, stagesForCase, claimControlledRun, controlledBaselinePrompt, extractAssistantTarget, assertControlledPayload, controlledFixtureItem, newAssistantText, jsonlContainsCheckpoint } from '../scripts/native-compaction-controlled-cases.mjs'
@@ -76,7 +77,7 @@ it('synthetic B derives its envelope from native assistant input and its answer 
   expect(() => controlledFixtureItem('resume', { input: [compact] }, 'assistant-origin')).toThrow('FIXTURE_CHECKPOINT_INVALID')
 })
 it('checks the physical JSONL checkpoint rather than merely finding a marker', () => {
-  const expected = { source: { kind: 'plugin', plugin: 'compact' }, content: [{ type: 'text', text: 'checkpoint' }] }
+  const expected = { source: compactCheckpointSource(CompactionId('fixture-compaction')), content: [{ type: 'text', text: 'checkpoint' }] }
   expect(jsonlContainsCheckpoint(`${JSON.stringify({ header: true })}\n${JSON.stringify({ data: { message: expected } })}\n`, expected)).toBe(true)
   expect(jsonlContainsCheckpoint(JSON.stringify({ marker: 'checkpoint' }), expected)).toBe(false)
   expect(jsonlContainsCheckpoint(JSON.stringify({ data: { ...expected, extra: true } }), expected)).toBe(false)

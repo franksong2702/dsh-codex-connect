@@ -11,7 +11,7 @@ import { runBoundedCommand } from './bounded-command.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 
 const JSON_SCHEMA_VERSION = 1
-const DEFAULT_DSH_VERSION = '0.1.2-rc.1'
+const DEFAULT_DSH_VERSION = '0.1.7-alpha.2'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const COMPATIBILITY = JSON.parse(await readFile(join(REPO_ROOT, 'compatibility.json'), 'utf8'))
@@ -125,7 +125,7 @@ function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersi
     throw new CompatibilityCheckError('doctor JSON exposed credential path or expiry data')
   }
   const compatibility = report['compatibility']
-  const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@earendil-works/pi-ai']
+  const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction', '@earendil-works/pi-ai']
   const acceptedStatuses = allowUndeclaredCanaryVersion ? ['compatible', 'unverified'] : ['compatible']
   if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || !acceptedStatuses.includes(compatibility?.['status'])) {
     throw new CompatibilityCheckError('doctor JSON did not report schemaVersion 1 and compatible runtime dependencies')

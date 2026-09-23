@@ -2,12 +2,12 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const presetRequire = createRequire(require.resolve('@deepseek-ai/dsh-agent-presets'))
+const defaultModelRequire = createRequire(require.resolve('@deepseek-ai/dsh-agent-default-model'))
 const includeRequire = createRequire(require.resolve('@deepseek-ai/cordis-plugin-include'))
 const attachmentRequire = createRequire(require.resolve('@deepseek-ai/dsh-attachment-local'))
 
 // Resolve the dependencies used by the host consumers, not separate test-only copies.
-const yaml = presetRequire('js-yaml') as {
+const yaml = defaultModelRequire('js-yaml') as {
   load(source: string, options?: { maxTotalMergeKeys: number }): unknown
 }
 interface ImagePipeline {
@@ -33,7 +33,7 @@ describe('host development dependency security regressions', () => {
   })
 
   it('retains ordinary YAML merges and uses one parser for both host consumers', () => {
-    expect(includeRequire.resolve('js-yaml')).toBe(presetRequire.resolve('js-yaml'))
+    expect(includeRequire.resolve('js-yaml')).toBe(defaultModelRequire.resolve('js-yaml'))
     expect(yaml.load('defaults: &defaults {model: astra}\nselected: {<<: *defaults, enabled: true}\n'))
       .toEqual({ defaults: { model: 'astra' }, selected: { model: 'astra', enabled: true } })
   })

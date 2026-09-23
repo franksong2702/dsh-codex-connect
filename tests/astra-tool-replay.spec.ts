@@ -58,7 +58,7 @@ it.each(['', 'Inspect the fixture.'])('preserves reasoning, phases, and parallel
     const prepared = await context.llm.prepareCall({ ...selection, reasoningEffort: ReasoningEffortId('high') })
     const assembler = new BlockAssembler()
     for await (const chunk of prepared.stream({ ...prepared.config, messages: history, tools, sessionId: 'fixture-session' as NonNullable<GenerateOptions['sessionId']> })) assembler.push(chunk)
-    history.push(JSON.parse(JSON.stringify(assembler.message({ kind: 'model', ...selection, replayState: assembler.replayState }))) as Message)
+    history.push(JSON.parse(JSON.stringify(assembler.message({ ...selection, replayState: assembler.replayState }))) as Message)
     return assembler
   }
   const first = await turn()
@@ -66,7 +66,8 @@ it.each(['', 'Inspect the fixture.'])('preserves reasoning, phases, and parallel
   const toolCalls = first.blocks().filter(block => block.type === 'tool-call')
   expect(toolCalls).toHaveLength(2)
   for (const call of [...toolCalls].reverse()) {
-    history.push(createMessage({ role: 'user', source: { kind: 'tool', callId: call.id }, content: [{ type: 'tool-result', toolCallId: call.id, content: [{ type: 'text', text: `value:${JSON.parse(call.arguments).key as string}` }] }] }))
+    history.push(createMessage({ role: 'tool', source: { kind: 'tool', callId: call.id }, toolCallId: call.id,
+      content: [{ type: 'text', text: `value:${JSON.parse(call.arguments).key as string}` }] }))
   }
   expect((await turn()).finish).toEqual({ kind: 'stop' })
   history.push(createMessage({ role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Confirm.' }] }))

@@ -138,7 +138,7 @@ describe('OpenAI Codex compaction request', () => {
       }),
       createUserMessage({
         content: [{ type: 'text', text: 'Summarize the conversation for compaction.' }],
-        source: { kind: 'plugin', plugin: 'compaction-basic' },
+        source: { kind: 'dsh-codex-connect', plugin: 'compaction-fixture' },
       }),
     ]
 
@@ -158,7 +158,7 @@ describe('OpenAI Codex compaction request', () => {
       sessionId: 'session-compaction' as never,
     })) assembler.push(chunk)
 
-    expect(assembler.message({ kind: 'model', provider: 'openai-codex', model: 'gpt-5.6-sol' }).content)
+    expect(assembler.message({ provider: 'openai-codex', model: 'gpt-5.6-sol' }).content)
       .toEqual([{ type: 'text', text: 'summary' }])
     if (request === undefined) throw new Error('Codex request was not captured')
     const captured = request as { url: string; init: RequestInit }

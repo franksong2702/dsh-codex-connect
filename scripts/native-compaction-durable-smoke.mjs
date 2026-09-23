@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { zstdDecompressSync } from 'node:zlib'
+import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { readVerifiedDurableRuntime } from './native-compaction-runtime.mjs'
 import { diagnoseRecall, describeRecallPayload } from './native-compaction-recall-diagnostics.mjs'
 import { parseDurableArgs, stagesForCase, claimControlledRun, controlledBaselinePrompt, extractAssistantTarget, assertControlledBaseline, assertControlledPayload, newAssistantText, jsonlContainsCheckpoint, controlledFixtureItem, corruptControlledPayload, ANCHOR_PROMPT, CONTINUATION_PROMPT } from './native-compaction-controlled-cases.mjs'
@@ -24,7 +25,7 @@ const safeError = error => /^[A-Z_]{1,80}$/u.test(error?.message ?? '') ? error.
 const finite = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 const sameModel = value => value === undefined || value === MODEL || /^gpt-5\.6-luna-\d{4}-\d{2}-\d{2}$/u.test(value)
 const authPath = () => join(process.env.CODEX_HOME?.trim() || join(homedir(), '.codex'), 'auth.json')
-const checkpoint = session => session.deriveMessages().find(message => message.source.kind === 'plugin' && message.source.plugin === 'compact')
+const checkpoint = session => session.deriveMessages().find(message => isCompactCheckpointSource(message.source))
 
 async function readLogin() {
   const handle = await open(authPath(), constants.O_RDONLY | constants.O_NOFOLLOW)
@@ -246,7 +247,7 @@ async function child(phase, root) {
         state.retained_input_digest = digest(JSON.stringify(nativeRetainedInput))
         ledger.checkpoint_observation = { retained_input_identical: true, target_in_retained_user: describeRecallPayload({ input: nativeRetainedInput }, state.label).user_contains_target }
       }
-      if (JSON.stringify(agent.session.deriveMessages().filter(message => message.source.kind !== 'plugin' || message.source.plugin !== 'compact')).toUpperCase().includes(state.label)) fail('LABEL_REMAINS_VISIBLE')
+      if (JSON.stringify(agent.session.deriveMessages().filter(message => !isCompactCheckpointSource(message.source))).toUpperCase().includes(state.label)) fail('LABEL_REMAINS_VISIBLE')
       await ctx.sessions.flush(agent.session)
       const files = (await readdir(join(root, 'sessions'), { recursive: true })).filter(path => path.endsWith('.jsonl'))
       if (files.length !== 1) fail('PERSISTED_SESSION_MISSING')
@@ -269,7 +270,7 @@ async function child(phase, root) {
     // Record restoration separately so a later recall failure does not erase it.
     ledger.restore_observation = { fresh_process_restored: true, checkpoint_identical: true, native_creation_disabled: true }
     await save(ledgerPath, ledger)
-    if (JSON.stringify(agent.session.deriveMessages().filter(message => message.source.kind !== 'plugin' || message.source.plugin !== 'compact')).toUpperCase().includes(state.label)) fail('LABEL_REMAINS_VISIBLE')
+    if (JSON.stringify(agent.session.deriveMessages().filter(message => !isCompactCheckpointSource(message.source))).toUpperCase().includes(state.label)) fail('LABEL_REMAINS_VISIBLE')
     const reply = await send(controlled ? CONTINUATION_PROMPT : 'What is the checkpoint label I asked you to remember? Return ONLY that label, not ACK. Do not invent a new label.')
     ledger.recall_diagnostic = diagnoseRecall(reply, state.label)
     ledger.provider_reply_diagnostic = typeof providerFinalReply === 'string' ? {

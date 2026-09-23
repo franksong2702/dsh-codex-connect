@@ -126,8 +126,7 @@ function renderNarrativeBlock(block: ContentBlock): string | undefined {
     case 'text': return block.text
     case 'image': return '[image attachment]'
     case 'reasoning':
-    case 'tool-call':
-    case 'tool-result': return undefined
+    case 'tool-call': return undefined
     default: return undefined
   }
 }
@@ -135,7 +134,6 @@ function renderNarrativeBlock(block: ContentBlock): string | undefined {
 function renderToolBlock(block: ContentBlock): string | undefined {
   switch (block.type) {
     case 'tool-call': return `call ${block.name} ${block.arguments}`
-    case 'tool-result': return `result ${String(block.toolCallId)} ${block.content.map(renderNarrativeBlock).filter(Boolean).join('\n')}`
     case 'text':
     case 'image':
     case 'reasoning': return undefined
@@ -152,10 +150,12 @@ function narrativeLabel(message: Message): string {
 function renderedEntries(messages: readonly Message[], tool: boolean): RenderedEntry[] {
   const budget = tool ? TOOL_ENTRY_BUDGET : MESSAGE_ENTRY_BUDGET
   return messages.flatMap((message, index) => {
-    const content = message.content
-      .map(tool ? renderToolBlock : renderNarrativeBlock)
-      .filter((value): value is string => value !== undefined && value.length > 0)
-      .join('\n')
+    const content = message.role === 'tool'
+      ? tool ? `result ${String(message.toolCallId)}${message.isError ? ' (error)' : ''} ${message.content.map(renderNarrativeBlock).filter(Boolean).join('\n')}` : ''
+      : message.content
+        .map(tool ? renderToolBlock : renderNarrativeBlock)
+        .filter((value): value is string => value !== undefined && value.length > 0)
+        .join('\n')
     if (content.length === 0) return []
     const bounded = truncateUtf8(`[${tool ? 'tool' : narrativeLabel(message)}]\n${content}`, budget)
     return [{ index, trustedUser: !tool && message.source.kind === 'user', ...bounded }]

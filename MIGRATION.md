@@ -1,5 +1,16 @@
 # Migrating from `dsh-codex`
 
+## Alpha 4.43 candidate: upgrade the Harness together
+
+This candidate targets DeepSeek Harness `0.1.7-alpha.2` only. Upgrade the Harness
+and its profile runtime first, then install the matching Codex Connect release;
+this candidate is not compatible with the previously declared `0.1.2-rc.1` or
+`0.1.5` hosts. Keep the existing `llm-openai-codex` row and OAuth store. The DSH
+settings lifecycle, message-source types, and native-compaction integration have
+changed, but the migration does not require signing in again or editing
+credentials. This candidate is not published; do not use a public install
+command until its exact package/host pair is verified and released.
+
 ## Next release candidate: public task orchestration paused
 
 Task-level automatic model selection and read-only delegation are being withheld

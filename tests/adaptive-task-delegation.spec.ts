@@ -60,7 +60,7 @@ async function setup(options: { compression?: 'none' | 'zstd'; persistence?: boo
   const ctx = new Context(); contexts.push(ctx)
   for (const plugin of [Llm, Sessions, Projection, AgentRegistry, Prompt, Tools]) await ctx.plugin(plugin)
   await ctx.plugin(AgentLoop, { agents: [] })
-  if (options.persistence !== false) await ctx.plugin(Persistence, { root: join(root, 'sessions'), compression: options.compression ?? 'none', packChunks: true })
+  if (options.persistence !== false) await ctx.plugin(Persistence, { root: join(root, 'sessions'), compression: options.compression ?? 'none' })
   const credentials = new OpenAICodexCredentialStore(join(root, '.synthetic-oauth.json'))
   const claim = Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'synthetic-delegation' } })).toString('base64url')
   await credentials.modify('openai-codex', async () => ({ type: 'oauth', access: `e30.${claim}.fixture`, refresh: 'fixture', accountId: 'synthetic-delegation', expires: Date.now() + 3600000 }))

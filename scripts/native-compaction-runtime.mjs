@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url'
 
 const DSH_PACKAGES = [
   'dsh-llm', 'dsh-llm-pi-ai', 'dsh-session', 'dsh-session-projection',
-  'dsh-system-prompt', 'dsh-tools', 'dsh-agent', 'dsh-agent-loop',
+  'dsh-system-prompt', 'dsh-tools', 'dsh-agent', 'dsh-agent-loop', 'dsh-compaction',
   'dsh-token-meter', 'dsh-compaction-basic', 'dsh-session-persistence-jsonl',
 ]
 export const DURABLE_RUNTIME_VERSIONS = Object.freeze({
-  '@deepseek-ai/cordis': '4.0.2',
-  ...Object.fromEntries(DSH_PACKAGES.map(name => [`@deepseek-ai/${name}`, '0.1.2-rc.1'])),
-  '@earendil-works/pi-ai': '0.84.4',
+  '@deepseek-ai/cordis': '4.0.4',
+  ...Object.fromEntries(DSH_PACKAGES.map(name => [`@deepseek-ai/${name}`, '0.1.7-alpha.2'])),
+  '@earendil-works/pi-ai': '0.85.1',
 })
 
 /** This probe is narrower than the plugin support matrix; mixed or new hosts fail closed. */

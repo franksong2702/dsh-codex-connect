@@ -69,7 +69,7 @@ async function fixture(config: CodexConnect.Config = { enableReserveFallback: tr
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   const plugin = await ctx.plugin(CodexConnect, config)
-  const agent = ctx.agentLoop.create(SessionId('reserve-fixture'), {
+  const agent = await ctx.agentLoop.create(SessionId('reserve-fixture'), {
     provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('max'), maxTokens: 2048,
   })
   const proposal: LlmCallConfig = { provider: 'openai-codex', model: 'gpt-6-astra', reasoningEffort: ReasoningEffortId('max'), maxTokens: 2048 }

@@ -164,6 +164,7 @@ describe('dsh-codex-connect CLI', () => {
         packages: {
           '@deepseek-ai/dsh-llm': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
           '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
+          '@deepseek-ai/dsh-compaction': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
           '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
         },
       },
@@ -230,6 +231,7 @@ describe('dsh-codex-connect CLI', () => {
         packages: {
           '@deepseek-ai/dsh-llm': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
           '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
+          '@deepseek-ai/dsh-compaction': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
           '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
         },
       },

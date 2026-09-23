@@ -116,6 +116,10 @@
     {
       "version": "0.1.0-alpha.4.36",
       "highlights": ["image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.43",
+      "highlights": ["runtime-compatibility"]
     }
   ]
 }

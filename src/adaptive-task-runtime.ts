@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/cordis-plugin-loader'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
@@ -35,13 +36,14 @@ function currentRoute(agent: Agent): TaskRoute | undefined {
 }
 function sameRoute(a: TaskRoute, b: TaskRoute): boolean { return a.model === b.model && a.effort === b.effort }
 function isFresh(agent: Agent): boolean {
-  return agent.status === 'idle' && !agent.inbox.hasPending && !agent.session.header.isSeeded && !agent.session.header.parentSession
+  return agent.status === 'idle' && agent.inbox.nextTurn.length === 0 && agent.inbox.nextStep.length === 0
+    && !agent.session.header.isSeeded && !agent.session.header.parentSession
     && !agent.session.snapshotEvents().some(event => event.type === 'request/header'
       || (event.type === 'user/message' && event.data.source.kind === 'user'))
 }
 const TASK_MARKER = 'dsh-codex-connect/task-grant'
 function hasTaskMarker(agent: Agent): boolean {
-  const marked = (message: { source: { kind: string; plugin?: string } }) => message.source.kind === 'plugin' && message.source.plugin === TASK_MARKER
+  const marked = (message: { source: { kind: string; plugin?: string } }) => message.source.kind === 'dsh-codex-connect' && message.source.plugin === TASK_MARKER
   return agent.session.snapshotEvents().some(event => (event.type === 'user/message' && marked(event.data))
     || (event.type === 'agent/inbox/spliced' && event.data.inserted.some(marked)))
 }
@@ -195,7 +197,7 @@ export class AdaptiveTaskRuntime {
           selectionSeq: selectionSeq(agent), portable: false, handoffSeq: -1, receipts: [{ id: command.operationId, digest }] }
       })
       if ((command.action === 'start' || command.action === 'resume') && !hasTaskMarker(agent)) {
-        agent.inject(createUserMessage({ source: { kind: 'plugin', plugin: TASK_MARKER },
+        agent.inject(createUserMessage({ source: { kind: 'dsh-codex-connect', plugin: TASK_MARKER },
           content: [{ type: 'text', text: 'This task has an explicit model-selection grant held by the host. This notice is not permission; the stored grant and live checks govern every change.' }] }))
       }
       if (command.action === 'start' || command.action === 'resume') {

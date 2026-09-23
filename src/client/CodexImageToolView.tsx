@@ -8,8 +8,8 @@ import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { PropsRuntime, Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import {
-  IconCheckOutline16,
-  IconCopyOutline16,
+  IconCheckOutlineRegular,
+  IconCopyOutlineRegular,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { decodeImagePresentationMeta, decodeImageResultContent } from '../image-presentation.ts'
@@ -244,7 +244,7 @@ function PromptPanel({ prompt, t }: { prompt: string; t: Translate<OpenAICodexSe
         onBlur={() => { setTooltipVisible(false) }}
         onClick={() => { void copy() }}
       >
-        {copyState === 'copied' ? <IconCheckOutline16 /> : <IconCopyOutline16 />}
+        {copyState === 'copied' ? <IconCheckOutlineRegular size={16} /> : <IconCopyOutlineRegular size={16} />}
       </button>
       {tooltipVisible ? <span id={tooltipId} role="tooltip" style={tooltipStyle}>{copyLabel}</span> : null}
       <pre style={promptText} tabIndex={0}>{prompt}</pre>
