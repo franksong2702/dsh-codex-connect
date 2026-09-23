@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
-export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-alpha.2'
+export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-rc.1'
 export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION] as const
 export const SUPPORTED_DSH_PLUGIN_API_RANGE = SUPPORTED_DSH_PLUGIN_API_VERSIONS.join(' || ')
 export const SUPPORTED_PI_AI_RANGE = '0.85.1'

@@ -11,7 +11,7 @@ import { runBoundedCommand } from './bounded-command.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 
 const JSON_SCHEMA_VERSION = 1
-const DEFAULT_DSH_VERSION = '0.1.7-alpha.2'
+const DEFAULT_DSH_VERSION = '0.1.7-rc.1'
 const UNDECLARED_CANARY_MODE = '1'
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const COMPATIBILITY = JSON.parse(await readFile(join(REPO_ROOT, 'compatibility.json'), 'utf8'))
@@ -154,8 +154,8 @@ function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersi
 export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
   const candidateDiagnostic = options.allowUndeclaredCanaryVersion === true && result.status === 1
     && commandFailureClassification(result, 'compatibility') !== 'infrastructure'
-  if (!candidateDiagnostic) requireSuccess('plugin doctor', result, 'compatibility')
-  if (candidateDiagnostic && result.stdout.trim() === '') {
+  if (result.status === 1 && result.stdout.trim() === ''
+    && commandFailureClassification(result, 'compatibility') !== 'infrastructure') {
     // A startup import error is not the doctor's expected version warning. Emit
     // only one package name already declared by this project, never raw stderr.
     const missing = [...result.stderr.matchAll(/Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^'\r\n]+)' imported from /gu)]
@@ -163,6 +163,7 @@ export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
       throw new CompatibilityCheckError(`plugin doctor failed before emitting JSON (error=ERR_MODULE_NOT_FOUND; package=${missing[0][1]}; exit=1)`)
     }
   }
+  if (!candidateDiagnostic) requireSuccess('plugin doctor', result, 'compatibility')
   const report = parseOneLineJson(result.stdout, 'plugin doctor')
   assertDoctorJson(report, dshHome, repoRoot, options)
   // Only a validated version warning explains the doctor's expected nonzero exit.

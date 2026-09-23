@@ -226,13 +226,13 @@ const candidateDoctor = {
     status: 'unverified',
     node: { status: 'compatible' },
     packages: Object.fromEntries(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction', '@earendil-works/pi-ai'].map(name => [name, {
-      supported: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-alpha.2',
-      installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-alpha.3',
+      supported: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.1',
+      installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.2',
       status: 'unverified',
     }])),
   },
 }
-const candidateDoctorOptions = { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.7-alpha.3' }
+const candidateDoctorOptions = { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.7-rc.2' }
 function doctorOutcome(report, options = candidateDoctorOptions, status = 1, stderr = '') {
   try {
     validateDoctorResult({ status, stdout: JSON.stringify(report), stderr }, '/fixture-home', '/fixture-repo', options)
@@ -246,11 +246,11 @@ assertContract('declared installation checks still reject unverified versions', 
 const declaredDoctor = structuredClone(candidateDoctor)
 declaredDoctor.compatibility.status = 'compatible'
 for (const [name, entry] of Object.entries(declaredDoctor.compatibility.packages)) {
-  entry.installed = name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-alpha.2'
+  entry.installed = name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.1'
   entry.status = 'compatible'
 }
 assertContract('declared compatible diagnostics still pass', doctorOutcome(declaredDoctor, {}, 0) === 'continue-runtime')
-assertContract('compatible JSON cannot explain a nonzero doctor exit', doctorOutcome(declaredDoctor, { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.7-alpha.2' }) === 1)
+assertContract('compatible JSON cannot explain a nonzero doctor exit', doctorOutcome(declaredDoctor, { allowUndeclaredCanaryVersion: true, dshVersion: '0.1.7-rc.1' }) === 1)
 assertContract('zero exit does not exempt an unverified report from declared validation', doctorOutcome(candidateDoctor, {}, 0) === 1)
 assertContract('malformed candidate JSON remains a compatibility failure', doctorOutcome(null) === 1)
 for (const [name, mutate] of [
@@ -301,6 +301,15 @@ assertContract('issue 211: missing declared peer is not masked by an empty JSON 
   missingPeerError instanceof CompatibilityCheckError
   && missingPeerError.message.includes('ERR_MODULE_NOT_FOUND')
   && missingPeerError.message.includes('@deepseek-ai/schemastery'))
+assertContract('issue 211: declared-host doctor reports only the missing declared peer', (() => {
+  try {
+    validateDoctorResult({ status: 1, stdout: '', stderr: missingPeerStderr }, '/fixture-home', '/fixture-repo', { dshVersion: '0.1.7-rc.1' })
+    return false
+  } catch (error) {
+    return error instanceof CompatibilityCheckError && error.message.includes('package=@deepseek-ai/schemastery')
+      && !error.message.includes('/fixture-home') && !error.message.includes('fixture-private-token')
+  }
+})())
 assertContract('issue 211: startup diagnosis does not expose other stderr or private paths',
   !missingPeerError.message.includes('/fixture-home') && !missingPeerError.message.includes('fixture-private-token'))
 for (const stderr of [

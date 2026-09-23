@@ -10,7 +10,7 @@ const DSH_PACKAGES = [
 ]
 export const DURABLE_RUNTIME_VERSIONS = Object.freeze({
   '@deepseek-ai/cordis': '4.0.4',
-  ...Object.fromEntries(DSH_PACKAGES.map(name => [`@deepseek-ai/${name}`, '0.1.7-alpha.2'])),
+  ...Object.fromEntries(DSH_PACKAGES.map(name => [`@deepseek-ai/${name}`, '0.1.7-rc.1'])),
   '@earendil-works/pi-ai': '0.85.1',
 })
 
