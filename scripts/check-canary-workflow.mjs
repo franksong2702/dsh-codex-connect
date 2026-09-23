@@ -39,9 +39,9 @@ for (const dependencies of [{}, { '@deepseek-ai/dsh-code-runtime': 'fixture', '@
 
 assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
 assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
-const matrixVersions = ['0.1.2-rc.1', '0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2']
+const matrixVersions = ['0.1.7-rc.1']
 const matrixReports = matrixVersions.map(dshVersion => ({
-  schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.33',
+  schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.43',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
   capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true,
@@ -49,34 +49,34 @@ const matrixReports = matrixVersions.map(dshVersion => ({
     images: { syntheticOnly: true, generated: 2, codeRuns: 1, dispatchEvent: 'tool/code-dispatch', originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true, realProviderRequests: 0 },
   },
 }))
-validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.33')
+validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.43')
 for (const [name, change] of [
   ['missing host', reports => reports.pop()],
   ['patched host represented as stock', reports => { reports[0].hostPackageCandidate = { package: '@deepseek-ai/dsh-plugin-manager' } }],
   ['missing enabled image proof', reports => { delete reports[0].runtime.images }],
   ['missing fork denial', reports => { reports[0].runtime.images.earlierForkDenied = false }],
   ['unexpected real image request', reports => { reports[0].runtime.images.realProviderRequests = 1 }],
-  ['different package bytes', reports => { reports[1].pluginArtifactSha256 = 'b'.repeat(64) }],
-  ['wrong host version', reports => { reports[1].dshVersion = reports[0].dshVersion }],
-  ['wrong plugin version', reports => { reports[1].pluginVersion = '0.1.0-alpha.4.32' }],
-  ['failed disposal', reports => { reports[1].runtime.disposalVerified = false }],
-  ['missing Reserve transitions', reports => { delete reports[1].runtime.reserveTransitionsVerified }],
-  ['missing native lifecycle', reports => { delete reports[1].runtime.nativeCompactionLifecycle }],
-  ['in-process-only native lifecycle', reports => { reports[1].runtime.nativeCompactionLifecycle.freshProcesses = 0 }],
-  ['missing native encoding', reports => { reports[1].runtime.nativeCompactionLifecycle.encodings.pop() }],
-  ['missing automatic trigger phase', reports => { reports[1].runtime.nativeCompactionLifecycle.phases.pop() }],
-  ['enabled native default', reports => { reports[1].capabilities.enableNativeCompaction = true }],
-  ['missing native default', reports => { delete reports[1].capabilities.enableNativeCompaction }],
-  ['unprepared model', reports => { reports[1].runtime.preparedModelCount = 7 }],
-  ['missing request preparation', reports => { delete reports[1].runtime.preparedModelCount }],
-  ['changed optional default', reports => { reports[1].capabilities.enableSearch = true }],
-  ['enabled Reserve default', reports => { reports[1].capabilities.enableReserveFallback = true }],
-  ['missing Reserve default', reports => { delete reports[1].capabilities.enableReserveFallback }],
+  ['invalid package bytes', reports => { reports[0].pluginArtifactSha256 = 'not-a-digest' }],
+  ['wrong host version', reports => { reports[0].dshVersion = '0.1.7-alpha.1' }],
+  ['wrong plugin version', reports => { reports[0].pluginVersion = '0.1.0-alpha.4.42' }],
+  ['failed disposal', reports => { reports[0].runtime.disposalVerified = false }],
+  ['missing Reserve transitions', reports => { delete reports[0].runtime.reserveTransitionsVerified }],
+  ['missing native lifecycle', reports => { delete reports[0].runtime.nativeCompactionLifecycle }],
+  ['in-process-only native lifecycle', reports => { reports[0].runtime.nativeCompactionLifecycle.freshProcesses = 0 }],
+  ['missing native encoding', reports => { reports[0].runtime.nativeCompactionLifecycle.encodings.pop() }],
+  ['missing automatic trigger phase', reports => { reports[0].runtime.nativeCompactionLifecycle.phases.pop() }],
+  ['enabled native default', reports => { reports[0].capabilities.enableNativeCompaction = true }],
+  ['missing native default', reports => { delete reports[0].capabilities.enableNativeCompaction }],
+  ['unprepared model', reports => { reports[0].runtime.preparedModelCount = 7 }],
+  ['missing request preparation', reports => { delete reports[0].runtime.preparedModelCount }],
+  ['changed optional default', reports => { reports[0].capabilities.enableSearch = true }],
+  ['enabled Reserve default', reports => { reports[0].capabilities.enableReserveFallback = true }],
+  ['missing Reserve default', reports => { delete reports[0].capabilities.enableReserveFallback }],
 ]) {
   const reports = structuredClone(matrixReports)
   change(reports)
   let rejected = false
-  try { validateDshMatrix(reports, matrixVersions, '0.1.0-alpha.4.33') } catch { rejected = true }
+  try { validateDshMatrix(reports, matrixVersions, '0.1.0-alpha.4.43') } catch { rejected = true }
   assertContract(`declared matrix rejects ${name}`, rejected)
 }
 
@@ -132,8 +132,8 @@ const candidateReport = overrides => ({
   status: 'pass',
   classification: 'candidate-compatible',
   channel: 'alpha',
-  supportedVersion: '0.1.2-rc.1',
-  candidateVersion: '0.1.2-rc.2',
+  supportedVersion: '0.1.7-rc.1',
+  candidateVersion: '0.1.7-alpha.3',
   stage: 'isolated-install',
   nodeVersion: 'v24.15.0',
   pluginCommit: null,
@@ -144,7 +144,7 @@ const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, tr
 assertContract(
   'a passing newer candidate becomes a preliminary validation tracker',
   passedTracking?.state === 'passed-needs-full-validation'
-    && passedTracking.marker === '<!-- dsh-canary:0.1.2-rc.2 -->'
+    && passedTracking.marker === '<!-- dsh-canary:0.1.7-alpha.3 -->'
     && passedTracking.label === 'enhancement'
     && passedTracking.body.includes('preliminary evidence only'),
 )

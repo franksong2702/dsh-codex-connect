@@ -1,5 +1,21 @@
 # Migrating from `dsh-codex`
 
+## Alpha 4.43 candidate: upgrade the Harness together
+
+This candidate targets DeepSeek Harness `0.1.7-rc.1` only. Upgrade the Harness
+and its profile runtime first, then install the matching Codex Connect release;
+this candidate is not compatible with the previously declared `0.1.2-rc.1` or
+`0.1.5` hosts. Keep the existing `llm-openai-codex` row and OAuth store. The DSH
+settings lifecycle, message-source types, and native-compaction integration have
+changed, but the migration does not require signing in again or editing
+credentials. This candidate is not published; do not use a public install
+command until its exact package/host pair is verified and released.
+DSH `0.1.7-rc.1` also changes the Session log format. Migration of an active
+task from the previously supported Harness versions to this target has not
+passed acceptance; do not treat same-host task recovery below as proof of a
+cross-Harness upgrade. Finish or safely stop active delegated tasks before
+changing the Harness until that migration is verified.
+
 ## Next release candidate: public task orchestration paused
 
 Task-level automatic model selection and read-only delegation are being withheld
@@ -9,7 +25,8 @@ published, installed, and loaded.
 
 A new ordinary conversation has no collaboration activation options. Cached
 clients cannot start, resume, upgrade or authorize delegation through the closed
-server route. Existing tasks keep authenticated readback, Stop and manual takeover;
+server route. On a supported same-version host, existing tasks keep authenticated
+readback, Stop and manual takeover;
 grants, original history and spent request counts are not deleted or reset.
 Manual model selection (including GPT-6/Astra), accounts, existing optional tools
 and native compaction settings are unchanged. Internal orchestration source and

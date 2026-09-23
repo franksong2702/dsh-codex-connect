@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { modelCatalogFixture } from '../model-catalog-fixture.ts'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { DEFAULT_OPENAI_CODEX_SETTINGS, resolveOpenAICodexSettings, type OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../../src/model-contract.ts'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
@@ -48,21 +48,22 @@ describe('Models account navigation', () => {
     } finally { popup.mockRestore() }
   })
   it('shares saved configuration with the plugin entry, discards modal drafts and contains keyboard focus', async () => {
-    let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
+    let snapshot: ConfigFormSnapshot<OpenAICodexSettingsConfig> = {
       status: 'ready', value: { ...DEFAULT_OPENAI_CODEX_SETTINGS }, base: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
       user: undefined, revision: 0, writable: true, mode: 'host',
     }
     const listeners = new Set<() => void>()
-    const mutate = vi.fn<SettingsScope<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
+    const mutate = vi.fn<ConfigForm<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
       if (revision !== snapshot.revision) throw new Error('stale revision')
       const next = { ...snapshot.value! }
       for (const op of ops) Object.assign(next, { [op.path[0]!]: op.op === 'set' ? op.value : undefined })
       snapshot = { ...snapshot, value: resolveOpenAICodexSettings(next), revision: (snapshot.revision ?? 0) + 1 }
       for (const listener of listeners) listener()
+      return true
     })
-    const scope: SettingsScope<OpenAICodexSettingsConfig> = {
+    const scope: ConfigForm<OpenAICodexSettingsConfig> = {
       getSnapshot: () => snapshot, subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
-      set: vi.fn(async () => { throw new Error('Use an atomic mutation') }), unset: vi.fn(), mutate,
+      set: vi.fn(async () => { throw new Error('Use an atomic mutation') }), unset: vi.fn(async () => true), mutate,
     }
     vi.stubGlobal('fetch', async (path: string) => Response.json(path === OPENAI_CODEX_MODEL_CATALOG_PATH
       ? modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }, { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])

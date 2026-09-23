@@ -16,7 +16,7 @@ for (const bad of [null, [], [baseline, baseline], ['invalid'], ['0.1.9'], [base
 assert.throws(() => declaredDshVersions({ dshPluginApi: { version: null, versions } }))
 for (const version of versions) assert.equal(classifyCandidateVersion(version, baseline, versions), 'declared')
 // Holes and future versions never inherit support from a later declared version.
-for (const version of ['0.1.5-alpha.2', '0.1.5-rc.3', '0.1.6', '9.9.9']) {
+for (const version of ['0.1.7-rc.2', '0.1.7', '0.1.8', '9.9.9']) {
   assert.equal(classifyCandidateVersion(version, baseline, versions), 'newer')
 }
 assert.equal(classifyCandidateVersion('0.1.1-rc.2', baseline, versions), 'not-newer')
@@ -59,13 +59,13 @@ try {
     if (previous === undefined) delete process.env.DSH_UNDECLARED_CANARY_VERSION
     else process.env.DSH_UNDECLARED_CANARY_VERSION = previous
   }
-  const hole = await fixture('0.1.5-alpha.2')
+  const hole = await fixture('0.1.7-rc.2')
   assert.equal(hole.report.classification, 'candidate-compatible')
   assert.equal(hole.report.declaredSupport, false)
-  assert.deepEqual(hole.child, { version: '0.1.5-alpha.2', undeclared: '1' })
+  assert.deepEqual(hole.child, { version: '0.1.7-rc.2', undeclared: '1' })
   const tracker = buildCanaryTrackingIssue(hole.report, undefined, metadata)
   assert.equal(tracker.state, 'passed-needs-full-validation')
-  assert.ok(tracker.body.includes('`0.1.5-rc.2`'))
+  assert.ok(tracker.body.includes('`0.1.7-rc.1`'))
   assert.ok(tracker.body.includes('Full user acceptance: not assessed'))
 
   for (const result of [await fixture('0.1.1-rc.2'), await fixture(versions.at(-1), 0, ['latest'])]) {

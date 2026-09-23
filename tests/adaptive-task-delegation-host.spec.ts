@@ -43,7 +43,7 @@ async function setup(ptc = true) {
   const ctx = new Context()
   contexts.push(ctx)
   for (const plugin of [Llm, Sessions, Projection, AgentRegistry]) await ctx.plugin(plugin)
-  await ctx.plugin(Prompt, { persona: 'parent persona needs {{cwd}}' })
+  await ctx.plugin(Prompt)
   await ctx.plugin(Tools)
   ctx.systemPrompt.context({ name: 'fixture:ambient', order: 0, text: 'unapproved ambient context' })
   await ctx.plugin(AgentLoop, { agents: [] })

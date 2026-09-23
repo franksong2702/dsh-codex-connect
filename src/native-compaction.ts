@@ -19,7 +19,8 @@ import {
   convertResponsesMessages,
   convertResponsesTools,
 } from '@earendil-works/pi-ai/api/openai-responses-shared'
-import type { GenerateOptions, Message, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, Message, RequestMessage, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { isCompactCheckpointSource as hasCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { prepareOpenAICodexBackendHeaders } from './backend-request-policy.ts'
 import { readRetryAfterMs } from './request-backoff.ts'
 
@@ -58,18 +59,18 @@ function isTextBlock(value: unknown): value is { type: 'text'; text: string } {
 }
 
 function isCompactCheckpointSource(message: Message): boolean {
-  const source = message.source as { kind?: unknown; plugin?: unknown }
-  return source.kind === 'plugin' && source.plugin === 'compact'
+  return isCompactCheckpointSourceValue(message.source)
 }
 
-function isCompactionInstructionMessage(message: Message | undefined): boolean {
-  if (message === undefined || message.role !== 'user') return false
-  const source = message.source as { kind?: unknown; plugin?: unknown }
-  return source.kind === 'plugin'
-    && source.plugin === 'dsh-compaction-basic'
-    && message.content.length === 1
+function isCompactCheckpointSourceValue(source: Message['source']): boolean {
+  return hasCompactCheckpointSource(source)
+}
+
+function isCompactionInstructionMessage(message: RequestMessage | undefined): boolean {
+  if (message === undefined || message.role !== 'user' || 'id' in message) return false
+  return message.content.length === 1
     && isTextBlock(message.content[0])
-    && message.content[0].text.trim().length > 0
+    && message.content[0].text.startsWith('You are now acting as a compaction engine for this AI coding assistant.')
 }
 
 function validateNativeItems(value: unknown): readonly unknown[] {
@@ -147,7 +148,7 @@ function prepareScopedRequest(options: GenerateOptions, enabled: boolean): { opt
   const expansions = new Map<string, readonly unknown[]>()
   let changed = false
   const messages = options.messages.map(message => {
-    const items = decodeNativeCompactionCheckpoint(message)
+    const items = 'id' in message && message.id !== undefined ? decodeNativeCompactionCheckpoint(message) : undefined
     if (items === undefined) return message
     const sentinel = checkpointSentinel()
     expansions.set(sentinel, items)

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties } from 'react'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
 import {
   isValidOpenAICodexContextWindowOverrides,
@@ -25,7 +25,7 @@ import {
 import type { OpenAICodexProxyProbeResult } from '../provider-proxy.ts'
 
 export interface OpenAICodexConfigurationProps {
-  scope?: SettingsScope<OpenAICodexSettingsConfig>
+  scope?: ConfigForm<OpenAICodexSettingsConfig>
   t: (key: OpenAICodexSettingsKey, params?: Record<string, unknown>) => string
   /** Select one settings module from the Plugin page. Omit to show local navigation. */
   activeModule?: OpenAICodexSettingsModule
@@ -408,7 +408,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
         throw new Error('Host settings are unavailable')
       }
       const changed = CONFIG_FIELDS.filter(field => !sameField(field, original[field], desired[field]))
-      const ops: Parameters<SettingsScope<OpenAICodexSettingsConfig>['mutate']>[0] = changed.map(field => {
+      const ops: Parameters<ConfigForm<OpenAICodexSettingsConfig>['mutate']>[0] = changed.map(field => {
         if (!sameField(field, original[field], current.value![field])
           && !sameField(field, desired[field], current.value![field])) {
           throw new Error(`Concurrent change to ${field}`)

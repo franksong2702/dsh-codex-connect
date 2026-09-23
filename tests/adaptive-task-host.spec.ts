@@ -61,7 +61,7 @@ async function setup(options: { persistence?: 'none' | 'zstd'; maxConcurrent?: n
   const ctx = new Context(); context = ctx
   for (const plugin of [Llm, Sessions, Projection, AgentRegistry, Prompt, Tools]) await ctx.plugin(plugin)
   await ctx.plugin(AgentLoop, { agents: [] })
-  if (options.persistence !== undefined) await ctx.plugin(Persistence, { root: join(root, 'sessions'), compression: options.persistence, packChunks: true })
+  if (options.persistence !== undefined) await ctx.plugin(Persistence, { root: join(root, 'sessions'), compression: options.persistence })
   const credentials = new OpenAICodexCredentialStore(join(root, '.synthetic-oauth.json'))
   const claim = Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'synthetic-only' } })).toString('base64url')
   await credentials.modify('openai-codex', async () => ({ type: 'oauth', access: `e30.${claim}.fixture`, refresh: 'fixture', accountId: 'synthetic-only', expires: Date.now() + 3600000 }))
@@ -297,7 +297,7 @@ it.each(['source-sequences', 'summary-range', 'checkpoint-content'] as const)('r
   f.setReply(() => answer('SUMMARY'))
   expect(await f.ctx.compaction.compactNow(f.agent, new AbortController().signal)).toBeTruthy()
   const snapshot = structuredClone(f.agent.session.snapshotEvents())
-  const checkpoint = snapshot.findLast(event => event.type === 'user/message' && event.data.source.kind === 'plugin' && event.data.source.plugin === 'compact')!
+  const checkpoint = snapshot.findLast(event => event.type === 'user/message' && event.data.source.kind === 'compact-checkpoint')!
   if (corruption === 'source-sequences' && checkpoint.type === 'user/message') {
     Object.assign(checkpoint, { sourceEventSeqs: [checkpoint.seq - 1] })
   } else if (corruption === 'summary-range') {

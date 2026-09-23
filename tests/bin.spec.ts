@@ -12,13 +12,21 @@ const mocked = vi.hoisted(() => ({
   authStatus: vi.fn(),
 }))
 
-vi.mock('../src/index.ts', () => ({
+vi.mock('../src/doctor.ts', () => ({
   diagnoseOpenAICodex: mocked.diagnose,
+  CODEX_CONNECT_VERSION: '0.1.0-alpha.4.43',
+}))
+vi.mock('../src/auth.ts', () => ({
   loginOpenAICodex: mocked.login,
   logoutOpenAICodex: mocked.logout,
-  migrateOpenAICodexSearchHistory: mocked.migrateHistory,
-  openAICodexAuthPath: mocked.authPath,
   openAICodexAuthStatus: mocked.authStatus,
+}))
+vi.mock('../src/history-migration.ts', () => ({
+  migrateOpenAICodexSearchHistory: mocked.migrateHistory,
+}))
+vi.mock('../src/store.ts', async importOriginal => ({
+  ...await importOriginal<typeof import('../src/store.ts')>(),
+  openAICodexAuthPath: mocked.authPath,
 }))
 
 import { run } from '../src/bin.ts'
@@ -81,8 +89,33 @@ describe('dsh-codex-connect CLI', () => {
     expect(output).toContain('dsh-codex-connect trust-origin <origin>')
     expect(output).toContain('dsh-codex-connect trusted-origins [--json]')
     expect(output).toContain('doctor         inspect secret-free')
+    expect(output).toContain('doctor [--install-anchor <absolute-dsh-package.json>]')
     expect(output).toContain('dsh-codex-connect migrate-history [--apply --confirm-stopped]')
     expect(output).toContain('migrate-history find or repair')
+  })
+
+  it('accepts an explicit DSH installation anchor only for doctor without echoing it', async () => {
+    const anchor = '/fixture/dsh/node_modules/@deepseek-ai/dsh/package.json'
+    mocked.diagnose.mockResolvedValue({
+      credentialFile: { state: 'missing' },
+      compatibility: { status: 'compatible' },
+      hints: [],
+      capabilities: { search: false, imageTool: false, imageGeneration: false },
+      version: 'test',
+      node: 'v22.19.0',
+    })
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation(chunk => { output += String(chunk); return true })
+    await expect(run(['doctor', '--json', '--install-anchor', anchor])).resolves.toBe(0)
+    expect(mocked.diagnose).toHaveBeenCalledWith({ compatibilityOptions: { installAnchor: anchor } })
+    expect(output).not.toContain(anchor)
+
+    mocked.diagnose.mockClear()
+    let error = ''
+    vi.spyOn(process.stderr, 'write').mockImplementation(chunk => { error += String(chunk); return true })
+    await expect(run(['doctor', '--install-anchor', 'relative/secret/package.json'])).resolves.toBe(1)
+    expect(mocked.diagnose).not.toHaveBeenCalled()
+    expect(error).not.toContain('relative/secret')
   })
 
   it('runs history migration with dry-run defaults and explicit apply confirmation', async () => {
@@ -164,6 +197,7 @@ describe('dsh-codex-connect CLI', () => {
         packages: {
           '@deepseek-ai/dsh-llm': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
           '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
+          '@deepseek-ai/dsh-compaction': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.2', status: 'compatible' },
           '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
         },
       },
@@ -230,6 +264,7 @@ describe('dsh-codex-connect CLI', () => {
         packages: {
           '@deepseek-ai/dsh-llm': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
           '@deepseek-ai/dsh-llm-pi-ai': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
+          '@deepseek-ai/dsh-compaction': { supported: '0.1.1-rc.2', installed: '0.1.1-rc.1', status: 'incompatible' },
           '@earendil-works/pi-ai': { supported: '0.82.1', installed: '0.82.1', status: 'compatible' },
         },
       },

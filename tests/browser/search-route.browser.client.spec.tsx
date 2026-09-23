@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { OpenAICodexConfiguration } from '../../src/client/OpenAICodexConfiguration.tsx'
 import { en, zh } from '../../src/client/locales.ts'
 import { DEFAULT_OPENAI_CODEX_SETTINGS, type OpenAICodexSettingsConfig } from '../../src/settings-contract.ts'
@@ -19,13 +19,13 @@ function translator(messages: Record<keyof typeof en, string>) {
   )
 }
 
-function configScope(): { scope: SettingsScope<OpenAICodexSettingsConfig>; mutate: ReturnType<typeof vi.fn> } {
-  let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
+function configScope(): { scope: ConfigForm<OpenAICodexSettingsConfig>; mutate: ReturnType<typeof vi.fn> } {
+  let snapshot: ConfigFormSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready', value: { ...DEFAULT_OPENAI_CODEX_SETTINGS },
     base: DEFAULT_OPENAI_CODEX_SETTINGS, user: undefined, revision: 1, writable: true, mode: 'host',
   }
   const listeners = new Set<() => void>()
-  const mutate = vi.fn<SettingsScope<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
+  const mutate = vi.fn<ConfigForm<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
       if (revision !== snapshot.revision) throw new Error('stale revision')
       const currentUser = typeof snapshot.user === 'object' && snapshot.user !== null ? snapshot.user : {}
       const changed = Object.fromEntries(ops.map(op => [op.path[0]!, op.op === 'set' ? op.value : undefined]))
@@ -36,6 +36,7 @@ function configScope(): { scope: SettingsScope<OpenAICodexSettingsConfig>; mutat
         revision: (snapshot.revision ?? 0) + 1,
       }
       for (const listener of listeners) listener()
+      return true
     })
   return {
     mutate,
@@ -43,7 +44,7 @@ function configScope(): { scope: SettingsScope<OpenAICodexSettingsConfig>; mutat
       getSnapshot: () => snapshot,
       subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
       set: vi.fn(async () => { throw new Error('Use an atomic mutation') }),
-      unset: vi.fn(), mutate,
+      unset: vi.fn(async () => true), mutate,
     },
   }
 }

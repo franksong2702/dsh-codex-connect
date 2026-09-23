@@ -17,7 +17,7 @@ const REJECTION_GUIDANCE = 'Do not attempt the same outcome through a workaround
 
 function notice(summary: string, text: string) {
   return createUserMessage({
-    source: { kind: 'plugin' as const, plugin: 'dsh-codex-connect', form: 'notice' as const, summary },
+    source: { kind: 'dsh-codex-connect' as const, plugin: 'auto-review', form: 'notice' as const, summary },
     content: [{ type: 'text' as const, text }],
   })
 }

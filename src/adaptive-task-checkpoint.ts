@@ -1,7 +1,7 @@
 /** Model-independent checkpoint provenance extracted from the M1 journal validation. */
 import { isDeepStrictEqual } from 'node:util'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-compaction/types'
+import { compactCheckpointSource, isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { foldSurface } from '@deepseek-ai/dsh-session/surface'
 import { decodeNativeCompactionCheckpoint } from './native-compaction.ts'
 import { taskFailure } from './adaptive-task-store.ts'
@@ -15,8 +15,8 @@ export function taskCheckpointValidator(session: Session, events: readonly Sessi
     || !isDeepStrictEqual(folded.nodes, [...session.surface.nodes])) fail()
   const replacements = new Map(folded.replacements.map(item => [item.seq, item]))
   return (event: SessionEvent) => {
-    if (event.type !== 'user/message' || event.data.source.kind !== 'plugin' || event.data.source.plugin !== 'compact') return fail()
-    const source = event.data.source as typeof event.data.source & { compactionId?: unknown; sourceCommandId?: unknown }
+    if (event.type !== 'user/message' || !isCompactCheckpointSource(event.data.source)) return fail()
+    const source = event.data.source
     const position = events.indexOf(event)
     const summary = events[position - 1]
     const starts = events.filter(item => item.type === 'compaction/start' && item.data.compactionId === source.compactionId)
@@ -31,8 +31,7 @@ export function taskCheckpointValidator(session: Session, events: readonly Sessi
       || end.data.sourceCommandId !== start.data.sourceCommandId || range === undefined) return fail()
     if (!Array.isArray(summary.data.rawOutput)
       || !isDeepStrictEqual(summary.data.summary, summary.data.rawOutput.filter(block => block.type === 'text'))
-      || !isDeepStrictEqual(source, { kind: 'plugin', plugin: 'compact', compactionId: start.data.compactionId,
-        ...(start.data.sourceCommandId === undefined ? {} : { sourceCommandId: start.data.sourceCommandId }) })
+      || !isDeepStrictEqual(source, compactCheckpointSource(start.data.compactionId, start.data.sourceCommandId))
       || !isDeepStrictEqual(summary.data.shadowedSeqs, range.shadowedSeqs)
       || summary.data.shadowedRange.start !== range.start || summary.data.shadowedRange.end !== range.end
       || !isDeepStrictEqual(event.sourceEventSeqs, [start.seq, summary.seq, ...range.shadowedSeqs])) return fail()

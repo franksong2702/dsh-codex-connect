@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { formatOpenAICodexResetAt, OpenAICodexSettings } from '../src/client/OpenAICodexSettings.tsx'
 import { OpenAICodexConfiguration } from '../src/client/OpenAICodexConfiguration.tsx'
 import { en, zh } from '../src/client/locales.ts'
@@ -60,11 +60,11 @@ function settingsScopeFixture(
   writable = true,
   initial: OpenAICodexSettingsConfig = DEFAULT_OPENAI_CODEX_SETTINGS,
 ): {
-  scope: SettingsScope<OpenAICodexSettingsConfig>
+  scope: ConfigForm<OpenAICodexSettingsConfig>
   set: ReturnType<typeof vi.fn>
   mutate: ReturnType<typeof vi.fn>
 } {
-  let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
+  let snapshot: ConfigFormSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready',
     value: { ...initial },
     base: { ...initial },
@@ -84,8 +84,9 @@ function settingsScopeFixture(
       revision: (snapshot.revision ?? 0) + 1,
     }
     for (const listener of listeners) listener()
+    return true
   })
-  const mutate = vi.fn<SettingsScope<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
+  const mutate = vi.fn<ConfigForm<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
     if (revision !== snapshot.revision) throw new Error('stale revision')
     const next = { ...snapshot.value! }
     for (const op of ops) {
@@ -94,6 +95,7 @@ function settingsScopeFixture(
     }
     snapshot = { ...snapshot, value: next, revision: (snapshot.revision ?? 0) + 1 }
     for (const listener of listeners) listener()
+    return true
   })
   return {
     set,
@@ -106,7 +108,7 @@ function settingsScopeFixture(
       },
       set,
       mutate,
-      unset: vi.fn(async () => undefined),
+      unset: vi.fn(async () => true),
     },
   }
 }

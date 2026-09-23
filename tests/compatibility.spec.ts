@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import {
   detectCompatibility,
   evaluateCompatibility,
@@ -13,7 +15,8 @@ import {
 const compatiblePackages = {
   '@deepseek-ai/dsh-llm': SUPPORTED_DSH_PLUGIN_API_VERSION,
   '@deepseek-ai/dsh-llm-pi-ai': SUPPORTED_DSH_PLUGIN_API_VERSION,
-  '@earendil-works/pi-ai': '0.84.4',
+  '@deepseek-ai/dsh-compaction': SUPPORTED_DSH_PLUGIN_API_VERSION,
+  '@earendil-works/pi-ai': '0.85.1',
 } as const
 
 describe('compatibility contract', () => {
@@ -26,7 +29,8 @@ describe('compatibility contract', () => {
       packages: {
         '@deepseek-ai/dsh-llm': { supported: SUPPORTED_DSH_PLUGIN_API_RANGE, installed: SUPPORTED_DSH_PLUGIN_API_VERSION, status: 'compatible' },
         '@deepseek-ai/dsh-llm-pi-ai': { supported: SUPPORTED_DSH_PLUGIN_API_RANGE, installed: SUPPORTED_DSH_PLUGIN_API_VERSION, status: 'compatible' },
-        '@earendil-works/pi-ai': { supported: SUPPORTED_PI_AI_RANGE, installed: '0.84.4', status: 'compatible' },
+        '@deepseek-ai/dsh-compaction': { supported: SUPPORTED_DSH_PLUGIN_API_RANGE, installed: SUPPORTED_DSH_PLUGIN_API_VERSION, status: 'compatible' },
+        '@earendil-works/pi-ai': { supported: SUPPORTED_PI_AI_RANGE, installed: '0.85.1', status: 'compatible' },
       },
     })
   })
@@ -35,21 +39,15 @@ describe('compatibility contract', () => {
     expect(JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))).toEqual(COMPATIBILITY_CONTRACT)
   })
 
-  it.each(['0.1.5-alpha.1', '0.1.5-rc.1', '0.1.5-rc.2'])('accepts the exact %s host pair without accepting mixed or future versions', version => {
-    const alpha = {
-      '@deepseek-ai/dsh-llm': version,
-      '@deepseek-ai/dsh-llm-pi-ai': version,
-      '@earendil-works/pi-ai': '0.85.1',
-    }
-    expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: alpha }).status).toBe('compatible')
+  it('accepts the exact declared host pair without inferring support for older or future versions', () => {
+    expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: compatiblePackages }).status).toBe('compatible')
     for (const packages of [
-      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.2-rc.1' },
-      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-rc.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.2' },
-      { ...alpha, '@earendil-works/pi-ai': '0.84.4' },
-      { ...compatiblePackages, '@earendil-works/pi-ai': '0.85.1' },
-      { ...alpha, '@earendil-works/pi-ai': '0.85.2' },
-      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-alpha.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-alpha.2' },
-      { ...alpha, '@deepseek-ai/dsh-llm': '0.1.5-rc.3', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.3' },
+      { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.1.5-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.2', '@deepseek-ai/dsh-compaction': '0.1.5-rc.2' },
+      { ...compatiblePackages, '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-alpha.1', '@deepseek-ai/dsh-compaction': '0.1.7-alpha.1' },
+      { ...compatiblePackages, '@deepseek-ai/dsh-compaction': '0.1.7-alpha.1' },
+      { ...compatiblePackages, '@earendil-works/pi-ai': '0.85.2' },
+      { ...compatiblePackages, '@earendil-works/pi-ai': '0.84.4' },
+      { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.1.7-alpha.3', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-alpha.3', '@deepseek-ai/dsh-compaction': '0.1.7-alpha.3' },
     ]) expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
   })
 
@@ -62,11 +60,8 @@ describe('compatibility contract', () => {
     expect(report.packages['@earendil-works/pi-ai']).toMatchObject({ installed: '0.82.2', status: 'unverified' })
   })
 
-  it('accepts stable pi-ai patch releases in the DSH caret range only', () => {
-    expect(evaluateCompatibility({
-      nodeVersion: 'v24.0.0',
-      packageVersions: { ...compatiblePackages, '@earendil-works/pi-ai': '0.84.2' },
-    }).status).toBe('compatible')
+  it('requires the pi-ai version paired with the declared DSH API', () => {
+    expect(evaluateCompatibility({ nodeVersion: 'v24.0.0', packageVersions: compatiblePackages }).status).toBe('compatible')
     expect(evaluateCompatibility({
       nodeVersion: 'v24.0.0',
       packageVersions: { ...compatiblePackages, '@earendil-works/pi-ai': '0.85.0' },
@@ -98,5 +93,39 @@ describe('compatibility contract', () => {
     })
     expect(report.status).toBe('compatible')
     expect(JSON.stringify(report)).not.toMatch(/node_modules|Users|token|credential/iu)
+  })
+
+  it('reads exact host package versions from an explicit DSH installation without loading peers', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'codex-connect-host-anchor-'))
+    const host = join(root, 'host')
+    const anchor = join(host, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+    try {
+      await mkdir(dirname(anchor), { recursive: true })
+      await writeFile(anchor, JSON.stringify({ name: '@deepseek-ai/dsh', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      for (const [name, version] of Object.entries(compatiblePackages)) {
+        const manifest = join(host, 'node_modules', name, 'package.json')
+        await mkdir(dirname(manifest), { recursive: true })
+        await writeFile(manifest, JSON.stringify({ name, version, exports: { import: './index.js' } }))
+      }
+      const report = await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })
+      expect(report.status).toBe('compatible')
+      expect(JSON.stringify(report)).not.toContain(root)
+
+      const llmManifest = join(host, 'node_modules', '@deepseek-ai', 'dsh-llm', 'package.json')
+      await writeFile(llmManifest,
+        JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: '0.1.7-rc.2' }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unverified')
+
+      await rm(llmManifest)
+      const unrelated = join(root, 'node_modules', '@deepseek-ai', 'dsh-llm', 'package.json')
+      await mkdir(dirname(unrelated), { recursive: true })
+      await writeFile(unrelated, JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unknown')
+
+      await writeFile(anchor, JSON.stringify({ name: 'not-dsh', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unknown')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

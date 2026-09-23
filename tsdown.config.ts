@@ -26,7 +26,6 @@ export default [
     entry: {
       index: 'src/index.ts',
       invariant: 'src/invariant.ts',
-      bin: 'src/bin.ts',
     },
     outDir: 'lib',
     format: ['esm'],
@@ -61,6 +60,20 @@ export default [
         '@deepseek-ai/dsh-tools',
         '@deepseek-ai/dsh-web',
       ],
+    },
+  },
+  {
+    entry: { bin: 'src/bin.ts' },
+    outDir: 'lib',
+    format: ['esm'],
+    platform: 'node',
+    target: 'es2024',
+    fixedExtension: false,
+    dts: false,
+    clean: false,
+    deps: { alwaysBundle: [/.*/u] },
+    define: {
+      __CODEX_CONNECT_VERSION__: JSON.stringify(PACKAGE_VERSION),
     },
   },
   {

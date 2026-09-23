@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { modelCatalogFixture } from '../model-catalog-fixture.ts'
@@ -22,10 +22,10 @@ function t(key: keyof typeof en, params: Record<string, unknown> = {}): string {
 }
 
 function settingsScopeFixture(initial: Partial<OpenAICodexSettingsConfig> = {}, writable = true): {
-  scope: SettingsScope<OpenAICodexSettingsConfig>
+  scope: ConfigForm<OpenAICodexSettingsConfig>
   mutate: ReturnType<typeof vi.fn>
 } {
-  let snapshot: SettingsScopeSnapshot<OpenAICodexSettingsConfig> = {
+  let snapshot: ConfigFormSnapshot<OpenAICodexSettingsConfig> = {
     status: 'ready',
     value: { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...initial },
     base: { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...initial },
@@ -35,7 +35,7 @@ function settingsScopeFixture(initial: Partial<OpenAICodexSettingsConfig> = {}, 
     mode: 'host',
   }
   const listeners = new Set<() => void>()
-  const mutate = vi.fn<SettingsScope<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
+  const mutate = vi.fn<ConfigForm<OpenAICodexSettingsConfig>['mutate']>(async (ops, revision) => {
     if (revision !== snapshot.revision) throw new Error('stale revision')
     const current = snapshot.value
     if (current === undefined) throw new Error('settings unavailable')
@@ -43,6 +43,7 @@ function settingsScopeFixture(initial: Partial<OpenAICodexSettingsConfig> = {}, 
     for (const op of ops) Object.assign(next, { [op.path[0]!]: op.op === 'set' ? op.value : undefined })
     snapshot = { ...snapshot, value: resolveOpenAICodexSettings(next), revision: (snapshot.revision ?? 0) + 1 }
     for (const listener of listeners) listener()
+    return true
   })
   return {
     mutate,
@@ -54,7 +55,7 @@ function settingsScopeFixture(initial: Partial<OpenAICodexSettingsConfig> = {}, 
       },
       set: vi.fn(async () => { throw new Error('Use an atomic mutation') }),
       mutate,
-      unset: vi.fn(async () => undefined),
+      unset: vi.fn(async () => true),
     },
   }
 }

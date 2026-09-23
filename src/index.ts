@@ -5,7 +5,9 @@
  */
 
 import './undici-runtime.ts'
-import type { Context, Fiber } from '@deepseek-ai/cordis'
+import './message-source.ts'
+import type { Context, Fiber, Volatile } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/cordis-plugin-loader'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
@@ -114,11 +116,11 @@ import {
   DEFAULT_OPENAI_CODEX_PROXY_URL,
   parseOpenAICodexImageModelHint,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
-  isValidOpenAICodexProxyUrl,
   resolveOpenAICodexProxyUrl,
   resolveOpenAICodexSettings,
   parseOpenAICodexContextWindowOverrides,
 } from './settings-contract.ts'
+import type { OpenAICodexSettingsInput } from './settings-contract.ts'
 
 export {
   decodeOpenAICodexSettings,
@@ -240,7 +242,7 @@ export const inject = ['llm']
 /** Branded Host settings namespace for Codex Connect capability configuration. */
 export const OPENAI_CODEX_SETTINGS_NS = OPENAI_CODEX_SETTINGS_NAMESPACE
 
-/** Composite model and standalone-search configuration. */
+/** Plain configuration accepted by direct Cordis composition and unit tests. */
 export interface Config {
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number
@@ -284,28 +286,66 @@ export interface Config {
   searchMaxOutputTokens?: number
 }
 
-export const Config: z<Config> = z.object({
+function configValue<T>(value: T | Volatile<T> | undefined): T | undefined {
+  return value !== null && typeof value === 'object' && 'get' in value
+    ? value.get() as T | undefined
+    : value as T | undefined
+}
+
+function parseSettingsContextWindowOverrides(
+  value: Record<string, number | null> | null | undefined,
+): Record<string, number | null> | null | undefined {
+  if (value === null || value === undefined) return value
+  const parsed = parseOpenAICodexContextWindowOverrides(value)
+  assertOpenAICodexContextWindowOverrides(parsed, openAICodexModelCatalog())
+  return parsed
+}
+
+const configSchema = z.object({
   oauthTimeoutMs: z.number().step(1).min(1_000).max(1_800_000).default(OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS),
-  models: z.union([z.const(undefined), z.array(z.string())]),
-  enableProxy: z.boolean().default(false),
-  proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL),
+  models: z.union([z.const(undefined), z.array(z.string())]).volatile(),
+  enableProxy: z.boolean().default(false).volatile(),
+  proxyUrl: z.string().default(DEFAULT_OPENAI_CODEX_PROXY_URL).volatile(),
   contextWindowOverrides: z.transform(
-    z.union([z.const(undefined), z.dict(z.union([z.const(null), z.number()]))]),
-    parseOpenAICodexContextWindowOverrides,
-  ),
-  enableSearch: z.boolean().default(false),
-  enableReserveFallback: z.boolean().default(false),
-  enableNativeCompaction: z.boolean().default(false),
-  enableImageTool: z.boolean().default(false),
-  enableImageGeneration: z.boolean().default(false),
-  imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default(''),
-  autoReviewDisclosureAcknowledged: z.boolean().default(false),
-  enableAutoReview: z.boolean().default(false),
-  searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL),
-  searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE),
-  searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE),
-  searchMaxOutputTokens: z.number().step(1).min(1).default(DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS),
+    z.union([z.const(undefined), z.const(null), z.dict(z.union([z.const(null), z.number()]))]),
+    parseSettingsContextWindowOverrides,
+  ).volatile(),
+  enableSearch: z.boolean().default(false).volatile(),
+  enableReserveFallback: z.boolean().default(false).volatile(),
+  enableNativeCompaction: z.boolean().default(false).volatile(),
+  enableImageTool: z.boolean().default(false).volatile(),
+  enableImageGeneration: z.boolean().default(false).volatile(),
+  imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default('').volatile(),
+  autoReviewDisclosureAcknowledged: z.boolean().default(false).volatile(),
+  enableAutoReview: z.boolean().default(false).volatile(),
+  searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL).volatile(),
+  searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE).volatile(),
+  searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE).volatile(),
+  searchMaxOutputTokens: z.number().step(1).min(1).default(DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS).volatile(),
 })
+
+/** Runtime configuration exposes each editable field through Cordis's public Volatile type. */
+export interface VolatileConfig {
+  oauthTimeoutMs: number
+  models: Volatile<string[] | undefined>
+  enableProxy: Volatile<boolean>
+  proxyUrl: Volatile<string>
+  contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>
+  enableSearch: Volatile<boolean>
+  enableReserveFallback: Volatile<boolean>
+  enableNativeCompaction: Volatile<boolean>
+  enableImageTool: Volatile<boolean>
+  enableImageGeneration: Volatile<boolean>
+  imageModelHint: Volatile<string>
+  autoReviewDisclosureAcknowledged: Volatile<boolean>
+  enableAutoReview: Volatile<boolean>
+  searchModel: Volatile<string>
+  searchMode: Volatile<OpenAICodexSearchMode>
+  searchContextSize: Volatile<OpenAICodexSearchContextSize>
+  searchMaxOutputTokens: Volatile<number>
+}
+
+export const Config: z<Config, VolatileConfig> = configSchema
 
 /**
  * Register the `openai-codex` LLM route with one provider-native OAuth store.
@@ -314,14 +354,22 @@ export const Config: z<Config> = z.object({
  * @param ctx - plugin context carrying the LLM registry plus optional services.
  * @param config - capability gates and standalone-search tuning.
  */
-export function apply(ctx: Context, config: Config): void {
+export function apply(ctx: Context, config: Config | VolatileConfig): void {
   const catalog = openAICodexModelCatalog()
-  const validateSettings = (value: Config): void => {
+  const current = (): OpenAICodexSettingsInput => Object.fromEntries(Object.entries({
+    models: configValue(config.models), enableProxy: configValue(config.enableProxy), proxyUrl: configValue(config.proxyUrl),
+    contextWindowOverrides: configValue(config.contextWindowOverrides), enableSearch: configValue(config.enableSearch),
+    enableReserveFallback: configValue(config.enableReserveFallback), enableNativeCompaction: configValue(config.enableNativeCompaction),
+    enableImageTool: configValue(config.enableImageTool), enableImageGeneration: configValue(config.enableImageGeneration),
+    imageModelHint: configValue(config.imageModelHint), autoReviewDisclosureAcknowledged: configValue(config.autoReviewDisclosureAcknowledged),
+    enableAutoReview: configValue(config.enableAutoReview), searchModel: configValue(config.searchModel), searchMode: configValue(config.searchMode),
+    searchContextSize: configValue(config.searchContextSize), searchMaxOutputTokens: configValue(config.searchMaxOutputTokens),
+  }).filter(([, value]) => value !== undefined)) as OpenAICodexSettingsInput
+  const validateSettings = (value: OpenAICodexSettingsInput): void => {
     resolveOpenAICodexSettings(value)
     assertOpenAICodexContextWindowOverrides(value.contextWindowOverrides ?? undefined, catalog)
   }
-  validateSettings(config)
-  let current = () => config
+  validateSettings(current())
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
   let taskRuntime: AdaptiveTaskControlRuntime | undefined
@@ -393,7 +441,8 @@ export function apply(ctx: Context, config: Config): void {
     ),
   )
   ctx.inject(['webServer'], webCtx => {
-    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl, config.oauthTimeoutMs, quota)
+    registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl,
+      configValue(config.oauthTimeoutMs) ?? OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS, quota)
     registerOpenAICodexProxyRoutes(webCtx, trustedOrigins, proxyManager)
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
     registerOpenAICodexModelCatalogRoute(webCtx, openAICodexModelCatalog, trustedOrigins)
@@ -543,28 +592,21 @@ export function apply(ctx: Context, config: Config): void {
     await proxyManager.dispose()
   }, 'dsh-codex-connect: optional capability lifecycle')
 
-  ctx.inject(['settings'], (settingsCtx) => {
-    settingsCtx.settings.installSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
-      validate(value) {
-        validateSettings(value)
-        if (value.enableProxy === true && !isValidOpenAICodexProxyUrl(value.proxyUrl)) {
-          throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
-        }
-      },
-      setSource(source) { current = source },
-      onChange() {
-        quota.invalidate()
-        const proxyIsActive = resolveProviderProxyUrl() !== undefined
-        if (proxyWasActive && !proxyIsActive) {
-          void proxyManager.deactivate().catch((error: unknown) => {
-            ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
-            ctx.logger.error(error)
-          })
-        }
-        proxyWasActive = proxyIsActive
-        scheduleCapabilities()
-      },
-    })
+  ctx.on('loader/volatile-update', () => {
+    quota.invalidate()
+    const proxyIsActive = resolveProviderProxyUrl() !== undefined
+    if (proxyWasActive && !proxyIsActive) {
+      void proxyManager.deactivate().catch((error: unknown) => {
+        ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
+        ctx.logger.error(error)
+      })
+    }
+    proxyWasActive = proxyIsActive
+    scheduleCapabilities()
+  })
+  ctx.inject(['settings'], settingsCtx => {
+    settingsCtx.effect(() => settingsCtx.settings.configure({ auto: false }, ctx.fiber),
+      'dsh-codex-connect: custom settings page policy')
   })
   scheduleCapabilities()
 }

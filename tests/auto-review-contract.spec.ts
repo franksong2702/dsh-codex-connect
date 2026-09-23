@@ -69,7 +69,7 @@ describe('Auto-review action and context contract', () => {
   it('labels trust, excludes reasoning, and reports bounded omissions', () => {
     const messages: Message[] = [
       message({ kind: 'user' }, [{ type: 'text', text: 'trusted request' }], 'user'),
-      message({ kind: 'plugin', plugin: 'fixture', form: 'notice', summary: 'fixture' }, [{ type: 'text', text: 'untrusted plugin text' }], 'plugin'),
+      message({ kind: 'dsh-codex-connect', plugin: 'fixture' }, [{ type: 'text', text: 'untrusted plugin text' }], 'plugin'),
       message({ kind: 'model', provider: 'openai-codex', model: 'fixture' }, [
         { type: 'reasoning', text: 'hidden chain of thought' },
         { type: 'text', text: 'visible assistant text' },

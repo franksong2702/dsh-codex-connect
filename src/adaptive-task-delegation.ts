@@ -5,6 +5,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-api-session-controller'
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { RequestMessage } from '@deepseek-ai/dsh-llm'
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { ADAPTIVE_TASK_TOOL, allowsTaskRoute, taskRecord, taskRoute } from './adaptive-task-contract.ts'
 import type { TaskRoute } from './adaptive-task-contract.ts'
@@ -303,10 +304,11 @@ export class AdaptiveTaskDelegation {
       const results = parent.session.snapshotEvents().filter(event => event.type === 'tool/result' && event.data.message.source.callId === call.data.callId)
       if (results.length !== 1 || results[0]!.type !== 'tool/result') { missing(); continue }
       const result = results[0]!
-      const block = result.data.message.content[0]
+      const message = result.data.message
+      const block = message.content[0]
       if (result.data.turn !== call.data.turn || result.data.step !== call.data.step || result.data.error !== undefined
-        || block.toolCallId !== call.data.callId || block.isError === true || block.content.length !== 1
-        || block.content[0]?.type !== 'text' || block.content[0].text !== expected) { missing(); continue }
+        || message.role !== 'tool' || message.toolCallId !== call.data.callId || message.isError === true || block === undefined
+        || message.content.length !== 1 || block.type !== 'text' || block.text !== expected) { missing(); continue }
       if (!await this.sessions.flush(parent.session)) { missing(); continue }
       if (run.delivery !== 'recorded') await this.options.ledger.delivery(root.identity, run.id, doc.runtime, run.delivery as 'pending' | 'unknown', 'recorded')
     }

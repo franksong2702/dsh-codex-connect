@@ -29,7 +29,7 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
   assert.ok(/^[a-f0-9]{64}$/u.test(report.bundleDigest ?? ''))
   assert.equal(report.bundleDigest, bundleDigest)
   assert.ok(/^v(?:22|24)\./u.test(report.node))
-  assert.ok(versions.length === 4 && new Set(versions).size === 4)
+  assert.ok(versions.length > 0 && new Set(versions).size === versions.length)
   assert.equal(report.reports.length, versions.length)
   const expected = PHASE2_REQUIRED_CASES
   const pids = new Set()

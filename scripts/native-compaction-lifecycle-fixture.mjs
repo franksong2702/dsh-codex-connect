@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
+import { isCompactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 
 const PROVIDER = 'openai-codex'
 const MODEL = 'gpt-6-astra'
@@ -14,7 +15,7 @@ const REASONING = 'synthetic-encrypted-reasoning-after-compaction'
 const MARKER = 'dsh-codex-connect-native-compaction-v1'
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const nativeItems = wire => wire.input.filter(item => item.type === 'compaction')
-const checkpoint = session => session.deriveMessages().find(message => message.source.kind === 'plugin' && message.source.plugin === 'compact')
+const checkpoint = session => session.deriveMessages().find(message => isCompactCheckpointSource(message.source))
 
 function response(items, text, terminalStatus = 'completed') {
   const events = items.flatMap((item, output_index) => [

@@ -13,9 +13,9 @@ import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import Compaction from '@deepseek-ai/dsh-compaction-basic'
 import Persistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SettingsProvider, { type SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import { afterEach, expect, it, vi } from 'vitest'
 import * as plugin from '../src/index.ts'
+import { loadSettingsPlugin } from './support/settings-loader-fixture.ts'
 
 const MODEL = 'gpt-5.6-luna'
 const NS = plugin.OPENAI_CODEX_SETTINGS_NS
@@ -35,17 +35,6 @@ function sse(item: Record<string, unknown>): Response {
 async function fixture(initial: Record<string, unknown> = {}, auto?: boolean) {
   root = await mkdtemp(join(tmpdir(), 'codex-native-setting-'))
   vi.stubEnv('DSH_HOME', join(root, 'synthetic-home'))
-  const document: Record<string, Record<string, unknown>> = { [NS]: structuredClone(initial) }
-  class StoredSettings extends SettingsProvider {
-    readonly writable = true
-    failNext = false
-    protected load() { return Promise.resolve(structuredClone(document)) }
-    protected persist(namespace: SettingsNamespace, section: Record<string, unknown>) {
-      if (this.failNext) { this.failNext = false; return Promise.reject(new Error('fixture persistence failure')) }
-      document[namespace] = structuredClone(section)
-      return Promise.resolve()
-    }
-  }
   let history = true
   let nativeCount = 0
   const wires: Wire[] = []
@@ -80,14 +69,23 @@ async function fixture(initial: Record<string, unknown> = {}, auto?: boolean) {
   await runtime.plugin(Agents)
   await runtime.plugin(AgentLoop, { agents: [] })
   await runtime.plugin(TokenMeter)
-  await runtime.plugin(Persistence, { root: join(root, 'sessions'), compression: 'none', packChunks: true })
-  await runtime.plugin(Compaction, { ...(auto === undefined ? {} : { auto }), thresholdRatio: 0.8, retainTokens: 0, compactionRetries: 0, maxOverflowRetries: 0 })
-  await runtime.plugin(StoredSettings)
-  await runtime.plugin(plugin, { models: [MODEL], contextWindowOverrides: { [MODEL]: 8192 } })
-  const settings = runtime.settings as StoredSettings
+  await runtime.plugin(Persistence, { root: join(root, 'sessions'), compression: 'none' })
+  await runtime.plugin(Compaction, {
+    ...(auto === undefined ? {} : { auto }),
+    thresholdRatio: 0.8,
+    headroomTokens: 1_024,
+    maxTokens: 1_024,
+    retainTokens: 0,
+    compactionRetries: 0,
+    maxOverflowRetries: 0,
+  })
+  const { editor } = await loadSettingsPlugin(runtime, root, 'dsh-codex-connect', plugin, {
+    models: [MODEL], contextWindowOverrides: { [MODEL]: 8192 }, ...initial,
+  })
+  const settings = runtime.settings
   const resolved = () => plugin.decodeOpenAICodexSettings(settings.describe().find(entry => entry.ns === NS)?.value)!
   const exercise = async (name: string) => {
-    const { agent } = await runtime.agents.create({ sessionId: SessionId(name), agentOptions: { provider: PROVIDER, model: MODEL, reasoningEffort: ReasoningEffortId('low') } })
+    const { agent } = await runtime.agents.create({ sessionId: SessionId(name), agentOptions: { provider: PROVIDER, model: MODEL, reasoningEffort: ReasoningEffortId('low'), maxTokens: 1_024 } })
     const send = async (text: string) => {
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }))
       await agent.whenIdle()
@@ -103,7 +101,8 @@ async function fixture(initial: Record<string, unknown> = {}, auto?: boolean) {
     await send('Continue the synthetic work.')
     return { agent, send }
   }
-  return { runtime, settings, resolved, exercise, wires, nativeCount: () => nativeCount, stored: () => document[NS] }
+  return { runtime, settings, editor, resolved, exercise, wires, nativeCount: () => nativeCount,
+    stored: () => settings.describe().find(entry => entry.ns === NS)?.value }
 }
 
 afterEach(async () => {
@@ -121,7 +120,7 @@ it('requires a committed opt-in, uses automatic host triggers, and preserves rep
   expect(before.enableNativeCompaction).toBe(false)
   await f.exercise('default-off')
   expect(f.nativeCount()).toBe(0)
-  f.settings.failNext = true
+  f.editor.failNext = true
   await expect(f.settings.mutate(NS, [{ op: 'set', path: ['enableNativeCompaction'], value: true }])).rejects.toThrow('fixture persistence failure')
   expect(f.resolved()).toEqual(before)
   await f.exercise('failed-save-still-off')

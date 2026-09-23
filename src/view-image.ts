@@ -156,7 +156,7 @@ export function viewImageTool(ctx: Context): ToolDefinition {
       if (exec.parent !== undefined) {
         exec.deferContext(createUserMessage({
           content: contentOf(value),
-          source: { kind: 'plugin', plugin: 'dsh-codex-connect' },
+          source: { kind: 'dsh-codex-connect', plugin: 'view-image' },
         }))
       }
       return value

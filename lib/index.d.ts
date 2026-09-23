@@ -1,8 +1,18 @@
 import z from "@deepseek-ai/schemastery";
 import { AuthInteraction, Credential, CredentialInfo, CredentialStore, OAuthCredential } from "@earendil-works/pi-ai";
-import { Context, Service } from "@deepseek-ai/cordis";
+import { Context, Service, Volatile } from "@deepseek-ai/cordis";
 import "@deepseek-ai/dsh-tools";
 import { WebSearchProvider, WebSearchRequest, WebSearchResult } from "@deepseek-ai/dsh-web";
+//#region src/message-source.d.ts
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'dsh-codex-connect': {
+      kind: 'dsh-codex-connect';
+      plugin: string;
+    };
+  }
+}
+//#endregion
 //#region src/account-profile.d.ts
 type OpenAICodexAccountProfileSource = 'oauth' | 'generated';
 //#endregion
@@ -286,13 +296,13 @@ export declare const IMAGE_GENERATE_TOOL_NAME = "codex_connect_image_generate";
 //#region src/compatibility.d.ts
 export declare const COMPATIBILITY_SCHEMA_VERSION: 1;
 export declare const SUPPORTED_NODE_RANGE = "^22.19.0 || >=24.0.0";
-export declare const SUPPORTED_DSH_PLUGIN_API_VERSION = "0.1.2-rc.1";
-export declare const SUPPORTED_DSH_PLUGIN_API_VERSIONS: readonly ["0.1.2-rc.1", "0.1.5-alpha.1", "0.1.5-rc.1", "0.1.5-rc.2"];
+export declare const SUPPORTED_DSH_PLUGIN_API_VERSION = "0.1.7-rc.1";
+export declare const SUPPORTED_DSH_PLUGIN_API_VERSIONS: readonly ["0.1.7-rc.1"];
 export declare const SUPPORTED_DSH_PLUGIN_API_RANGE: string;
-export declare const SUPPORTED_PI_AI_RANGE = "^0.84.2 || 0.85.1";
+export declare const SUPPORTED_PI_AI_RANGE = "0.85.1";
 export declare const PI_AI_PACKAGE = "@earendil-works/pi-ai";
-export declare const DSH_PLUGIN_API_PACKAGES: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
-export declare const COMPATIBILITY_PACKAGES: readonly ["@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@earendil-works/pi-ai"];
+export declare const DSH_PLUGIN_API_PACKAGES: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-compaction", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
+export declare const COMPATIBILITY_PACKAGES: readonly ["@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-compaction", "@earendil-works/pi-ai"];
 type CompatibilityPackageName = (typeof COMPATIBILITY_PACKAGES)[number];
 /** Version metadata proves a declared match, not behavioral failure for an untested package. */
 type CompatibilityStatus = 'compatible' | 'unverified' | 'incompatible' | 'unknown';
@@ -325,6 +335,8 @@ interface CompatibilityEvaluationInput {
 interface CompatibilityDetectionOptions extends CompatibilityEvaluationInput {
   /** Test seam for package metadata resolution; no package paths are returned. */
   readPackageVersion?: (name: CompatibilityPackageName) => string | null | undefined | Promise<string | null | undefined>;
+  /** Explicit package.json of the DSH installation owning a standalone CLI invocation. */
+  installAnchor?: string;
 }
 /** Public contract data mirrored by compatibility.json without importing JSON at runtime. */
 export declare const COMPATIBILITY_CONTRACT: {
@@ -333,13 +345,13 @@ export declare const COMPATIBILITY_CONTRACT: {
     readonly node: "^22.19.0 || >=24.0.0";
   };
   readonly dshPluginApi: {
-    readonly version: "0.1.2-rc.1";
-    readonly versions: readonly ["0.1.2-rc.1", "0.1.5-alpha.1", "0.1.5-rc.1", "0.1.5-rc.2"];
-    readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
+    readonly version: "0.1.7-rc.1";
+    readonly versions: readonly ["0.1.7-rc.1"];
+    readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-compaction", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-invariants", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
   };
   readonly piAi: {
     readonly package: "@earendil-works/pi-ai";
-    readonly version: "^0.84.2 || 0.85.1";
+    readonly version: "0.85.1";
   };
 };
 /** Evaluate a captured set of versions without touching the filesystem. */
@@ -791,7 +803,7 @@ export declare const name = "llm-openai-codex";
 export declare const inject: string[];
 /** Branded Host settings namespace for Codex Connect capability configuration. */
 export declare const OPENAI_CODEX_SETTINGS_NS = "llm-openai-codex";
-/** Composite model and standalone-search configuration. */
+/** Plain configuration accepted by direct Cordis composition and unit tests. */
 export interface Config {
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number;
@@ -834,7 +846,27 @@ export interface Config {
   /** Maximum generated tokens returned by the standalone search endpoint. */
   searchMaxOutputTokens?: number;
 }
-export declare const Config: z<Config>;
+/** Runtime configuration exposes each editable field through Cordis's public Volatile type. */
+export interface VolatileConfig {
+  oauthTimeoutMs: number;
+  models: Volatile<string[] | undefined>;
+  enableProxy: Volatile<boolean>;
+  proxyUrl: Volatile<string>;
+  contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>;
+  enableSearch: Volatile<boolean>;
+  enableReserveFallback: Volatile<boolean>;
+  enableNativeCompaction: Volatile<boolean>;
+  enableImageTool: Volatile<boolean>;
+  enableImageGeneration: Volatile<boolean>;
+  imageModelHint: Volatile<string>;
+  autoReviewDisclosureAcknowledged: Volatile<boolean>;
+  enableAutoReview: Volatile<boolean>;
+  searchModel: Volatile<string>;
+  searchMode: Volatile<OpenAICodexSearchMode>;
+  searchContextSize: Volatile<OpenAICodexSearchContextSize>;
+  searchMaxOutputTokens: Volatile<number>;
+}
+export declare const Config: z<Config, VolatileConfig>;
 /**
  * Register the `openai-codex` LLM route with one provider-native OAuth store.
  * Search and image tooling are added only when their config flags are true.
@@ -842,6 +874,6 @@ export declare const Config: z<Config>;
  * @param ctx - plugin context carrying the LLM registry plus optional services.
  * @param config - capability gates and standalone-search tuning.
  */
-export declare function apply(ctx: Context, config: Config): void;
+export declare function apply(ctx: Context, config: Config | VolatileConfig): void;
 //#endregion
 export { type CompatibilityDetectionOptions, type CompatibilityEntry, type CompatibilityEvaluationInput, type CompatibilityPackageName, type CompatibilityReport, type CompatibilityStatus, FastModeRegistry as OpenAICodexFastModeRegistry, type GeneratedImagePayload, type ImageGenerationRequest, type ImageGenerationResponse, type ImageRequestContext, type OpenAICodexAccountSummary, type OpenAICodexAuthStatus, type OpenAICodexCredits, type OpenAICodexDiagnosticOptions, type OpenAICodexDiagnosticReport, type OpenAICodexHistoryMigrationFile, type OpenAICodexHistoryMigrationOptions, type OpenAICodexHistoryMigrationResult, type OpenAICodexIndividualLimit, type OpenAICodexProxyProbeClassification, type OpenAICodexProxyProbeResult, type OpenAICodexRateLimit, type OpenAICodexRateLimitWindow, type OpenAICodexSearchContextSize, type OpenAICodexSearchMode, type OpenAICodexSearchProviderOptions, type OpenAICodexSearchRequestRecord, type OpenAICodexSettingsConfig, type OpenAICodexTransportErrorCode, type OpenAICodexTransportV1, type OpenAICodexUpdateResult, type OpenAICodexUsage };

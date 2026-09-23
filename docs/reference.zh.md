@@ -142,6 +142,8 @@ Reserve 使用 Luna 目录中的 272,000 token 上下文窗口，不沿用原模
 
 运行 `dsh plugin --profile web exec dsh-codex-connect doctor --json` 可检查本地安装元数据，不会联网。兼容性状态含义：`compatible` 表示符合声明的版本要求，不是行为测试通过；`unverified` 表示包版本超出声明的支持集合；`unknown` 表示缺少必要版本元数据或无法读取；`incompatible` 表示 Node 版本不满足声明的 engine 要求。汇总状态依次优先采用 `incompatible`、`unknown`、`unverified`。任何非 compatible 结果或不安全的凭据文件元数据都会让 doctor 返回 `1`，但这并不授权或建议更改 DSH。
 
+DSH `0.1.7-rc.1` 的 `plugin exec` 会启动独立进程，普通模块解析无法看见宿主的 peer 包。Alpha 4.43 的 CLI 自带所需代码，因此所有命令都能在该进程中启动。若要让 `doctor` 核对确切宿主包版本，给 `--install-anchor` 传入该 DSH 安装中 `@deepseek-ai/dsh/package.json` 的绝对路径；该选项只读包元数据，也不会输出路径。未提供 anchor 且无法解析版本时，`doctor` 报 `unknown`，不能据此认定运行时不兼容。安装运行时检查另行启动 DSH 自身的 profile 解析器后再导入插件，保持宿主包身份一致。
+
 常规更新卡片只检查 Codex Connect 发布版本。插件版本检查成功后最多缓存 24 小时，页面挂载期间每五分钟重试不可用的检查；手动检查会绕过缓存。它不会查询宿主兼容性，也不会建议升级或降级宿主。未列入记录的 DSH/plugin 组合需要验证，不能据此认定无法运行。
 
 ### 能力探针

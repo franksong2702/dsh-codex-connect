@@ -5,7 +5,7 @@ import { readFile, writeFile, mkdir, readdir, rm, realpath } from 'node:fs/promi
 import { join, dirname, resolve, delimiter, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { connect } from 'node:net'
@@ -15,9 +15,14 @@ import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { prepareLegacyTaskPackage, replaceFixtureTaskPackage, publicationPauseJourney } from './adaptive-task-publication-session.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const args = process.argv.slice(2), phase2 = args.includes('--phase2'), manifests = args.filter(arg => arg !== '--phase2')
+const args = process.argv.slice(2)
+const phase2 = args.includes('--phase2')
+const currentHostPaused = args.includes('--current-host-paused')
+const manifests = args.filter(arg => arg !== '--phase2' && arg !== '--current-host-paused')
+assert.equal(phase2 && currentHostPaused, false, 'Select one installed Session scenario')
 assert.ok(manifests.length <= 1 && !manifests.some(arg => arg.startsWith('--')))
-const f = manifests[0] ? JSON.parse(await readFile(resolve(manifests[0]), 'utf8')) : await prepareTaskSession(root)
+const f = manifests[0] ? JSON.parse(await readFile(resolve(manifests[0]), 'utf8'))
+  : await prepareTaskSession(root, currentHostPaused ? '0.1.7-rc.1' : undefined)
 assert.match(f.directory, /\/codex-task-session-[^/]+$/)
 for (const name of ['home', 'workspace', 'install', 'source']) assert.equal(f[name], join(f.directory, name))
 assert.equal(JSON.parse(await readFile(join(f.directory, 'fixture-owner.json'), 'utf8')).kind, 'codex-task-session-offline')
@@ -49,7 +54,8 @@ for (const name of ['dsh', 'dsh-agent', 'dsh-session', 'dsh-client-ui-conversati
   identity[name] = { path, version }
 }
 const publicationPaused = /ADAPTIVE_TASK_PUBLIC_RELEASE: boolean = false/.test(await readFile(join(f.source, 'src/adaptive-task-publication.ts'), 'utf8'))
-if (publicationPaused) assert.equal(phase2, true, 'Run closed-release upgrade acceptance with --phase2')
+if (publicationPaused && !currentHostPaused) assert.equal(phase2, true, 'Run closed-release upgrade acceptance with --phase2')
+if (currentHostPaused) assert.equal(publicationPaused, true, 'Current-host pause acceptance requires a paused release')
 const path = '/plugins/dsh-codex-connect/task'
 const checks = [], pids = [], browserErrors = [], blockedBrowser = [], mutations = [], taskReads = []
 const redact = value => String(value).replace(/(https?:\/\/127\.0\.0\.1:\d+\/?)\?[^\s"'<>]+/g, '$1?[redacted]')
@@ -129,6 +135,33 @@ async function picker(kind, choice) {
   await page.getByRole('button', { name: /^Select model, current/ }).click()
   await page.getByRole('menuitem', { name: new RegExp(`^${kind} `) }).click()
   await page.getByRole('menuitemradio', { name: choice, exact: true }).click()
+}
+async function currentHostPausedJourney() {
+  await page.locator('[data-composer-input][contenteditable="true"]').waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Model choice', exact: true }).count(), 0)
+  assert.equal(await page.getByRole('button', { name: 'Existing task controls', exact: true }).count(), 0)
+  await until(() => taskReads.at(-1)?.url !== undefined, 'Current Session task state was not read')
+  const taskUrl = taskReads.at(-1).url
+  const stateResponse = await context.request.get(taskUrl)
+  assert.equal(stateResponse.status(), 200)
+  const state = await stateResponse.json()
+  assert.equal(state.mode, 'off')
+  assert.equal(state.canStart, false)
+  const sessionId = new URL(taskUrl).searchParams.get('sessionId')
+  assert.ok(sessionId)
+  const mutation = await context.request.post(host.origin + path, { headers: { origin: host.origin }, data: {
+    sessionId, action: 'start', revision: state.revision, operationId: randomUUID(),
+    models: ['gpt-5.6-sol'], efforts: { 'gpt-5.6-sol': ['medium'] }, maximumRequests: 1,
+  } })
+  assert.equal(mutation.status(), 409)
+  assert.deepEqual(await mutation.json(), { error: 'TASK_PUBLIC_RELEASE_PAUSED' })
+  assert.equal((await requests()).length, 0)
+  pass('stock current DSH Session renders ordinary Composer but rejects paused task activation')
+  await page.getByRole('button', { name: 'New session', exact: true }).last().click()
+  await page.getByRole('textbox', { name: /^Describe what you want to build/ }).waitFor()
+  assert.equal(await page.getByRole('button', { name: 'Model choice', exact: true }).count(), 0)
+  assert.equal(await page.getByRole('button', { name: 'Existing task controls', exact: true }).count(), 0)
+  pass('fresh Session exposes no paused automation controls')
 }
 async function delegationJourney() {
   await writeFile(join(f.workspace, 'notes.txt'), 'approved first\nsecond')
@@ -231,17 +264,19 @@ try {
   // A fixture may be supplied to avoid repeating dependency installation, but must be unused.
   const existing = await readFile(join(f.home, 'storages/workspace.json'), 'utf8').catch(() => '')
   assert.ok(!existing || JSON.parse(existing).global.workspaceIds.length === 0, 'Use a fresh fixture, never reuse user sessions')
-  if (publicationPaused) {
+  if (publicationPaused && !currentHostPaused) {
     await writeFile(join(f.workspace, 'notes.txt'), 'approved first\nsecond')
     await replaceFixtureTaskPackage(f, plugin, await prepareLegacyTaskPackage(f))
   }
   await start()
-  // Stock boot creates the profile's module fallback links. Resolve the
-  // plugin's peers only after that public boot path has completed.
-  for (const [name, value] of Object.entries(identity)) {
-    if (!value?.path || name === 'dsh') continue
-    const packageName = name.startsWith('@') ? name : '@deepseek-ai/' + name
-    assert.equal(await realpath(pluginRequire.resolve(packageName + '/package.json')), await realpath(value.path))
+  if (!currentHostPaused) {
+    // Legacy host boot creates profile module fallback links; rc.1 instead
+    // uses a process-local resolver and is covered by check:dsh-install.
+    for (const [name, value] of Object.entries(identity)) {
+      if (!value?.path || name === 'dsh') continue
+      const packageName = name.startsWith('@') ? name : '@deepseek-ai/' + name
+      assert.equal(await realpath(pluginRequire.resolve(packageName + '/package.json')), await realpath(value.path))
+    }
   }
   await writeFile(join(f.directory, 'host-origin.json'), JSON.stringify({ origin: host.origin }), { mode: 0o600 })
   assert.ok(!['3080', '3081'].includes(new URL(host.origin).port))
@@ -274,7 +309,8 @@ try {
   await page.locator('input').last().fill(f.workspace)
   await page.locator('input').last().press('Enter')
   await page.getByRole('button', { name: 'Open', exact: true }).click()
-  if (publicationPaused) await publicationPauseJourney({ f, plugin, page, context, panel, closePanel, allowLunaMax, send, picker,
+  if (currentHostPaused) await currentHostPausedJourney()
+  else if (publicationPaused) await publicationPauseJourney({ f, plugin, page, context, panel, closePanel, allowLunaMax, send, picker,
     requests, events, until, pass, stop, start, origin: () => host.origin, taskReads, mutations })
   else {
   await page.getByRole('button', { name: 'Model choice', exact: true }).waitFor()
@@ -413,7 +449,8 @@ try {
   if (!error && cleanup) {
     try { await rm(f.directory, { recursive: true, force: true }); fixtureRemoved = true } catch (cause) { error = cause }
   }
-  const report = { kind: 'installed-full-session-synthetic', phase: phase2 ? 2 : 1, publicationPaused, upgradedFrom: publicationPaused ? '0.1.0-alpha.4.41' : undefined, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
+  const report = { kind: 'installed-full-session-synthetic', scenario: currentHostPaused ? 'current-host-paused' : phase2 ? 'phase2-upgrade' : 'phase1', phase: currentHostPaused ? null : phase2 ? 2 : 1, publicationPaused,
+    upgradedFrom: publicationPaused && !currentHostPaused ? '0.1.0-alpha.4.41' : undefined, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
     artifactSha256: f.artifactSha256, identity, installer: f.installer, node: process.version, checks, pids, wire, mutations: mutations.map(({ action, revision }) => ({ action, revision })),
     browserErrors, blockedBrowser, taskReads: taskReads.map(({ status, failure }) => ({ status, failure })), cleanup, hostOrigin: host?.origin, syntheticCredentials: true, realProviderRequests: 0,
     fullInstalledSessionPage: true, fullDailyProfileAcceptance: false,
