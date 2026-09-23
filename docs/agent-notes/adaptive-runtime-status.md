@@ -1,3 +1,37 @@
+# Phase 1 merged / Phase 2 main-based review — 2026-09-23
+
+Phase 1 #236 was reviewed and squash-merged as `3c3d1762536efafaecefb36146e062dad5edd4f8`; its tree exactly equals reviewed `76c3c0c`. Main's active ruleset permits squash only. The Phase 2 branch retains its source history and connects that identical Phase 1 main tree without changing product bytes; #239 now proceeds through a main-based exact-head CI/CodeQL gate. Source branches remain intact. This supersedes the historical no-push/no-merge status below, not their evidence limitations.
+
+Fresh independent review found no remaining confirmed blocker in Phase 2 `76c3c0c..4b5d485` and the supplemental Phase 1 authority/stop/recovery pass. A suggested cancellation window was withdrawn after verifying the code executes synchronously with no reentrant revoke path. Focused Phase 2 checks passed 3 files / 40 tests. The exact installed `4b5d485` also passed all eight native Session groups on DSH `0.1.5-rc.1` / Node `26.5.0`, matching the actual 3081 version combination, with npm 10.9.3 peer checks and selected vendor floors. All nine installed library hashes were verified; cleanup and fixture removal passed; real provider requests were zero.
+
+This is still isolated synthetic acceptance, not acceptance of existing 3081 sessions/host patches or real model quality. Actual 3081 installation/restart awaits its explicit scoped approval; 3080, npm release/publish and real model requests remain untouched. See the [updated acceptance gate](../experiments/adaptive-task-phase2-acceptance.md#main-based-integration-gate).
+
+# Phase 2 E exact-host and installed Session local candidate — 2026-09-23
+
+Continued from local `dcd5cab`, without changing Phase 1 #236 or main. [E acceptance and evidence](../experiments/adaptive-task-phase2-acceptance.md) records the pre-integration gate, single default-off product composition, per-root artifacts, optional-service compatibility and child prompt isolation. Product bytes are `20e6ecf`; the final test/checker/docs changes do not alter them. Legacy grants gain no delegation permission; explicit v2 upgrade and separate source/model/effort consent remain mandatory.
+
+Node 22.19.0 and 24.13.0 each passed 115 files / 1,234 tests in the complete check. Final four-host matrices on both Nodes passed the same 130 checks plus 18 crash cases / 36 fresh processes per combination, at bundle `6cc3da121ef360bc5193e7eef986623310d4491204d9fc7f80b0b93b0c86e7fd`. The committed installed baseline candidate passed eight native Session groups, including real parent/child loop, shared title accounting, restart without replay, native Stop, manual Terra/Default and safe downgrade/re-upgrade. Owned browser/host cleanup was verified; all model responses and credentials were synthetic. Independent review found no remaining confirmed runtime issue.
+
+Material qualification: the installed full page used baseline DSH's published Cordis dependency floors and npm 10.9.3 with peer checks. A newer stock loader combination failed even without this plugin; npm 11 also rejected the exact peer closure. Neither is certified by the passing fixture. No daily profiles/3080/3081, real-provider requests, push, GitHub mutation, merge, release or deployment occurred. Next is a separately reviewable Phase 2 PR and exact-head remote CI after explicit authorization, not an automatic release. Historical A–D checkpoints below describe their earlier integration state.
+
+# Phase 2 D consent and safe-transition local candidate — 2026-09-22
+
+Continued from local `fae0a2d` in the isolated ledger branch, leaving Phase 1 #236 unchanged. [Consent and transition contract](../experiments/adaptive-task-phase2-consent.md) records explicit v1/v2 composition, authenticated optional file/model/effort consent, existing-dialog status, archive-verified downgrade and counter/provenance-preserving re-upgrade. Product `src/index.ts` still constructs Phase 1; the v2 composition is only assembled in disposable tests. Shared decoder/hooks and built client/runtime bytes changed, not dependencies/defaults.
+
+Final local `pnpm run check` passed 114 files / 1,221 tests on Node 24.13.0 and baseline DSH 0.1.2-rc.1; browser regression passed 50 tests. Authenticated Phase 2 checker passed all 13 cases (including a four-request parent/child browser journey); old Phase 1 checker passed six. Current crash matrix passed 18 cases / 36 fresh processes. Independent review confirmed the full-receipt safety-exit fix and the corrected contention-test accounting; prior lock-timeout failures are retained in the local delivery evidence. No real credentials/provider, push, GitHub mutation, merge, release or deployment. E remains four-host/two-Node runtime identity plus installed full Session acceptance, followed by reviewed default-off product integration.
+
+# Phase 2 C recovery and root-integration local candidate — 2026-09-22
+
+Continued from local `a26a6d6`, without changing Phase 1 #236. [Recovery contract and evidence](../experiments/adaptive-task-phase2-recovery.md) records v2 main-model changes, root auxiliary accounting, original-history portability, manual takeover and same-owner idle resume. Real-loop SIGKILL recovery passed 18 cases across 36 fresh processes with two host encodings; no replay, counter rollback or fabricated delivery. Final local check passed 112 files / 1,200 tests. The executor remains internal: product entry point, v1 behavior and built runtime are unchanged. Next gates are migration/downgrade, authenticated optional UI/default-off integration, and full host/Node/installed-session acceptance. No push or GitHub/production changes in this slice.
+
+# Phase 2 restricted execution local candidate — 2026-09-22
+
+Continued from local A commit `6d21243` in the same isolated branch. [Execution contract and evidence](../experiments/adaptive-task-phase2-execution.md) records the new evidence/artifact store, real owned-host bridge and internal executor. The synthetic real-host path now goes parent → bounded child read/submit → cleanup → durable original tool-result reconciliation → parent continuation. No product entry point or built runtime is changed; C crash matrix, D/E UI/compatibility and migration gates remain open. No push or GitHub changes in this slice.
+
+# Phase 2 A isolated ledger development — 2026-09-22
+
+This local branch starts at #236's tested `76c3c0c`, without changing that PR or main. The user approved root-owned plugin persistence after a required custom Session event could be written/flushed but not cold-loaded on baseline DSH. [Slice A](../experiments/adaptive-task-phase2-ledger.md) adds dormant strict v2 ledger primitives; no migration, child tools, transport, UI or real-profile change is enabled. The same atomic task file owns authorization, request counters and retained replay records. Evidence and remaining gates are in that contract. No push, merge, publish or deployment is included.
+
 # Consolidated Phase 1 candidate — 2026-09-22
 
 This branch starts directly from main `1748bec`. Its current product contract is [task-level model selection](../experiments/adaptive-task-phase1.md): default-off, Sol/Medium, one task grant, bounded main-model/effort changes and handoffs, shared request accounting, safe stop/manual takeover and interrupted restore. Candidate #236 at `0a09e04` passed all eight remote checks. Main remains `1748bec`; the candidate is unmerged. No Think/Split product setting or M2/M3 runtime is included.

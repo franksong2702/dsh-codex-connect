@@ -40,8 +40,9 @@ import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
 import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexBackendRequests } from './backend-request.ts'
-import { AdaptiveTaskRuntime } from './adaptive-task-runtime.ts'
-import { AdaptiveTaskStore } from './adaptive-task-store.ts'
+import { AdaptiveTaskControlRuntime } from './adaptive-task-control-runtime.ts'
+import { TaskDelegationArtifacts } from './adaptive-task-artifacts.ts'
+import { taskIdentity } from './adaptive-task-store.ts'
 import { registerAdaptiveTaskHttp } from './adaptive-task-http.ts'
 import { ADAPTIVE_TASK_MODELS } from './adaptive-task-contract.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
@@ -323,7 +324,7 @@ export function apply(ctx: Context, config: Config): void {
   let current = () => config
   const proxyManager = new OpenAICodexProxyManager()
   const resolveProviderProxyUrl = (): string | undefined => resolveOpenAICodexProxyUrl(resolveOpenAICodexSettings(current()))
-  let taskRuntime: AdaptiveTaskRuntime | undefined
+  let taskRuntime: AdaptiveTaskControlRuntime | undefined
   const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl, undefined,
     async () => { await taskRuntime?.reserveAuxiliary() })
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
@@ -333,8 +334,11 @@ export function apply(ctx: Context, config: Config): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
-  taskRuntime = new AdaptiveTaskRuntime(ctx, {
-    store: new AdaptiveTaskStore(join(dirname(credentials.filename), 'codex-connect-tasks')),
+  const taskDirectory = join(dirname(credentials.filename), 'codex-connect-tasks')
+  taskRuntime = new AdaptiveTaskControlRuntime(ctx, {
+    directory: taskDirectory,
+    artifacts: identity => new TaskDelegationArtifacts(join(taskDirectory,
+      taskIdentity(JSON.stringify([identity.owner, identity.sessionKey])) + '-artifacts')),
     models: async () => {
       const models = await ctx.llm.listModels(OPENAI_CODEX_PROVIDER)
       return Promise.all(models.filter(model => ADAPTIVE_TASK_MODELS.some(id => id === model.id))

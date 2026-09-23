@@ -8,6 +8,17 @@ export const ADAPTIVE_TASK_TOOL = 'codex_connect_change_work_model'
 export interface TaskRoute { readonly model: string; readonly effort: string }
 export interface TaskCapability { readonly model: string; readonly efforts: readonly string[] }
 export type TaskMode = 'auto' | 'manual' | 'stopped' | 'interrupted' | 'limit'
+export interface TaskDelegationState {
+  readonly version: 1 | 2
+  readonly idle: boolean
+  readonly enabled: boolean
+  readonly canDowngrade: boolean
+  readonly files: readonly string[]
+  readonly routes: readonly TaskRoute[]
+  readonly maxRequests: number
+  readonly timeoutMs: number
+  readonly runs: readonly { id: string; state: string; cleanup: string; delivery: string; reserved: number }[]
+}
 export interface AdaptiveTaskState {
   readonly revision: number
   readonly mode: TaskMode | 'off'
@@ -19,16 +30,23 @@ export interface AdaptiveTaskState {
   readonly canStart: boolean
   readonly eligibility: 'not-probed'
   readonly unavailable?: string
+  /** Absent on Phase 1-only hosts. No UI control may infer delegation availability. */
+  readonly delegation?: TaskDelegationState
 }
 export interface AdaptiveTaskCommand {
   readonly sessionId: string
   readonly operationId: string
   readonly revision: number
-  readonly action: 'start' | 'manual' | 'stop' | 'resume'
+  readonly action: 'start' | 'manual' | 'stop' | 'resume' | 'upgrade' | 'delegate-enable' | 'delegate-disable' | 'downgrade'
   readonly models?: readonly string[]
   /** Exact displayed effort scope; newly added catalog levels never expand an existing grant. */
   readonly efforts?: Readonly<Record<string, readonly string[]>>
   readonly maximumRequests?: number
+  readonly files?: readonly string[]
+  readonly routes?: readonly TaskRoute[]
+  readonly maxChildRequests?: number
+  readonly timeoutMs?: number
+  readonly disclose?: true
 }
 export function validTaskSessionId(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/u.test(value)
@@ -48,9 +66,17 @@ export function decodeTaskCommand(value: unknown): AdaptiveTaskCommand | undefin
   if (!taskRecord(value) || !validTaskSessionId(value.sessionId)
     || typeof value.operationId !== 'string' || !/^[A-Za-z0-9_-]{16,80}$/u.test(value.operationId)
     || !Number.isSafeInteger(value.revision) || Number(value.revision) < 0
-    || !['start', 'manual', 'stop', 'resume'].includes(String(value.action))) return undefined
+    || !['start', 'manual', 'stop', 'resume', 'upgrade', 'delegate-enable', 'delegate-disable', 'downgrade'].includes(String(value.action))) return undefined
   const keys = Object.keys(value).sort().join(',')
-  if (value.action !== 'start') {
+  if (value.action === 'delegate-enable') {
+    if (keys !== 'action,disclose,files,maxChildRequests,operationId,revision,routes,sessionId,timeoutMs'
+      || value.disclose !== true || !Array.isArray(value.files) || value.files.length < 1 || value.files.length > 32
+      || new Set(value.files).size !== value.files.length || value.files.some(file => typeof file !== 'string' || !file.trim() || file.length > 512)
+      || !Array.isArray(value.routes) || value.routes.length < 1 || value.routes.length > 64 || value.routes.some(route => !taskRoute(route))
+      || new Set(value.routes.map(route => `${route.model}/${route.effort}`)).size !== value.routes.length
+      || !Number.isSafeInteger(value.maxChildRequests) || Number(value.maxChildRequests) < 1 || Number(value.maxChildRequests) > 6
+      || !Number.isSafeInteger(value.timeoutMs) || Number(value.timeoutMs) < 1000 || Number(value.timeoutMs) > 90000) return undefined
+  } else if (value.action !== 'start') {
     if (keys !== 'action,operationId,revision,sessionId') return undefined
   } else {
     if (keys !== 'action,efforts,maximumRequests,models,operationId,revision,sessionId'
@@ -88,6 +114,21 @@ export function decodeTaskState(value: unknown): AdaptiveTaskState | undefined {
       || !Array.isArray(entry.efforts) || entry.efforts.length > 16
       || entry.efforts.some(effort => !taskRoute({ model: entry.model, effort }))) return undefined
     ids.add(entry.model)
+  }
+  if (value.delegation !== undefined) {
+    const d = value.delegation
+    if (!taskRecord(d) || (d.version !== 1 && d.version !== 2) || typeof d.idle !== 'boolean'
+      || typeof d.enabled !== 'boolean' || typeof d.canDowngrade !== 'boolean'
+      || !Array.isArray(d.files) || d.files.length > 32 || d.files.some(file => typeof file !== 'string' || file.length > 512)
+      || !Array.isArray(d.routes) || d.routes.length > 64 || d.routes.some(route => !taskRoute(route))
+      || !Number.isSafeInteger(d.maxRequests) || Number(d.maxRequests) < 1 || Number(d.maxRequests) > 6
+      || !Number.isSafeInteger(d.timeoutMs) || Number(d.timeoutMs) < 1000 || Number(d.timeoutMs) > 90000
+      || !Array.isArray(d.runs) || d.runs.length > 32 || d.runs.some(run => !taskRecord(run)
+        || typeof run.id !== 'string' || !/^[A-Za-z0-9_-]{16,80}$/u.test(run.id)
+        || !['prepared', 'running', 'settling', 'succeeded', 'failed', 'cancelled', 'interrupted'].includes(String(run.state))
+        || !['pending', 'failed', 'verified'].includes(String(run.cleanup))
+        || !['none', 'pending', 'recorded', 'unknown'].includes(String(run.delivery))
+        || !Number.isSafeInteger(run.reserved) || Number(run.reserved) < 0 || Number(run.reserved) > 6)) return undefined
   }
   return value as unknown as AdaptiveTaskState
 }

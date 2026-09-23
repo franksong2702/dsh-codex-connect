@@ -18,6 +18,8 @@ import { portableTaskMessages } from './adaptive-task-context.ts'
 export interface TaskRuntimeOptions {
   readonly store: AdaptiveTaskStore
   readonly models: () => Promise<readonly LlmResolvedModelInfo[]>
+  /** Explicit v2 composition only; absent in the Phase 1 product. */
+  readonly ownsRoot?: (agent: Agent) => Promise<boolean>
 }
 function selectionSeq(agent: Agent): number {
   return agent.session.snapshotEvents().findLast(event => event.type === 'model/selection')?.seq ?? -1
@@ -89,6 +91,7 @@ export class AdaptiveTaskRuntime {
     return task
   }
   private async load(agent: Agent): Promise<TaskDocument | undefined> {
+    if (this.options.ownsRoot !== undefined && !await this.options.ownsRoot(agent)) { this.withdraw(agent); return undefined }
     const task = await this.options.store.read(agent.id)
     if (task === undefined) {
       if (hasTaskMarker(agent) || this.lifetimes.has(agent)) taskFailure('TASK_STATE_MISSING')
@@ -139,6 +142,7 @@ export class AdaptiveTaskRuntime {
   }
   async command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState> {
     if (decodeTaskCommand(command) === undefined) taskFailure('TASK_COMMAND_INVALID')
+    if (!['start', 'manual', 'stop', 'resume'].includes(command.action)) taskFailure('TASK_COMMAND_INVALID')
     if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED')
     const agent = this.owner(command.sessionId)
     const digest = taskIdentity(JSON.stringify(command))
@@ -265,6 +269,8 @@ export class AdaptiveTaskRuntime {
     this.tools.get(agent)?.(); this.tools.delete(agent)
     this.lifetimes.get(agent)?.abort(new Error('Task automation withdrawn'))
   }
+  /** Quiescent composition relinquishes only this root, never another task's lifetime. */
+  release(agent: Agent): void { this.withdraw(agent) }
   private async reserve(agent: Agent, route?: TaskRoute, revision?: number): Promise<void> {
     if (route !== undefined && !allowsTaskRoute(await this.capabilities(), route)) taskFailure('TASK_MODEL_UNAVAILABLE')
     const updated = await this.options.store.update(agent.id, existing => {

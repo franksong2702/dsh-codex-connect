@@ -31,7 +31,7 @@ export class AdaptiveTaskError extends Error {
   constructor(readonly code: string) { super(code) }
 }
 export function taskFailure(code: string): never { throw new AdaptiveTaskError(code) }
-function parse(value: unknown, sessionId: string): TaskDocument {
+export function parseTaskDocument(value: unknown, sessionId: string): TaskDocument {
   if (!taskRecord(value) || Object.keys(value).sort().join(',') !== 'capabilities,handoffSeq,maximumRequests,mode,owner,portable,receipts,reserved,revision,route,runtime,selectionSeq,sessionId,sessionKey,version'
     || value.version !== 1 || value.sessionId !== sessionId || !validTaskSessionId(value.sessionId)
     || !['auto', 'manual', 'stopped', 'interrupted', 'limit'].includes(String(value.mode))
@@ -67,14 +67,15 @@ function parse(value: unknown, sessionId: string): TaskDocument {
   if (!allowsTaskRoute(document.capabilities, document.route)) taskFailure('TASK_STATE_INVALID')
   return document
 }
-export class AdaptiveTaskStore {
-  constructor(private readonly directory: string) {}
+/** One private file/lock per root. Codecs cannot change identity or storage safety checks. */
+export class AtomicTaskDocumentStore<T> {
+  constructor(private readonly directory: string, private readonly parse: (value: unknown, sessionId: string) => T) {}
   private filename(sessionId: string): string {
     if (!validTaskSessionId(sessionId)) taskFailure('TASK_SESSION_INVALID')
     return join(this.directory, hash(sessionId) + '.json')
   }
   /** Reads do not create a directory or grant anything. */
-  async read(sessionId: string): Promise<TaskDocument | undefined> {
+  async read(sessionId: string): Promise<T | undefined> {
     const filename = this.filename(sessionId)
     try {
       const parent = await lstat(this.directory)
@@ -88,7 +89,7 @@ export class AdaptiveTaskStore {
         const bytes = Buffer.alloc(MAX_BYTES + 1)
         const { bytesRead } = await file.read(bytes, 0, bytes.length, 0)
         if (bytesRead > MAX_BYTES || bytesRead !== stat.size) taskFailure('TASK_STATE_INVALID')
-        return parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, bytesRead))), sessionId)
+        return this.parse(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, bytesRead))), sessionId)
       } finally { await file.close() }
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
@@ -97,7 +98,7 @@ export class AdaptiveTaskStore {
     }
   }
   /** Lock, reread and atomically reserve before dispatch. A lost reply never refunds a request. */
-  async update(sessionId: string, change: (current: TaskDocument | undefined) => TaskDocument | Promise<TaskDocument>): Promise<TaskDocument> {
+  async update(sessionId: string, change: (current: T | undefined) => T | Promise<T>): Promise<T> {
     const filename = this.filename(sessionId)
     await mkdir(dirname(filename), { recursive: true, mode: 0o700 })
     const parent = await lstat(this.directory)
@@ -105,7 +106,7 @@ export class AdaptiveTaskStore {
       || (process.platform !== 'win32' && (parent.mode & 0o077) !== 0)) taskFailure('TASK_STATE_UNSAFE')
     return withFileLock(filename, async () => {
       const current = await this.read(sessionId)
-      const next = parse(await change(current), sessionId)
+      const next = this.parse(await change(current), sessionId)
       const text = JSON.stringify(next)
       if (Buffer.byteLength(text) > MAX_BYTES) taskFailure('TASK_STATE_TOO_LARGE')
       await writeFileAtomic(filename, text + '\n', { mode: 0o600, dirMode: 0o700 })
@@ -119,4 +120,8 @@ export class AdaptiveTaskStore {
       return structuredClone(next)
     })
   }
+}
+/** Phase 1 never accepts or silently resets a v2 ledger. */
+export class AdaptiveTaskStore extends AtomicTaskDocumentStore<TaskDocument> {
+  constructor(directory: string) { super(directory, parseTaskDocument) }
 }

@@ -6,7 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { ADAPTIVE_TASK_PATH, decodeTaskCommand, validTaskSessionId } from './adaptive-task-contract.ts'
 import { AdaptiveTaskError, taskFailure, taskIdentity } from './adaptive-task-store.ts'
-import type { AdaptiveTaskRuntime } from './adaptive-task-runtime.ts'
+import type { AdaptiveTaskCommand, AdaptiveTaskState } from './adaptive-task-contract.ts'
 
 const BODY_LIMIT = 8192
 function reply(res: ServerResponse, status: number, value: unknown): void {
@@ -47,7 +47,10 @@ async function readCommand(req: IncomingMessage): Promise<unknown> {
   } finally { clearTimeout(timer) }
 }
 /** Missing host Connection leaves the feature unavailable; it never falls back to an unauthenticated route. */
-export function registerAdaptiveTaskHttp(ctx: Context, runtime: AdaptiveTaskRuntime): void {
+export function registerAdaptiveTaskHttp(ctx: Context, runtime: {
+  state(sessionId: string, principal: string): Promise<AdaptiveTaskState>
+  command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState>
+}): void {
   ctx.webServer.register({ kind: 'exact', path: ADAPTIVE_TASK_PATH, async handler(req, res) {
     const rejected = ctx.connection.requestRejection(req)
     if (rejected !== undefined) { reply(res, rejected, { error: 'TASK_BROWSER_AUTH_REQUIRED' }); return }

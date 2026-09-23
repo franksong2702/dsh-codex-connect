@@ -4,6 +4,8 @@ import type { CSSProperties } from 'react'
 import { ADAPTIVE_TASK_PATH, ADAPTIVE_TASK_START, ADAPTIVE_TASK_REQUEST_LIMIT, ADAPTIVE_TASK_MAX_REQUESTS,
   decodeTaskState } from '../adaptive-task-contract.ts'
 import type { AdaptiveTaskCommand, AdaptiveTaskState } from '../adaptive-task-contract.ts'
+import { TaskDelegationConsent } from './TaskDelegationConsent.tsx'
+import type { DelegationFields } from './TaskDelegationConsent.tsx'
 
 const words = {
   en: {
@@ -120,13 +122,13 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
     }
   }, [opened, read])
   const close = () => { setOpenedFor(undefined); opener.current?.focus() }
-  const mutate = async (action: AdaptiveTaskCommand['action']) => {
+  const mutate = async (action: AdaptiveTaskCommand['action'], extra: DelegationFields = {}) => {
     if (state === undefined || busy || failed || mutation.current !== undefined) return
     const token = ++generation.current
     mutation.current = token
     controller.current?.abort()
     const operation = new AbortController(); controller.current = operation
-    const command: AdaptiveTaskCommand = { sessionId, action, operationId: crypto.randomUUID(), revision: state.revision,
+    const command: AdaptiveTaskCommand = { ...extra, sessionId, action, operationId: crypto.randomUUID(), revision: state.revision,
       ...(action === 'start' ? { models, efforts: Object.fromEntries(models.map(model => [model, efforts[model] ?? []])), maximumRequests: maximum } : {}) }
     setBusy(true); setFailed(false)
     const timer = setTimeout(() => operation.abort(), 20_000)
@@ -190,6 +192,8 @@ export function AdaptiveTaskControl({ sessionId, language = 'en' }: { sessionId:
           </details>
         </> : null}
         <p style={{ fontSize: 12 }}>{text.resources}</p>
+        <TaskDelegationConsent key={sessionId} state={state} zh={language === 'zh'} disabled={busy || failed}
+          mutate={(action, extra) => { void mutate(action, extra) }} />
       </> : busy ? <p>{text.loading}</p> : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {state?.mode === 'off' ? <button style={buttonStyle} type="button"
