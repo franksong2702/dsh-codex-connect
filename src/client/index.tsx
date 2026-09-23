@@ -3,7 +3,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-models/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
@@ -20,6 +20,8 @@ import {
   decodeOpenAICodexSettings,
   OPENAI_CODEX_SETTINGS_NAMESPACE,
 } from '../settings-contract.ts'
+import type { OpenAICodexSettingsConfig } from '../settings-contract.ts'
+import { configFormsOf, legacySettingsScopeOf } from './config-forms.ts'
 import { OpenAICodexPluginCard } from './OpenAICodexPluginCard.tsx'
 import type { OpenAICodexPluginCardInjected } from './OpenAICodexPluginCard.tsx'
 import { OpenAICodexQuotaIndicator } from './OpenAICodexQuotaIndicator.tsx'
@@ -46,8 +48,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Stable browser-plugin name. */
 export const name = 'dsh-codex-connect-client'
-/** Client services required by the Plugin configuration contribution. */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.session', 'settingsScope', 'sessions']
+/** Client services required by the non-settings surfaces; the settings surface is detected in apply. */
+export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.session', 'sessions']
 
 /** Register account copy and the OpenAI Codex card under Plugin configuration. */
 export function apply(ctx: ClientContext): void {
@@ -61,22 +63,45 @@ export function apply(ctx: ClientContext): void {
   }, 'dsh-codex-connect: update checker')
   ctx.effect(() => ctx.locale.register(namespace, { zh, en }), 'dsh-codex-connect: settings copy')
   const t = ctx.locale.bind(namespace) as OpenAICodexPluginCardInjected['t']
-  const configScope = ctx.settingsScope.bind({
-    namespace: OPENAI_CODEX_SETTINGS_NAMESPACE,
-    decode: decodeOpenAICodexSettings,
-  })
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
-    key: OPENAI_CODEX_SETTINGS_NAMESPACE,
-    inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
-  }, OpenAICodexPluginCard))
+  // DSH 0.1.7 replaced the browser settingsScope service with configForms and
+  // moved Plugin configuration from `settings.plugin.item` to `plugins.item`.
+  // Detect the running surface first so neither branch leaves this fiber
+  // waiting on a service the other DSH version never provides.
+  const configForms = configFormsOf(ctx)
+  const legacySettings = legacySettingsScopeOf(ctx)
+  if (configForms !== undefined) {
+    // DSH 0.1.7 renders plugin configuration through the platform form derived
+    // from the host-registered schema, so no settings card is contributed here.
+    // Only the model-page account card still needs a client-side surface.
+    ctx.inject(['configForms'], (formsCtx: ClientContext) => {
+      const configScope = formsCtx.configForms.get(OPENAI_CODEX_SETTINGS_NAMESPACE) as unknown as SettingsScope<OpenAICodexSettingsConfig>
+      ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
+        name: 'settings.models.footer',
+        id: 'dsh-codex-connect-account',
+        order: 100,
+        inject: () => ({ t, account, configScope }),
+      }, OpenAICodexModelsCard))
+    })
+  } else if (legacySettings !== undefined) {
+    ctx.inject(['settingsScope'], (scopeCtx: ClientContext) => {
+      const configScope = scopeCtx.settingsScope.bind({
+        namespace: OPENAI_CODEX_SETTINGS_NAMESPACE,
+        decode: decodeOpenAICodexSettings,
+      })
+      ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+        name: 'settings.plugin.item',
+        key: OPENAI_CODEX_SETTINGS_NAMESPACE,
+        inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
+      }, OpenAICodexPluginCard))
 
-  ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
-    name: 'settings.models.footer',
-    id: 'dsh-codex-connect-account',
-    order: 100,
-    inject: () => ({ t, account, configScope }),
-  }, OpenAICodexModelsCard))
+      ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
+        name: 'settings.models.footer',
+        id: 'dsh-codex-connect-account',
+        order: 100,
+        inject: () => ({ t, account, configScope }),
+      }, OpenAICodexModelsCard))
+    })
+  }
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',

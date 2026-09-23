@@ -12,15 +12,20 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client.match(/new OpenAICodexAccountStore\(\)/g)).toHaveLength(1)
     expect(client).not.toContain("ctx.slots.inject('settings.models.provider-card'")
   })
-  it('registers as a Plugin configuration card instead of adding a tab or section', async () => {
+  it('registers as a Plugin configuration contribution on either settings surface without adding a tab or section', async () => {
     const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+    // Legacy clients (DSH 0.1.2 through 0.1.5) keep the Plugin configuration card.
+    expect(client).toContain("ctx.inject(['settingsScope']")
     expect(client).toContain("ctx.slots.inject('settings.plugin.item'")
     expect(client).toContain("name: 'settings.plugin.item'")
     expect(client).toContain('key: OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("id: 'openai-codex'")
     const settingsCard = client.split("ctx.slots.inject('settings.plugin.item'")[1]!.split("ctx.slots.inject('settings.models.footer'")[0]!
     expect(settingsCard).not.toContain('order: 30')
-    expect(client).toContain('ctx.settingsScope.bind')
+    expect(client).toContain('scopeCtx.settingsScope.bind')
+    // DSH 0.1.7+ renders Plugin configuration through the platform form.
+    expect(client).toContain("ctx.inject(['configForms']")
+    expect(client).toContain('configForms.get(OPENAI_CODEX_SETTINGS_NAMESPACE)')
     expect(client).toContain('OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("namespace: 'web'")
     expect(client).not.toContain("ctx.slots.inject('settings.plugins.tab'")

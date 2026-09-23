@@ -51,6 +51,7 @@ import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
 import { registerReserveRouting } from './reserve-routing.ts'
 import { OpenAICodexQuotaState } from './quota-state.ts'
+import { liveSettingsOf } from './live-settings.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -544,6 +545,31 @@ export function apply(ctx: Context, config: Config): void {
   }, 'dsh-codex-connect: optional capability lifecycle')
 
   ctx.inject(['settings'], (settingsCtx) => {
+    // DSH 0.1.7 replaced the section installer with schema-registered live
+    // scopes; one build serves every declared DSH version by preferring the
+    // newer surface and falling back to the legacy installer.
+    const liveSettings = liveSettingsOf(settingsCtx.settings)
+    const notifySettingsChanged = (): void => {
+      quota.invalidate()
+      const proxyIsActive = resolveProviderProxyUrl() !== undefined
+      if (proxyWasActive && !proxyIsActive) {
+        void proxyManager.deactivate().catch((error: unknown) => {
+          ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
+          ctx.logger.error(error)
+        })
+      }
+      proxyWasActive = proxyIsActive
+      scheduleCapabilities()
+    }
+    if (liveSettings !== undefined) {
+      // The registered schema validates field types and ranges; the proxy
+      // origin is re-normalized at every consume point, so the legacy extra
+      // validate hook has no 0.1.7 counterpart to replicate here.
+      const scope = liveSettings.register(OPENAI_CODEX_SETTINGS_NS, Config, { applies: 'live' })
+      current = () => scope.get() as Config
+      ctx.effect(() => scope.watch(notifySettingsChanged), 'dsh-codex-connect: live settings watch')
+      return
+    }
     settingsCtx.settings.installSection(ctx, OPENAI_CODEX_SETTINGS_NS, Config, config, {
       validate(value) {
         validateSettings(value)
@@ -552,18 +578,7 @@ export function apply(ctx: Context, config: Config): void {
         }
       },
       setSource(source) { current = source },
-      onChange() {
-        quota.invalidate()
-        const proxyIsActive = resolveProviderProxyUrl() !== undefined
-        if (proxyWasActive && !proxyIsActive) {
-          void proxyManager.deactivate().catch((error: unknown) => {
-            ctx.logger.error('dsh-codex-connect: could not deactivate the provider proxy')
-            ctx.logger.error(error)
-          })
-        }
-        proxyWasActive = proxyIsActive
-        scheduleCapabilities()
-      },
+      onChange() { notifySettingsChanged() },
     })
   })
   scheduleCapabilities()
