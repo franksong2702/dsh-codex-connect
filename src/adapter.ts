@@ -64,9 +64,25 @@ export function withOpenAICodexAstra(
   return { ...provider, getModels: () => models }
 }
 
+/** Missing Codex catalog entries; never replace upstream capacity, pricing or capabilities. */
+export function withOpenAICodexModels(
+  provider: Provider<'openai-codex-responses'>,
+): Provider<'openai-codex-responses'> {
+  const baseline = withOpenAICodexAstra(provider)
+  const models = [...baseline.getModels()]
+  for (const [id, name] of [['gpt-6-sol', 'GPT-6-Sol'], ['gpt-6-luna', 'GPT-6-Luna']] as const) {
+    const index = models.findIndex(model => model.id === id)
+    // Ultra is Codex client orchestration, not a pi-ai thinking level.
+    const thinkingLevelMap = { off: null, minimal: null, xhigh: 'xhigh', max: 'max' } as const
+    if (index === -1) models.push({ ...OPENAI_CODEX_ASTRA_MODEL, id, name, thinkingLevelMap })
+    else models[index] = { ...models[index]!, thinkingLevelMap: { ...models[index]!.thinkingLevelMap, ...thinkingLevelMap } }
+  }
+  return { ...baseline, getModels: () => models }
+}
+
 /** Return a detached copy of the effective Codex model catalog. */
 export function openAICodexModelCatalog(): readonly OpenAICodexModelCatalogEntry[] {
-  return withOpenAICodexAstra(openaiCodexProvider()).getModels().map(model => ({
+  return withOpenAICodexModels(openaiCodexProvider()).getModels().map(model => ({
     id: model.id, name: model.name, contextWindow: model.contextWindow,
     ...openAICodexContextLimit(model.id, model.contextWindow),
   }))
@@ -260,7 +276,7 @@ export function createOpenAICodexAdapter(
   backendRequests?: OpenAICodexBackendRequests,
   taskDispatch?: OpenAICodexTaskDispatch,
 ): PiAiAdapter {
-  const baseline = withOpenAICodexAstra(openaiCodexProvider())
+  const baseline = withOpenAICodexModels(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined

@@ -270,7 +270,9 @@ try {
   await page.getByText('Allowed main models and effort levels', { exact: true }).click()
   for (const label of await page.locator('details > label').all()) {
     const text = await label.innerText()
-    if (text.startsWith('gpt-5.6-terra:') || text.startsWith('gpt-6-astra:')) await label.getByRole('checkbox').uncheck()
+    if (text.startsWith('gpt-') && !text.startsWith('gpt-5.6-sol:') && !text.startsWith('gpt-5.6-luna:')) {
+      await label.getByRole('checkbox').uncheck()
+    }
   }
   for (const checkbox of await page.locator('fieldset input').all()) {
     const name = await checkbox.getAttribute('aria-label')

@@ -65,6 +65,8 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 ## Optional capabilities
 
+**Unreleased model compatibility:** the development branch also supplies `gpt-6-sol` and `gpt-6-luna` when older provider catalogs omit them, retaining native metadata when present. Both expose Low through Max (including Xhigh); Default omits an explicit effort. Codex Sol's Ultra orchestration mode is not implemented. New task grants can explicitly include these models, but existing grants, GPT-5.6 Sol/Medium startup and Luna Reserve remain unchanged. This is not included in the published 4.39 package or proof of account access. See [compatibility scope and validation](docs/experiments/gpt6-sol-luna-compatibility.md).
+
 All options below are off on a fresh installation. Edit them in **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**, then select **Save changes**. A conflict or failed save preserves your draft.
 
 | Capability | Enable with | Important behavior |

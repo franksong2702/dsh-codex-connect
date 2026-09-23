@@ -65,6 +65,8 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 ## 可选能力
 
+**尚未发布的模型兼容：**开发分支会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权、GPT-5.6 Sol/Medium 起步与 Luna Reserve 不变。这些改动不包含在已发布的 4.39 包中，也不代表账户调用资格已验证。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
+
 以下选项在新安装时全部关闭。请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑，再点击 **保存更改**。发生冲突或保存失败时会保留草稿。
 
 | 能力 | 启用字段 | 重要行为 |

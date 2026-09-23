@@ -10,7 +10,7 @@ import type { DelegationFields } from './TaskDelegationConsent.tsx'
 const words = {
   en: {
     button: 'Model choice', title: 'Models for this task', loading: 'Reading current state…', unavailable: 'Task controls are unavailable. No setting has been changed.',
-    intro: 'Start this new conversation with Sol / Medium. It may adjust effort or hand the remaining work to an allowed model without asking each time. Continuing with the same model is also valid.',
+    intro: 'Start this new conversation with GPT-5.6 Sol / Medium. It may adjust effort or hand the remaining work to an allowed model without asking each time. Continuing with the same model is also valid.',
     boundary: 'This applies to this conversation only, including follow-up messages until you take over. It grants no new file, command, publishing or subagent permissions. Other settings and conversations stay unchanged.',
     budget: 'Request limit (whole task)', resources: 'This counts reserved Codex requests, including failures. It is not a spending or subscription quota cap. A lost request may still be counted.',
     models: 'Allowed main models and effort levels', eligibility: 'Model capability is from the installed adapter. Your account eligibility has not been probed; an unavailable model will not be silently replaced. Existing search, image and review tools retain their own model settings and permissions; attributable Codex requests share this limit.',
@@ -25,7 +25,7 @@ const words = {
   },
   zh: {
     button: '模型选择', title: '这项任务怎么选模型', loading: '正在读取当前状态…', unavailable: '当前环境暂不可用，未更改任何设置。',
-    intro: '这段新会话从 Sol / Medium 开始。它可以在你允许的模型与档位中自行调整，或交给另一模型继续，不必每次询问；也可以一直自己做完。',
+    intro: '这段新会话从 GPT-5.6 Sol / Medium 开始。它可以在你允许的模型与档位中自行调整，或交给另一模型继续，不必每次询问；也可以一直自己做完。',
     boundary: '仅作用于这段会话，后续消息继续计入，直到你切回手动。不会新增文件、命令、发布或子任务权限，也不会改动其他功能或会话。',
     budget: '整项任务的请求上限', resources: '统计已预留的 Codex 请求，包含失败请求；不是金额或订阅额度上限。结果未知的请求也可能占用次数。',
     models: '允许使用的主模型与档位', eligibility: '能力来自已安装的适配器，尚未探测你的账户资格。模型不可用时会报明原因，不会偷偷换成其他模型。已有搜索、图片和审查工具沿用各自的模型设置及权限；可归属的 Codex 请求共用此上限。',
@@ -41,7 +41,7 @@ const words = {
 }
 const buttonStyle: CSSProperties = { minHeight: 36, padding: '5px 10px', borderRadius: 8,
   border: '1px solid var(--dsw-alias-border-l2)', background: 'var(--dsw-alias-bg-layer-1)', color: 'inherit', cursor: 'pointer' }
-const format = (value: { model: string; effort: string }) => `${value.model.replace('gpt-5.6-', '').replace('gpt-6-', '')} / ${value.effort}`
+const format = (value: { model: string; effort: string }) => `${value.model} / ${value.effort}`
 /** A mounted host slot can precede live Session restoration. Never retry a mutation. */
 async function waitForSession(signal: AbortSignal, milliseconds: number): Promise<void> {
   signal.throwIfAborted()

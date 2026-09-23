@@ -137,6 +137,7 @@ it('starts Sol/Medium only after task opt-in and adds no mandatory routing call'
 })
 it.each([
   ['gpt-5.6-sol', 'high'], ['gpt-5.6-terra', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-6-astra', 'low'],
+  ['gpt-6-sol', 'xhigh'], ['gpt-6-luna', 'max'],
 ])('lets the current model choose %s/%s within the approved task', async (model, effort) => {
   const f = await setup(); await f.start()
   f.setReply(() => f.wires.length === 1 ? choose(model, effort) : answer())

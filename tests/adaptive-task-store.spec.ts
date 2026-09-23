@@ -18,6 +18,18 @@ async function setup() {
   return { path, file, store }
 }
 afterEach(async () => { if (root !== undefined) await rm(root, { recursive: true, force: true }); root = undefined })
+it('persists all six explicitly granted models and never expands an older grant on read', async () => {
+  const f = await setup()
+  const old = document(); await f.store.update('fixture', () => old)
+  expect((await f.store.read('fixture'))!.capabilities).toEqual(old.capabilities)
+  const fresh = { ...document(), capabilities: ADAPTIVE_TASK_MODELS.map(model => ({ model, efforts: ['medium'] })) }
+  await f.store.update('fixture', () => fresh)
+  const restarted = new AdaptiveTaskStore(f.path)
+  expect((await restarted.read('fixture'))!.capabilities).toEqual(fresh.capabilities)
+  expect((await restarted.read('fixture'))!.route).toEqual({ model: 'gpt-5.6-sol', effort: 'medium' })
+  await expect(f.store.update('fixture', current => ({ ...current!, capabilities: [...fresh.capabilities,
+    { model: 'unapproved-model', efforts: ['medium'] }] }))).rejects.toThrow('TASK_STATE_INVALID')
+})
 it('uses private atomic state and never stores unrelated prompt or credential fields', async () => {
   const f = await setup(); expect(await f.store.read('fixture')).toBeUndefined()
   await f.store.update('fixture', document)
