@@ -16,17 +16,19 @@ This guide describes the published pairings below. Check `dsh --version` first a
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.40` |
+| Codex Connect | `0.1.0-alpha.4.41` |
 | DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-23, npm `alpha` points to 4.40 while `latest` intentionally remains on 4.34. Use the exact version below for 4.40; this recommendation does not promote the default installation channel.
+As of 2026-09-23, npm `alpha` points to 4.41 while `latest` remains on 4.40. Use the exact version below for 4.41; publishing an Alpha and changing the default installation channel are separate actions.
+
+Task-level model choice remains off until enabled for a new conversation. In 4.41, a new grant preselects only GPT-5.6 Sol / Medium and shows the exact scope and request limit before Start. Existing task grants are preserved; take over manually and start a new task to choose a narrower scope.
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.40
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
 dsh web
 ```
 
