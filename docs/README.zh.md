@@ -16,17 +16,17 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.39` |
+| Codex Connect | `0.1.0-alpha.4.40` |
 | DeepSeek Harness | `0.1.2-rc.1`、`0.1.5-alpha.1`、`0.1.5-rc.1` 或 `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-21，npm `alpha` 指向 4.39，`latest` 则有意保留在 4.34。安装 4.39 请使用下方精确版本命令；文档推荐更新不代表默认安装渠道已提升。
+截至 2026-09-23，npm `alpha` 指向 4.40，`latest` 则有意保留在 4.34。安装 4.40 请使用下方精确版本命令；文档推荐更新不代表默认安装渠道已提升。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.39
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.40
 dsh web
 ```
 
@@ -65,7 +65,9 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 ## 可选能力
 
-**尚未发布的模型兼容：**开发分支会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权、GPT-5.6 Sol/Medium 起步与 Luna Reserve 不变。这些改动不包含在已发布的 4.39 包中，也不代表账户调用资格已验证。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
+**Alpha 4.40 新增：**任务级模型安排默认关闭。用户明确授予任务权限后，由 GPT-5.6 Sol／Medium 起步；当前模型可以在授权范围内继续、调档或交接主任务。请求共用同一任务账本与预算；停止、手动接管和重启恢复都保留授权边界。Phase 2 的只读委派需要单独同意，不会给委派工作者写入权限。它们是按任务开启的能力，不是并列的 Think／Split／Remember 开关。参见 [Phase 1](experiments/adaptive-task-phase1.md) 与 [Phase 2 同意边界](experiments/adaptive-task-phase2-consent.md)。
+
+Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权、GPT-5.6 Sol／Medium 起步与 Luna Reserve 不变。模型出现在目录中不代表账户具有调用资格。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
 
 以下选项在新安装时全部关闭。请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑，再点击 **保存更改**。发生冲突或保存失败时会保留草稿。
 

@@ -16,17 +16,17 @@ This guide describes the published pairings below. Check `dsh --version` first a
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.39` |
+| Codex Connect | `0.1.0-alpha.4.40` |
 | DeepSeek Harness | `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, or `0.1.5-rc.2` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-21, npm `alpha` points to 4.39 while `latest` intentionally remains on 4.34. Use the exact version below for 4.39; this recommendation does not promote the default installation channel.
+As of 2026-09-23, npm `alpha` points to 4.40 while `latest` intentionally remains on 4.34. Use the exact version below for 4.40; this recommendation does not promote the default installation channel.
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.39
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.40
 dsh web
 ```
 
@@ -65,7 +65,9 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 ## Optional capabilities
 
-**Unreleased model compatibility:** the development branch also supplies `gpt-6-sol` and `gpt-6-luna` when older provider catalogs omit them, retaining native metadata when present. Both expose Low through Max (including Xhigh); Default omits an explicit effort. Codex Sol's Ultra orchestration mode is not implemented. New task grants can explicitly include these models, but existing grants, GPT-5.6 Sol/Medium startup and Luna Reserve remain unchanged. This is not included in the published 4.39 package or proof of account access. See [compatibility scope and validation](docs/experiments/gpt6-sol-luna-compatibility.md).
+**New in Alpha 4.40:** task-level model control is off by default. After explicit task authorization, GPT-5.6 Sol/Medium starts the task, and the active model may continue, change effort, or hand off the main task within the granted scope. The task shares one request ledger and budget; stopping, manual takeover, and restart recovery retain the grant boundary. Phase 2 read-only delegation requires separate consent and does not grant workers write access. These are opt-in task capabilities, not parallel Think/Split/Remember switches. See [Phase 1](docs/experiments/adaptive-task-phase1.md) and [Phase 2 consent](docs/experiments/adaptive-task-phase2-consent.md).
+
+Alpha 4.40 also supplies `gpt-6-sol` and `gpt-6-luna` when older provider catalogs omit them, retaining native metadata when present. Both expose Low through Max (including Xhigh); Default omits an explicit effort. Codex Sol's Ultra orchestration mode is not implemented. New task grants can explicitly include these models, but existing grants, GPT-5.6 Sol/Medium startup and Luna Reserve remain unchanged. A catalog entry is not proof of account access. See [compatibility scope and validation](docs/experiments/gpt6-sol-luna-compatibility.md).
 
 All options below are off on a fresh installation. Edit them in **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**, then select **Save changes**. A conflict or failed save preserves your draft.
 
