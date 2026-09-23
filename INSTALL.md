@@ -4,7 +4,7 @@ Published Alpha 4.41 is verified with DSH `0.1.2-rc.1` and pi-ai `0.84.4` within
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-09-23: npm `alpha` points to `0.1.0-alpha.4.41`; `latest` remains on `0.1.0-alpha.4.40`. Use the exact-version commands below for 4.41. Publishing an Alpha and promoting the default installation channel are separate actions.
+Channel snapshot on 2026-09-23: npm `alpha` and `latest` both point to `0.1.0-alpha.4.41`. Use the exact-version commands below for a verified host pairing. Publishing an Alpha and promoting the default installation channel are separate actions.
 
 ## Safety requirements
 

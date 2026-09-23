@@ -21,7 +21,7 @@ This guide describes the published pairings below. Check `dsh --version` first a
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-23, npm `alpha` points to 4.41 while `latest` remains on 4.40. Use the exact version below for 4.41; publishing an Alpha and changing the default installation channel are separate actions.
+As of 2026-09-23, npm `alpha` and `latest` both point to 4.41. Use the exact version below for a verified host pairing; publishing an Alpha and changing the default installation channel are separate actions.
 
 Task-level model choice remains off until enabled for a new conversation. In 4.41, a new grant preselects only GPT-5.6 Sol / Medium and shows the exact scope and request limit before Start. Existing task grants are preserved; take over manually and start a new task to choose a narrower scope.
 
