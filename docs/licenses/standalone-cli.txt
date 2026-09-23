@@ -1,21 +1,29 @@
 Standalone CLI third-party notices
 
-The generated lib/bin.js and its generated helper chunks contain portions of
-the following packages. This list describes the build of Codex Connect Alpha
-4.43; it does not change the licenses of those packages.
+The generated lib/bin.js and its helper chunks include portions of the
+packages listed below, except where marked as retained notices. The retained
+notices cover dependencies bundled by earlier Alpha 4.43 candidates but
+removed from the final standalone CLI. They do not change package licenses.
 
 MIT-licensed packages:
 - @deepseek-ai/dsh-atomic-write, dsh-home-paths, dsh-typert-protocol,
-  dsh-util-values, dsh-timeout, dsh-llm, dsh-attachment, dsh-llm-pi-ai,
-  dsh-compaction, and dsh-web: Copyright (c) 2026 DeepSeek.
+  dsh-util-values, dsh-timeout, dsh-llm, and dsh-web: Copyright (c) 2026 DeepSeek.
 - @deepseek-ai/cosmokit, @deepseek-ai/cordis, and
   @deepseek-ai/schemastery: Copyright (c) 2021-present Shigma.
 - @earendil-works/pi-ai: Copyright (c) 2025 Mario Zechner. Its OAuth
   source notice is also retained in docs/licenses/pi-ai-oauth.txt.
-- @anthropic-ai/sdk: Copyright 2023 Anthropic, PBC.
-- @stablelib/base64: Copyright (C) 2016 Dmitry Chestnykh.
-- standardwebhooks: Copyright Standard Webhooks.
 - partial-json: Copyright (c) 2023 Promplate Dev Team.
+
+Retained notices for packages no longer included in this CLI build:
+- @deepseek-ai/dsh-attachment, dsh-llm-pi-ai, and dsh-compaction:
+  Copyright (c) 2026 DeepSeek (MIT).
+- @anthropic-ai/sdk: Copyright 2023 Anthropic, PBC (MIT).
+- @stablelib/base64: Copyright (C) 2016 Dmitry Chestnykh (MIT).
+- standardwebhooks: Copyright Standard Webhooks (MIT).
+- openai: Copyright OpenAI (Apache-2.0).
+- neoqs: Copyright (c) 2014 Nathan LaFreniere and other contributors (BSD-3-Clause).
+- zod-to-json-schema: Copyright (c) 2020 Stefan Terdell (ISC).
+- fast-sha256: Unlicense.
 
 MIT License
 

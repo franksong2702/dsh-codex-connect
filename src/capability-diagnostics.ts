@@ -1,7 +1,7 @@
 /** Evidence-scoped diagnostics, separate from model routing and durable sessions. */
 
 import { createHash } from 'node:crypto'
-import { openAICodexModelCatalog, OPENAI_CODEX_TRANSPORT } from './adapter.ts'
+import { openAICodexModelCatalog, OPENAI_CODEX_TRANSPORT } from './model-catalog.ts'
 import { evaluateCompatibility, DSH_PLUGIN_API_PACKAGES, readInstalledPackageVersion, isSupportedDshPluginApiVersion } from './compatibility.ts'
 import { diagnoseOpenAICodex } from './doctor.ts'
 import { probeCodexResponses } from './capability-probe.ts'
