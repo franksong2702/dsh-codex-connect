@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import { ADAPTIVE_TASK_PATH, decodeTaskCommand, validTaskSessionId } from './adaptive-task-contract.ts'
 import { AdaptiveTaskError, taskFailure, taskIdentity } from './adaptive-task-store.ts'
 import type { AdaptiveTaskCommand, AdaptiveTaskState } from './adaptive-task-contract.ts'
+import { ADAPTIVE_TASK_RELEASE_PAUSED, publicTaskCommandAllowed, publicTaskState } from './adaptive-task-publication.ts'
 
 const BODY_LIMIT = 8192
 function reply(res: ServerResponse, status: number, value: unknown): void {
@@ -61,12 +62,13 @@ export function registerAdaptiveTaskHttp(ctx: Context, runtime: {
       if (req.method === 'GET') {
         const sessionId = url.searchParams.get('sessionId')
         if (!validTaskSessionId(sessionId) || [...url.searchParams.keys()].join(',') !== 'sessionId') taskFailure('TASK_SESSION_INVALID')
-        reply(res, 200, await runtime.state(sessionId, principal))
+        reply(res, 200, publicTaskState(await runtime.state(sessionId, principal)))
       } else if (req.method === 'POST') {
         if (url.search !== '') taskFailure('TASK_COMMAND_INVALID')
         const command = decodeTaskCommand(await readCommand(req))
         if (command === undefined) taskFailure('TASK_COMMAND_INVALID')
-        reply(res, 200, await runtime.command(command, principal))
+        if (!publicTaskCommandAllowed(command.action)) taskFailure(ADAPTIVE_TASK_RELEASE_PAUSED)
+        reply(res, 200, publicTaskState(await runtime.command(command, principal)))
       } else reply(res, 405, { error: 'TASK_METHOD_NOT_ALLOWED' })
     } catch (error: unknown) {
       const code = error instanceof AdaptiveTaskError ? error.code : 'TASK_OPERATION_FAILED'

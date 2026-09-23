@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { request } from 'node:http'
+import { request, type IncomingMessage } from 'node:http'
 import { zstdDecompressSync } from 'node:zlib'
 import { Context } from '@deepseek-ai/cordis'
 import { AgentRegistry } from '@deepseek-ai/dsh-agent'
@@ -18,7 +18,7 @@ import { WebServer } from '@deepseek-ai/dsh-host-webserver'
 import * as Connection from '@deepseek-ai/dsh-client-connection'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AdaptiveTaskControlRuntime } from '../src/adaptive-task-control-runtime.ts'
-import { registerAdaptiveTaskHttp } from '../src/adaptive-task-http.ts'
+import { adaptiveBrowserPrincipal, registerAdaptiveTaskHttp } from '../src/adaptive-task-http.ts'
 import { TaskDelegationArtifacts } from '../src/adaptive-task-artifacts.ts'
 import { AtomicTaskDocumentStore, taskIdentity } from '../src/adaptive-task-store.ts'
 import { parseTaskLedger } from '../src/adaptive-task-delegation-contract.ts'
@@ -77,7 +77,7 @@ function response(name?: string, args?: unknown): Response {
     { type: 'response.completed', response: { id: 'synthetic', status: 'completed', output: [item] } }]
     .map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
 }
-async function setup(selectedChild = child, catalogModels = [main, selectedChild]) {
+async function setup(selectedChild = child, catalogModels = [main, selectedChild], initialOwner = owner) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'task-consent-'))); roots.push(root)
   vi.stubEnv('DSH_HOME', root); vi.stubEnv('OTEL_SDK_DISABLED', 'true')
   vi.stubGlobal('WebSocket', class { constructor() { throw new Error('Synthetic only') } })
@@ -110,10 +110,11 @@ async function setup(selectedChild = child, catalogModels = [main, selectedChild
   const { agent } = await ctx.agents.create({ sessionId: SessionId('consent-root'), meta: { cwd: root },
     agentOptions: { provider: 'openai-codex', model: main, reasoningEffort: ReasoningEffortId('medium') } })
   await writeFile(join(root, 'notes.txt'), 'approved first\nsecond')
-  const state = () => runtime.state(agent.id, owner)
+  let taskOwner = initialOwner
+  const state = () => runtime.state(agent.id, taskOwner)
   const build = (action: AdaptiveTaskCommand['action'], revision: number, extra = {}): AdaptiveTaskCommand => ({ sessionId: agent.id,
     action, revision, operationId: randomUUID(), ...(action === 'start' ? { models: [main, selectedChild], efforts: { [main]: ['medium'], [selectedChild]: ['max'] }, maximumRequests: 20 } : {}), ...extra })
-  const mutate = async (action: AdaptiveTaskCommand['action'], extra = {}) => runtime.command(build(action, (await state()).revision, extra), owner)
+  const mutate = async (action: AdaptiveTaskCommand['action'], extra = {}) => runtime.command(build(action, (await state()).revision, extra), taskOwner)
   const grant = { files: ['notes.txt'], routes: [{ model: selectedChild, effort: 'max' }], maxChildRequests: 6, timeoutMs: 30000, disclose: true }
   const ready = async () => { await mutate('start'); await mutate('upgrade'); await mutate('delegate-enable', grant); await mutate('resume') }
   const send = async (text = 'ORIGINAL CONSENT REQUIREMENT') => { agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })); await agent.whenIdle() }
@@ -125,7 +126,7 @@ async function setup(selectedChild = child, catalogModels = [main, selectedChild
       : step === 2 ? response('read_task_evidence', { sourceId, start: 1, end: 1 })
       : step === 3 ? response('submit_task_findings', { summary: 'Synthetic findings', findings: [{ text: 'First line', references: [{ sourceId, start: 1, end: 1, digest: taskIdentity('approved first') }] }] }) : response()
   }
-  return { root, ctx, agent, runtime, store, artifacts, wires, state, build, mutate, grant, ready, send, success, child: selectedChild, setReply(fn: typeof reply) { reply = fn } }
+  return { root, ctx, agent, runtime, store, artifacts, wires, state, build, mutate, grant, ready, send, success, setOwner(value: string) { taskOwner = value }, child: selectedChild, setReply(fn: typeof reply) { reply = fn } }
 }
 
 it('keeps legacy/off behavior, explicitly migrates without child authority, and preserves the root budget', async () => {
@@ -278,22 +279,35 @@ async function serve(f: Awaited<ReturnType<typeof setup>>) {
   const headers = { cookie: issued.cookie!, origin, 'content-type': 'application/json' }, url = origin + ADAPTIVE_TASK_PATH
   return { origin, headers, url, setPage(value: string, entries: Array<[string, Buffer]>) { html = value; for (const [name, bytes] of entries) assets.set(name, bytes) } }
 }
-it('uses actual signed-cookie HTTP for upgrade and consent and rejects cross-site/other credential control', async () => {
+it('keeps signed-cookie activation closed and preserves existing delegation safety exits and ownership', async () => {
   const f = await setup(), { origin, headers, url } = await serve(f)
   expect((await http(url, { ...headers, cookie: '' }, f.build('start', 0))).status).toBe(401)
-  let result = await http(url, headers, f.build('start', 0)); expect(result.status).toBe(200)
-  result = await http(url, headers, f.build('upgrade', result.value.revision)); expect(result.status).toBe(200)
-  expect(result.value.delegation).toMatchObject({ version: 2, enabled: false })
-  const enable = f.build('delegate-enable', result.value.revision, f.grant)
-  expect((await http(url, { ...headers, 'sec-fetch-site': 'cross-site' }, enable)).status).toBe(403)
-  result = await http(url, headers, enable); expect(result.status, JSON.stringify(result.value)).toBe(200)
-  expect(result.value.delegation).toMatchObject({ enabled: true, files: ['notes.txt'] })
+  for (const action of ['start', 'resume', 'upgrade', 'delegate-enable'] as const) {
+    const result = await http(url, headers, f.build(action, 0, action === 'delegate-enable' ? f.grant : {}))
+    expect(result.status).toBe(409); expect(result.value).toEqual({ error: 'TASK_PUBLIC_RELEASE_PAUSED' })
+  }
+  // Explicit test-only host preparation represents a pre-existing v2 grant.
+  // It does not enable a production route or mutate the compiled release gate.
+  const principal = adaptiveBrowserPrincipal({ headers: { ...headers, host: new URL(origin).host } } as IncomingMessage)
+  let state = await f.runtime.command(f.build('start', 0), principal)
+  state = await f.runtime.command(f.build('upgrade', state.revision), principal)
+  state = await f.runtime.command(f.build('delegate-enable', state.revision, f.grant), principal)
+  let result = await http(url + '?sessionId=' + f.agent.id, headers)
+  expect(result.value).toMatchObject({ mode: 'interrupted', canStart: false, delegation: { version: 2, enabled: true } })
+  expect((await http(url, { ...headers, 'sec-fetch-site': 'cross-site' }, f.build('manual', state.revision))).status).toBe(403)
   const other = await http(f.ctx.connection.authenticatedUrl(origin))
   expect((await http(url + '?sessionId=' + f.agent.id, { ...headers, cookie: other.cookie! })).status).toBe(403)
+  expect((await http(url, headers, f.build('resume', state.revision))).status).toBe(409)
+  for (const action of ['stop', 'manual', 'delegate-disable', 'downgrade'] as const) {
+    result = await http(url, headers, f.build(action, result.value.revision))
+    expect(result.status, JSON.stringify(result.value)).toBe(200)
+    expect(result.value.reserved).toBe(0)
+  }
+  expect(await f.store.read(f.agent.id)).toMatchObject({ version: 1, mode: 'manual', reserved: 0 })
   expect(f.wires).toHaveLength(0)
 })
 
-if (process.env.ADAPTIVE_DELEGATION_UI === '1') it('drives actual Chromium consent, delegation, manual takeover and downgrade over signed host HTTP', async () => {
+if (process.env.ADAPTIVE_DELEGATION_UI === '1') it('drives paused Chromium recovery for a pre-existing delegated task over signed host HTTP', async () => {
   const f = await setup(), web = await serve(f)
   const { build } = await import('tsdown'), output = join(f.root, 'browser')
   await build({ config: false, entry: { browser: join(process.cwd(), 'scripts/adaptive-task-browser-entry.tsx') },
@@ -316,40 +330,27 @@ if (process.env.ADAPTIVE_DELEGATION_UI === '1') it('drives actual Chromium conse
       return route.continue()
     })
     await page.goto(f.ctx.connection.authenticatedUrl(web.origin))
-    await page.getByRole('button', { name: '模型选择', exact: true }).click()
-    await page.getByText('允许使用的主模型与档位', { exact: true }).click()
-    await page.getByRole('checkbox', { name: /^gpt-5\.6-luna:/ }).check()
-    await page.getByRole('checkbox', { name: `${child} / max`, exact: true }).check()
-    await page.getByText(`现在开始将授权的主模型与档位：${main}: medium; ${child}: max`, { exact: true }).waitFor()
-    await page.getByRole('button', { name: '按这些范围开始' }).click()
-    await page.getByRole('button', { name: '准备任务升级' }).click()
-    await page.getByText('尚未授予委派权限', { exact: true }).waitFor()
-    await page.getByText('设置明确的子任务范围', { exact: true }).click()
-    expect(await page.getByRole('button', { name: '仅授权这些范围' }).isEnabled()).toBe(false)
-    await page.getByRole('checkbox', { name: `Child ${child} / max`, exact: true }).check()
-    await page.getByRole('textbox', { name: '批准的文本文件（相对工作目录，每行一个）' }).fill('notes.txt')
-    await page.getByRole('checkbox', { name: /我已检查这些文件/ }).check()
-    await page.getByRole('button', { name: '仅授权这些范围' }).click()
-    await page.getByText('已授权只读委派范围：', { exact: true }).waitFor()
-    await page.getByRole('button', { name: '按原范围继续' }).click()
-    await page.getByText('已允许系统自行选模型', { exact: true }).waitFor()
-    await f.success()
-    await page.getByRole('button', { name: '关闭', exact: true }).click()
-    await page.getByRole('textbox', { name: 'Task', exact: true }).fill('ORIGINAL BROWSER DELEGATION REQUIREMENT')
-    await page.getByRole('button', { name: 'Send task' }).click()
-    await page.getByText('Fixture task finished', { exact: true }).waitFor()
+    const cookies = await page.context().cookies()
+    const credential = cookies.filter(cookie => cookie.name.startsWith('dsh-auth-')).map(cookie => cookie.name + '=' + cookie.value).join('; ')
+    const principal = adaptiveBrowserPrincipal({ headers: { host: new URL(web.origin).host, cookie: credential } } as IncomingMessage)
+    f.setOwner(principal)
+    await f.ready(); await f.success(); await f.send('ORIGINAL BROWSER DELEGATION REQUIREMENT')
     expect(f.wires.map(w => w.model)).toEqual([main, child, child, main])
-    expect(JSON.stringify(f.wires.at(-1).input)).toContain('ORIGINAL BROWSER DELEGATION REQUIREMENT')
-    await page.getByRole('button', { name: '模型选择', exact: true }).click()
-    await page.getByText(/#1: 已完成/).waitFor()
-    expect(await page.locator('dialog').textContent()).toContain('4 / 40')
+    // Reload the unchanged closed public surface after fixture-only legacy preparation.
+    await page.reload()
+    await page.getByRole('button', { name: '已有任务控制', exact: true }).click()
+    await page.getByText('已预留请求: 4 / 20', { exact: false }).waitFor()
+    expect(await page.getByRole('checkbox').count()).toBe(0)
+    expect(await page.getByRole('button', { name: '按原范围继续' }).count()).toBe(0)
     expect(await page.locator('dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
     if (process.env.ADAPTIVE_DELEGATION_SCREENSHOT) await page.screenshot({ path: process.env.ADAPTIVE_DELEGATION_SCREENSHOT, fullPage: true })
     await page.getByRole('button', { name: '切回手动', exact: true }).click()
-    await page.getByRole('button', { name: '撤销子任务权限' }).click()
-    await page.getByText('尚未授予委派权限', { exact: true }).waitFor()
-    await page.getByRole('button', { name: '留档并退回 Phase 1 手动模式' }).click()
-    await page.getByRole('button', { name: '准备任务升级' }).waitFor()
+    await page.getByText('已记录状态: manual', { exact: false }).waitFor()
+    for (const action of ['delegate-disable', 'downgrade'] as const) {
+      const state = await f.state()
+      const result = await page.context().request.post(web.url, { data: f.build(action, state.revision), headers: { origin: web.origin } })
+      expect(result.status()).toBe(200)
+    }
     const stored = await f.store.read(f.agent.id)
     expect(stored).toMatchObject({ version: 1, mode: 'manual', reserved: 4 })
     expect(external).toBe(0); expect(errors).toEqual([])

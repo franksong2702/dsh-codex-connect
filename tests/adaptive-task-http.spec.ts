@@ -10,7 +10,7 @@ import Loop from '@deepseek-ai/dsh-agent-loop'
 import Prompt from '@deepseek-ai/dsh-system-prompt'
 import Tools from '@deepseek-ai/dsh-tools'
 import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { request } from 'node:http'
 import type { IncomingHttpHeaders } from 'node:http'
@@ -21,6 +21,8 @@ import * as Product from '../src/index.ts'
 import { OpenAICodexCredentialStore } from '../src/store.ts'
 import { ADAPTIVE_TASK_PATH, ADAPTIVE_TASK_MODELS, ADAPTIVE_TASK_TOOL } from '../src/adaptive-task-contract.ts'
 import { adaptiveBrowserPrincipal } from '../src/adaptive-task-http.ts'
+import { AdaptiveTaskStore, taskIdentity } from '../src/adaptive-task-store.ts'
+import { ADAPTIVE_TASK_RELEASE_PAUSED } from '../src/adaptive-task-publication.ts'
 import type { IncomingMessage } from 'node:http'
 import { createHash } from 'node:crypto'
 
@@ -57,9 +59,7 @@ async function fixture() {
     expect(String(url)).toBe('https://chatgpt.com/backend-api/codex/responses')
     const raw = new Headers(init.headers).get('content-encoding') === 'zstd' ? zstdDecompressSync(init.body as Uint8Array).toString('utf8') : String(init.body)
     const wire = JSON.parse(raw); wires.push(wire)
-    const item = wires.length === 1 ? { type: 'function_call', id: 'fc_fixture', call_id: 'c_fixture', name: ADAPTIVE_TASK_TOOL,
-      arguments: JSON.stringify({ model: 'gpt-5.6-luna', effort: 'max', reason: 'The remaining synthetic work is explicit.' }), status: 'completed' }
-      : { type: 'message', id: 'm_fixture', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: 'Fixture done.', annotations: [] }] }
+    const item = { type: 'message', id: 'm_fixture', role: 'assistant', phase: 'final_answer', status: 'completed', content: [{ type: 'output_text', text: 'Fixture done.', annotations: [] }] }
     return new Response([{ type: 'response.output_item.added', output_index: 0, item },
       { type: 'response.output_item.done', output_index: 0, item },
       { type: 'response.completed', response: { id: 'r_fixture', model: wire.model, status: 'completed', output: [item] } },
@@ -99,7 +99,23 @@ async function fixture() {
   const efforts = Object.fromEntries(taskModels.map(model => [model.id, model.reasoning!.efforts.map(effort => String(effort.id))]))
   const body = (action = 'start', revision = 0, extra = {}) => JSON.stringify({ sessionId: agent.id, action, revision, operationId: randomUUID(),
     ...(action === 'start' ? { models: [...ADAPTIVE_TASK_MODELS], efforts, maximumRequests: 10 } : {}), ...extra })
-  return { host, agent, origin, cookie, headers, read, body, wires,
+  // Fixture-only prior-version document: the shipping endpoint remains closed throughout.
+  // Restore through the actual product rather than introducing a second live runtime.
+  const seedLegacy = async (credential = cookie) => {
+    const h = agent.session.header
+    const taskStore = new AdaptiveTaskStore(join(dirname(store.filename), 'codex-connect-tasks'))
+    const principal = adaptiveBrowserPrincipal({ headers: { host: new URL(origin).host, cookie: credential } } as IncomingMessage)
+    await taskStore.update(agent.id, previous => {
+      expect(previous).toBeUndefined()
+      return { version: 1, sessionId: agent.id, owner: principal,
+        sessionKey: taskIdentity(JSON.stringify([h.id, h.createdAt, h.cwd ?? '', h.isSeeded, h.parentSession ?? ''])),
+        runtime: taskIdentity('previous-process'), revision: 5, mode: 'auto',
+        route: { model: 'gpt-5.6-sol', effort: 'medium' }, capabilities: [{ model: 'gpt-5.6-sol', efforts: ['medium'] }],
+        maximumRequests: 10, reserved: 3, selectionSeq: -1, portable: false, handoffSeq: -1,
+        receipts: [{ id: randomUUID(), digest: taskIdentity('prior-consent') }] }
+    })
+  }
+  return { host, agent, origin, cookie, headers, read, body, wires, seedLegacy,
     setPage(value: string, entries: Array<[string, Buffer]>) { html = value; for (const [name, bytes] of entries) assets.set(name, bytes) },
     post: (content = body(), override: Record<string, string> = {}) => http(origin + ADAPTIVE_TASK_PATH, { method: 'POST', headers: { ...headers, ...override }, body: content }) }
 }
@@ -109,21 +125,22 @@ afterEach(async () => {
     if (directory !== undefined) await rm(directory, { recursive: true, force: true }); directory = undefined
   }
 })
-it('uses actual signed browser auth through the product, then Sol, model-selected Luna and manual exit', async () => {
+it('keeps signed public task activation closed while ordinary manual model requests still work', async () => {
   const f = await fixture()
-  expect(JSON.parse((await f.read()).text)).toMatchObject({ mode: 'off', canStart: true })
-  const command = f.body()
-  const activated = await f.post(command); expect(activated.status, activated.text).toBe(200)
-  expect(JSON.parse(activated.text)).toMatchObject({ mode: 'auto', requested: { model: 'gpt-5.6-sol', effort: 'medium' }, reserved: 0 })
-  f.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Original authenticated task requirement.' }] }))
+  expect(JSON.parse((await f.read()).text)).toMatchObject({ mode: 'off', canStart: false, unavailable: ADAPTIVE_TASK_RELEASE_PAUSED })
+  for (const action of ['start', 'resume', 'upgrade', 'delegate-enable']) {
+    const extra = action === 'delegate-enable' ? { files: ['notes.txt'], routes: [{ model: 'gpt-5.6-sol', effort: 'medium' }],
+      maxChildRequests: 2, timeoutMs: 1000, disclose: true } : {}
+    const result = await f.post(f.body(action, 0, extra))
+    expect(result.status).toBe(409); expect(JSON.parse(result.text)).toEqual({ error: ADAPTIVE_TASK_RELEASE_PAUSED })
+  }
+  expect(f.wires).toHaveLength(0)
+  expect(JSON.parse((await f.read()).text)).toMatchObject({ revision: 0, mode: 'off', reserved: 0 })
+  f.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Ordinary manual request.' }] }))
   await f.agent.whenIdle()
-  expect(f.wires.map(wire => wire.model)).toEqual(['gpt-5.6-sol', 'gpt-5.6-luna'])
-  const state = JSON.parse((await f.read()).text)
-  expect(state).toMatchObject({ mode: 'auto', reserved: 2, current: { model: 'gpt-5.6-luna', effort: 'max' } })
-  expect((await f.post(command)).status).toBe(200)
-  const result = await f.post(f.body('manual', state.revision)); expect(result.status).toBe(200)
-  expect(JSON.parse(result.text).mode).toBe('manual')
-  expect(result.text).not.toContain(f.cookie)
+  expect(f.wires).toHaveLength(1); expect(f.wires[0].model).toBe('gpt-5.6-terra')
+  expect(f.wires[0].tools?.some((tool: any) => tool.name === ADAPTIVE_TASK_TOOL)).not.toBe(true)
+  expect(JSON.parse((await f.read()).text).mode).toBe('off')
 })
 it('rejects missing cookie, forged cookie and cross-origin mutation before creating a task', async () => {
   const f = await fixture()
@@ -133,27 +150,35 @@ it('rejects missing cookie, forged cookie and cross-origin mutation before creat
   expect(JSON.parse((await f.read()).text).mode).toBe('off'); expect(f.wires).toHaveLength(0)
 })
 it('prevents another valid browser credential from inspecting or controlling a bound task', async () => {
-  const f = await fixture(); expect((await f.post()).status).toBe(200)
+  const f = await fixture(); await f.seedLegacy()
+  const state = JSON.parse((await f.read()).text); expect(state).toMatchObject({ mode: 'interrupted', reserved: 3 })
   const issued = await http(f.host.connection.authenticatedUrl(f.origin))
   const other = issued.headers['set-cookie']![0]!.split(';')[0]!
   expect(other).not.toBe(f.cookie)
   const denied = await http(f.origin + ADAPTIVE_TASK_PATH + '?sessionId=' + f.agent.id, { headers: { ...f.headers, cookie: other } })
   expect(denied.status).toBe(403)
   expect((await f.post(f.body('manual', 1), { cookie: other })).status).toBe(403)
-  expect(JSON.parse((await f.read()).text).mode).toBe('auto')
+  expect(JSON.parse((await f.read()).text).mode).toBe('interrupted')
 })
 it('rejects oversize, wrong-content-type, extra authority and stale mutation requests', async () => {
   const f = await fixture()
   expect((await f.post('x'.repeat(9000))).status).toBe(409)
   expect((await f.post(f.body(), { 'content-type': 'text/plain' })).status).toBe(409)
   expect((await f.post(f.body('start', 0, { approved: true }))).status).toBe(409)
-  expect((await f.post()).status).toBe(200)
+  await f.seedLegacy()
+  let state = JSON.parse((await f.read()).text)
+  expect(state).toMatchObject({ mode: 'interrupted', reserved: 3, canStart: false })
+  expect((await f.post(f.body('resume', state.revision))).status).toBe(409)
   expect((await f.post(f.body('manual', 0))).status).toBe(409)
-  expect((await f.post(f.body('manual', 1))).status).toBe(200)
+  const stopped = await f.post(f.body('stop', state.revision)); expect(stopped.status).toBe(200)
+  state = JSON.parse(stopped.text); expect(state).toMatchObject({ mode: 'stopped', reserved: 3 })
+  const manual = await f.post(f.body('manual', state.revision)); expect(manual.status).toBe(200)
+  expect(JSON.parse(manual.text)).toMatchObject({ mode: 'manual', reserved: 3, maximumRequests: 10 })
+  expect(f.wires).toHaveLength(0)
 })
 
 // The dedicated browser CI job installs Chromium; ordinary unit jobs exercise the four HTTP cases above.
-if (process.env.ADAPTIVE_TASK_UI === '1') it('runs the real task control over authenticated HTTP and completes a model-directed handoff', async () => {
+if (process.env.ADAPTIVE_TASK_UI === '1') it('runs the paused public control over authenticated HTTP and reconciles a lost manual-exit reply', async () => {
   const f = await fixture()
   const { build } = await import('tsdown')
   const output = join(directory!, 'browser')
@@ -187,26 +212,40 @@ if (process.env.ADAPTIVE_TASK_UI === '1') it('runs the real task control over au
       return route.continue()
     })
     await page.goto(f.host.connection.authenticatedUrl(f.origin))
-    await page.getByRole('button', { name: '模型选择', exact: true }).click()
-    await page.getByText('允许使用的主模型与档位', { exact: true }).click()
-    await page.getByRole('checkbox', { name: /^gpt-5\.6-luna:/ }).check()
-    await page.getByRole('checkbox', { name: 'gpt-5.6-luna / max', exact: true }).check()
-    await page.getByText('现在开始将授权的主模型与档位：gpt-5.6-sol: medium; gpt-5.6-luna: max', { exact: true }).waitFor()
-    await page.getByRole('button', { name: '按这些范围开始' }).click()
-    await page.getByRole('button', { name: '切回手动' }).waitFor()
+    const browserCookies = await page.context().cookies()
+    const credential = browserCookies.filter(cookie => cookie.name.startsWith('dsh-auth-')).map(cookie => cookie.name + '=' + cookie.value).join('; ')
+    const current = () => page.context().request.get(f.origin + ADAPTIVE_TASK_PATH + '?sessionId=' + f.agent.id)
+    expect((await (await current()).json()).canStart).toBe(false)
+    expect(await page.getByRole('button', { name: '模型选择', exact: true }).count()).toBe(0)
+    await f.seedLegacy(credential)
+    await page.reload()
+    await page.getByRole('button', { name: '已有任务控制', exact: true }).click()
+    await page.getByText('已预留请求: 3 / 10', { exact: false }).waitFor()
+    expect(await page.getByRole('checkbox').count()).toBe(0)
+    expect(await page.getByRole('button', { name: '按原范围继续' }).count()).toBe(0)
+    expect(await page.locator('dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    let dropped = 0
+    const lose = async (route: any) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      const response = await route.fetch(); expect(response.status()).toBe(200)
+      expect((await response.json()).mode).toBe('manual'); dropped++
+      await route.abort('connectionreset')
+    }
+    await page.route('**' + ADAPTIVE_TASK_PATH, lose)
+    await page.getByRole('button', { name: '切回手动', exact: true }).click()
+    await page.getByRole('alert').waitFor()
+    expect(dropped).toBe(1)
+    await page.unroute('**' + ADAPTIVE_TASK_PATH, lose)
+    await page.getByRole('button', { name: '重新读取状态', exact: true }).click()
+    await page.getByText('已记录状态: manual', { exact: false }).waitFor()
+    expect(dropped).toBe(1)
     await page.getByRole('button', { name: '关闭', exact: true }).click()
-    await page.getByRole('textbox', { name: 'Task', exact: true }).fill('ORIGINAL BROWSER REQUIREMENT: inspect the synthetic change and verify it.')
+    await page.getByRole('textbox', { name: 'Task', exact: true }).fill('Manual task after retained grant.')
     await page.getByRole('button', { name: 'Send task' }).click()
     await page.getByText('Fixture task finished', { exact: true }).waitFor()
-    expect(f.wires.map(wire => wire.model)).toEqual(['gpt-5.6-sol', 'gpt-5.6-luna'])
-    expect(JSON.stringify(f.wires[1].input)).toContain('ORIGINAL BROWSER REQUIREMENT')
-    await page.getByRole('button', { name: '模型选择', exact: true }).click()
-    await page.getByText('已允许系统自行选模型', { exact: true }).waitFor()
-    expect(await page.locator('dialog').textContent()).toContain('luna / max')
-    expect(await page.locator('dialog').textContent()).toContain('2 / 40')
-    await page.getByRole('button', { name: '切回手动' }).click()
-    await page.getByText('手动选择，尚未开启自动安排', { exact: true }).waitFor()
-    expect(f.host.tools.get(ADAPTIVE_TASK_TOOL, f.agent)).toBeUndefined()
-    expect(external).toBe(0); expect(errors).toEqual([])
+    expect(f.wires).toHaveLength(1)
+    expect(f.wires[0].tools?.some((tool: any) => tool.name === ADAPTIVE_TASK_TOOL)).not.toBe(true)
+    expect(await (await current()).json()).toMatchObject({ mode: 'manual', reserved: 3, maximumRequests: 10 })
+    expect(errors).toEqual([]); expect(external).toBe(0)
   } finally { await browser.close() }
 }, 60000)

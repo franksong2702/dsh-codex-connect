@@ -1,5 +1,28 @@
 # Migrating from `dsh-codex`
 
+## Next release candidate: public task orchestration paused
+
+Task-level automatic model selection and read-only delegation are being withheld
+until maintainer acceptance. This change does not retroactively disable npm 4.41
+or already-running installations. It takes effect only after the new package is
+published, installed, and loaded.
+
+A new ordinary conversation has no collaboration activation options. Cached
+clients cannot start, resume, upgrade or authorize delegation through the closed
+server route. Existing tasks keep authenticated readback, Stop and manual takeover;
+grants, original history and spent request counts are not deleted or reset.
+Manual model selection (including GPT-6/Astra), accounts, existing optional tools
+and native compaction settings are unchanged. Internal orchestration source and
+tests remain, but there is no public setting or environment-variable escape hatch.
+Reopening requires a separately reviewed source change and new build after
+acceptance; per-task user authorization will still be required.
+
+Before downgrading an existing delegated task, use the authenticated safety exits
+and let the runtime verify cleanup and delivery. Do not delete the task ledger or
+edit its counters to force recovery. Cross-device/new-cookie task ownership limits
+remain unchanged.
+
+
 `dsh-codex-connect` uses the same provider id (`openai-codex`), OAuth filename (`.openai-codex-auth.json`), Cordis row id (`llm-openai-codex`), and browser auth routes for compatibility. The packages cannot be active together because Harness forbids duplicate provider adapters.
 
 1. Record the effective default model, search route, and `llm-openai-codex` config without reading any OAuth file.
