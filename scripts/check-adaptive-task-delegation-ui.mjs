@@ -21,7 +21,7 @@ try {
   assert.equal(result.error, undefined); assert.equal(result.cleanupError, undefined)
   const report = JSON.parse(await readFile(join(directory, 'report.json'), 'utf8'))
   assert.equal(report.success, true)
-  assert.equal(report.numTotalTests, 15); assert.equal(report.numPassedTests, 15)
+  assert.equal(report.numTotalTests, 23); assert.equal(report.numPassedTests, 23)
   assert.equal(report.numPendingTests, 0); assert.equal(report.numTodoTests, 0)
   console.log(JSON.stringify({ kind: 'adaptive-task-delegation-authenticated-control', syntheticProvider: true,
     realHostAuthentication: true, explicitPhase2Composition: true, usesProductEntry: false,
