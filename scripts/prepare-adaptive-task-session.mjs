@@ -38,7 +38,7 @@ export async function prepareTaskSession(repo, version = '0.1.2-rc.1') {
   // A fresh latest-compatible closure can fail before the plugin/page boots.
   for (const [name, range] of Object.entries((await registry('@deepseek-ai/dsh', version)).dependencies)) {
     if (!name.startsWith('@deepseek-ai/cordis')) continue
-    assert.match(range, /^\^\d+\.\d+\.\d+$/)
+    assert.match(range, /^[~^]\d+\.\d+\.\d+$/)
     vendorPackages[name] = range.slice(1)
     metadata.dependencies[name] = range.slice(1); metadata.overrides[name] = range.slice(1)
   }

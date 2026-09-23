@@ -335,6 +335,8 @@ interface CompatibilityEvaluationInput {
 interface CompatibilityDetectionOptions extends CompatibilityEvaluationInput {
   /** Test seam for package metadata resolution; no package paths are returned. */
   readPackageVersion?: (name: CompatibilityPackageName) => string | null | undefined | Promise<string | null | undefined>;
+  /** Explicit package.json of the DSH installation owning a standalone CLI invocation. */
+  installAnchor?: string;
 }
 /** Public contract data mirrored by compatibility.json without importing JSON at runtime. */
 export declare const COMPATIBILITY_CONTRACT: {

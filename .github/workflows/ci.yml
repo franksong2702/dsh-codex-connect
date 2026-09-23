@@ -122,10 +122,10 @@ jobs:
         run: node scripts/check-adaptive-task-delegation-ui.mjs
       - name: Prepare pinned installed-session acceptance installer
         run: npm install --prefix "${{ runner.temp }}/phase2-npm" --ignore-scripts --no-audit --no-fund npm@10.9.3
-      - name: Verify installed full Session delegation and native controls
+      - name: Verify stock current-host Session keeps task controls paused
         env:
           MATRIX_NPM_CLI: ${{ runner.temp }}/phase2-npm/node_modules/npm/bin/npm-cli.js
-        run: node scripts/check-adaptive-task-session.mjs --phase2
+        run: node scripts/check-adaptive-task-session.mjs --current-host-paused
 
   windows-canary-contract:
     runs-on: windows-latest

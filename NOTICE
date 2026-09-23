@@ -18,3 +18,9 @@ This product also includes OAuth login and refresh code from earendil-works/pi
 (@earendil-works/pi-ai 0.84.4), under the MIT license reproduced in
 docs/licenses/pi-ai-oauth.txt. JWT payload decoding, callback connection cleanup
 and structured refresh rejection handling are modified.
+
+The standalone CLI bundles selected code from host and provider dependencies so
+it can run from an isolated DSH plugin-exec process without copying host peers.
+The bundled third-party package attributions and license texts are in
+docs/licenses/standalone-cli.txt. Runtime plugin imports continue to use the
+host's packages rather than these standalone CLI copies.

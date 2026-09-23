@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises'
-import { dirname, join, parse as parsePath } from 'node:path'
+import { readFile, realpath } from 'node:fs/promises'
+import { basename, dirname, join, parse as parsePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
@@ -71,6 +71,8 @@ export interface CompatibilityEvaluationInput {
 export interface CompatibilityDetectionOptions extends CompatibilityEvaluationInput {
   /** Test seam for package metadata resolution; no package paths are returned. */
   readPackageVersion?: (name: CompatibilityPackageName) => string | null | undefined | Promise<string | null | undefined>
+  /** Explicit package.json of the DSH installation owning a standalone CLI invocation. */
+  installAnchor?: string
 }
 
 /** Public contract data mirrored by compatibility.json without importing JSON at runtime. */
@@ -183,7 +185,29 @@ export const assessCompatibility = evaluateCompatibility
  * @param name - package to resolve from this plugin installation.
  * @returns its version, or undefined when metadata cannot be read.
  */
-export async function readInstalledPackageVersion(name: string): Promise<string | undefined> {
+export async function readInstalledPackageVersion(name: string, installAnchor?: string): Promise<string | undefined> {
+  if (installAnchor !== undefined) {
+    let anchor: string
+    try {
+      anchor = await realpath(installAnchor)
+      const manifest = JSON.parse(await readFile(anchor, 'utf8')) as PackageJson
+      if (manifest.name !== '@deepseek-ai/dsh') return undefined
+    } catch {
+      return undefined
+    }
+    const packageDirectory = dirname(anchor)
+    const scopeDirectory = dirname(packageDirectory)
+    const modulesDirectory = dirname(scopeDirectory)
+    if (basename(packageDirectory) !== 'dsh' || basename(scopeDirectory) !== '@deepseek-ai'
+      || basename(modulesDirectory) !== 'node_modules') return undefined
+    try {
+      const parsed = JSON.parse(await readFile(join(modulesDirectory, name, 'package.json'), 'utf8')) as PackageJson
+      return parsed.name === name && typeof parsed.version === 'string' ? parsed.version : undefined
+    } catch {
+      // The exact host installation does not expose this package's metadata.
+      return undefined
+    }
+  }
   let entry: string
   try {
     const resolved = import.meta.resolve(name)
@@ -211,7 +235,7 @@ export async function readInstalledPackageVersion(name: string): Promise<string 
 
 /** Read installed package metadata and return only versions and statuses. */
 export async function detectCompatibility(options: CompatibilityDetectionOptions = {}): Promise<CompatibilityReport> {
-  const readVersion = options.readPackageVersion ?? readInstalledPackageVersion
+  const readVersion = options.readPackageVersion ?? ((name: CompatibilityPackageName) => readInstalledPackageVersion(name, options.installAnchor))
   const packageVersions = options.packageVersions ?? options.packages ?? options.installed?.packages
   const resolvedPackages = packageVersions === undefined
     ? Object.fromEntries(await Promise.all(COMPATIBILITY_PACKAGES.map(async name => [name, await readVersion(name)] as const)))

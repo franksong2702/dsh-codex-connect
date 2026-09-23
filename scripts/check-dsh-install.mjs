@@ -299,12 +299,13 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
       throw new CompatibilityCheckError('local plugin configuration did not retain all optional capabilities as false')
     }
 
-    // DSH rc.1 prepares profile-to-installation module fallback during profile composition.
+    // Compose the installed profile through the stock DSH entry before diagnostics.
     const profileHelp = await runCommand(dshBinary, ['web', '--help'], { cwd: workspace, env })
     requireSuccess('installed profile boot', profileHelp, 'compatibility')
 
     const doctor = await runCommand(dshBinary, [
       'plugin', '--profile', 'web', 'exec', 'dsh-codex-connect', 'doctor', '--json',
+      '--install-anchor', join(installRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
     ], { cwd: workspace, env })
     validateDoctorResult(doctor, dshHome, REPO_ROOT, { allowUndeclaredCanaryVersion, dshVersion })
 

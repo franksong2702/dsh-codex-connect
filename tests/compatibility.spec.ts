@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { readFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import {
   detectCompatibility,
   evaluateCompatibility,
@@ -37,7 +39,7 @@ describe('compatibility contract', () => {
     expect(JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))).toEqual(COMPATIBILITY_CONTRACT)
   })
 
-  it('accepts the exact alpha.2 host pair without inferring support for older or future versions', () => {
+  it('accepts the exact declared host pair without inferring support for older or future versions', () => {
     expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: compatiblePackages }).status).toBe('compatible')
     for (const packages of [
       { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.1.5-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.5-rc.2', '@deepseek-ai/dsh-compaction': '0.1.5-rc.2' },
@@ -91,5 +93,39 @@ describe('compatibility contract', () => {
     })
     expect(report.status).toBe('compatible')
     expect(JSON.stringify(report)).not.toMatch(/node_modules|Users|token|credential/iu)
+  })
+
+  it('reads exact host package versions from an explicit DSH installation without loading peers', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'codex-connect-host-anchor-'))
+    const host = join(root, 'host')
+    const anchor = join(host, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+    try {
+      await mkdir(dirname(anchor), { recursive: true })
+      await writeFile(anchor, JSON.stringify({ name: '@deepseek-ai/dsh', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      for (const [name, version] of Object.entries(compatiblePackages)) {
+        const manifest = join(host, 'node_modules', name, 'package.json')
+        await mkdir(dirname(manifest), { recursive: true })
+        await writeFile(manifest, JSON.stringify({ name, version, exports: { import: './index.js' } }))
+      }
+      const report = await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })
+      expect(report.status).toBe('compatible')
+      expect(JSON.stringify(report)).not.toContain(root)
+
+      const llmManifest = join(host, 'node_modules', '@deepseek-ai', 'dsh-llm', 'package.json')
+      await writeFile(llmManifest,
+        JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: '0.1.7-rc.2' }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unverified')
+
+      await rm(llmManifest)
+      const unrelated = join(root, 'node_modules', '@deepseek-ai', 'dsh-llm', 'package.json')
+      await mkdir(dirname(unrelated), { recursive: true })
+      await writeFile(unrelated, JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unknown')
+
+      await writeFile(anchor, JSON.stringify({ name: 'not-dsh', version: SUPPORTED_DSH_PLUGIN_API_VERSION }))
+      expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unknown')
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })
