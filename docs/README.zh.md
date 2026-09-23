@@ -12,23 +12,23 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 ## 快速开始
 
-本指南介绍下方已发布的组合。请先运行 `dsh --version`，并用 `doctor --json` 检查实际安装的模型运行库：rc.1 CLI 可能解析到 rc.2 包。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
+本指南介绍下方已发布的组合。请先运行 `dsh --version`，再用 `doctor --json` 做本地诊断；单凭 CLI 版本无法证明实际安装的模型运行库版本，缺少版本元数据时会报告未知。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.41` |
-| DeepSeek Harness | `0.1.2-rc.1`、`0.1.5-alpha.1`、`0.1.5-rc.1` 或 `0.1.5-rc.2` |
+| Codex Connect | `0.1.0-alpha.4.43` |
+| DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-23，npm `alpha` 指向 4.41，`latest` 仍指向 4.40。安装 4.41 请使用下方精确版本命令；发布 Alpha 与提升默认安装渠道是两项独立操作。
+截至 2026-09-24，npm `alpha` 指向 4.43，`latest` 仍指向 4.41。安装此 DSH 组合请使用下方精确版本命令；发布 Alpha 与提升默认安装渠道是两项独立操作。
 
-任务级模型选择仍需在新会话中主动开启。4.41 的新授权默认只选择 GPT-5.6 Sol / Medium，开始前会显示准确的模型范围和请求上限。已有任务授权不会被自动收窄；如需改用较窄范围，请先切回手动，再在新任务中选择。
+在原版 DSH `0.1.7-rc.1` 上，普通 Composer 可用，但 Task 控件仍暂停：激活请求会被拒绝，新 Session 不显示这些控件。跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.43
 dsh web
 ```
 
@@ -67,7 +67,7 @@ dsh plugin --profile web exec dsh-codex-connect doctor --json
 
 ## 可选能力
 
-**Alpha 4.40 新增：**任务级模型安排默认关闭。用户明确授予任务权限后，由 GPT-5.6 Sol／Medium 起步；当前模型可以在授权范围内继续、调档或交接主任务。请求共用同一任务账本与预算；停止、手动接管和重启恢复都保留授权边界。Phase 2 的只读委派需要单独同意，不会给委派工作者写入权限。它们是按任务开启的能力，不是并列的 Think／Split／Remember 开关。参见 [Phase 1](experiments/adaptive-task-phase1.md) 与 [Phase 2 同意边界](experiments/adaptive-task-phase2-consent.md)。
+**较早的 Alpha 4.40/4.41 组合：**任务级模型安排默认关闭。用户明确授予任务权限后，由 GPT-5.6 Sol／Medium 起步；当前模型可以在授权范围内继续、调档或交接主任务。请求共用同一任务账本与预算；停止、手动接管和重启恢复都保留授权边界。Phase 2 的只读委派需要单独同意，不会给委派工作者写入权限。原版 DSH `0.1.7-rc.1` 配合 Alpha 4.43 时，这些 Task 控件仍暂停；不能从旧组合推断它们可用。参见 [Phase 1](experiments/adaptive-task-phase1.md) 与 [Phase 2 同意边界](experiments/adaptive-task-phase2-consent.md)。
 
 Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权、GPT-5.6 Sol／Medium 起步与 Luna Reserve 不变。模型出现在目录中不代表账户具有调用资格。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
 
