@@ -2,7 +2,8 @@
 export const ADAPTIVE_TASK_CASES = Object.freeze([
   'is off without a task grant and preserves the ordinary selection',
   'starts Sol/Medium only after task opt-in and adds no mandatory routing call',
-  ...[['gpt-5.6-sol', 'high'], ['gpt-5.6-terra', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-6-astra', 'low']]
+  ...[['gpt-5.6-sol', 'high'], ['gpt-5.6-terra', 'medium'], ['gpt-5.6-luna', 'max'], ['gpt-6-astra', 'low'],
+    ['gpt-6-sol', 'xhigh'], ['gpt-6-luna', 'max']]
     .map(([model, effort]) => `lets the current model choose ${model}/${effort} within the approved task`),
   'keeps another root untouched and refuses forged or extra-scope tool inputs',
   'does not silently fall back when an allowed model disappears',

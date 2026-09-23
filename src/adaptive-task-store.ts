@@ -42,7 +42,7 @@ export function parseTaskDocument(value: unknown, sessionId: string): TaskDocume
     || !Number.isSafeInteger(value.selectionSeq) || Number(value.selectionSeq) < -1
     || !Number.isSafeInteger(value.handoffSeq) || Number(value.handoffSeq) < -1
     || typeof value.portable !== 'boolean' || !taskRoute(value.route)
-    || !Array.isArray(value.capabilities) || value.capabilities.length < 1 || value.capabilities.length > 4
+    || !Array.isArray(value.capabilities) || value.capabilities.length < 1 || value.capabilities.length > ADAPTIVE_TASK_MODELS.length
     || !Array.isArray(value.receipts) || value.receipts.length < 1 || value.receipts.length > 64) taskFailure('TASK_STATE_INVALID')
   for (const key of ['sessionKey', 'owner', 'runtime'] as const) {
     if (typeof value[key] !== 'string' || !/^[a-f0-9]{64}$/u.test(value[key])) taskFailure('TASK_STATE_INVALID')

@@ -10,6 +10,7 @@ import {
   OPENAI_CODEX_TRANSPORT,
   OPENAI_CODEX_ASTRA_MODEL_ID,
   withOpenAICodexAstra,
+  withOpenAICodexModels,
   withOpenAICodexContextWindowOverrides,
 } from '../src/adapter.ts'
 import type { OpenAICodexCredentialStore } from '../src/store.ts'
@@ -17,6 +18,26 @@ import { OPENAI_CODEX_PROVIDER } from '../src/store.ts'
 import { Config } from '../src/index.ts'
 
 describe('OpenAI Codex rc.2 adapter profile', () => {
+  it.each(['gpt-6-sol', 'gpt-6-luna'])('adds missing %s without duplicating or overwriting native metadata', id => {
+    const provider = openaiCodexProvider()
+    const baseline = provider.getModels().filter(model => model.id !== id)
+    const patched = withOpenAICodexModels({ ...provider, getModels: () => baseline })
+    const fallback = patched.getModels().find(model => model.id === id)!
+    expect(fallback).toMatchObject({ id, contextWindow: 272_000, maxTokens: 128_000,
+      provider: OPENAI_CODEX_PROVIDER, api: 'openai-codex-responses', input: ['text', 'image'],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } })
+    const native = { ...fallback, name: 'Native model', contextWindow: 300_000, maxTokens: 64_000,
+      cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 }, compat: { supportsStrictMode: false },
+      thinkingLevelMap: { minimal: 'minimal' as const } }
+    const result = withOpenAICodexModels({ ...provider, getModels: () => [native, ...baseline] }).getModels()
+    expect(result.filter(model => model.id === id)).toEqual([{ ...native,
+      thinkingLevelMap: { off: null, minimal: null, xhigh: 'xhigh', max: 'max' } }])
+    expect(native.thinkingLevelMap).toEqual({ minimal: 'minimal' })
+    for (const old of baseline.filter(model => model.id !== OPENAI_CODEX_ASTRA_MODEL_ID && !model.id.startsWith('gpt-6-'))) {
+      expect(result.find(model => model.id === old.id)).toBe(old)
+    }
+  })
+
   it('preserves upstream Astra metadata while retaining calibrated reasoning choices', () => {
     const provider = openaiCodexProvider()
     const withoutAstra = {

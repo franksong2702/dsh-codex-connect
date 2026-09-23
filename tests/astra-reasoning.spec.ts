@@ -31,9 +31,11 @@ afterEach(async () => {
   if (root !== undefined) await rm(root, { recursive: true, force: true })
 })
 
-const selection = { provider: OPENAI_CODEX_PROVIDER, model: OPENAI_CODEX_ASTRA_MODEL_ID }
+const modelSelections = [OPENAI_CODEX_ASTRA_MODEL_ID, 'gpt-6-sol', 'gpt-6-luna'] as const
 
-describe('Astra reasoning selections', () => {
+describe.each(modelSelections)('%s reasoning selections', model => {
+  const selection = { provider: OPENAI_CODEX_PROVIDER, model }
+
   it('exposes five effective levels and leaves the provider default unspecified', async () => {
     const info = await context.llm.resolveModelInfo(selection.provider, selection.model)
     expect(info.reasoning).toEqual({ efforts: [
@@ -47,7 +49,7 @@ describe('Astra reasoning selections', () => {
     expect(prepared.config).toEqual(selection)
   })
 
-  it.each(['off', 'minimal', 'none'])('rejects %s before authentication or dispatch without rewriting the selection', async effort => {
+  it.each(['off', 'minimal', 'none', 'ultra'])('rejects %s before authentication or dispatch without rewriting the selection', async effort => {
     const capture = vi.spyOn(store, 'captureActiveAccount')
     const fetch = vi.fn(() => { throw new Error('Unexpected network request') })
     vi.stubGlobal('fetch', fetch)

@@ -14,6 +14,14 @@ const mount = (language: string, sessionId = 'fixture-session') => {
   root.render(createElement(AdaptiveTaskControl, { language, sessionId }))
 }
 afterEach(() => { root?.unmount(); element?.remove(); root = undefined; element = undefined; vi.unstubAllGlobals() })
+it.each(['en', 'zh'])('distinguishes GPT-5.6 and GPT-6 recorded/requested routes in %s', async language => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...initial(), mode: 'auto', canStart: false, reserved: 1,
+    current: { model: 'gpt-5.6-sol', effort: 'medium' }, requested: { model: 'gpt-6-sol', effort: 'max' } })))
+  mount(language)
+  await page.getByRole('button', { name: language === 'zh' ? '模型选择' : 'Model choice', exact: true }).click()
+  await expect.element(page.getByText('gpt-5.6-sol / medium', { exact: false })).toBeVisible()
+  await expect.element(page.getByText('gpt-6-sol / max', { exact: false })).toBeVisible()
+})
 it.each(['en', 'zh'])('requires a visible scoped opt-in and permits manual exit in %s at phone width', async language => {
   await page.viewport(390, 844)
   let state = initial(); const mutations: any[] = []

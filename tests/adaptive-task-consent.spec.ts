@@ -77,7 +77,7 @@ function response(name?: string, args?: unknown): Response {
     { type: 'response.completed', response: { id: 'synthetic', status: 'completed', output: [item] } }]
     .map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
 }
-async function setup() {
+async function setup(selectedChild = child, catalogModels = [main, selectedChild]) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'task-consent-'))); roots.push(root)
   vi.stubEnv('DSH_HOME', root); vi.stubEnv('OTEL_SDK_DISABLED', 'true')
   vi.stubGlobal('WebSocket', class { constructor() { throw new Error('Synthetic only') } })
@@ -101,7 +101,7 @@ async function setup() {
   // Match the product's llm-only dependency contract, not a privileged root context.
   await ctx.plugin({ inject: ['llm'], apply(pluginCtx: Context) {
     runtime = new AdaptiveTaskControlRuntime(pluginCtx, { directory: join(root, 'tasks'), artifacts: () => artifacts,
-      models: async () => Promise.all([main, child].map(model => pluginCtx.llm.resolveModelInfo('openai-codex', model))) })
+      models: async () => Promise.all(catalogModels.map(model => pluginCtx.llm.resolveModelInfo('openai-codex', model))) })
   } })
   const governor = new OpenAICodexBackendRequests(undefined, undefined, 8, () => runtime.reserveAuxiliary())
   ctx.effect(() => () => governor.dispose())
@@ -112,20 +112,20 @@ async function setup() {
   await writeFile(join(root, 'notes.txt'), 'approved first\nsecond')
   const state = () => runtime.state(agent.id, owner)
   const build = (action: AdaptiveTaskCommand['action'], revision: number, extra = {}): AdaptiveTaskCommand => ({ sessionId: agent.id,
-    action, revision, operationId: randomUUID(), ...(action === 'start' ? { models: [main, child], efforts: { [main]: ['medium'], [child]: ['max'] }, maximumRequests: 20 } : {}), ...extra })
+    action, revision, operationId: randomUUID(), ...(action === 'start' ? { models: [main, selectedChild], efforts: { [main]: ['medium'], [selectedChild]: ['max'] }, maximumRequests: 20 } : {}), ...extra })
   const mutate = async (action: AdaptiveTaskCommand['action'], extra = {}) => runtime.command(build(action, (await state()).revision, extra), owner)
-  const grant = { files: ['notes.txt'], routes: [{ model: child, effort: 'max' }], maxChildRequests: 6, timeoutMs: 30000, disclose: true }
+  const grant = { files: ['notes.txt'], routes: [{ model: selectedChild, effort: 'max' }], maxChildRequests: 6, timeoutMs: 30000, disclose: true }
   const ready = async () => { await mutate('start'); await mutate('upgrade'); await mutate('delegate-enable', grant); await mutate('resume') }
   const send = async (text = 'ORIGINAL CONSENT REQUIREMENT') => { agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })); await agent.whenIdle() }
   const success = async () => {
     const doc = await store.read(agent.id); if (doc?.version !== 2) throw new Error('v2 expected')
     const sourceId = doc.delegation.grant!.sourceIds[0]!
     let step = 0
-    reply = () => ++step === 1 ? response(TASK_DELEGATE_TOOL, { goal: 'Inspect', expectedOutput: 'Cited findings', model: child, effort: 'max', sourceIds: [sourceId] })
+    reply = () => ++step === 1 ? response(TASK_DELEGATE_TOOL, { goal: 'Inspect', expectedOutput: 'Cited findings', model: selectedChild, effort: 'max', sourceIds: [sourceId] })
       : step === 2 ? response('read_task_evidence', { sourceId, start: 1, end: 1 })
       : step === 3 ? response('submit_task_findings', { summary: 'Synthetic findings', findings: [{ text: 'First line', references: [{ sourceId, start: 1, end: 1, digest: taskIdentity('approved first') }] }] }) : response()
   }
-  return { root, ctx, agent, runtime, store, artifacts, wires, state, build, mutate, grant, ready, send, success, setReply(fn: typeof reply) { reply = fn } }
+  return { root, ctx, agent, runtime, store, artifacts, wires, state, build, mutate, grant, ready, send, success, child: selectedChild, setReply(fn: typeof reply) { reply = fn } }
 }
 
 it('keeps legacy/off behavior, explicitly migrates without child authority, and preserves the root budget', async () => {
@@ -156,6 +156,22 @@ it('executes only explicit evidence consent, then archives/downgrades/remigrates
   expect((await f.state()).reserved).toBe(4); expect((await f.state()).mode).toBe('interrupted')
   expect((await f.state()).delegation!.enabled).toBe(false); expect(f.wires).toHaveLength(5)
 })
+it.each(['gpt-6-sol', 'gpt-6-luna'])('authorizes an explicitly selected %s child route without widening the default start', async selectedChild => {
+  const f = await setup(selectedChild); await f.ready(); await f.success(); await f.send()
+  expect(f.wires.map(wire => wire.model)).toEqual([main, selectedChild, selectedChild, main])
+  expect((await f.state()).capabilities).toEqual(expect.arrayContaining([{ model: selectedChild, efforts: ['max'] }]))
+  expect((await f.store.read(f.agent.id))!.route).toEqual({ model: main, effort: 'medium' })
+})
+it.each(['gpt-6-sol', 'gpt-6-luna'])('hands the main task to explicitly authorized %s without changing the default start', async selectedModel => {
+  const f = await setup(selectedModel); await f.mutate('start')
+  let step = 0
+  f.setReply(() => ++step === 1
+    ? response(ADAPTIVE_TASK_TOOL, { model: selectedModel, effort: 'max', reason: 'The remaining synthetic work benefits from the authorized route.' })
+    : response())
+  await f.send()
+  expect(f.wires.map(wire => [wire.model, wire.reasoning?.effort])).toEqual([[main, 'medium'], [selectedModel, 'max']])
+  expect((await f.store.read(f.agent.id))!.route).toEqual({ model: selectedModel, effort: 'max' })
+})
 it('fences duplicate operations, changed digests, stale UI and another owner before changing consent', async () => {
   const f = await setup(); await f.mutate('start'); await f.mutate('upgrade')
   const before = await f.state(), command = f.build('delegate-enable', before.revision, f.grant)
@@ -167,10 +183,19 @@ it('fences duplicate operations, changed digests, stale UI and another owner bef
   await expect(f.runtime.command(command, taskIdentity('other'))).rejects.toThrow('TASK_OWNER_MISMATCH')
   expect(f.wires).toHaveLength(0)
 })
-it.each([{ disclose: false }, { files: ['../outside.txt'] }, { files: ['.env'] }, { routes: [{ model: 'gpt-6-astra', effort: 'max' }] }, { maxChildRequests: 7 }])('rejects expanded or undisclosed scope %j', async patch => {
+it.each([{ disclose: false }, { files: ['../outside.txt'] }, { files: ['.env'] },
+  { routes: [{ model: 'gpt-6-astra', effort: 'max' }] }, { routes: [{ model: 'gpt-6-sol', effort: 'max' }] },
+  { routes: [{ model: 'gpt-6-luna', effort: 'max' }] }, { maxChildRequests: 7 }])('rejects expanded or undisclosed scope %j', async patch => {
   const f = await setup(); await f.mutate('start'); await f.mutate('upgrade')
   await expect(f.mutate('delegate-enable', { ...f.grant, ...patch })).rejects.toThrow()
   expect((await f.state()).delegation!.enabled).toBe(false); expect(f.wires).toHaveLength(0)
+})
+it.each(['gpt-6-sol', 'gpt-6-luna'])('rejects an old grant route for %s even when the live catalog advertises it', async selectedModel => {
+  const f = await setup(child, [main, child, 'gpt-6-sol', 'gpt-6-luna']); await f.mutate('start'); await f.mutate('upgrade')
+  await expect(f.mutate('delegate-enable', { ...f.grant, routes: [{ model: selectedModel, effort: 'max' }] })).rejects.toThrow()
+  expect((await f.state()).delegation!.enabled).toBe(false)
+  expect((await f.store.read(f.agent.id))!.capabilities.map(item => item.model)).toEqual([main, child])
+  expect(f.wires).toHaveLength(0)
 })
 it('requires idle consent but stop/manual can cancel an active child and preserve debits', async () => {
   const f = await setup(); await f.ready(); await f.success()

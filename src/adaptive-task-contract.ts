@@ -1,6 +1,6 @@
 /** Shared task-level policy. Catalog facts are not account eligibility or price claims. */
 export const ADAPTIVE_TASK_PATH = '/plugins/dsh-codex-connect/task'
-export const ADAPTIVE_TASK_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra'] as const
+export const ADAPTIVE_TASK_MODELS = ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna'] as const
 export const ADAPTIVE_TASK_START = Object.freeze({ model: 'gpt-5.6-sol', effort: 'medium' })
 export const ADAPTIVE_TASK_REQUEST_LIMIT = 40
 export const ADAPTIVE_TASK_MAX_REQUESTS = 200
