@@ -25,6 +25,11 @@ it('requires every named Phase 2 case and accurate totals without skip or todo',
 it('accepts four complete exact hosts with identical source and crash evidence', () => {
   const report = matrix(); expect(assertDelegationMatrix(report, versions, digest)).toBe(report)
 })
+it('accepts one declared exact host when the current compatibility matrix has one version', () => {
+  const report = matrix()
+  report.reports = report.reports.slice(0, 1)
+  expect(assertDelegationMatrix(report, versions.slice(0, 1), digest)).toBe(report)
+})
 it.each(['missing-package', 'mixed-runtime', 'node', 'network', 'digest', 'case', 'pid', 'crash-count', 'crash-replay'])('rejects incomplete or mismatched %s evidence', kind => {
   const report = matrix(), host = report.reports[1]
   if (kind === 'missing-package') delete host.runtimePackages[PHASE2_RUNTIME_PACKAGES[0]]

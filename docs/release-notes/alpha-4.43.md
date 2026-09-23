@@ -6,7 +6,7 @@ This candidate updates the plugin runtime and UI integration for DeepSeek Harnes
 
 Upgrade the Harness before installing the matching Codex Connect release. Existing provider configuration and OAuth credentials remain in place; signing in again is not required. This candidate has not been published, so the public installation recommendation remains unchanged.
 
-The exact install check against unmodified DSH `0.1.7-alpha.2` currently stops in `plugin doctor` because the isolated plugin process cannot resolve the host-provided `@deepseek-ai/schemastery` peer, matching the upstream [plugin-exec peer-resolution report](https://github.com/deepseek-ai/deepseek-harness/discussions/5537). The browser suite cannot resolve external imports from the published DSH UI package, including `clsx`, `simple-icons`, and `zustand/vanilla`. The pair remains unverified in `verified-compatibility.json` until the stock-host install matrix and browser suite pass.
+The exact install check against unmodified DSH `0.1.7-alpha.2` currently stops in `plugin doctor` because the isolated plugin process cannot resolve the host-provided `@deepseek-ai/schemastery` peer, matching the upstream [plugin-exec peer-resolution report](https://github.com/deepseek-ai/deepseek-harness/discussions/5537). The local Chromium suite passes 60 tests in 11 files after adding test-only dependencies for imports externalized by the published DSH UI packages. This does not validate installation in an unmodified DSH profile; the pair remains unverified in `verified-compatibility.json` until the stock-host install matrix passes.
 
 ## 中文
 
@@ -14,4 +14,4 @@ The exact install check against unmodified DSH `0.1.7-alpha.2` currently stops i
 
 请先升级 Harness，再安装对应的 Codex Connect 版本。已有 Provider 配置和 OAuth 凭据会保留，无需重新登录。本候选版尚未发布，公开安装建议保持不变。
 
-针对未修改的 DSH `0.1.7-alpha.2` 的隔离安装检查目前在 `plugin doctor` 阶段失败：插件独立进程无法解析宿主提供的 `@deepseek-ai/schemastery` peer，与上游[插件命令 peer 解析问题](https://github.com/deepseek-ai/deepseek-harness/discussions/5537)相符。浏览器套件加载已发布的 DSH UI 包时也无法解析外置依赖，包括 `clsx`、`simple-icons` 和 `zustand/vanilla`。在原版宿主安装矩阵和浏览器套件通过前，该组合继续保持未验证，`verified-compatibility.json` 不记录此组合。
+针对未修改的 DSH `0.1.7-alpha.2` 的隔离安装检查目前在 `plugin doctor` 阶段失败：插件独立进程无法解析宿主提供的 `@deepseek-ai/schemastery` peer，与上游[插件命令 peer 解析问题](https://github.com/deepseek-ai/deepseek-harness/discussions/5537)相符。为已发布 DSH UI 包外置导入补齐仅用于测试的开发依赖后，本地 Chromium 套件 11 个文件、60 项测试通过；这不代表原版 DSH profile 的安装检查通过。该组合仍保持未验证，`verified-compatibility.json` 不记录此组合。
