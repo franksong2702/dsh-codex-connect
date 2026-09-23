@@ -12,6 +12,7 @@ import { connect } from 'node:net'
 import { chromium } from 'playwright'
 import { prepareTaskSession } from './prepare-adaptive-task-session.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
+import { prepareLegacyTaskPackage, replaceFixtureTaskPackage, publicationPauseJourney } from './adaptive-task-publication-session.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const args = process.argv.slice(2), phase2 = args.includes('--phase2'), manifests = args.filter(arg => arg !== '--phase2')
@@ -47,6 +48,8 @@ for (const name of ['dsh', 'dsh-agent', 'dsh-session', 'dsh-client-ui-conversati
   assert.equal(version, f.version)
   identity[name] = { path, version }
 }
+const publicationPaused = /ADAPTIVE_TASK_PUBLIC_RELEASE: boolean = false/.test(await readFile(join(f.source, 'src/adaptive-task-publication.ts'), 'utf8'))
+if (publicationPaused) assert.equal(phase2, true, 'Run closed-release upgrade acceptance with --phase2')
 const path = '/plugins/dsh-codex-connect/task'
 const checks = [], pids = [], browserErrors = [], blockedBrowser = [], mutations = [], taskReads = []
 const redact = value => String(value).replace(/(https?:\/\/127\.0\.0\.1:\d+\/?)\?[^\s"'<>]+/g, '$1?[redacted]')
@@ -228,6 +231,10 @@ try {
   // A fixture may be supplied to avoid repeating dependency installation, but must be unused.
   const existing = await readFile(join(f.home, 'storages/workspace.json'), 'utf8').catch(() => '')
   assert.ok(!existing || JSON.parse(existing).global.workspaceIds.length === 0, 'Use a fresh fixture, never reuse user sessions')
+  if (publicationPaused) {
+    await writeFile(join(f.workspace, 'notes.txt'), 'approved first\nsecond')
+    await replaceFixtureTaskPackage(f, plugin, await prepareLegacyTaskPackage(f))
+  }
   await start()
   // Stock boot creates the profile's module fallback links. Resolve the
   // plugin's peers only after that public boot path has completed.
@@ -252,7 +259,7 @@ try {
   page = context.pages()[0] ?? await context.newPage()
   page.on('pageerror', error => browserErrors.push(error.message))
   page.on('response', response => {
-    if (new URL(response.url()).pathname === path && response.request().method() === 'GET') taskReads.push({ status: response.status() })
+    if (new URL(response.url()).pathname === path && response.request().method() === 'GET') taskReads.push({ status: response.status(), url: response.url() })
   })
   page.on('requestfailed', request => {
     if (new URL(request.url()).pathname === path && request.method() === 'GET') taskReads.push({ failure: request.failure()?.errorText })
@@ -267,6 +274,9 @@ try {
   await page.locator('input').last().fill(f.workspace)
   await page.locator('input').last().press('Enter')
   await page.getByRole('button', { name: 'Open', exact: true }).click()
+  if (publicationPaused) await publicationPauseJourney({ f, plugin, page, context, panel, closePanel, allowLunaMax, send, picker,
+    requests, events, until, pass, stop, start, origin: () => host.origin, taskReads, mutations })
+  else {
   await page.getByRole('button', { name: 'Model choice', exact: true }).waitFor()
   const initial = await panel('off', 0)
   assert.equal(initial.canStart, true)
@@ -368,6 +378,7 @@ try {
   await pause(500); assert.equal((await requests()).length, 7)
   pass('shared one-request budget denies the post-handoff dispatch')
   }
+  }
   assert.deepEqual(browserErrors, [])
   assert.deepEqual(blockedBrowser, [])
   assert.equal((await events()).filter(event => event.kind === 'blocked-network').length, 0)
@@ -402,9 +413,9 @@ try {
   if (!error && cleanup) {
     try { await rm(f.directory, { recursive: true, force: true }); fixtureRemoved = true } catch (cause) { error = cause }
   }
-  const report = { kind: 'installed-full-session-synthetic', phase: phase2 ? 2 : 1, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
+  const report = { kind: 'installed-full-session-synthetic', phase: phase2 ? 2 : 1, publicationPaused, upgradedFrom: publicationPaused ? '0.1.0-alpha.4.41' : undefined, checkedAt: new Date().toISOString(), passed: !error, head: f.head, hostVersion: f.version,
     artifactSha256: f.artifactSha256, identity, installer: f.installer, node: process.version, checks, pids, wire, mutations: mutations.map(({ action, revision }) => ({ action, revision })),
-    browserErrors, blockedBrowser, taskReads, cleanup, hostOrigin: host?.origin, syntheticCredentials: true, realProviderRequests: 0,
+    browserErrors, blockedBrowser, taskReads: taskReads.map(({ status, failure }) => ({ status, failure })), cleanup, hostOrigin: host?.origin, syntheticCredentials: true, realProviderRequests: 0,
     fullInstalledSessionPage: true, fullDailyProfileAcceptance: false,
     fixtureDirectory: f.directory, fixtureRemoved, failure: error ? redact(error.message) : undefined }
   await writeFile(join(output, 'report.json'), JSON.stringify(report, null, 2))

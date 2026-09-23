@@ -127,7 +127,7 @@
   "unloads/resumes the persisted parent and reconciles a lost reply without respawning (none)",
   "unloads/resumes the persisted parent and reconciles a lost reply without respawning (zstd)",
   "unobserved findings fail and parent receives a bounded failed outcome",
-  "uses actual signed-cookie HTTP for upgrade and consent and rejects cross-site/other credential control",
+  "keeps signed-cookie activation closed and preserves existing delegation safety exits and ownership",
   "uses immutable snapshots and host IDs, not child-supplied paths",
   "v2 compaction is counted and handoff restores the original journal (native=false)",
   "v2 compaction is counted and handoff restores the original journal (native=true)",

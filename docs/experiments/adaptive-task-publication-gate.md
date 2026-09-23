@@ -42,3 +42,31 @@ The current conversation could not discover the previously used WebCodex executi
 ## Reopening gate
 
 After separately approved internal/live-account acceptance, use a second PR to propose reopening. Attach exact artifact/environment identity, default-closed non-regression, bounded real-model/handoff/delegation checks, stop/manual/restart results and user comprehension evidence. Quality or savings claims require their own task comparisons. Never equate a green synthetic test count with live acceptance.
+
+## Release completion follow-up (2026-09-23)
+
+The maintainer authorized completing this PR, normal merge, a new Alpha publication,
+and promotion of the verified package to npm latest. This is not authorization to
+bypass CI, install on daily ports, or run a real provider experiment.
+
+The old public HTTP expectations are now replaced by closed-route assertions and
+explicit synthetic prior-task preparation. The actual product still refuses every
+activation command. Runtime-only delegation tests retain their original coverage;
+no environment or browser option opens the shipping gate. Recovery UI regression
+covers both languages, phone width, bounded readiness, unknown state, stale-session
+responses and lost manual-exit replies.
+
+The installed checker uses the immutable public 4.41 archive (SHA-256
+`0823648f3db055a8e12f7bdbac8b23de9d25d4b9f0c6c91794fe21dd3207ed81`) to create genuine
+old grants in its owned temporary profile, then replaces only that fixture's
+package with the candidate's verified bytes and restarts the owned host. All
+credentials and model replies remain synthetic. This is an upgrade/recovery test,
+not live account acceptance or daily-profile deployment. Its result must be read
+from the exact candidate's CI; writing the checker does not mean it passed.
+
+Local Node 22.19.0 complete check passed (116 files / 1,309 tests, typecheck, lint,
+normal build, capability CLI, compatibility and package checks). This report does
+not certify later edits or remote installation/browser gates. Local Chromium 144
+navigation was blocked by the execution environment's browser policy before UI
+acceptance; that run is not passing browser evidence and no policy was changed.
+The repository's existing independent CI remains the merge gate.

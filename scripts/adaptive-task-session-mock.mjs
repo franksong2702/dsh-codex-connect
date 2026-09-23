@@ -51,7 +51,7 @@ globalThis.fetch = async (input, init) => {
       const hold = child && prompt.includes('HOLD_CHILD_P2')
       record({ kind: 'provider-request', model: body.model, effort: body.reasoning?.effort, child, hold, auxiliary,
         originalRetained: JSON.stringify(body.input).includes('ORIGINAL_REQUIREMENT_P2'), tools: (body.tools ?? []).map(tool => tool.name) })
-      if (auxiliary) return sse({ ...p2answer(), content: [{ type: 'output_text', text: 'ORIGINAL_REQUIREMENT_P2 task', annotations: [] }] }, body.model)
+      if (auxiliary) return sse({ ...p2answer(), content: [{ type: 'output_text', text: JSON.stringify(body.input).includes('UPGRADE_V1_P2') ? 'UPGRADE_V1_P2 task' : JSON.stringify(body.input).includes('UPGRADE_V2_P2') ? 'UPGRADE_V2_P2 task' : 'ORIGINAL_REQUIREMENT_P2 task', annotations: [] }] }, body.model)
       if (hold) return new Promise((_, reject) => {
         const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
         assert.ok(signal)
