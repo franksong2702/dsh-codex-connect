@@ -109,6 +109,12 @@ async function panel(mode, reserved) {
   return state
 }
 const closePanel = () => page.getByRole('button', { name: 'Close', exact: true }).click()
+async function allowLunaMax() {
+  await page.getByText('Allowed main models and effort levels', { exact: true }).click()
+  await page.getByRole('checkbox', { name: /^gpt-5\.6-luna:/ }).check()
+  await page.getByRole('checkbox', { name: 'gpt-5.6-luna / max', exact: true }).check()
+  await page.getByText('Main model and effort allowed if started now: gpt-5.6-sol: medium; gpt-5.6-luna: max', { exact: true }).waitFor()
+}
 async function send(message, expectedCount, completed = true) {
   const count = await page.getByText('SESSION_FIXTURE_COMPLETE: original requirement retained.', { exact: true }).count()
   await page.locator('[data-composer-input]').fill(message)
@@ -123,6 +129,7 @@ async function picker(kind, choice) {
 }
 async function delegationJourney() {
   await writeFile(join(f.workspace, 'notes.txt'), 'approved first\nsecond')
+  await allowLunaMax()
   await page.getByRole('button', { name: 'Start with these limits', exact: true }).click()
   await page.getByRole('button', { name: 'Prepare task upgrade', exact: true }).click()
   await page.getByText('No delegation permission', { exact: true }).waitFor()
@@ -267,17 +274,7 @@ try {
   pass('stock installed shell, native empty Session, opt-in off')
   if (phase2) await delegationJourney()
   else {
-  await page.getByText('Allowed main models and effort levels', { exact: true }).click()
-  for (const label of await page.locator('details > label').all()) {
-    const text = await label.innerText()
-    if (text.startsWith('gpt-') && !text.startsWith('gpt-5.6-sol:') && !text.startsWith('gpt-5.6-luna:')) {
-      await label.getByRole('checkbox').uncheck()
-    }
-  }
-  for (const checkbox of await page.locator('fieldset input').all()) {
-    const name = await checkbox.getAttribute('aria-label')
-    if (!['gpt-5.6-sol / medium', 'gpt-5.6-luna / max'].includes(name)) await checkbox.uncheck()
-  }
+  await allowLunaMax()
   await page.getByRole('spinbutton', { name: 'Request limit (whole task)' }).fill('6')
   let dropped = 0
   const loseStartResponse = async route => {
@@ -361,7 +358,7 @@ try {
   await page.getByRole('button', { name: 'New session', exact: true }).last().click()
   await page.getByRole('textbox', { name: /^Describe what you want to build/ }).waitFor()
   await panel('off', 0)
-  await page.getByText('Allowed main models and effort levels', { exact: true }).click()
+  await allowLunaMax()
   await page.getByRole('spinbutton', { name: 'Request limit (whole task)' }).fill('1')
   await page.getByRole('button', { name: 'Start with these limits', exact: true }).click()
   await page.getByText('Automatic selection is allowed', { exact: true }).waitFor(); await closePanel()

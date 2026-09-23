@@ -40,6 +40,9 @@ it.each(['en', 'zh'])('requires a visible scoped opt-in and permits manual exit 
   await page.getByRole('button', { name: button, exact: true }).click()
   const start = page.getByRole('button', { name: language === 'zh' ? '按这些范围开始' : 'Start with these limits' })
   await expect.element(start).toBeEnabled()
+  await expect.element(page.getByText(language === 'zh' ? '现在开始将授权的主模型与档位：gpt-5.6-sol: medium'
+    : 'Main model and effort allowed if started now: gpt-5.6-sol: medium', { exact: true })).toBeVisible()
+  await expect.element(page.getByRole('spinbutton', { name: language === 'zh' ? '整项任务的请求上限' : 'Request limit (whole task)' })).toBeVisible()
   expect(mutations).toHaveLength(0)
   const dialog = document.querySelector('dialog')!
   expect(dialog.getBoundingClientRect().width).toBeLessThanOrEqual(390)
@@ -47,9 +50,9 @@ it.each(['en', 'zh'])('requires a visible scoped opt-in and permits manual exit 
   await start.click()
   await expect.element(page.getByRole('button', { name: language === 'zh' ? '切回手动' : 'Take over manually' })).toBeEnabled()
   expect(mutations).toHaveLength(1)
-  expect(mutations[0]).toMatchObject({ action: 'start', sessionId: 'fixture-session', revision: 0, maximumRequests: 40, models: [...ADAPTIVE_TASK_MODELS] })
+  expect(mutations[0]).toMatchObject({ action: 'start', sessionId: 'fixture-session', revision: 0, maximumRequests: 40, models: [ADAPTIVE_TASK_START.model] })
   expect(mutations[0].operationId).toMatch(/^[0-9a-f-]{36}$/)
-  expect(mutations[0].efforts).toEqual(Object.fromEntries(initial().capabilities.map(item => [item.model, item.efforts])))
+  expect(mutations[0].efforts).toEqual({ [ADAPTIVE_TASK_START.model]: [ADAPTIVE_TASK_START.effort] })
   expect(dialog.textContent).toContain(language === 'zh' ? '尚未发起模型请求' : 'No model request yet')
   await page.getByRole('button', { name: language === 'zh' ? '切回手动' : 'Take over manually' }).click()
   await vi.waitFor(() => expect(mutations).toHaveLength(2))
@@ -74,7 +77,7 @@ it('does not retry a lost mutation response or present unconfirmed success', asy
   expect(mutations).toBe(1)
 })
 
-it('sends only checked effort levels and preserves the mandatory Sol Medium start', async () => {
+it('requires an explicit additional model and effort before expanding the grant', async () => {
   let command: any
   vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init?: RequestInit) => {
     if (init?.method === 'POST') command = JSON.parse(String(init.body))
@@ -84,10 +87,14 @@ it('sends only checked effort levels and preserves the mandatory Sol Medium star
   await expect.element(page.getByRole('button', { name: 'Start with these limits' })).toBeEnabled()
   await page.getByText('Allowed main models and effort levels', { exact: true }).click()
   await expect.element(page.getByRole('checkbox', { name: 'gpt-5.6-sol / medium', exact: true })).toBeDisabled()
+  await page.getByRole('checkbox', { name: /^gpt-5\.6-luna:/ }).click()
+  await expect.element(page.getByRole('button', { name: 'Start with these limits' })).toBeDisabled()
   await page.getByRole('checkbox', { name: 'gpt-5.6-luna / max', exact: true }).click()
+  await expect.element(page.getByText('Main model and effort allowed if started now: gpt-5.6-sol: medium; gpt-5.6-luna: max', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Start with these limits' }).click()
   await vi.waitFor(() => expect(command).toBeDefined())
-  expect(command.efforts['gpt-5.6-luna']).toEqual(['low', 'medium', 'high'])
+  expect(command.models).toEqual(['gpt-5.6-sol', 'gpt-5.6-luna'])
+  expect(command.efforts).toEqual({ 'gpt-5.6-sol': ['medium'], 'gpt-5.6-luna': ['max'] })
 })
 it('keeps unavailable state non-actionable and never calls an activation endpoint', async () => {
   const fetch = vi.fn(async () => new Response(null, { status: 401 })); vi.stubGlobal('fetch', fetch)
