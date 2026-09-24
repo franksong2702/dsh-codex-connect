@@ -18,7 +18,7 @@ describe('installation version guidance', () => {
     ['0.1.5-alpha.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.2', '0.1.0-alpha.4.41'],
-    ['0.1.7-rc.1', '0.1.0-alpha.4.43'],
+    ['0.1.7-rc.1', '0.1.0-alpha.4.45'],
   ])('selects the recorded DSH %s / Codex Connect %s pair before installation', (dsh, plugin) => {
     expect(firstInstall).toBeGreaterThan(0)
     expect(compatibility.pluginVersions).toContainEqual(expect.objectContaining({
@@ -37,7 +37,7 @@ describe('installation version guidance', () => {
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
     ])
     for (const guide of [english, chinese]) {
-      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.43')
+      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.45')
       expect(guide).toContain('`latest`')
     }
     expect(english).toContain('**Published experiment:**')
@@ -46,7 +46,7 @@ describe('installation version guidance', () => {
     expect(chinese).toContain('**已发布的实验功能：**')
     expect(chinese).toContain('仍默认关闭')
     expect(chinese).toContain('仍未验证')
-    expect(install).toContain('`latest` remains on `0.1.0-alpha.4.41`')
+    expect(install).toContain('`latest` remains on `0.1.0-alpha.4.44`')
     expect(install).toContain('Stock rc.1 keeps Task controls paused')
     expect(install).toContain('enableReserveFallback: false')
   })
@@ -64,6 +64,6 @@ describe('installation version guidance', () => {
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.23/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.25/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.41/iu)
-    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.43/iu)
+    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.45/iu)
   })
 })
