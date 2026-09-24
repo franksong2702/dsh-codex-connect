@@ -120,6 +120,10 @@
     {
       "version": "0.1.0-alpha.4.43",
       "highlights": ["runtime-compatibility"]
+    },
+    {
+      "version": "0.1.0-alpha.4.45",
+      "highlights": ["image-generation"]
     }
   ]
 }
