@@ -16,7 +16,7 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.43` |
+| Codex Connect | `0.1.0-alpha.4.45` |
 | DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
@@ -28,7 +28,7 @@ On stock DSH `0.1.7-rc.1`, ordinary Composer works, but Task controls remain pau
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.43
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.45
 dsh web
 ```
 
