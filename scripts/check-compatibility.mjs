@@ -15,6 +15,8 @@ const REQUIRED_DSH_RANGE = REQUIRED_DSH_VERSION
 const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION]
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
+const SCHEMASTERY_PACKAGE = '@deepseek-ai/schemastery'
+const REQUIRED_SCHEMASTERY_VERSION = '3.18.4'
 const MAX_PACKAGE_JSON_SEARCH_DEPTH = 8
 
 function fail(message) {
@@ -109,7 +111,12 @@ async function main() {
       fail(`peer dependency ${name} must match ${REQUIRED_DSH_RANGE}`)
     }
   }
-  if (peers[PI_AI_PACKAGE] !== REQUIRED_PI_AI_RANGE) fail(`peer dependency ${PI_AI_PACKAGE} must match ${REQUIRED_PI_AI_RANGE}`)
+  const dependencies = packageJson.dependencies ?? {}
+  if (dependencies[PI_AI_PACKAGE] !== REQUIRED_PI_AI_RANGE) fail(`runtime dependency ${PI_AI_PACKAGE} must match ${REQUIRED_PI_AI_RANGE}`)
+  if (dependencies[SCHEMASTERY_PACKAGE] !== REQUIRED_SCHEMASTERY_VERSION) fail(`runtime dependency ${SCHEMASTERY_PACKAGE} must match ${REQUIRED_SCHEMASTERY_VERSION}`)
+  if (peers[PI_AI_PACKAGE] !== undefined || peers[SCHEMASTERY_PACKAGE] !== undefined) {
+    fail('plugin-owned runtime dependencies must not also be peer dependencies')
+  }
 
   const declaredPackages = compatibility.dshPluginApi.packages
   const installedDeclared = Object.fromEntries(await Promise.all(declaredPackages.map(async name => [name, await installedPackageVersion(name)])))
