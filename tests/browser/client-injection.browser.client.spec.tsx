@@ -90,7 +90,11 @@ describe('OpenAI Codex client dependency injection', () => {
       bind: () => (key: string) => key,
     })
     ctx.provide('connection', {})
-    ctx.provide('configForms', { get: () => ({}), whileServed: () => () => undefined })
+    ctx.provide('configForms', {
+      get: () => ({}),
+      describe: () => ({ getSnapshot: () => ({ status: 'idle', view: undefined, error: null }), subscribe: () => () => undefined }),
+      whileServed: () => () => undefined,
+    })
     ctx.provide('sessions', {})
 
     await expect(ctx.plugin({ name: 'codex-connect-client-fixture', inject, apply })).resolves.toBeDefined()

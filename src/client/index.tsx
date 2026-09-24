@@ -34,6 +34,7 @@ import { CODEX_CONNECT_VERSION } from '../version.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
 import { OpenAICodexModelsCard } from './OpenAICodexModelsCard.tsx'
 import { PublishedAdaptiveTaskControl as AdaptiveTaskControl } from './PublishedAdaptiveTaskControl.tsx'
+import { OpenAICodexConfigForm } from './config-form.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -59,8 +60,11 @@ export function apply(ctx: ClientContext): void {
   }, 'dsh-codex-connect: update checker')
   ctx.effect(() => ctx.locale.register(namespace, { zh, en }), 'dsh-codex-connect: settings copy')
   const t = ctx.locale.bind(namespace) as OpenAICodexPluginCardInjected['t']
+  const configScope = new OpenAICodexConfigForm(
+    ctx.configForms.get<OpenAICodexSettingsConfig>(OPENAI_CODEX_SETTINGS_NAMESPACE),
+    ctx.configForms.describe(),
+  )
   ctx.effect(() => ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE], () => {
-    const configScope = ctx.configForms.get<OpenAICodexSettingsConfig>(OPENAI_CODEX_SETTINGS_NAMESPACE)
     return ctx.slots.register({
       name: 'settings.plugins.tab',
       id: 'codex-connect',
@@ -75,7 +79,7 @@ export function apply(ctx: ClientContext): void {
     name: 'settings.models.footer',
     id: 'dsh-codex-connect-account',
     order: 100,
-    inject: () => ({ t, account, configScope: ctx.configForms.get<OpenAICodexSettingsConfig>(OPENAI_CODEX_SETTINGS_NAMESPACE) }),
+    inject: () => ({ t, account, configScope }),
   }, OpenAICodexModelsCard))
 
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
