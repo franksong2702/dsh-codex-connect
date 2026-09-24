@@ -222,6 +222,12 @@
       "verifiedDshVersions": [
         "0.1.7-rc.1"
       ]
+    },
+    {
+      "version": "0.1.0-alpha.4.46",
+      "verifiedDshVersions": [
+        "0.1.7-rc.1"
+      ]
     }
   ]
 }
