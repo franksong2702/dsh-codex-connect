@@ -124,6 +124,10 @@
     {
       "version": "0.1.0-alpha.4.45",
       "highlights": ["image-generation"]
+    },
+    {
+      "version": "0.1.0-alpha.4.46",
+      "highlights": ["proxy-connection"]
     }
   ]
 }
