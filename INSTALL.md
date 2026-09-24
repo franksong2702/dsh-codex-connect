@@ -1,10 +1,10 @@
 # Installation Runbook for CLI Agents
 
-Published Alpha 4.46 is verified with the exact DSH `0.1.7-rc.1` model-runtime pairing and pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
+Published Alpha 4.47 is verified with the exact DSH `0.1.7-rc.1` model-runtime pairing and pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-09-24: npm `alpha` points to `0.1.0-alpha.4.46` while `latest` remains on `0.1.0-alpha.4.45`. Use the exact-version command for the installed DSH version. Publishing an Alpha and promoting the default installation channel are separate actions.
+Channel snapshot on 2026-09-24: npm `alpha` and `latest` both point to `0.1.0-alpha.4.47`. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
 
 ## Safety requirements
 
@@ -30,13 +30,17 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.5-alpha.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.2` | `0.1.0-alpha.4.41` |
-| `0.1.7-rc.1` | `0.1.0-alpha.4.46` |
+| `0.1.7-rc.1` | `0.1.0-alpha.4.47` |
 
 If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-Alpha 4.46 requires one consistent DSH `0.1.7-rc.1` plugin API and pi-ai `0.85.1`; Node.js remains `^22.19.0 || >=24.0.0`. It does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+Alpha 4.47 requires one consistent DSH `0.1.7-rc.1` plugin API and pi-ai `0.85.1`; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. Node.js remains `^22.19.0 || >=24.0.0`. It does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
 
-The Alpha 4.46 recommendation follows [exact-release main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35982530538) on Node 22/24, browser and keyless Windows checks, plus the stock DSH `0.1.7-rc.1` same-artifact installation matrix. The [original publish run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35983101557) uploaded the verified package but timed out waiting for npm's public readback; it must not be rerun. After the exact version and `alpha` tag appeared, the [recovery-only run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35984180679) matched the public npm archive byte-for-byte to the original artifact and created the Git tag and prerelease without republishing. The fix's real Chrome OAuth and quota refresh on the original Windows PC remain unverified; these checks do not promote npm `latest` or establish real-account acceptance. Stock rc.1 keeps Task controls paused; migration of old Task grants across a Harness upgrade remains unverified.
+The Alpha 4.47 recommendation follows [exact-release main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35994106350) on Node 22/24, browser and keyless Windows checks, plus the stock DSH `0.1.7-rc.1` same-artifact installation matrix. The [original publish run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35994578156) uploaded the verified package but failed during npm public readback; do not rerun publication. Recovery-only local verification matched the public npm archive byte-for-byte to the original artifact and created the [Git tag and prerelease](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.47) without republishing. npm `alpha` and `latest` were independently read back as 4.47. These checks are not fresh real Chrome OAuth, live model/tool/image requests, or Windows application acceptance. Stock rc.1 keeps Task controls paused; migration of old Task grants across a Harness upgrade remains unverified.
+
+Historical Alpha 4.46 evidence:
+
+The Alpha 4.46 recommendation follows [exact-release main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35982530538) on Node 22/24, browser and keyless Windows checks, plus the stock DSH `0.1.7-rc.1` same-artifact installation matrix. The [original publish run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35983101557) uploaded the verified package but timed out waiting for npm's public readback; it must not be rerun. After the exact version and `alpha` tag appeared, the [recovery-only run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35984180679) matched the public npm archive byte-for-byte to the original artifact and created the Git tag and prerelease without republishing. The fix's real Chrome OAuth and quota refresh on the original Windows PC remain unverified; these checks did not promote npm `latest` or establish real-account acceptance. Stock rc.1 keeps Task controls paused; migration of old Task grants across a Harness upgrade remains unverified.
 
 The historical Alpha 4.43 recommendation followed [exact-release main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35887810404) on Node 22/24, Chromium and Windows checks, plus the stock DSH `0.1.7-rc.1` same-artifact installation matrix. The [original publish run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35888766215) uploaded the verified npm package but timed out waiting for public registry readback; do not rerun publication. Once npm exposed the exact version and `alpha` tag, the [recovery-only run](https://github.com/franksong2702/dsh-codex-connect/actions/runs/35889959811) verified the archive against that original artifact and created the matching Git tag and prerelease without republishing. These checks used synthetic providers, not a real ChatGPT account. Stock rc.1 keeps Task controls paused; migration of old Task grants across a Harness upgrade remains unverified.
 
@@ -75,10 +79,10 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
    ```
 
-   For the exact DSH `0.1.7-rc.1` pairing, use Alpha 4.46:
+   For the exact DSH `0.1.7-rc.1` pairing, use Alpha 4.47:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.46
+   dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.47
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -88,6 +92,8 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
    ```
 
    If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.41'` only for the DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` combinations, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.46'` only for DSH `0.1.7-rc.1`.
+
+   For the current DSH `0.1.7-rc.1` pairing, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.47'`.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
