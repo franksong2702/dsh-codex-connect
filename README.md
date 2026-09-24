@@ -16,19 +16,19 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.45` |
+| Codex Connect | `0.1.0-alpha.4.46` |
 | DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-24, npm `alpha` points to 4.43 while `latest` remains on 4.41. Use the exact version below for this DSH pairing; publishing an Alpha and changing the default installation channel are separate actions.
+As of 2026-09-24, npm `alpha` points to 4.46 while `latest` remains on 4.45. Use the exact version below for this DSH pairing; publishing an Alpha and changing the default installation channel are separate actions.
 
 On stock DSH `0.1.7-rc.1`, ordinary Composer works, but Task controls remain paused: activation is rejected and fresh Sessions do not show them. Migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.45
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.46
 dsh web
 ```
 
