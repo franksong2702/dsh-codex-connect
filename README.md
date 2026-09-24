@@ -75,7 +75,7 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 
 | Capability | Enable with | Important behavior |
 |---|---|---|
-| Proxy | `enableProxy` | Credential-free HTTP(S), scoped to this plugin's traffic. A failed proxy request does not silently retry directly. |
+| Proxy | `enableProxy` | Credential-free HTTP(S), scoped to this plugin's traffic, including compressed OAuth and quota responses. Unrelated Fetch calls retain the host's original transport. A failed proxy request does not silently retry directly. |
 | Codex Search | `enableSearch` | Selects Codex for the entire profile's search route; disabling restores the previously active route. |
 | Luna Reserve | `enableReserveFallback` | Uses the hidden Reserve route only when the backend explicitly authorizes it for the captured account; never changes global defaults or retries a generic `429`. |
 | Image viewing | `enableImageTool` | Adds `view_image` to vision-capable models for local files and validated public HTTP(S) images. |
