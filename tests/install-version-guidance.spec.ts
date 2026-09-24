@@ -46,7 +46,7 @@ describe('installation version guidance', () => {
     expect(chinese).toContain('**已发布的实验功能：**')
     expect(chinese).toContain('仍默认关闭')
     expect(chinese).toContain('仍未验证')
-    expect(install).toContain('`latest` remains on `0.1.0-alpha.4.44`')
+    expect(install).toContain('`alpha` and `latest` both point to `0.1.0-alpha.4.45`')
     expect(install).toContain('Stock rc.1 keeps Task controls paused')
     expect(install).toContain('enableReserveFallback: false')
   })

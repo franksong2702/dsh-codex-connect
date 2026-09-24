@@ -4,7 +4,7 @@ Published Alpha 4.43 is verified with the exact DSH `0.1.7-rc.1` model-runtime p
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-09-24: npm `alpha` points to `0.1.0-alpha.4.45`; `latest` remains on `0.1.0-alpha.4.44`. Use the exact-version command for the installed DSH version. Publishing an Alpha and promoting the default installation channel are separate actions.
+Channel snapshot on 2026-09-24: npm `alpha` and `latest` both point to `0.1.0-alpha.4.45`. Use the exact-version command for the installed DSH version. Publishing an Alpha and promoting the default installation channel are separate actions.
 
 ## Safety requirements
 
