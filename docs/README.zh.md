@@ -16,19 +16,19 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.46` |
+| Codex Connect | `0.1.0-alpha.4.47` |
 | DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-24，npm `alpha` 指向 4.46，`latest` 仍指向 4.45。安装此 DSH 组合请使用下方精确版本命令；发布 Alpha 与提升默认安装渠道是两项独立操作。
+截至 2026-09-24，npm `alpha` 和 `latest` 均指向 4.47。安装此 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 在原版 DSH `0.1.7-rc.1` 上，普通 Composer 可用，但 Task 控件仍暂停：激活请求会被拒绝，新 Session 不显示这些控件。跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.46
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.47
 dsh web
 ```
 
