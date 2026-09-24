@@ -343,6 +343,7 @@ export class OpenAICodexSearchProvider implements WebSearchProvider {
         'chatgpt-account-id': accountId,
         'content-type': 'application/json',
         accept: 'application/json',
+        'accept-encoding': 'identity',
       }, 'plugin')
       response = await abortable(requestFetch(OPENAI_CODEX_SEARCH_URL, {
         method: 'POST',

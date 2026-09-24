@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { brotliCompressSync } from 'node:zlib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
@@ -140,6 +141,28 @@ describe('OpenAI Codex standalone search request', () => {
     })
     expect(recordRequest).toHaveBeenCalledWith({ endpoint: url, body })
     expect(recordRequest.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0] ?? 0)
+  })
+
+  it('requests identity encoding when search responses have no content-encoding header', async () => {
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const headers = new Headers(init.headers)
+      // Some transports discard response headers and leave Brotli bytes undecoded.
+      return headers.get('accept-encoding') === 'identity'
+        ? jsonResponse(searchPayload)
+        : new Response(brotliCompressSync(JSON.stringify(searchPayload)), { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const search = await provider()
+
+    await expect(search.search({ query: 'current information' })).resolves.toMatchObject({
+      content: 'A synthesized answer.',
+      sources: [
+        { url: 'https://example.com/a', title: 'A', snippet: 'First' },
+        { url: 'https://example.com/b' },
+      ],
+    })
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(new Headers(init.headers).get('accept-encoding')).toBe('identity')
   })
 
   it('forwards cancellation and rejects a pre-aborted request before reading credentials', async () => {
