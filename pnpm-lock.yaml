@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: 3.18.4
+        version: 3.18.4
+      '@earendil-works/pi-ai':
+        specifier: 0.85.1
+        version: 0.85.1(ws@8.21.3)(zod@4.4.3)
       undici:
         specifier: ^8.10.0
         version: 8.10.2
@@ -198,12 +204,6 @@ importers:
       '@deepseek-ai/dsh-workspace':
         specifier: 0.1.7-rc.1
         version: 0.1.7-rc.1(9647dcd75749bbde17533c0656d3a0b0)
-      '@deepseek-ai/schemastery':
-        specifier: 3.18.4
-        version: 3.18.4
-      '@earendil-works/pi-ai':
-        specifier: 0.85.1
-        version: 0.85.1(ws@8.21.3)(zod@4.4.3)
       '@shikijs/langs':
         specifier: ^4.3.1
         version: 4.4.3

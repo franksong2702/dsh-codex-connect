@@ -1,0 +1,7 @@
+# Install libraries imported by the runtime bundle
+
+The Cordis bundle's `lib/index.js` imports `@deepseek-ai/schemastery` and `@earendil-works/pi-ai` at module load. Alpha 4.46 declared both only as peers, so a profile that supplied the DSH host packages but not these two libraries could fail before plugin activation. Resolving an older host-level schemastery also exposed a `.volatile()` method mismatch. A profile-local dependency workaround confirmed that the missing libraries, not credentials or plugin configuration, caused the reported failure.
+
+The plugin now declares exact, plugin-owned runtime dependencies for schemastery `3.18.4` and pi-ai `0.85.1`. DSH, Cordis, and React remain peers because they are host-owned APIs whose module identity must remain shared. The runtime bundle continues to externalize these imports; the package manager installs the two direct dependencies beside the plugin instead of relying on incidental profile hoisting.
+
+`check:isolated-import` copies the built package into a disposable profile, exposes the declared host peers except these two libraries, links only the plugin's declared direct dependencies beside its package, and imports the real built entry point in a fresh Node process. Before the manifest change, the same check failed on missing schemastery. The DSH install matrix exercises the packed artifact with the declared host version and remains the compatibility gate; the isolated import check does not claim a real-account or Windows acceptance run.

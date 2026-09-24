@@ -2,7 +2,7 @@
   "name": "dsh-codex-connect",
   "displayName": "Codex Connect",
   "description": "ChatGPT OAuth and Codex models for DeepSeek Harness.",
-  "version": "0.1.0-alpha.4.46",
+  "version": "0.1.0-alpha.4.47",
   "author": "Frank Song",
   "contributors": [
     "Yan-Zero (original dsh-codex author)"
@@ -54,7 +54,8 @@
     "check:dsh-next": "node scripts/check-dsh-next.mjs",
     "check:release-workflow": "node scripts/check-release-workflow.mjs",
     "check:env-proxy-import": "node scripts/check-env-proxy-import.mjs",
-    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:env-proxy-import && pnpm run check:capability-cli && pnpm --silent run check:compatibility && pnpm run pack:check",
+    "check:isolated-import": "node scripts/check-isolated-import.mjs",
+    "check": "pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:env-proxy-import && pnpm run check:isolated-import && pnpm run check:capability-cli && pnpm --silent run check:compatibility && pnpm run pack:check",
     "prepublishOnly": "pnpm --config.minimum-release-age=0 run check"
   },
   "exports": {
@@ -83,6 +84,8 @@
     "NOTICE"
   ],
   "dependencies": {
+    "@deepseek-ai/schemastery": "3.18.4",
+    "@earendil-works/pi-ai": "0.85.1",
     "undici": "^8.10.0"
   },
   "license": "Apache-2.0",
@@ -129,8 +132,6 @@
     "@deepseek-ai/dsh-tools": "0.1.7-rc.1",
     "@deepseek-ai/dsh-util-values": "0.1.7-rc.1",
     "@deepseek-ai/dsh-web": "0.1.7-rc.1",
-    "@deepseek-ai/schemastery": "^3.18.2",
-    "@earendil-works/pi-ai": "0.85.1",
     "react": "^18.2.0"
   },
   "peerDependenciesMeta": {
@@ -201,8 +202,6 @@
     "@deepseek-ai/dsh-util-values": "0.1.7-rc.1",
     "@deepseek-ai/dsh-web": "0.1.7-rc.1",
     "@deepseek-ai/dsh-workspace": "0.1.7-rc.1",
-    "@deepseek-ai/schemastery": "3.18.4",
-    "@earendil-works/pi-ai": "0.85.1",
     "@testing-library/react": "^16.3.2",
     "@shikijs/langs": "^4.3.1",
     "@types/node": "^22.20.0",
