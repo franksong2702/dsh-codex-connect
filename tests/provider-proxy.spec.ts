@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
 import { connect } from 'node:net'
+import { gzipSync } from 'node:zlib'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -66,6 +67,26 @@ describe('OpenAI Codex proxy manager', () => {
     await second.dispose()
     expect(getGlobalDispatcher()).toBe(replacement)
   })
+  it('restores a third-party Fetch replacement after the last owner disposes', async () => {
+    const originalFetch = globalThis.fetch
+    const first = new OpenAICodexProxyManager()
+    const second = new OpenAICodexProxyManager()
+    try {
+      first.run('http://127.0.0.1:9', () => undefined)
+      const retained = globalThis.fetch
+      const replacement: typeof fetch = (input, init) => retained(input, init)
+      globalThis.fetch = replacement
+      second.run('http://127.0.0.1:9', () => undefined)
+      expect(globalThis.fetch).not.toBe(replacement)
+      await first.dispose()
+      await second.dispose()
+      expect(globalThis.fetch).toBe(replacement)
+    } finally {
+      await first.dispose()
+      await second.dispose()
+      globalThis.fetch = originalFetch
+    }
+  })
   it('scopes fetch through the proxy and leaves unrelated dispatch on the original dispatcher', async () => {
     const target = createServer((_req, res) => {
       res.writeHead(200, { 'content-type': 'text/plain' })
@@ -99,6 +120,54 @@ describe('OpenAI Codex proxy manager', () => {
     } finally {
       await new Promise<void>(resolve => { proxy.close(() => resolve()) })
       await new Promise<void>(resolve => { target.close(() => resolve()) })
+    }
+  })
+
+  it('decodes a compressed JSON response through the scoped proxy with Node fetch', async () => {
+    const originalFetch = globalThis.fetch
+    let connects = 0
+    const target = createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json', 'content-encoding': 'gzip' })
+      res.end(gzipSync(JSON.stringify({ authenticated: true })))
+    })
+    const proxy = createServer()
+    proxy.on('connect', (request, client, head) => {
+      connects += 1
+      const [host, portText] = (request.url ?? '').split(':')
+      const upstream = connect(Number(portText), host, () => {
+        client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+        if (head.length > 0) upstream.write(head)
+        upstream.pipe(client)
+        client.pipe(upstream)
+      })
+      upstream.on('error', () => { client.destroy() })
+    })
+    await new Promise<void>(resolve => { target.listen(0, '127.0.0.1', resolve) })
+    await new Promise<void>(resolve => { proxy.listen(0, '127.0.0.1', resolve) })
+    const manager = new OpenAICodexProxyManager()
+    const proxyDispatch = vi.spyOn(ProxyAgent.prototype, 'dispatch')
+    try {
+      const targetAddress = target.address() as AddressInfo
+      const proxyAddress = proxy.address() as AddressInfo
+      const response = await manager.run(
+        `http://127.0.0.1:${String(proxyAddress.port)}`,
+        () => fetch(`http://127.0.0.1:${String(targetAddress.port)}`),
+      )
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ authenticated: true })
+      const requestResponse = await manager.run(
+        `http://127.0.0.1:${String(proxyAddress.port)}`,
+        () => fetch(new Request(`http://127.0.0.1:${String(targetAddress.port)}`)),
+      )
+      expect(await requestResponse.json()).toEqual({ authenticated: true })
+      expect(connects).toBeGreaterThan(0)
+      expect(proxyDispatch).toHaveBeenCalledTimes(2)
+    } finally {
+      await manager.dispose()
+      const restored = globalThis.fetch === originalFetch
+      await new Promise<void>(resolve => { proxy.close(() => resolve()) })
+      await new Promise<void>(resolve => { target.close(() => resolve()) })
+      expect(restored).toBe(true)
     }
   })
 
