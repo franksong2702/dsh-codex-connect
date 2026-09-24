@@ -28,6 +28,7 @@ An explicit OAuth `invalid_grant` rejection during refresh shows the reauthoriza
 For GPT Codex conversations, the Composer shows Fast Mode and quota:
 
 - **Fast Mode** requests priority service (`service_tier: 'priority'`) for that conversation only. It is off by default and does not change the model. Actual speed and quota consumption depend on the service; a fixed speed multiplier is not guaranteed.
+- The profile's **Fast Mode for new conversations** and **Fast Mode for new subagent conversations** settings are independent and both off by default. Each is applied only when a new session starts; changing either setting does not retroactively alter existing sessions or override a Composer choice. Per-conversation Fast Mode state is process-local, so resuming after a plugin restart returns that conversation to Standard speed; subsequent new sessions still use the saved profile defaults.
 - **Quota bars** normally refresh every 60 seconds while signed in and the tab is visible (hidden tabs pause; failures back off) and show only the `5h` and `7d` windows returned by the server, with the exact remaining percentage and reset time. `gpt-5.3-codex-spark` uses its separate Spark bucket. Codex Connect never invents missing windows or suppresses returned windows based on a plan name.
 
 <p align="center">

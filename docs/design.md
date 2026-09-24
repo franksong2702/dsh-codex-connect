@@ -8,6 +8,8 @@ The bundle patch inserts only `llm-openai-codex`. It never writes `agent-default
 
 The Host registers `llm-openai-codex` as the plugin-owned capability settings namespace. DSH's `llm-pi-ai` catalog owns the `openai-codex` configurable-provider directory entry, while Codex Connect registers the active adapter without redeclaring that entry. The browser binds the plugin namespace through Harness's settings-scope transport and renders account, quota, Save/Discard capability controls in the existing Plugin configuration card. Revision-fenced field writes preserve unrelated settings. Committed changes reconcile search and image registrations live. Default-model settings are never written.
 
+Fast Mode remains per-session process-local state. Separate default-off profile settings seed newly started top-level and subagent sessions through `agent/created`; resume, setting edits, and repeated startup notifications do not change an existing session's Composer choice. The adapter adds `service_tier: 'priority'` only on Codex requests for an enabled session.
+
 ## Task-level model selection (unreleased Phase 1 candidate)
 
 The optional conversation control grants a bounded main-model/effort scope to one task, initially Sol/Medium. The task runtime, adapter dispatch wrapper and existing backend governor share durable request accounting. There is no separate Think, Split or Remember product selector. Host-owned permissions, session history and compaction remain their existing owners; model choice grants no new tool authority. See [the consolidated contract and migration](experiments/adaptive-task-phase1.md) for source selection from #232–#235, cancellation, recovery and acceptance limits.

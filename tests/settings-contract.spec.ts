@@ -39,6 +39,8 @@ describe('OpenAI Codex proxy settings contract', () => {
   it('keeps fresh and legacy settings on direct connection', () => {
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableProxy).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableReserveFallback).toBe(false)
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableNewSessionFastMode).toBe(false)
+    expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableNewSubagentFastMode).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableNativeCompaction).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.autoReviewDisclosureAcknowledged).toBe(false)
     expect(DEFAULT_OPENAI_CODEX_SETTINGS.enableAutoReview).toBe(false)
@@ -53,6 +55,8 @@ describe('OpenAI Codex proxy settings contract', () => {
     })
     expect(legacy?.enableProxy).toBe(false)
     expect(legacy?.enableReserveFallback).toBe(false)
+    expect(legacy?.enableNewSessionFastMode).toBe(false)
+    expect(legacy?.enableNewSubagentFastMode).toBe(false)
     expect(legacy?.enableNativeCompaction).toBe(false)
     expect(legacy?.proxyUrl).toBe(DEFAULT_OPENAI_CODEX_PROXY_URL)
     expect(legacy?.autoReviewDisclosureAcknowledged).toBe(false)
@@ -83,6 +87,25 @@ describe('OpenAI Codex proxy settings contract', () => {
       ...DEFAULT_OPENAI_CODEX_SETTINGS,
       enableReserveFallback: true,
     })?.enableReserveFallback).toBe(true)
+  })
+
+  it('keeps top-level and subagent Fast Mode defaults separate and rejects malformed values', () => {
+    const defaults = resolveOpenAICodexSettings({})
+    expect(defaults.enableNewSessionFastMode).toBe(false)
+    expect(defaults.enableNewSubagentFastMode).toBe(false)
+    expect(configSettings(Config({ enableNewSessionFastMode: true }))).toMatchObject({
+      enableNewSessionFastMode: true,
+      enableNewSubagentFastMode: false,
+    })
+    expect(decodeOpenAICodexSettings({
+      ...DEFAULT_OPENAI_CODEX_SETTINGS,
+      enableNewSubagentFastMode: true,
+    })).toMatchObject({ enableNewSessionFastMode: false, enableNewSubagentFastMode: true })
+    for (const field of ['enableNewSessionFastMode', 'enableNewSubagentFastMode'] as const) {
+      expect(() => Config({ [field]: 'on' } as never)).toThrow()
+      expect(() => resolveOpenAICodexSettings({ [field]: 'on' } as never)).toThrow()
+      expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, [field]: 'on' })).toBeUndefined()
+    }
   })
 
   it('rejects non-boolean Auto-review settings while preserving the default-off legacy value', () => {

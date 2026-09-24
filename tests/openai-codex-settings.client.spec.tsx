@@ -456,6 +456,35 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(mutate).toHaveBeenCalledTimes(1)
   })
 
+  it('saves independent, default-off Fast Mode choices for new top-level and subagent sessions', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    const first = render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const topLevel = await screen.findByRole('checkbox', { name: /Fast Mode for new conversations/u }) as HTMLInputElement
+    const subagent = screen.getByRole('checkbox', { name: /Fast Mode for new subagent conversations/u }) as HTMLInputElement
+    expect(topLevel.checked).toBe(false)
+    expect(subagent.checked).toBe(false)
+
+    fireEvent.click(topLevel)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['enableNewSessionFastMode'], value: true }], 0)
+    expect(scope.getSnapshot().value).toMatchObject({ enableNewSessionFastMode: true, enableNewSubagentFastMode: false })
+
+    fireEvent.click(subagent)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['enableNewSubagentFastMode'], value: true }], 1)
+    first.unmount()
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const reloaded = await screen.findByRole('checkbox', { name: /Fast Mode for new conversations/u }) as HTMLInputElement
+    expect(reloaded.checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: /Fast Mode for new subagent conversations/u }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(reloaded)
+    fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(reloaded.checked).toBe(true)
+  })
+
   it('stages, saves, reloads, discards, and disables Codex native context management', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }]))))
     const { scope, mutate } = settingsScopeFixture()
