@@ -12,7 +12,8 @@ import {
   IconCopyOutlineRegular,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { decodeImagePresentationMeta, decodeImageResultContent } from '../image-presentation.ts'
+import { imagePresentationForResult, promptForImageToolBlock } from './image-result-presentation.ts'
+import type { ImagePresentationMeta } from '../image-presentation.ts'
 import { openAICodexOriginalImageUrl } from '../image-assets-contract.ts'
 import type { OpenAICodexOriginalImageRef } from '../image-assets-contract.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
@@ -23,7 +24,10 @@ export interface CodexImageToolViewInjected {
   sessions: ISessions
 }
 
-export type CodexImageToolViewProps = PropsRuntime<'tool.call.toolview'> & CodexImageToolViewInjected & { t: Translate<OpenAICodexSettingsKey> }
+type ImageToolRuntime = PropsRuntime<'tool.call.toolview'>
+export type CodexImageToolViewProps = Omit<ImageToolRuntime, 'phase' | 'block'> & {
+  block: ImageToolRuntime['block']
+} & CodexImageToolViewInjected & { t: Translate<OpenAICodexSettingsKey> }
 
 const shell: CSSProperties = { containerType: 'inline-size', padding: 12, border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 10, background: 'var(--dsw-alias-bg-module-platform)', color: 'var(--dsw-alias-label-primary)' }
 const header: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }
@@ -48,33 +52,6 @@ function contentText(content: readonly unknown[]): string | undefined {
       && typeof (block as { text?: unknown }).text === 'string') return (block as { text: string }).text
   }
   return undefined
-}
-
-function presentation(block: CodexImageToolViewProps['block']) {
-  if (!('kind' in block) || block.kind !== 'tool-result' || block.isError) return undefined
-  if (block.meta !== undefined) return decodeImagePresentationMeta(block.meta)
-  const prompt = promptFor(block)
-  return prompt === undefined ? undefined : decodeImageResultContent(block.content, prompt)
-}
-
-function promptFromArgs(raw: string): string | undefined {
-  try {
-    const value: unknown = JSON.parse(raw)
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
-    const prompt = (value as Record<string, unknown>).prompt
-    if (typeof prompt !== 'string') return undefined
-    const trimmed = prompt.trim()
-    return trimmed.length > 0 && trimmed.length <= 32_000 ? trimmed : undefined
-  } catch {
-    return undefined
-  }
-}
-
-function promptFor(block: CodexImageToolViewProps['block']): string | undefined {
-  if (!('kind' in block)) return promptFromArgs(block.argsRaw)
-  const decoded = decodeImagePresentationMeta(block.meta)
-  if (decoded !== undefined) return decoded.prompt
-  return block.call === null ? undefined : promptFromArgs(block.call.argsRaw)
 }
 
 type SessionAction = 'cancel' | 'follow-up'
@@ -342,8 +319,8 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
   const load = useImageLoader(sessionId, sessions)
   const sessionActions = useSessionActions(sessionId, sessions)
   const galleryLabels = useMemo(() => labels(t), [t])
-  const prompt = promptFor(block)
-  const decoded = useMemo(() => presentation(block), [block])
+  const prompt = promptForImageToolBlock(block)
+  const decoded = useMemo(() => 'kind' in block ? imagePresentationForResult(block) : undefined, [block])
   if (!('kind' in block)) return <ResponsiveCard
     label={t('generating')}
     visual={<div style={{ display: 'grid', gap: 10 }}>
@@ -378,6 +355,32 @@ export function CodexImageToolView({ block, sessionId, t, sessions }: CodexImage
   }
   if (decoded === undefined) return <section style={shell} role="status"><strong>{t('completed')}</strong><span style={detail}>{t('unknownResult')}</span></section>
 
+  return <ImageResultCard decoded={decoded} sessionId={sessionId} load={load} sessionActions={sessionActions} galleryLabels={galleryLabels} t={t} />
+}
+
+/** Render the same complete result controls in the independent answer tail. */
+export function CodexImageTurnResult({ block, sessionId, sessions, t }: {
+  block: Extract<CodexImageToolViewProps['block'], { kind: 'tool-result' }>
+  sessionId: CodexImageToolViewProps['sessionId']
+  sessions: ISessions
+  t: Translate<OpenAICodexSettingsKey>
+}) {
+  const load = useImageLoader(sessionId, sessions)
+  const sessionActions = useSessionActions(sessionId, sessions)
+  const galleryLabels = useMemo(() => labels(t), [t])
+  const decoded = useMemo(() => imagePresentationForResult(block), [block])
+  if (decoded === undefined) return null
+  return <ImageResultCard decoded={decoded} sessionId={sessionId} load={load} sessionActions={sessionActions} galleryLabels={galleryLabels} t={t} />
+}
+
+function ImageResultCard({ decoded, sessionId, load, sessionActions, galleryLabels, t }: {
+  decoded: ImagePresentationMeta
+  sessionId: CodexImageToolViewProps['sessionId']
+  load: ReturnType<typeof useImageLoader>
+  sessionActions: ReturnType<typeof useSessionActions>
+  galleryLabels: CodexImageGalleryLabels
+  t: Translate<OpenAICodexSettingsKey>
+}) {
   return <ResponsiveCard
     label={t('completed')}
     visual={<><div style={header}><strong>{t('completed')}</strong></div><CodexImageGallery images={decoded.images.map(image => ({ attachment: image.preview }))} load={load} align="start" labels={galleryLabels} /></>}

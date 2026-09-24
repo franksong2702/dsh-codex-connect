@@ -13,6 +13,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-connection/client'
 // Type-only: pulls the conversation input-region SlotMap declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+// Type-only: pulls the independent completed-Turn tail SlotMap declaration.
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 // Type-only: pulls ctx.modelDirectories and its session directory contract.
 import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -28,6 +30,8 @@ import { en, zh } from './locales.ts'
 import type { OpenAICodexSettingsKey } from './locales.ts'
 import { CodexImageToolView } from './CodexImageToolView.tsx'
 import type { CodexImageToolViewInjected } from './CodexImageToolView.tsx'
+import { CodexImageTurnTail } from './CodexImageTurnTail.tsx'
+import type { CodexImageTurnTailProps } from './CodexImageTurnTail.tsx'
 import { OpenAICodexUpdateOverlay } from './OpenAICodexUpdateNotice.tsx'
 import { OpenAICodexUpdateStore } from './update-store.ts'
 import { CODEX_CONNECT_VERSION } from '../version.ts'
@@ -103,6 +107,14 @@ export function apply(ctx: ClientContext): void {
     locale: namespace,
     inject: (): CodexImageToolViewInjected => ({ sessions: ctx.sessions }),
   }, CodexImageToolView))
+
+  ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({
+    name: 'conversation.chat.turnTail',
+    id: 'codex-connect-generated-images',
+    order: 20,
+    locale: namespace,
+    inject: (): Pick<CodexImageTurnTailProps, 'sessions'> => ({ sessions: ctx.sessions }),
+  }, CodexImageTurnTail))
 
   ctx.inject(['slots', 'modelDirectories'], (scope: ClientContext) => {
     scope.slots.inject('conversation.input.right', () => scope.slots.register({

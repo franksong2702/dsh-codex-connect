@@ -40,6 +40,8 @@ When `enableImageTool: true`, `view_image` is registered only after tools, files
 
 Each remote-image redirect hop has one 30-second deadline covering DNS, connection, and body consumption. Cancellation settles the caller's wait immediately; an operating-system DNS lookup may still finish later, but its result cannot start a new HTTP request after cancellation or timeout.
 
+Successful Codex image-generation Tool results also render in the independent completed-Turn tail. DSH groups Tool calls into a collapsed processing disclosure, so the keyed Tool card alone cannot make generated images visible with the answer. The tail reads only this Turn's settled Tool rows, including nested PTC calls and restored history, and uses the same validated result metadata, session-bound preview loader, Lightbox, and download controls as the Tool card. Failed, malformed, unrelated, or post-answer results do not enter the visible image row. The Tool card remains available in processing details.
+
 ## Conflicts and diagnostics
 
 Before registration the plugin checks current provider ids. An existing `openai-codex` adapter produces a focused message naming the likely legacy-bundle or manual-provider cause. The boot-free CLI `doctor` reports package/runtime version, OAuth path metadata, capability defaults, and safe conflict guidance without returning auth content.

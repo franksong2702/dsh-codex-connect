@@ -79,7 +79,10 @@ describe('OpenAI Codex browser contribution', () => {
     ])
     expect(client).toContain("ctx.slots.inject('tool.call.toolview'")
     expect(client).toContain("key: 'codex_connect_image_generate'")
+    expect(client).toContain("ctx.slots.inject('conversation.chat.turnTail'")
+    expect(client).toContain("id: 'codex-connect-generated-images'")
     const parsed = JSON.parse(manifest) as { dsh: { client: { inject: string[] } } }
+    expect(parsed.dsh.client.inject).toContain('@deepseek-ai/dsh-client-ui-chat')
     expect(parsed.dsh.client.inject).not.toContain('@deepseek-ai/dsh-client-ui-slots')
     expect(parsed.dsh.client.inject).not.toContain('@deepseek-ai/dsh-client-ui-attachment')
   })
