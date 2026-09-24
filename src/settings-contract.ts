@@ -110,6 +110,10 @@ export interface OpenAICodexSettingsConfig {
   enableSearch: boolean
   /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
   enableReserveFallback: boolean
+  /** Default Fast Mode for newly started top-level sessions; existing sessions are unchanged. */
+  enableNewSessionFastMode: boolean
+  /** Independent default for newly started subagent sessions. */
+  enableNewSubagentFastMode: boolean
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean
   enableImageTool: boolean
@@ -133,6 +137,8 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   contextWindowOverrides: undefined,
   enableSearch: false,
   enableReserveFallback: false,
+  enableNewSessionFastMode: false,
+  enableNewSubagentFastMode: false,
   enableNativeCompaction: false,
   enableImageTool: false,
   enableImageGeneration: false,
@@ -157,6 +163,9 @@ export function resolveOpenAICodexSettings(
   const resolved = { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
   if (typeof resolved.enableReserveFallback !== 'boolean') {
     throw new TypeError('OpenAI Codex enableReserveFallback must be a boolean')
+  }
+  if (typeof resolved.enableNewSessionFastMode !== 'boolean' || typeof resolved.enableNewSubagentFastMode !== 'boolean') {
+    throw new TypeError('OpenAI Codex new-session Fast Mode defaults must be booleans')
   }
   if (typeof resolved.enableNativeCompaction !== 'boolean') {
     throw new TypeError('OpenAI Codex enableNativeCompaction must be a boolean')
@@ -189,6 +198,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const contextWindowOverrides = value['contextWindowOverrides']
   const enableSearch = value['enableSearch']
   const enableReserveFallback = value['enableReserveFallback']
+  const enableNewSessionFastMode = value['enableNewSessionFastMode']
+  const enableNewSubagentFastMode = value['enableNewSubagentFastMode']
   const enableNativeCompaction = value['enableNativeCompaction']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
@@ -205,6 +216,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   if (enableReserveFallback !== undefined && typeof enableReserveFallback !== 'boolean') return undefined
+  if (enableNewSessionFastMode !== undefined && typeof enableNewSessionFastMode !== 'boolean') return undefined
+  if (enableNewSubagentFastMode !== undefined && typeof enableNewSubagentFastMode !== 'boolean') return undefined
   if (enableNativeCompaction !== undefined && typeof enableNativeCompaction !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
@@ -225,6 +238,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
     enableReserveFallback: enableReserveFallback ?? false,
+    enableNewSessionFastMode: enableNewSessionFastMode ?? false,
+    enableNewSubagentFastMode: enableNewSubagentFastMode ?? false,
     enableNativeCompaction: enableNativeCompaction ?? false,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,

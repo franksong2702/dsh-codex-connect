@@ -91,6 +91,8 @@ describe('OpenAI Codex Host settings integration', () => {
       proxyUrl: OpenAICodex.DEFAULT_OPENAI_CODEX_SETTINGS.proxyUrl,
       enableSearch: false,
       enableReserveFallback: false,
+      enableNewSessionFastMode: false,
+      enableNewSubagentFastMode: false,
       enableNativeCompaction: false,
       enableImageTool: false,
       enableImageGeneration: false,
@@ -114,6 +116,8 @@ describe('OpenAI Codex Host settings integration', () => {
       enableSearch: true,
       enableImageTool: true,
       enableImageGeneration: true,
+      enableNewSessionFastMode: true,
+      enableNewSubagentFastMode: true,
       imageModelHint: 'custom-image-route',
       searchModel: 'gpt-search-settings-test',
       searchMode: 'live',
@@ -128,7 +132,7 @@ describe('OpenAI Codex Host settings integration', () => {
       await expect(ctx.web.search({ query: 'enabled' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
     })
     expect(ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value)
-      .toMatchObject({ imageModelHint: 'custom-image-route' })
+      .toMatchObject({ imageModelHint: 'custom-image-route', enableNewSessionFastMode: true, enableNewSubagentFastMode: true })
     await expect(ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, { imageModelHint: 'https://invalid.example' }))
       .rejects.toThrow()
     expect(ctx.settings.describe().find(entry => entry.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value)

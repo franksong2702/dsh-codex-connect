@@ -35,6 +35,7 @@ import {
 } from './update.ts'
 import { CODEX_CONNECT_VERSION } from './version.ts'
 import { FastModeRegistry } from './fast-mode.ts'
+import { registerOpenAICodexFastModeDefaults } from './fast-mode-defaults.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { imageGenerateTool } from './image-tool.ts'
 import { viewImageTool } from './view-image.ts'
@@ -264,6 +265,10 @@ export interface Config {
   enableSearch?: boolean
   /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
   enableReserveFallback?: boolean
+  /** Enable Fast Mode for newly started top-level sessions only. */
+  enableNewSessionFastMode?: boolean
+  /** Independent opt-in default for newly started subagent sessions. */
+  enableNewSubagentFastMode?: boolean
   /** Explicit profile opt-in to Codex native context management; DSH owns automatic triggers. Disabling stops new native compactions, not replay of existing checkpoints. */
   enableNativeCompaction?: boolean
   /** Register the optional image-loading tool. */
@@ -312,6 +317,8 @@ const configSchema = z.object({
   ).volatile(),
   enableSearch: z.boolean().default(false).volatile(),
   enableReserveFallback: z.boolean().default(false).volatile(),
+  enableNewSessionFastMode: z.boolean().default(false).volatile(),
+  enableNewSubagentFastMode: z.boolean().default(false).volatile(),
   enableNativeCompaction: z.boolean().default(false).volatile(),
   enableImageTool: z.boolean().default(false).volatile(),
   enableImageGeneration: z.boolean().default(false).volatile(),
@@ -333,6 +340,8 @@ export interface VolatileConfig {
   contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>
   enableSearch: Volatile<boolean>
   enableReserveFallback: Volatile<boolean>
+  enableNewSessionFastMode: Volatile<boolean>
+  enableNewSubagentFastMode: Volatile<boolean>
   enableNativeCompaction: Volatile<boolean>
   enableImageTool: Volatile<boolean>
   enableImageGeneration: Volatile<boolean>
@@ -360,6 +369,8 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     models: configValue(config.models), enableProxy: configValue(config.enableProxy), proxyUrl: configValue(config.proxyUrl),
     contextWindowOverrides: configValue(config.contextWindowOverrides), enableSearch: configValue(config.enableSearch),
     enableReserveFallback: configValue(config.enableReserveFallback), enableNativeCompaction: configValue(config.enableNativeCompaction),
+    enableNewSessionFastMode: configValue(config.enableNewSessionFastMode),
+    enableNewSubagentFastMode: configValue(config.enableNewSubagentFastMode),
     enableImageTool: configValue(config.enableImageTool), enableImageGeneration: configValue(config.enableImageGeneration),
     imageModelHint: configValue(config.imageModelHint), autoReviewDisclosureAcknowledged: configValue(config.autoReviewDisclosureAcknowledged),
     enableAutoReview: configValue(config.enableAutoReview), searchModel: configValue(config.searchModel), searchMode: configValue(config.searchMode),
@@ -382,6 +393,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
   )
   const fastMode = new FastModeRegistry()
+  registerOpenAICodexFastModeDefaults(ctx, fastMode, () => resolveOpenAICodexSettings(current()))
   const taskDirectory = join(dirname(credentials.filename), 'codex-connect-tasks')
   taskRuntime = new AdaptiveTaskControlRuntime(ctx, {
     directory: taskDirectory,

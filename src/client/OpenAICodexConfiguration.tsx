@@ -103,6 +103,8 @@ const CONFIG_FIELDS = [
   'contextWindowOverrides',
   'enableProxy',
   'enableReserveFallback',
+  'enableNewSessionFastMode',
+  'enableNewSubagentFastMode',
   'enableNativeCompaction',
   'proxyUrl',
   'enableImageTool',
@@ -774,6 +776,28 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             <span style={toggleCopyStyle}>
               <span style={labelStyle}>{t('enableReserveFallback')}</span>
               <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableNewSessionFastMode}
+              onChange={event => { update('enableNewSessionFastMode', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableNewSessionFastMode')}</span>
+              <span style={bodyStyle}>{t('enableNewSessionFastModeHelp')}</span>
+            </span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableNewSubagentFastMode}
+              onChange={event => { update('enableNewSubagentFastMode', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableNewSubagentFastMode')}</span>
+              <span style={bodyStyle}>{t('enableNewSubagentFastModeHelp')}</span>
             </span>
           </label>
           <div role="group" aria-labelledby={`${panelPrefix}-native-context-label`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

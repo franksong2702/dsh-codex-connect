@@ -519,6 +519,10 @@ interface OpenAICodexSettingsConfig {
   enableSearch: boolean;
   /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
   enableReserveFallback: boolean;
+  /** Default Fast Mode for newly started top-level sessions; existing sessions are unchanged. */
+  enableNewSessionFastMode: boolean;
+  /** Independent default for newly started subagent sessions. */
+  enableNewSubagentFastMode: boolean;
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean;
   enableImageTool: boolean;
@@ -825,6 +829,10 @@ export interface Config {
   enableSearch?: boolean;
   /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
   enableReserveFallback?: boolean;
+  /** Enable Fast Mode for newly started top-level sessions only. */
+  enableNewSessionFastMode?: boolean;
+  /** Independent opt-in default for newly started subagent sessions. */
+  enableNewSubagentFastMode?: boolean;
   /** Explicit profile opt-in to Codex native context management; DSH owns automatic triggers. Disabling stops new native compactions, not replay of existing checkpoints. */
   enableNativeCompaction?: boolean;
   /** Register the optional image-loading tool. */
@@ -855,6 +863,8 @@ export interface VolatileConfig {
   contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>;
   enableSearch: Volatile<boolean>;
   enableReserveFallback: Volatile<boolean>;
+  enableNewSessionFastMode: Volatile<boolean>;
+  enableNewSubagentFastMode: Volatile<boolean>;
   enableNativeCompaction: Volatile<boolean>;
   enableImageTool: Volatile<boolean>;
   enableImageGeneration: Volatile<boolean>;
