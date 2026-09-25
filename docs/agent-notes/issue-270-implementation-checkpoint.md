@@ -1,5 +1,7 @@
 # Issue #270: local integrated editing candidate — 2026-09-25
 
+Historical integrated-candidate checkpoint. Continue from [the subsequent source review and regression fixes](issue-270-review-checkpoint.md); retain the evidence and limits below for the original candidate.
+
 Repository `franksong2702/dsh-codex-connect`; branch `franksong2702/issue-270-image-edit`. This work continues local transport commit `70668f68fe0460f0b03f373739ae6d20210d5847`, based on main `b1b6efcd93be434bc4b7dd8b9da692803102844e`. It does not restart from remote main or modify the other worktrees. The commit containing this checkpoint is a local, unreleased candidate, not an acceptance/release claim for public Alpha 4.47.
 
 ## Implemented beyond the foundation

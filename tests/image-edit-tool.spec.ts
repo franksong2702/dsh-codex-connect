@@ -102,6 +102,41 @@ describe('session-owned image edit tool', () => {
     expect(decodeImageResultContent(result.content, 'make the background blue')).toEqual(decodeImagePresentationMeta(result.meta))
   })
 
+  it('review: preserves both complete references when identical uploads have different display names', async () => {
+    const { ctx, session, editImages } = await setup()
+    const first = await upload(ctx, session, 'first-upload.png')
+    const second = await upload(ctx, session, 'second-upload.png')
+    expect(first.attachmentId).toBe(second.attachmentId)
+    expect(first.name).not.toBe(second.name)
+    for (const ref of [first, second]) {
+      const result = await execute(ctx, session, { operation: 'edit', prompt: 'keep the selected upload', target: { attachment: ref } })
+      expect(result.isError, JSON.stringify(result.content)).toBe(false)
+      expect(result.meta).toMatchObject({ edit: { target: { attachment: ref } } })
+    }
+    expect(editImages).toHaveBeenCalledTimes(2)
+  })
+
+  it('review: does not promote a complete upload reference to an unrelated generated occurrence', async () => {
+    const { ctx, session } = await setup()
+    const ref = await upload(ctx, session, 'chosen-upload.png')
+    const generated = await execute(ctx, session, { prompt: 'same normalized pixels' })
+    persistResult(session, generated)
+    expect(decodeImagePresentationMeta(generated.meta)!.images[0]!.preview.attachmentId).toBe(ref.attachmentId)
+    const result = await execute(ctx, session, { operation: 'edit', prompt: 'edit the upload itself', target: { attachment: ref } })
+    expect(result.isError, JSON.stringify(result.content)).toBe(false)
+    expect(result.meta).toMatchObject({ edit: { target: { attachment: ref } } })
+  })
+
+  it('review: refuses an unrecorded occurrence name even when its image bytes are known', async () => {
+    const { ctx, session, editImages, generateImages } = await setup()
+    const ref = await upload(ctx, session, 'known-name.png')
+    const result = await execute(ctx, session, { operation: 'edit', prompt: 'must not guess an occurrence',
+      target: { attachment: { ...ref, name: 'not-in-session.png' } } })
+    expect(result.isError).toBe(true)
+    expect(editImages).not.toHaveBeenCalled()
+    expect(generateImages).not.toHaveBeenCalled()
+  })
+
   it('keeps ordered reference purposes and sends every input', async () => {
     const { ctx, session, editImages, generateImages } = await setup()
     const ref = await upload(ctx, session)

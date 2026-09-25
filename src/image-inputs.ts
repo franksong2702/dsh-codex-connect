@@ -62,14 +62,17 @@ export async function resolveImageEditInputs(
       return { label, source: { assetId: ref.assetId }, ref }
     }
     const id = 'attachment' in source ? String(source.attachment.attachmentId) : source.attachmentId
-    const ref = inventory.attachments.get(id)
-    if (ref === undefined) fail(label, 'is unavailable in this session. Select or attach the image again.')
-    if ('attachment' in source && JSON.stringify(decodeImageInputAttachment(ref)) !== JSON.stringify(source.attachment)) {
-      fail(label, 'the attachment reference does not match the session record.')
-    }
-    const result = inventory.results.get(id)
+    const occurrences = inventory.attachments.get(id)
+    const selectorKey = 'attachment' in source ? JSON.stringify(source.attachment) : undefined
+    const ref = selectorKey === undefined ? occurrences?.values().next().value : occurrences?.get(selectorKey)
+    if (ref === undefined) fail(label, 'is unavailable or does not match a reference in this session. Select or attach the image again.')
+    const results = [...(inventory.results.get(id)?.values() ?? [])].filter(result =>
+      selectorKey === undefined || JSON.stringify(result.preview) === selectorKey)
+    const result = results[0]
     if (result !== undefined && source.usePreview !== true) {
-      if (inventory.ambiguousResults.has(id)) fail(label, 'matches several original results. Select one exact original image.')
+      if (new Set(results.map(item => item.original?.assetId)).size > 1) {
+        fail(label, 'matches several original results. Select one exact original image.')
+      }
       if (result.original === undefined) fail(label, 'only a preview is available. Explicitly choose that preview or attach an original.')
       return { label, source: { assetId: result.original.assetId }, ref: result.original }
     }

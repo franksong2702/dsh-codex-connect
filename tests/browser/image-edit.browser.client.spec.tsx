@@ -77,6 +77,19 @@ describe('image editing browser workflow', () => {
     await expect.poll(() => prompts.length).toBe(1)
     expect(request().target).toEqual({ assetId: original('b').assetId })
   })
+  it('review: never transfers an edit draft to a different original sharing the same preview', async () => {
+    show(generated())
+    await page.getByRole('button', { name: en.editImage, exact: true }).click()
+    await page.getByRole('textbox', { name: en.editInstructions }).fill('Instructions intended only for original A')
+    const replaced = { ...generated(), callId: 'replacement-call', meta: {
+      kind: 'codex-connect-images', schemaVersion: 1, prompt: 'new result',
+      images: [{ original: original('b'), preview: images[0]!.preview }],
+    } }
+    show(replaced)
+    await expect.poll(async () => (await page.getByRole('textbox', { name: en.editInstructions }).findElement() as HTMLTextAreaElement).value).toBe('')
+    expect(prompts).toHaveLength(0)
+  })
+
   it('repeats a failed edit with the same target and ordered references', async () => {
     const input = { operation: 'edit', prompt: 'Keep the subject', target: { assetId: original('a').assetId },
       references: [{ image: { attachmentId: 'sha256:colors' }, purpose: 'colors only' }, { image: { attachmentId: 'sha256:texture' }, purpose: 'texture' }] }

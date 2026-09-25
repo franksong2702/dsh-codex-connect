@@ -410,6 +410,8 @@ function ImageEditForm({ decoded, actions, onClose, t }: {
   const [selected, setSelected] = useState(decoded.images.length === 1 ? '0' : '')
   const [instructions, setInstructions] = useState('')
   const [allowPreview, setAllowPreview] = useState(false)
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const image = selected === '' ? undefined : decoded.images[Number(selected)]
   const previewOnly = image !== undefined && image.original === undefined
   const ready = image !== undefined && instructions.trim().length > 0 && (!previewOnly || allowPreview)
@@ -419,7 +421,7 @@ function ImageEditForm({ decoded, actions, onClose, t }: {
       ? { attachmentId: String(image.preview.attachmentId), usePreview: true }
       : { assetId: image.original.assetId }
     const accepted = await actions.followUp(imageRequestFollowUp({ operation: 'edit', prompt: instructions.trim(), edit: { target, references: [] } }))
-    if (accepted) onClose()
+    if (accepted && mounted.current) onClose()
   }
   return <form aria-label={t('editImage')} style={{ display: 'grid', gap: 8 }} onSubmit={event => { event.preventDefault(); void send() }}>
     <label style={detail}>{t('editTarget')}
@@ -427,7 +429,7 @@ function ImageEditForm({ decoded, actions, onClose, t }: {
         style={{ display: 'block', width: '100%', maxWidth: '100%', minHeight: 32 }}
         onChange={event => { setSelected(event.currentTarget.value); setAllowPreview(false) }}>
         {decoded.images.length > 1 ? <option value="">{t('selectEditTarget')}</option> : null}
-        {decoded.images.map((item, index) => <option key={String(item.preview.attachmentId)} value={String(index)}>
+        {decoded.images.map((item, index) => <option key={`${item.original?.assetId ?? item.preview.attachmentId}:${index}`} value={String(index)}>
           {String(index + 1)}. {item.original?.name ?? item.preview.name ?? t('image')}
         </option>)}
       </select>
@@ -478,19 +480,19 @@ function ImageResultCard({ decoded, sessionId, load, sessionActions, galleryLabe
       {decoded.edit === undefined ? null : <span style={detail}>{t('editFrom', {
         source: imageInputLabel(decoded.edit.target), count: decoded.edit.references.length,
       })}</span>}
-      {editing && actionsEnabled ? <ImageEditForm key={`${sessionId}:${decoded.images.map(image => image.preview.attachmentId).join(':')}`}
+      {editing && actionsEnabled ? <ImageEditForm key={JSON.stringify([sessionId, decoded.images.map(image => [image.original?.assetId ?? null, image.preview.attachmentId])])}
         decoded={decoded} actions={sessionActions} onClose={() => { setEditing(false) }} t={t} /> : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{decoded.images.flatMap((image, index) => {
         const suffix = image.preview.name ?? String(index + 1)
         const exactOriginal = image.original
         const original = exactOriginal === undefined ? [] : [<DownloadButton
-          key={`${image.preview.attachmentId as string}:original`}
+          key={`${exactOriginal.assetId}:${index}:original`}
           onDownload={() => downloadOriginal(sessionId, exactOriginal)}
           t={t}
           label={decoded.images.length === 1 ? t('downloadOriginal') : t('downloadOriginalNamed', { name: exactOriginal.name })}
         />]
         return [...original, <DownloadButton
-          key={`${image.preview.attachmentId as string}:preview`}
+          key={`${image.preview.attachmentId as string}:${index}:preview`}
           onDownload={async () => { triggerDownload(await load(image.preview), image.preview.name ?? t('image')) }}
           t={t}
           label={image.original === undefined
@@ -504,10 +506,10 @@ function ImageResultCard({ decoded, sessionId, load, sessionActions, galleryLabe
           const preview = image.preview
           const original = image.original
           const name = preview.name ?? String(index + 1)
-          if (original === undefined) return [<span key={preview.attachmentId as string}>{t('imageDetail', { name, format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>]
+          if (original === undefined) return [<span key={`${preview.attachmentId as string}:${index}`}>{t('imageDetail', { name, format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>]
           return [
-            <span key={`${preview.attachmentId as string}:original`}>{t('originalImageDetail', { name: original.name, format: formatMediaType(original.mediaType), width: original.width, height: original.height, size: formatBytes(original.bytes) })}</span>,
-            <span key={`${preview.attachmentId as string}:preview`}>{t('previewImageDetail', { format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>,
+            <span key={`${original.assetId}:${index}:original`}>{t('originalImageDetail', { name: original.name, format: formatMediaType(original.mediaType), width: original.width, height: original.height, size: formatBytes(original.bytes) })}</span>,
+            <span key={`${preview.attachmentId as string}:${index}:preview`}>{t('previewImageDetail', { format: formatMediaType(preview.mediaType), width: preview.width, height: preview.height, size: formatBytes(preview.bytes) })}</span>,
           ]
         })}</div>
       </details>

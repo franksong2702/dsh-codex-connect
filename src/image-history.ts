@@ -3,8 +3,8 @@ import { deriveEventMessage } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import { decodeImageInputAttachment, imageInputObject } from './image-input-contract.ts'
 import { decodeImagePresentationMeta, decodeImageResultContent } from './image-presentation.ts'
-import type { ImagePresentationMeta } from './image-presentation.ts'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { ImagePresentationMeta, ImagePresentationItem } from './image-presentation.ts'
+import type { ImageInputAttachment } from './image-input-contract.ts'
 import type { OpenAICodexOriginalImageRef } from './image-assets-contract.ts'
 
 /** Result metadata is evidence only in the host's successful result envelope. */
@@ -35,33 +35,44 @@ export function inheritedImageOriginal(session: Session | undefined, assetId: st
 }
 
 export interface SessionImageInventory {
-  attachments: Map<string, ImageAttachmentRef>
-  ambiguousResults: Set<string>
-  results: Map<string, { preview: ImageAttachmentRef; original?: OpenAICodexOriginalImageRef }>
+  /** A content-addressed image can have several valid occurrence-local names/dimensions. */
+  attachments: Map<string, Map<string, ImageInputAttachment>>
+  /** Keep every result-to-original relation rather than letting the newest preview win. */
+  results: Map<string, Map<string, ImagePresentationItem>>
   originals: Map<string, OpenAICodexOriginalImageRef>
 }
 
 /** Read one current session's immutable log, including restored and inherited events. */
 export function sessionImageInventory(session: Session): SessionImageInventory {
-  const result: SessionImageInventory = { attachments: new Map(), results: new Map(), originals: new Map(), ambiguousResults: new Set() }
+  const result: SessionImageInventory = { attachments: new Map(), results: new Map(), originals: new Map() }
+  const addRef = (value: unknown): ImageInputAttachment | undefined => {
+    const ref = decodeImageInputAttachment(value)
+    if (ref === undefined) return undefined
+    const id = String(ref.attachmentId)
+    const occurrences = result.attachments.get(id) ?? new Map<string, ImageInputAttachment>()
+    occurrences.set(JSON.stringify(ref), ref)
+    result.attachments.set(id, occurrences)
+    return ref
+  }
   const add = (content: unknown): void => {
     if (!Array.isArray(content)) return
     for (const block of content) {
       const candidate = imageInputObject(block)
       if (candidate?.type !== 'image') continue
-      const ref = decodeImageInputAttachment(candidate.attachment)
-      if (ref !== undefined) result.attachments.set(String(ref.attachmentId), ref)
+      addRef(candidate.attachment)
     }
   }
   for (const event of session.snapshotEvents()) {
     const presentation = imagePresentationFromEvent(event)
     for (const image of presentation?.images ?? []) {
-      const id = String(image.preview.attachmentId)
-      const existing = result.results.get(id)
-      if (existing !== undefined && existing.original?.assetId !== image.original?.assetId) result.ambiguousResults.add(id)
-      result.results.set(id, image)
-      result.attachments.set(id, image.preview)
       if (image.original !== undefined) result.originals.set(image.original.assetId, image.original)
+      const preview = addRef(image.preview)
+      if (preview === undefined) continue
+      const id = String(preview.attachmentId)
+      const occurrences = result.results.get(id) ?? new Map<string, ImagePresentationItem>()
+      const key = JSON.stringify([preview, image.original?.assetId ?? null])
+      occurrences.set(key, { ...image, preview })
+      result.results.set(id, occurrences)
     }
     // Mirror the host's known content boundaries, without recursing through arbitrary data.
     const data = imageInputObject(event.data)

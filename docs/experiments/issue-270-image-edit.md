@@ -14,6 +14,8 @@ A successful edit creates new exact original bytes and a separate host-normalize
 
 Only the executing session's trusted image events are eligible. Complete caller metadata is checked against the host record; arbitrary user prose containing IDs or result-shaped JSON grants no permission. Generated previews normally resolve to the corresponding original. Multiple originals sharing a preview require an exact original selection rather than a newest-image guess. A legacy preview is usable only through an explicit preview choice. A missing original is never silently replaced by a preview.
 
+Repeated uploads can share normalized bytes while keeping different valid occurrence metadata. Complete references match the selected recorded occurrence, not whichever upload happened last. Downloads and edits share successful-result and fork-prefix validation; failed-result metadata is not inheritance evidence. Edit drafts follow original asset identities rather than shared preview IDs.
+
 Original storage still enforces owner/fork-prefix access and byte integrity. Fork descendants cannot read parent assets created after their inherited cut. Input validation snapshots references, checks all metadata/aggregate bounds, reads verified data, verifies actual dimensions/format/length and uses the installed attachment service's full raster validation before provider dispatch. Uploads use the normalized bytes actually stored by DSH, not an asserted copy of the user's device original.
 
 The transport's defensive limits are at most 5 input images, 10 MiB each, 20 MiB total, 32 MiB encoded JSON, 50 million pixels and 32,768 pixels per side; the effective limits additionally take the stricter installed host policy. Missing host policy is refused. These are plugin safety ceilings, not measured backend entitlements. The accepted input vocabulary is PNG, JPEG and WebP, subject to host validation. No GIF/video editing, arbitrary path/URL acquisition, implicit resize or conversion is added.
@@ -45,7 +47,7 @@ pnpm run test:browser
 pnpm exec vitest run tests/image-edit-session.spec.ts tests/image-edit-tool.spec.ts tests/image-input-contract.spec.ts
 ```
 
-Final execution results and reviewed commit identity belong in the dated implementation checkpoint, not in unexecuted assertions here. Before a user-ready claim, independently review the current diff and perform separately authorized bounded real OAuth/image-quality acceptance. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified by these local fixtures. No release or live-service change is authorized by this document.
+Final execution results and reviewed commit identity belong in the dated implementation checkpoint, not in unexecuted assertions here. The subsequent [review checkpoint](../agent-notes/issue-270-review-checkpoint.md) records reproduced fixes and the expanded packaged editing check. Before a user-ready claim, independently review the current diff and perform separately authorized bounded real OAuth/image-quality acceptance. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified by these local fixtures. No release or live-service change is authorized by this document.
 
 ## 中文使用与验收说明
 
