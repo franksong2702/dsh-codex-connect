@@ -7,6 +7,7 @@ Status: local implementation candidate, not a published release or live-account 
 The existing `codex_connect_image_generate` tool accepts legacy `{prompt}` generation unchanged. Editing requires `operation: "edit"`, one `target` and optional ordered `references`, each with an image selector and a nonempty purpose. Image selection uses one of `assetId`, `attachmentId`, or a complete host image attachment reference. These namespaces are not provider `file_id`s and are never forwarded as such.
 
 The first image is the edit target; later inputs are references. Their purposes are expressed in the bounded edit prompt, not claimed as dedicated server-side role fields. The tool does not infer semantic intent from keywords and does not scan global recent images. The conversation model must select the requested target or ask about ambiguity. Provider quality and reliable natural-language selection require separate live acceptance.
+For image-capable Codex requests, while the existing image-generation/editing opt-in is enabled, the adapter projects a short text handle immediately after every request image: its ordinal within that message, sanitized display name when present, and stable DSH attachmentId. This projection is request-only and does not rewrite the session log. It lets wording such as “the first attached image” map to a stable selector without persisting a turn-relative ordinal; failed-edit retries therefore retain the stable ID. The tool still revalidates the ID against the session, so the handle is guidance rather than authority.
 
 A successful edit creates new exact original bytes and a separate host-normalized preview. New v2 result metadata records the operation, original target/reference selections actually used and output assets. Source relationships survive native result metadata and nested tool-content recovery. Legacy v1 and preview-only histories remain readable. There is no version-tree application or overwrite operation.
 
@@ -32,7 +33,7 @@ Saved `enableImageGeneration` governs both operations and remains off by default
 
 ## Verification boundaries
 
-Development uses Node 22.22.3, pnpm 10.30.3 and exact installed DSH packages 0.1.7-rc.1 / pi-ai 0.85.1. All test credentials, source images and provider replies are synthetic. No private account or real image request is needed by these tests.
+Development uses Node 22.22.3, pnpm 10.30.3 and exact installed DSH packages 0.1.7-rc.1 / pi-ai 0.85.1. Automated tests use synthetic credentials, source images and provider replies. A separately authorized bounded live acceptance used non-sensitive generated fixtures and the already-selected Codex account; details and budget accounting are in the review checkpoint.
 
 - Contract tests cover exact selectors, complete metadata, operation conflicts and malformed references.
 - Tool tests use the real attachment store and real session vocabulary. They cover distinct ordered images, source promotion, legacy previews, missing/foreign inputs, bounds, cancellation, storage failure, repeated edits, old-version selection and inherited access.
@@ -47,7 +48,7 @@ pnpm run test:browser
 pnpm exec vitest run tests/image-edit-session.spec.ts tests/image-edit-tool.spec.ts tests/image-input-contract.spec.ts
 ```
 
-Final execution results and reviewed commit identity belong in the dated implementation checkpoint, not in unexecuted assertions here. The subsequent [review checkpoint](../agent-notes/issue-270-review-checkpoint.md) records reproduced fixes and the expanded packaged editing check. Before a user-ready claim, independently review the current diff and perform separately authorized bounded real OAuth/image-quality acceptance. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified by these local fixtures. No release or live-service change is authorized by this document.
+Final execution results and reviewed commit identity belong in the dated checkpoints, not in unexecuted assertions here. The [review checkpoint](../agent-notes/issue-270-review-checkpoint.md) records reproduced fixes, real image-backend acceptance, the natural ordinal-selection failure found during live testing, and the subsequent adapter-level handle projection. The authorized model budget ended before that final projection could be live-rechecked, so natural “first/second image” selection remains a narrow live confirmation gate. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified. No release or live-service change is authorized by this document.
 
 ## 中文使用与验收说明
 
@@ -57,6 +58,6 @@ Final execution results and reviewed commit identity belong in the dated impleme
 
 “基于此图修改”先打开选图和修改说明，不会一点击就消耗图片请求。编辑失败后的重试保留原主图、参考图和指令；“重做本次修改”不会误把上次输出当输入再改一次。超时和断线不自动重发，也不声称一定没有消耗额度。
 
-仍使用同一个图片开关，不自动开启其他功能。编辑会将本次选定的图片发送给现有图片服务。关闭开关后停止新请求，历史结果仍可查看、下载。
+仍使用同一个图片开关，不自动开启其他功能。开启后，发给 Codex 的模型请求会在每张对话图片旁附加该图片的稳定附件句柄，帮助模型准确对应“第一张/第二张”等表达；这些句柄不授予额外访问权。真正进入图片编辑服务的仍只有本次选定的主图和参考图。关闭开关后停止新请求，历史结果仍可查看、下载。
 
-本地测试覆盖真实宿主工具调用、磁盘 JSONL 保存与服务重新创建后的读取，以及 Chromium 中英文操作流程，但图片服务响应全部是模拟的。它们证明数据和操作流程，不证明真实账户可用性或改图质量；发布前仍需有明确预算的真实图片验收。
+本地自动测试覆盖真实宿主工具调用、磁盘 JSONL 保存与服务重新创建后的读取，以及 Chromium 中英文操作流程。另一次明确授权的有限真实验收已经用 3 次真实图片编辑验证了单图修改、连续修改和多图参考效果。真实模型测试同时发现：原先仅靠“第一张/第二张”无法可靠对应 opaque 附件 ID；当前候选已改为在 Codex 请求中紧邻每张图片投影稳定 attachmentId 句柄，并通过离线真实 AgentLoop wire 测试。由于 8 次真实模型预算已经用完，最终这一修复仍需下一次单独授权后做一次不调用图片服务的真实模型确认。

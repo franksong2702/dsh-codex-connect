@@ -4,7 +4,7 @@ import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-w
 import type { Context as PiContext, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, GenerateOptions, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -199,6 +199,31 @@ export function assertOpenAICodexContextWindowOverrides(
  * resolution, streaming, reasoning metadata, and compaction behavior; this
  * plugin supplies its provider-native OAuth token for each request.
  */
+/** Add stable selection handles next to request images without mutating durable messages. */
+export function withOpenAICodexImageSelectionHandles(options: GenerateOptions): GenerateOptions {
+  let changed = false
+  const messages = options.messages.map(message => {
+    let imageIndex = 0
+    let contentChanged = false
+    const content: ContentBlock[] = []
+    for (const block of message.content) {
+      content.push(block)
+      if (block.type !== 'image') continue
+      imageIndex += 1
+      const name = block.attachment.name === undefined ? '' : ` ${JSON.stringify(block.attachment.name)}`
+      content.push({
+        type: 'text',
+        text: `[Codex Connect image ${String(imageIndex)} in this message:${name} attachmentId=${String(block.attachment.attachmentId)}. For image editing, copy this exact attachmentId for this image.]`,
+      })
+      contentChanged = true
+    }
+    if (!contentChanged) return message
+    changed = true
+    return { ...message, content }
+  })
+  return changed ? { ...options, messages } : options
+}
+
 export function createOpenAICodexAdapter(
   credentials: OpenAICodexCredentialStore,
   resolveAttachments: () => AttachmentStore | undefined,
@@ -211,6 +236,7 @@ export function createOpenAICodexAdapter(
   nativeCompactionEnabled?: () => boolean,
   backendRequests?: OpenAICodexBackendRequests,
   taskDispatch?: OpenAICodexTaskDispatch,
+  imageEditingEnabled?: () => boolean,
 ): PiAiAdapter {
   const baseline = withOpenAICodexModels(openaiCodexProvider())
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
@@ -231,9 +257,12 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
-      const dispatch = (request: GenerateOptions) => streamWithCodexRequestDiagnostics(
-        next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), request,
-      )
+      const dispatch = (request: GenerateOptions) => {
+        const projected = imageEditingEnabled?.() === true ? withOpenAICodexImageSelectionHandles(request) : request
+        return streamWithCodexRequestDiagnostics(
+          next => streamWithNativeCompactionScope(stream, next, nativeCompactionEnabled?.() === true), projected,
+        )
+      }
       return taskDispatch?.stream(options, dispatch) ?? dispatch(options)
     }
 

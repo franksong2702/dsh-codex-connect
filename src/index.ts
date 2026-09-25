@@ -450,6 +450,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
       () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
       backendRequests,
       taskRuntime,
+      () => resolveOpenAICodexSettings(current()).enableImageGeneration,
     ),
   )
   ctx.inject(['webServer'], webCtx => {

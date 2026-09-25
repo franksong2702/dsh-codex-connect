@@ -42,6 +42,9 @@ describe('explicit image edit contract', () => {
     { attachment: { ...attachment, originalDimensions: { width: 1.5, height: 2 } } },
     { attachment: { ...attachment, secret: 'not allowed' } }, { attachmentId: 'sha256:one', owner: 'another-session' },
   ])('rejects malformed sources and unsupported metadata %#', value => { expect(decodeImageInputRef(value)).toBeUndefined() })
+  it('does not persist turn-relative ordinal selectors in edit requests', () => {
+    expect(decodeImageInputRef({ currentMessageImage: 1 })).toBeUndefined()
+  })
   it('does not accept a source object as an implicit edit record', () => {
     expect(decodeImageEditSources({ ...target, references: [] })).toBeUndefined()
   })

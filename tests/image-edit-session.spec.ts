@@ -22,6 +22,7 @@ import { OpenAICodexImageAssetStore } from '../src/image-assets.ts'
 import { decodeImagePresentationMeta } from '../src/image-presentation.ts'
 
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'))
+const PNG_REFERENCE = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'))
 const contexts: Context[] = []
 const roots: string[] = []
 afterEach(async () => {
@@ -91,15 +92,24 @@ it.each(['none', 'zstd'] as const)('edits through the real loop, cold-loads phys
 
   const ctx = await host(root, compression)
   const ref = await ctx.attachments.saveImage({ data: PNG, mediaType: 'image/png', name: 'synthetic-upload.png' })
+  const reference = await ctx.attachments.saveImage({ data: PNG_REFERENCE, mediaType: 'image/png', name: 'synthetic-reference.png' })
   const expectedInput = await ctx.attachments.readImage(ref)
   const id = SessionId('edit-durable')
   const options = { provider: 'openai-codex', model: 'gpt-5.6-luna' }
   const handle = await ctx.agents.create({ sessionId: id, meta: { cwd: root }, agentOptions: options })
   nextCall = { operation: 'edit', prompt: 'make background blue', target: { attachmentId: ref.attachmentId } }
   handle.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [
-    { type: 'text', text: 'Edit the attached image.' }, { type: 'image', attachment: ref },
+    { type: 'text', text: 'Edit the first attached image; use the second only as a reference.' },
+    { type: 'image', attachment: ref }, { type: 'image', attachment: reference },
   ] }))
   await handle.agent.whenIdle()
+  const firstWire = JSON.stringify(modelBodies[0])
+  const firstHandle = `Codex Connect image 1 in this message: \\"synthetic-upload.png\\" attachmentId=${String(ref.attachmentId)}`
+  const secondHandle = `Codex Connect image 2 in this message: \\"synthetic-reference.png\\" attachmentId=${String(reference.attachmentId)}`
+  const firstHandleAt = firstWire.indexOf(firstHandle)
+  const secondHandleAt = firstWire.indexOf(secondHandle)
+  expect(firstHandleAt).toBeGreaterThanOrEqual(0)
+  expect(secondHandleAt).toBeGreaterThan(firstHandleAt)
   const results = handle.agent.session.snapshotEvents().filter(event => event.type === 'tool/result')
   const first = results.find(event => event.type === 'tool/result' && decodeImagePresentationMeta(event.data.meta)?.operation === 'edit')
   expect(first, JSON.stringify(results)).toBeDefined()

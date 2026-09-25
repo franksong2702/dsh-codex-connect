@@ -1,6 +1,6 @@
 # Issue #270: source review and regression fixes — 2026-09-25
 
-Status: reviewed local candidate with reproduced fixes and synthetic verification; not live-account acceptance or a release.
+Status: reviewed local candidate with reproduced fixes, synthetic verification, and bounded live-provider evidence. Real image editing is accepted within the scoped fixtures; the final conversational ordinal-to-image fix has not yet received a second live-model confirmation. This is not a release.
 
 ## Identity and review boundary
 
@@ -52,28 +52,56 @@ Exact runtime: Node `v22.22.3`, pnpm `10.30.3`, DSH `0.1.7-rc.1`, pi-ai `0.85.1`
 | Pre-fix Chromium draft reproduction | One failure as expected; eight other tests filtered. |
 | Focused backend verification after initial fixes | Four files / 59 tests passed; two additional occurrence cases were added afterward and included in the full run. |
 | Typecheck and focused edit Chromium suite | Passed; nine browser tests. |
-| Final `pnpm run check` | Exit 0; 123 files / 1,402 tests passed, including lint, host/client types, build, proxy preservation, isolated imports, capability CLI, compatibility and packing. |
+| Final `pnpm run check` after live-findings fixes | Exit 0; 124 files / 1,405 tests passed, including lint, host/client types, build, proxy preservation, isolated imports, capability CLI, compatibility and packing. |
 | Final `pnpm run test:browser` | Exit 0; 13 files / 70 Chromium tests passed. |
 | Rebuilt package with existing exact host dependencies | Exit 0; two generations, two edits, two PTC dispatches, source and inherited-edit checks, negative-input refusal, zero real-provider requests. This is not a fresh installation. |
 | First `pnpm --silent run check:dsh-matrix` attempt | Failed during registry resolution, before plugin execution: `exact DSH fixture resolution failed: fetch failed`. No policy or endpoint workaround was applied. |
-| One retry with `pnpm --silent run check:dsh-install` | Exit 0 on a freshly isolated exact DSH 0.1.7-rc.1 install. Defaults unchanged; new edit checks and existing runtime/disposal/compaction regressions passed. The matrix wrapper itself was not rerun. |
+| Fresh final `pnpm run check:dsh-install` | Exit 0 on exact DSH 0.1.7-rc.1 after the adapter handle projection. Defaults unchanged; two synthetic generations, two edits, source/inheritance/refusal checks and existing runtime/disposal/compaction regressions passed. |
 
-Successful isolated archive SHA-256: `f00c65f35e4d0be8d84ec8370fb0f4173f9dce4c45f7cbc41659c06923d157ce`.
+Successful final isolated archive SHA-256: `42b9d7fe55877580e6c207cb2d0dd6973e4dbf68fd79aa16ff80a1b2c90e4d33`.
+This archive includes the final adapter projection and settings-help wording. It predates only the evidence-note update that records its own hash, so it identifies the tested runtime/package content rather than a byte-for-byte release artifact after this note was written.
 
-That archive was built before this checkpoint and its cross-links were added. Its hash identifies the tested archive, not a later documentation-only repack. Product byte identities below were measured from the reviewed build:
+Product byte identities after the final live-findings fix and successful full check:
 
-- `src/image-history.ts`: `d0f85d49934e60331f9dea2fb24e94221df1998ecabc2b39c2016b11c67a4eea`
-- `src/image-inputs.ts`: `c1768b5b7517d541cfd625b97fc5f78bfff23164a83db5b1af090d4137500b12`
-- `src/image-asset-routes.ts`: `f9e5ca0a4e531dbb9f61f97350d28ba2e94f9200360203b31de99f5f67214ce3`
-- `src/client/CodexImageToolView.tsx`: `c0ff029d733a5a84a84c44b1681351a440c9068af8930d948a5d194648a837be`
-- `lib/index.js`: `a0deed9fc3932f9633c9a6b94ec400b34cc8558c08b1d82a783e528d67e52701`
-- `lib/client.js`: `dae870bcd0856d4956c042318aeed7e13f0ae62d71707f882d983431a79dd2da`
-- `scripts/check-installed-images.mjs`: `de117553c02c321bc465042e2c6220c45a15ddf0fbbc48aba6a07de176472bf6`
+- src/adapter.ts: c72b8682dc342cebe878534ef5dd79bcb987f00220bd0086a59ffec51ee7f680
+- src/image-tool.ts: c3ec17be5443452be5c9020699fdca5cf608887865f59ebadc1295cf4c9e918b
+- src/image-input-contract.ts: 2191857a8b2d5f10c3070d65e609fde61b0f0e835187503a021a2e510c15ae78
+- lib/index.js: 0ace9ac73f9697614a888b176c7fb83bfa7f1ef6b4420f547118c2986c999e50
+- src/client/locales.ts: 0da18ac561f0550f20c24458c05b46dc168c53ce5cf11059bc6aebca8f172712
+- lib/client.js: 3ee42b3ea7082a1178d103b4da95291d9b2b6cb29bbb3958eff063eee43d486f
+- tests/image-handle-projection.spec.ts: d6df0cf4ecf036177de960276c026c7b8ad5852e4fc025e0e1469710237d3449
+- tests/image-edit-session.spec.ts: b85d66fe13e571fcd6a9d2deb72ebfd5bcd4acefaf1fa71a5d9e6054a30973d1
+
+## Bounded live-provider acceptance
+
+The maintainer explicitly authorized at most three real image-edit requests and eight ordinary model requests, using only non-sensitive generated fixtures, no automatic retries, no daily-service changes, and no credential disclosure. The normal credential-store APIs selected an already signed-in profile; raw access/refresh tokens and authorization headers were never printed or copied into the report.
+
+### Real image backend
+
+The fixed Codex OAuth edit route was called exactly three times and all three returned valid PNG results. No ordinary model request was needed for these three calls.
+
+1. Single-image edit changed the off-white background to pale blue while retaining the central red square and green circle.
+2. Consecutive edit from result 1 added a yellow border around the red square while retaining the pale-blue background and green circle.
+3. Three-input edit from result 2 plus two references used the blue color reference and checker texture reference in the background while retaining the red square, yellow border and green circle.
+
+Visual inspection was backed by local pixel summaries: yellow pixels were absent in step 1 and appeared in step 2; step 3 retained the red/green/yellow populations while the outer margin changed from a near-uniform pale blue to multiple blue checker shades. There was no fourth real image call.
+
+### Real conversational selection
+
+A separate isolated real GPT-5.6 Sol harness blocked the image endpoint locally and captured tool arguments instead.
+
+- Natural wording (“FIRST attached image”, “SECOND … reference”) produced one edit call with one reference, but the opaque attachment identities were mapped incorrectly.
+- The same task with explicit attachment IDs in user text mapped target and reference correctly, showing the tool protocol itself was sound.
+- Strengthening only the tool description did not fix the natural ordinal case. This consumed six ordinary model requests total across those diagnostics.
+- Investigation showed the image-capable request carried image bytes without adjacent text binding each occurrence to its opaque attachment ID. The candidate now fixes that at the Codex Connect adapter boundary: when enableImageGeneration is on, every request image is followed only in the provider request projection by a bounded line naming its per-message ordinal and stable attachmentId. Durable session messages are unchanged; when the feature is off, the projection is not applied. Focused and full synthetic AgentLoop tests verify the exact wire ordering.
+- The last two authorized ordinary model calls were used for an intermediate live recheck. The model/tool turn completed, but the acceptance script raised a local variable-name ReferenceError while constructing its final JSON report, after execution. No result classification was persisted, so this run is outcome_unknown, not success. Both calls are conservatively counted against the budget. The intermediate system-prompt approach used for that attempt was subsequently removed after offline tests proved it did not enter the actual request projection.
+
+Final live budget accounting: **3/3 real image edits, 8/8 ordinary model requests**. No further live call was made after the budget was exhausted. Therefore the final adapter-level ordinal mapping fix is strongly regression-tested but still requires a newly authorized real-model confirmation before claiming natural “first/second image” selection is live-accepted.
 
 ## Remaining acceptance and explicit limits
 
-The identified findings are fixed and regression-covered; this is not a guarantee that no further defects exist. Source tests and Chromium component tests do not prove a real conversational model consistently selects the right target. Synthetic edits do not prove current account entitlement, actual backend limits, subject preservation or reference-following quality. The full installed everyday Session page, physical mobile, Windows and process-crash behavior remain outside this round's acceptance.
+The identified findings are fixed and regression-covered; this is not a guarantee that no further defects exist. The bounded real run proves current-account access to the edit endpoint and representative single/continued/multi-input edit quality for the tested fixtures, but it does not establish general backend limits or pixel-perfect preservation. The final adapter handle projection has synthetic wire evidence but no post-fix live-model confirmation because the authorized model budget was exhausted. The full installed everyday Session page, physical mobile, Windows and process-crash behavior remain outside this round's acceptance.
 
-Proposed next live scope, requiring separate explicit authorization: use only the existing selected DSH account through the normal plugin transport in an isolated test session/profile, with non-sensitive fixtures; at most three image edit requests (single-image edit, continuation from its output, one target plus references), and at most eight ordinary model requests if validating the conversational path. No automatic image retries, account rotation, alternate API-key route, provider endpoint probing, publishing or daily 3080/3081 service changes. Stop on refusal or uncertain completion and record the outcome without calling it success.
+The next live gate, if separately authorized, needs no additional image generation: one isolated natural-language “first image / second reference” conversational check is sufficient to confirm the final adapter handle projection. Keep the image endpoint locally blocked and bound ordinary model calls explicitly. Do not reuse the exhausted budget from this round.
 
-No real credential read, real model/image request, push, PR, merge, release, npm channel change or daily deployment occurred in this round. Local fixes and evidence remain on the feature branch.
+Real requests in this round used only the already-selected Codex account through normal store/transport APIs; raw credential values were not printed or copied into artifacts. No push, PR, merge, release, npm channel change or daily deployment occurred. Local fixes and evidence remain on the feature branch.
