@@ -1,6 +1,6 @@
 # Issue #270 — conversation image editing candidate
 
-Status: local implementation candidate, not a published release or live-account acceptance. Builds based on public Alpha 4.47 do not acquire this feature merely because that version appears in `package.json`. The original transport checkpoint is preserved in `../agent-notes/issue-270-transport-checkpoint.md`.
+Status: local implementation candidate with bounded real image-backend evidence and [final GPT-6 Sol selection confirmation](../agent-notes/issue-270-sol-live-confirmation.md), not a published release or full installed-UI acceptance. Builds based on public Alpha 4.47 do not acquire this feature merely because that version appears in `package.json`. The original transport checkpoint is preserved in `../agent-notes/issue-270-transport-checkpoint.md`.
 
 ## Product contract
 
@@ -48,7 +48,7 @@ pnpm run test:browser
 pnpm exec vitest run tests/image-edit-session.spec.ts tests/image-edit-tool.spec.ts tests/image-input-contract.spec.ts
 ```
 
-Final execution results and reviewed commit identity belong in the dated checkpoints, not in unexecuted assertions here. The [review checkpoint](../agent-notes/issue-270-review-checkpoint.md) records reproduced fixes, real image-backend acceptance, the natural ordinal-selection failure found during live testing, and the subsequent adapter-level handle projection. The authorized model budget ended before that final projection could be live-rechecked, so natural “first/second image” selection remains a narrow live confirmation gate. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified. No release or live-service change is authorized by this document.
+Final execution results and reviewed commit identity belong in the dated checkpoints, not in unexecuted assertions here. The [review checkpoint](../agent-notes/issue-270-review-checkpoint.md) records reproduced fixes, real image-backend acceptance, the natural ordinal-selection failure found during live testing, and the subsequent adapter-level handle projection. The first authorized model budget ended before the final projection could be live-rechecked. A subsequently authorized run with `gpt-6-sol` passed the exact “first image / second reference” selection and resolved-byte checks using one real model request and zero real image requests; see the [final confirmation](../agent-notes/issue-270-sol-live-confirmation.md). This is not a post-fix GPT-5.6 Sol or all-model reliability claim. Physical Windows, process-crash recovery, all-host compatibility and provider pixel-perfect preservation are not certified. No release or live-service change is authorized by this document.
 
 ## 中文使用与验收说明
 
@@ -60,4 +60,4 @@ Final execution results and reviewed commit identity belong in the dated checkpo
 
 仍使用同一个图片开关，不自动开启其他功能。开启后，发给 Codex 的模型请求会在每张对话图片旁附加该图片的稳定附件句柄，帮助模型准确对应“第一张/第二张”等表达；这些句柄不授予额外访问权。真正进入图片编辑服务的仍只有本次选定的主图和参考图。关闭开关后停止新请求，历史结果仍可查看、下载。
 
-本地自动测试覆盖真实宿主工具调用、磁盘 JSONL 保存与服务重新创建后的读取，以及 Chromium 中英文操作流程。另一次明确授权的有限真实验收已经用 3 次真实图片编辑验证了单图修改、连续修改和多图参考效果。真实模型测试同时发现：原先仅靠“第一张/第二张”无法可靠对应 opaque 附件 ID；当前候选已改为在 Codex 请求中紧邻每张图片投影稳定 attachmentId 句柄，并通过离线真实 AgentLoop wire 测试。由于 8 次真实模型预算已经用完，最终这一修复仍需下一次单独授权后做一次不调用图片服务的真实模型确认。
+本地自动测试覆盖真实宿主工具调用、磁盘 JSONL 保存与服务重新创建后的读取，以及 Chromium 中英文操作流程。另一次明确授权的有限真实验收已经用 3 次真实图片编辑验证了单图修改、连续修改和多图参考效果。真实模型测试同时发现：原先仅靠“第一张/第二张”无法可靠对应 opaque 附件 ID；当前候选已改为在 Codex 请求中紧邻每张图片投影稳定 attachmentId 句柄，并通过离线真实 AgentLoop wire 测试。前一轮 8 次真实模型预算用完后，已在另一次明确授权中改用用户指定的 `gpt-6-sol` 完成最终确认：1 次真实模型请求、0 次真实图片请求，主图、参考图以及解析出的图片数据和顺序均正确。该结论仅覆盖本次 GPT-6 Sol 场景，不代表所有模型或全部使用场景都已验收。

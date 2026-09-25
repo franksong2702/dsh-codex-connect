@@ -1,6 +1,6 @@
 # Issue #270: source review and regression fixes — 2026-09-25
 
-Status: reviewed local candidate with reproduced fixes, synthetic verification, and bounded live-provider evidence. Real image editing is accepted within the scoped fixtures; the final conversational ordinal-to-image fix has not yet received a second live-model confirmation. This is not a release.
+Historical review and first bounded live run. The final adapter selection gate was subsequently confirmed using the explicitly requested **GPT-6 Sol** route: see [final live-selection confirmation](issue-270-sol-live-confirmation.md). Preserve the failures, budget accounting and scope below as evidence for the earlier round. This is not a release.
 
 ## Identity and review boundary
 
