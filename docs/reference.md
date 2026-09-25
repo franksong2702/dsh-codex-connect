@@ -83,14 +83,24 @@ Automated coverage uses synthetic tokens and quota responses. It verifies local 
 - `enableSearch: true` registers Codex as an available search provider and selects it for profile-wide searches. Disabling it unregisters the provider and restores the route that was active before Codex Search was enabled.
 - Search has a 30-second total deadline covering authentication, response headers and body reading. Responses larger than 1 MiB are rejected, and unfinished response bodies are cancelled on failure. Caller cancellation can end a search sooner.
 - `enableImageTool: true` registers `view_image` on vision-capable models. Remote reads accept credential-free public HTTP(S) only and revalidate DNS and redirects.
-- `enableImageGeneration: true` registers prompt-only GPT Image generation. Use the image generation capability included with your current GPT subscription. Availability, dimensions, and quota remain account- and service-controlled.
-- `imageModelHint` is an optional profile-scoped setting in Plugin configuration or the profile config. Empty uses `gpt-image-2`; a custom value accepts 1–128 ASCII letters, digits, dots, underscores, or hyphens and must start with a letter or digit. Saving changes the `model` field of subsequent image requests to the same fixed endpoint; clearing restores the default. The tool still accepts only `prompt`. This is an unverified route hint: the service may ignore or reject it, and it does not guarantee the returned model.
+- `enableImageGeneration: true` registers GPT Image generation and, in Alpha 4.48 builds, editing of explicitly selected session images. Prompt-only generation remains supported. Availability, dimensions, and quota remain account- and service-controlled.
+- `imageModelHint` is an optional profile-scoped setting in Plugin configuration or the profile config. Empty uses `gpt-image-2`; a custom value accepts 1–128 ASCII letters, digits, dots, underscores, or hyphens and must start with a letter or digit. Saving changes the `model` field of subsequent requests to the fixed generation or edit endpoint; clearing restores the default. Alpha 4.47 accepts only `prompt`; Alpha 4.48 also accepts explicit editing inputs. This is an unverified route hint: the service may ignore or reject it, and it does not guarantee the returned model.
 
 Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; the conversation receives a separate DSH attachment preview. The result card reports dimensions and file sizes and can download either representation. Originals are owner-only, integrity-checked, and available only to the creating session and forks that inherited the result. Disabling or uninstalling the plugin does not delete those files automatically.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="GPT Image result with prompt, download actions, and image details" width="780">
 </p>
+
+#### Image editing in Alpha 4.48
+
+With the existing image capability enabled, attach a target and optional references and describe their roles, for example: “Edit the first image; use only the colors of the second image and keep the subject.” You can also choose **Edit based on this image** on a previous result. The form waits for your instructions before submitting.
+
+The tool `codex_connect_image_generate` accepts `{"operation":"edit","prompt":"change the background","target":{"attachmentId":"<exact session attachment ID>"},"references":[]}`. Each optional reference is `{"image":{"attachmentId":"<exact ID>"},"purpose":"colors only"}`. Stored original results can instead use `{"assetId":"<exact original ID>"}`. These placeholders are illustrative, not usable IDs or permission grants. Normal conversation users do not need to look up IDs: the model receives stable image handles.
+
+Every edit preserves the old image and stores a new original, preview and source relation. Continue from the new result or select an older result to branch. Missing, inaccessible or ambiguous inputs fail without quietly dropping references or generating a replacement. Preview-only history requires an explicit lower-resolution choice. Editing sends only the selected images to the image service; the existing capability remains disabled by default.
+
+The plugin accepts PNG, JPEG and WebP, with at most five inputs and stricter host limits where applicable. These are defensive limits, not a promise of backend entitlement. Output dimensions and preservation quality are service-controlled. Lost or uncertain requests are not automatically repeated; retrying can consume additional quota. See [the detailed contract and acceptance limits](experiments/issue-270-image-edit.md).
 
 ### Auto-review
 
@@ -125,7 +135,7 @@ The main plugin options are:
 | `enableSearch` | `false` | Register Codex search and select it when the setting is saved |
 | `enableReserveFallback` | `false` | Follow identity-matched, backend-authorized Luna Reserve transitions for agent requests |
 | `enableImageTool` | `false` | Register `view_image` |
-| `enableImageGeneration` | `false` | Register GPT Image generation |
+| `enableImageGeneration` | `false` | Register GPT Image generation and explicit editing in Alpha 4.48 |
 | `imageModelHint` | empty | Optional unverified image route hint; empty keeps the default request |
 | `enableAutoReview` | `false` | Review eligible approval requests with Codex |
 | `searchModel` | `gpt-5.6-sol` | Model used by standalone search |

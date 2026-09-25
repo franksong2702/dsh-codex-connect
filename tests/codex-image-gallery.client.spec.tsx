@@ -48,7 +48,8 @@ describe('Codex image gallery', () => {
     const load = vi.fn(async () => 'blob:gallery')
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
-    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    await screen.findByRole('img', { name: 'gallery.png' })
+    expect(load).toHaveBeenCalledOnce()
     const thumbnail = screen.getByRole('button', { name: 'Open gallery.png' })
     fireEvent.click(thumbnail)
     const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })
@@ -66,7 +67,8 @@ describe('Codex image gallery', () => {
     const load = vi.fn(async () => 'blob:gallery')
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
-    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    await screen.findByRole('img', { name: 'gallery.png' })
+    expect(load).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Open gallery.png' }))
     const mask = document.body.querySelector('[aria-hidden="true"]')
     expect(mask).not.toBeNull()
@@ -78,7 +80,8 @@ describe('Codex image gallery', () => {
     const load = vi.fn(async () => 'blob:gallery')
     render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
 
-    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    await screen.findByRole('img', { name: 'gallery.png' })
+    expect(load).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Open gallery.png' }))
     const viewport = screen.getByTestId('codex-image-lightbox-viewport')
     const dialog = screen.getByRole('dialog', { name: labels.lightbox.dialog })
@@ -122,8 +125,24 @@ describe('Codex image gallery', () => {
 
     const retry = await screen.findByRole('button', { name: labels.loadFailed })
     fireEvent.click(retry)
-    await waitFor(() => { expect(screen.getByRole('button', { name: 'Open gallery.png' })).toBeTruthy() })
+    await screen.findByRole('img', { name: 'gallery.png' })
     expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it('distinguishes a started load from an image ready to open', async () => {
+    let finish: ((value: string) => void) | undefined
+    const load = vi.fn(() => new Promise<string>(resolve => { finish = resolve }))
+    render(<CodexImageGallery images={[{ attachment: image }]} load={load} align="start" labels={labels} />)
+    await waitFor(() => { expect(load).toHaveBeenCalledOnce() })
+    const thumbnail = screen.getByRole('button', { name: 'Open gallery.png' })
+    fireEvent.click(thumbnail)
+    expect(screen.queryByRole('dialog', { name: labels.lightbox.dialog })).toBeNull()
+    expect(screen.queryByRole('img', { name: 'gallery.png' })).toBeNull()
+    finish?.('blob:gallery')
+    await screen.findByRole('img', { name: 'gallery.png' })
+    fireEvent.click(thumbnail)
+    expect(screen.getByRole('dialog', { name: labels.lightbox.dialog })).toBeTruthy()
+    expect(load).toHaveBeenCalledOnce()
   })
 
   it('ignores a late loader result after unmount', async () => {
