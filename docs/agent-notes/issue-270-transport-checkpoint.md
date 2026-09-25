@@ -1,5 +1,7 @@
 # Issue #270: local image edit transport checkpoint — 2026-09-25
 
+> Historical foundation checkpoint at `70668f6`. Subsequent local implementation now connects image selection, editing, provenance and UI. Use [the implementation checkpoint](issue-270-implementation-checkpoint.md) for the newer state; the evidence below remains scoped to the original transport commit.
+
 Status: partial implementation; not a completed or enabled image-editing feature.
 
 ## Identity and scope
