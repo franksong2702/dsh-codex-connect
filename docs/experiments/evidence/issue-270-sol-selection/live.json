@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "mode": "live",
+  "model": "gpt-6-sol",
+  "identity": {
+    "head": "ff1192393df5fb45a536539f07faee7bf532883a",
+    "runtimeSha256": "0ace9ac73f9697614a888b176c7fb83bfa7f1ef6b4420f547118c2986c999e50",
+    "scriptSha256": "b406b0e4773f3a07279c9cf22749207951f0dcd8a4b2413d7a24ae966fa13cf5"
+  },
+  "startedAt": "2026-09-25T14:23:49.293Z",
+  "status": "passed",
+  "maximumModelRequests": 2,
+  "realModelRequests": 1,
+  "simulatedModelRequests": 0,
+  "realImageRequests": 0,
+  "blockedEditRequests": 1,
+  "blockedGenerateRequests": 0,
+  "blockedOtherRequests": 0,
+  "blockedOverBudgetRequests": 0,
+  "wire": [
+    {
+      "model": "gpt-6-sol",
+      "handleBindingsPresent": [
+        true,
+        true
+      ]
+    }
+  ],
+  "httpStatuses": [
+    200
+  ],
+  "editInputBytesCorrect": true,
+  "selectionAtDispatch": {
+    "toolCalls": 1,
+    "operation": "edit",
+    "targetCorrect": true,
+    "referenceCount": 1,
+    "referenceCorrect": true,
+    "referencePurposePresent": true,
+    "selectors": {
+      "target": {
+        "attachmentId": "sha256:1c13017141edc8438c317168ad497d00ef68e9b36eee4a22719ec666bbdc31b1"
+      },
+      "references": [
+        {
+          "image": {
+            "attachmentId": "sha256:03e4f7b48d3b8962b2554aa29f40038ddaf5d488dc9069c1977d45d8861fe2b3"
+          },
+          "purpose": "Use its background palette: blue upper half and yellow lower half, with a crisp horizontal division."
+        }
+      ]
+    }
+  },
+  "selection": {
+    "toolCalls": 1,
+    "operation": "edit",
+    "targetCorrect": true,
+    "referenceCount": 1,
+    "referenceCorrect": true,
+    "referencePurposePresent": true,
+    "selectors": {
+      "target": {
+        "attachmentId": "sha256:1c13017141edc8438c317168ad497d00ef68e9b36eee4a22719ec666bbdc31b1"
+      },
+      "references": [
+        {
+          "image": {
+            "attachmentId": "sha256:03e4f7b48d3b8962b2554aa29f40038ddaf5d488dc9069c1977d45d8861fe2b3"
+          },
+          "purpose": "Use its background palette: blue upper half and yellow lower half, with a crisp horizontal division."
+        }
+      ]
+    }
+  },
+  "finishedAt": "2026-09-25T14:23:59.398Z",
+  "cleanup": "passed"
+}

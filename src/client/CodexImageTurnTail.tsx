@@ -8,10 +8,13 @@ import type { ToolChatData } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { PropsRuntime, Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import { imagePresentationForResult } from './image-result-presentation.ts'
 import { CodexImageTurnResult } from './CodexImageToolView.tsx'
+import type { CodexImageToolViewInjected } from './CodexImageToolView.tsx'
+
 import type { OpenAICodexSettingsKey } from './locales.ts'
 
 export type CodexImageTurnTailProps = PropsRuntime<'conversation.chat.turnTail'> & {
   sessions: ISessions
+  configScope?: CodexImageToolViewInjected['configScope']
   t: Translate<OpenAICodexSettingsKey>
 }
 
@@ -38,12 +41,12 @@ export function selectTurnImageResults(rows: readonly ToolChatData[], closingSeq
 }
 
 /** Put generated images in the independent answer tail, outside Turn-process disclosure. */
-export function CodexImageTurnTail({ turn, seq, sessionId, useChat, sessions, t }: CodexImageTurnTailProps) {
+export function CodexImageTurnTail({ turn, seq, sessionId, useChat, sessions, configScope, t }: CodexImageTurnTailProps) {
   const source = useChat(chat => chat.nodes.turnDataSource(turn.turn, 'tool-call'))
   const rows = useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot)
   const results = useMemo(() => selectTurnImageResults(rows, seq), [rows, seq])
   if (results.length === 0) return null
   return <section data-turn-image-results="" aria-label={t('completed')} style={resultStack}>
-    {results.map(block => <CodexImageTurnResult key={block.callId} block={block} sessionId={sessionId} sessions={sessions} t={t} />)}
+    {results.map(block => <CodexImageTurnResult key={block.callId} block={block} sessionId={sessionId} sessions={sessions} configScope={configScope} t={t} />)}
   </section>
 }

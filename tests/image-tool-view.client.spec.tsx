@@ -294,7 +294,7 @@ describe('Codex image Tool view', () => {
     expect(actionPrompt).not.toHaveBeenCalledWith([{ type: 'text', text: laterPrompt }], 'queue')
   })
 
-  it('offers regenerate and edit follow-ups after success', async () => {
+  it('prepares an explicit selected preview edit without submitting on click', async () => {
     const prompt = 'a glass city at dawn'
     render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{ kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', call: null, callTime: 1, content: [], isError: false, meta: { kind: 'codex-connect-images', prompt, images: [image] }, subCalls: [] }} />)
     fireEvent.click(screen.getByRole('button', { name: en.regenerate }))
@@ -302,8 +302,15 @@ describe('Codex image Tool view', () => {
     expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: prompt }], 'queue')
     actionPrompt.mockClear()
     fireEvent.click(screen.getByRole('button', { name: en.editImage }))
+    expect(actionPrompt).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByRole('textbox', { name: en.editInstructions }), { target: { value: 'change only the sky' } })
+    expect(screen.getByRole('button', { name: en.submitImageEdit })).toHaveProperty('disabled', true)
+    fireEvent.click(screen.getByRole('checkbox', { name: en.choosePreviewEdit }))
+    fireEvent.click(screen.getByRole('button', { name: en.submitImageEdit }))
     await waitFor(() => { expect(actionPrompt).toHaveBeenCalledOnce() })
-    expect(actionPrompt).toHaveBeenCalledWith([{ type: 'text', text: `${prompt}\n\n${en.editRequest}` }], 'queue')
+    const text = (actionPrompt.mock.calls[0] as unknown as [Array<{ text: string }>])[0][0]!.text
+    expect(JSON.parse(text.slice(text.indexOf('\n') + 1))).toEqual({ operation: 'edit', prompt: 'change only the sky',
+      target: { attachmentId: image.attachmentId, usePreview: true }, references: [] })
   })
 
   it('renders fixed canceled and redacted failure states', () => {

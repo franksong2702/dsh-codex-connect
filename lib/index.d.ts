@@ -201,6 +201,22 @@ declare class OpenAICodexBackendRequests {
   dispose(): void;
 }
 //#endregion
+//#region src/image-format.d.ts
+/** Pure encoded-image header validation for PNG, JPEG, and WebP. */
+type CodexImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp';
+//#endregion
+//#region src/image-edit-request.d.ts
+/** Bytes must already have passed the caller's session/attachment authorization. */
+interface ImageEditInputBytes {
+  readonly data: Uint8Array;
+  readonly mediaType: CodexImageMediaType;
+}
+/** A host-only request. Model-visible attachment IDs are never provider file IDs. */
+interface ImageEditRequest {
+  readonly prompt: string;
+  readonly images: readonly ImageEditInputBytes[];
+}
+//#endregion
 //#region src/transport.d.ts
 /** Cordis service name owned by the core plugin fiber. */
 export declare const OPENAI_CODEX_TRANSPORT_SERVICE = "openaiCodexTransport";
@@ -271,6 +287,8 @@ interface ImageGenerationResponse {
 interface OpenAICodexTransportV1 {
   readonly apiVersion: 1;
   generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
+  /** Additive capability: an older v1 service may not support editing. Never fall back. */
+  editImages?(input: ImageEditRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
 }
 /** Core-owned Cordis service for the optional image package. */
 export declare class OpenAICodexTransport extends Service implements OpenAICodexTransportV1 {
@@ -282,6 +300,8 @@ export declare class OpenAICodexTransport extends Service implements OpenAICodex
   readonly apiVersion: 1;
   constructor(ctx: Context, credentials: OpenAICodexCredentialStore, proxyManager?: OpenAICodexProxyManager | undefined, resolveProxyUrl?: () => string | undefined, resolveImageModelHint?: () => string, backendRequests?: OpenAICodexBackendRequests | undefined);
   generateImages(input: ImageGenerationRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
+  editImages(input: ImageEditRequest, context: ImageRequestContext): Promise<ImageGenerationResponse>;
+  private requestImages;
   private generateImagesWithoutProxy;
 }
 //#endregion

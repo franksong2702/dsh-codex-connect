@@ -5,6 +5,7 @@ import { join } from 'node:path'
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64')
 const PREFIX = 'codex-connect-image-result-v1:'
+const EDIT_PREFIX = 'codex-connect-image-result-v2:'
 
 /** Select the service required by the installed tools package, not its version label. */
 export function imageRuntimeService(manifest) {
@@ -30,6 +31,9 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
   const previousFetch = globalThis.fetch
   const ctx = new Context()
   let generated = 0
+  let edited = 0
+  let editArgs
+  let editProgram
   let codeRuns = 0
   let networkAttempts = 0
   process.env.DSH_HOME = directory
@@ -38,7 +42,11 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
   try {
     ctx.provide('webServer', { register(route) { routes.set(route.path, route); return () => routes.delete(route.path) } })
     ctx.provide('attachments', {
-      imageLimits: { maxImageBytes: 1_000_000, maxImagesPerMessage: 4, maxMessageImageBytes: 4_000_000, maxImagePixels: 1_000_000, mediaTypes: ['image/png'] },
+      imageLimits: { maxImageBytes: 1_000_000, maxImagesPerMessage: 4, maxMessageImageBytes: 4_000_000, maxImagePixels: 1_000_000, maxImageDimension: 2048, mediaTypes: ['image/png'] },
+      async validateImage(input) {
+        assert.equal(input.mediaType, 'image/png')
+        assert.deepEqual(Buffer.from(input.data), PNG)
+      },
       async saveImages(inputs) {
         return inputs.map(input => ({ attachmentId: 'fixture-preview', mediaType: 'image/png', width: 1, height: 1, bytes: PNG.length, name: input.name }))
       },
@@ -51,10 +59,11 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
       },
       async run(request) {
         codeRuns++
-        assert.equal(request.program, 'return await tools.codex_connect_image_generate({prompt: "fixture"});')
+        const args = editProgram !== undefined && request.program === editProgram ? editArgs : { prompt: 'fixture' }
+        if (args !== editArgs) assert.equal(request.program, 'return await tools.codex_connect_image_generate({prompt: "fixture"});')
         const tools = request.bindings.find(binding => binding.global === 'tools')
         assert.ok(tools)
-        return { value: await tools.functions.codex_connect_image_generate({ prompt: 'fixture' }), logs: [] }
+        return { value: await tools.functions.codex_connect_image_generate(args), logs: [] }
       },
     })
     for (const plugin of [Llm, Sessions, Projections, Prompt]) await ctx.plugin(plugin)
@@ -66,6 +75,14 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
     ctx.openaiCodexTransport.generateImages = async () => {
       generated++
       return { apiVersion: 1, traceId: 'fixture', elapsedMs: 1, responseBytes: PNG.length, images: [{ b64Json: PNG.toString('base64') }] }
+    }
+    assert.equal(typeof ctx.openaiCodexTransport.editImages, 'function', 'installed bytes must expose edit transport')
+    ctx.openaiCodexTransport.editImages = async input => {
+      edited++
+      assert.equal(input.images.length, 1)
+      assert.deepEqual(Buffer.from(input.images[0].data), PNG)
+      assert.ok(input.prompt.includes('Image 1 is the target to edit.'))
+      return { apiVersion: 1, traceId: 'edit-fixture', elapsedMs: 1, responseBytes: PNG.length, images: [{ b64Json: PNG.toString('base64') }] }
     }
     const agent = await ctx.agentLoop.create(SessionId('image-fixture'), { provider: 'openai-codex', model: 'gpt-6-astra' })
     const execute = (name, args, callId) => ctx.tools.execute({ agent, name, arguments: args, callId, signal: new AbortController().signal })
@@ -102,10 +119,41 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
     assert.equal((await download(earlierFork.id, image.original.assetId)).status, 404)
     const denied = await download('unrelated-session', image.original.assetId)
     assert.equal(denied.status, 404)
+    editArgs = { operation: 'edit', prompt: '  fixture edit  ', target: { assetId: image.original.assetId } }
+    editProgram = `return await tools.codex_connect_image_generate(${JSON.stringify(editArgs)});`
+    const edit = await execute('run_code', { code: editProgram, description: 'Synthetic image edit' }, 'ptc-edit')
+    assert.equal(edit.isError, false, JSON.stringify(edit))
+    const editDispatch = agent.session.snapshotEvents().filter(event => event.type === 'tool/code-dispatch' || event.type === 'tool/ptc-dispatch')
+    assert.equal(editDispatch.length, 2)
+    const editEnvelope = editDispatch[1].data.content.find(block => block.type === 'text' && block.text.startsWith(EDIT_PREFIX))
+    assert.ok(editEnvelope)
+    const editedMeta = JSON.parse(editEnvelope.text.slice(EDIT_PREFIX.length))
+    assert.equal(editedMeta.operation, 'edit')
+    assert.equal(editedMeta.prompt, 'fixture edit')
+    assert.deepEqual(editedMeta.edit, { target: editArgs.target, references: [] })
+    const editedOriginal = editedMeta.images[0].original
+    assert.notEqual(editedOriginal.assetId, image.original.assetId)
+    const editFork = await ctx.sessions.fork(agent.session, undefined, SessionId('image-edited-fork'))
+    const inheritedEdit = await download(editFork.id, editedOriginal.assetId)
+    assert.equal(inheritedEdit.status, 200)
+    assert.deepEqual(inheritedEdit.body, PNG)
+    assert.equal((await download(fork.id, editedOriginal.assetId)).status, 404)
+    const next = await execute('codex_connect_image_generate', {
+      operation: 'edit', prompt: 'continue fixture edit', target: { assetId: editedOriginal.assetId },
+    }, 'continued-edit')
+    assert.equal(next.isError, false, JSON.stringify(next))
+    assert.deepEqual(next.meta.edit.target, { assetId: editedOriginal.assetId })
+    const missing = await execute('codex_connect_image_generate', {
+      operation: 'edit', prompt: 'must not generate', target: { assetId: `img_${'0'.repeat(32)}` },
+    }, 'missing-edit')
+    assert.equal(missing.isError, true)
     assert.equal(generated, 2)
-    assert.equal(codeRuns, 1)
+    assert.equal(edited, 2)
+    assert.equal(codeRuns, 2)
     assert.equal(networkAttempts, 0)
-    return { syntheticOnly: true, generated, codeRuns, dispatchEvent: dispatch[0].type, originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true, realProviderRequests: 0 }
+    return { syntheticOnly: true, generated, edited, codeRuns, dispatchEvent: dispatch[0].type,
+      originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true,
+      editSourcesVerified: true, inheritedEditVerified: true, invalidEditRefused: true, realProviderRequests: 0 }
   } finally {
     try { await ctx.fiber.dispose() } finally {
       globalThis.fetch = previousFetch

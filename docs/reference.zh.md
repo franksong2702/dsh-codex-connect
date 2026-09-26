@@ -83,14 +83,24 @@ Reserve 使用 Luna 目录中的 272,000 token 上下文窗口，不沿用原模
 - `enableSearch: true` 将 Codex 注册为可用搜索提供方，并用于整个 profile 的搜索。关闭时会注销该提供方，并恢复启用 Codex 搜索之前的路由。
 - 搜索从认证开始到读完响应共用 30 秒总期限。超过 1 MiB 的响应会被拒绝，失败时会取消尚未读完的响应体。调用方也可以提前取消搜索。
 - `enableImageTool: true` 为具备视觉能力的模型注册 `view_image`。远程读取只接受不带凭据的公网 HTTP(S)，并重新检查 DNS 与重定向。
-- `enableImageGeneration: true` 注册只接受提示词的 GPT Image 图片生成。使用你当前 GPT 订阅计划提供的图片生成能力。可用性、尺寸和额度仍由账户及服务端控制。
-- `imageModelHint` 是“插件配置”或 profile config 中的可选设置，按 profile 保存。留空使用 `gpt-image-2`；自定义值接受 1–128 个 ASCII 字母、数字、点、下划线或连字符，且必须以字母或数字开头。保存后会修改后续图片请求的 `model` 字段，仍使用同一固定端点；清空可恢复默认值。工具仍只接受 `prompt`。这是未经验证的路由提示：服务端可能忽略或拒绝，也不保证返回指定模型。
+- `enableImageGeneration: true` 注册 GPT Image 图片生成；Alpha 4.48 构建还支持编辑明确选定的会话图片。原有纯文字生图保留，可用性、尺寸和额度仍由账户及服务端控制。
+- `imageModelHint` 是“插件配置”或 profile config 中的可选设置，按 profile 保存。留空使用 `gpt-image-2`；自定义值接受 1–128 个 ASCII 字母、数字、点、下划线或连字符，且必须以字母或数字开头。保存后会修改后续请求的 `model` 字段，仍使用固定的生成或编辑端点；清空可恢复默认值。Alpha 4.47 只接受 `prompt`；Alpha 4.48 还接受显式编辑输入。这是未经验证的路由提示：服务端可能忽略或拒绝，也不保证返回指定模型。
 
 生成的原文件保存在 `$DSH_HOME/dsh-codex-connect/images/v1`；对话会收到另一份 DSH 附件预览。结果卡片会报告尺寸和文件大小，并可下载任一版本。原文件仅允许所有者访问，下载前会校验完整性，并且只对创建会话及继承了该结果的 fork 开放。关闭能力或卸载插件不会自动删除这些文件。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/zh/image-generation.png" alt="包含提示词、下载操作与图片详情的 GPT Image 结果" width="780">
 </p>
+
+#### Alpha 4.48 图片编辑
+
+开启原有图片能力后，上传一张主图和可选参考图，并说明用途，例如：“修改第一张，只参考第二张的颜色，保留主体。”也可以在旧结果上点击“基于此图修改”。表单会等待你填写修改说明，不会一打开就提交。
+
+工具 `codex_connect_image_generate` 接受 `{"operation":"edit","prompt":"修改背景","target":{"attachmentId":"<当前会话的精确附件 ID>"},"references":[]}`。每张参考图使用 `{"image":{"attachmentId":"<精确 ID>"},"purpose":"仅参考颜色"}`；已保存的原图也可用 `{"assetId":"<精确原图 ID>"}`。占位符仅用于说明，不能直接使用，也不授予读取权限。普通用户不需要查找这些编号，模型会收到稳定的图片句柄。
+
+每次编辑保留旧图，并保存新的原图、预览和来源关系；可接着修改新结果，也可选旧结果另改。图片缺失、无权读取或选择有歧义时明确失败，不丢掉必要参考图继续，也不改成重新生图。旧历史只有预览时，需要明确选择低清预览。只有本次选定的图片会发送给编辑服务，原有图片开关仍默认关闭。
+
+插件接受 PNG、JPEG 和 WebP，最多五张输入；宿主限制更严格时以宿主为准。这些是防护上限，不是服务端权限保证。输出尺寸和主体保留效果由服务端决定。超时或结果未确认时不会自动重发；手动重试可能再次消耗额度。详见[完整约定与验收边界](experiments/issue-270-image-edit.md)。
 
 ### 自动审查
 
@@ -125,7 +135,7 @@ Reserve 使用 Luna 目录中的 272,000 token 上下文窗口，不沿用原模
 | `enableSearch` | `false` | 注册 Codex 搜索，并在保存时将它选为搜索提供方 |
 | `enableReserveFallback` | `false` | 为 agent 请求执行身份匹配、后端授权的 Luna Reserve 切换 |
 | `enableImageTool` | `false` | 注册 `view_image` |
-| `enableImageGeneration` | `false` | 注册 GPT Image 图片生成 |
+| `enableImageGeneration` | `false` | 注册 GPT Image 图片生成及 Alpha 4.48 的显式编辑 |
 | `imageModelHint` | 空字符串 | 可选的未验证图片路由提示；留空保持默认请求 |
 | `enableAutoReview` | `false` | 使用 Codex 审查符合条件的审批请求 |
 | `searchModel` | `gpt-5.6-sol` | 独立搜索使用的模型 |

@@ -105,7 +105,7 @@ export function apply(ctx: ClientContext): void {
     name: 'tool.call.toolview',
     key: 'codex_connect_image_generate',
     locale: namespace,
-    inject: (): CodexImageToolViewInjected => ({ sessions: ctx.sessions }),
+    inject: (): CodexImageToolViewInjected => ({ sessions: ctx.sessions, configScope }),
   }, CodexImageToolView))
 
   ctx.slots.inject('conversation.chat.turnTail', () => ctx.slots.register({
@@ -113,7 +113,7 @@ export function apply(ctx: ClientContext): void {
     id: 'codex-connect-generated-images',
     order: 20,
     locale: namespace,
-    inject: (): Pick<CodexImageTurnTailProps, 'sessions'> => ({ sessions: ctx.sessions }),
+    inject: (): Pick<CodexImageTurnTailProps, 'sessions' | 'configScope'> => ({ sessions: ctx.sessions, configScope }),
   }, CodexImageTurnTail))
 
   ctx.inject(['slots', 'modelDirectories'], (scope: ClientContext) => {
