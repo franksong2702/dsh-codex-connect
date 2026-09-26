@@ -16,19 +16,19 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.49` |
-| DeepSeek Harness | `0.1.7-rc.1` |
+| Codex Connect | `0.1.0-alpha.4.50` |
+| DeepSeek Harness | `0.1.7-rc.1` 或 `0.1.7-rc.2`（包版本必须一致） |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-26，npm `alpha` 指向 4.49，`latest` 仍为 4.47；本次发布没有提升 `latest`。安装此 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-09-26，npm `alpha` 指向 4.50，`latest` 仍为 4.47；本次发布没有提升 `latest`。安装此 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
-在原版 DSH `0.1.7-rc.1` 上，普通 Composer 可用，但 Task 控件仍暂停：激活请求会被拒绝，新 Session 不显示这些控件。跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
+该安装包已通过原版 DSH `0.1.7-rc.1` 和 `0.1.7-rc.2` 的安装及运行回归验证；Task 控件仍暂停：激活请求会被拒绝，新 Session 不显示这些控件。跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.49
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.50
 dsh web
 ```
 
@@ -88,7 +88,7 @@ Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-lun
 
 使用你当前 GPT 订阅计划提供的图片生成能力。成功生成的图片会显示在对话回复下方，无需展开处理过程；原工具卡片仍保留在处理过程里。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 
-Alpha 4.49 修复了 4.48 中重新上传的副本与历史原图混淆、以及安全失败原因未显示的问题。输入有歧义时要求明确选择，不会静默更换编辑对象。旧安装包保持不变，请使用精确的 4.49 版本。
+Alpha 4.49 修复了 4.48 中重新上传的副本与历史原图混淆、以及安全失败原因未显示的问题。输入有歧义时要求明确选择，不会静默更换编辑对象。旧安装包保持不变；Alpha 4.50 保留这两项修复，并在继续支持 rc.1 的同时增加精确的 DSH rc.2 兼容。不要混装 rc.1／rc.2 的包，也不要绕过插件管理器的版本检查。
 
 自动审查在 Harness 策略判定需要审批后执行，不会绕过该策略。启用前请阅读[自动审查行为](auto-review.zh.md)。
 

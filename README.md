@@ -16,19 +16,19 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.49` |
-| DeepSeek Harness | `0.1.7-rc.1` |
+| Codex Connect | `0.1.0-alpha.4.50` |
+| DeepSeek Harness | `0.1.7-rc.1` or `0.1.7-rc.2` (consistent package set) |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-26, npm `alpha` points to 4.49 while `latest` remains 4.47; publishing this release did not promote `latest`. Use the exact version below for this DSH pairing; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-09-26, npm `alpha` points to 4.50 while `latest` remains 4.47; publishing this release did not promote `latest`. Use the exact version below for this DSH pairing; a moving npm tag is not a compatibility guarantee for other hosts.
 
-On stock DSH `0.1.7-rc.1`, ordinary Composer works, but Task controls remain paused: activation is rejected and fresh Sessions do not show them. Migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
+On stock DSH `0.1.7-rc.1` and `0.1.7-rc.2`, the package is installation/runtime-regression verified; Task controls remain paused: activation is rejected and fresh Sessions do not show them. Migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.49
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.50
 dsh web
 ```
 
@@ -88,7 +88,7 @@ With `enableReserveFallback: true`, the account UI and agent routing share one i
 
 Use the image generation capability included with your current GPT subscription. Successful images appear below the conversation answer without opening its processing details; the original tool card remains available there. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
 
-Alpha 4.49 fixes the re-uploaded-copy/original confusion and hidden safe failure reasons found in 4.48. Ambiguous inputs require an explicit selection rather than silently changing the target. The original package remains unchanged; use the exact 4.49 release.
+Alpha 4.49 fixes the re-uploaded-copy/original confusion and hidden safe failure reasons found in 4.48. Ambiguous inputs require an explicit selection rather than silently changing the target. The original package remains unchanged; Alpha 4.50 retains both repairs and adds exact DSH rc.2 compatibility while preserving rc.1. Do not mix rc.1 and rc.2 packages or bypass the plugin manager's version checks.
 
 Auto-review operates after Harness policy requires approval; it does not bypass that policy. See [Auto-review behavior](docs/auto-review.md) before enabling it.
 
