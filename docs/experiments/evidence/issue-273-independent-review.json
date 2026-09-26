@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "reviewedCommit": "804c0820024618016297889bc6c2df35d78bebbd",
+  "reviewedBase": "8e685d736da8e605ead11808a7daab5cdaf4b481",
+  "reviewer": "separate Codex CLI process",
+  "cliVersion": "0.153.4",
+  "model": "gpt-6-astra",
+  "mode": "ephemeral read-only, source bundle via stdin, no shared implementation history",
+  "verdict": "PASS",
+  "findingCount": 0,
+  "scope": "source and supplied test review only; reviewer did not run tests or live image/model-selection acceptance",
+  "inputSha256": "cebada34d7c424f5b772939c6131c57d033eeb4fee3d4dbf7dd893e5fa1ad044",
+  "reportSha256": "fbfbf658b22d50bf66ad0295c5ce8fde50ad75a5bf5965f18a6a20e97aa6dc21",
+  "recordedAt": "2026-09-26T02:35:08.868293+00:00",
+  "previousAttempt": {
+    "model": "gpt-6-sol",
+    "status": "unsupported model with this Codex ChatGPT account",
+    "reportProduced": false
+  },
+  "releaseCandidate": "0.1.0-alpha.4.49",
+  "sourceUnchangedSinceReview": true
+}
