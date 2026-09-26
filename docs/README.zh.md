@@ -4,7 +4,7 @@
 
 [English](../README.md) | 中文
 
-通过 OAuth 把你的 ChatGPT 订阅接入 DeepSeek Harness，并提供可选的 GPT Image 图片生成、由用户控制的默认设置、Harness 原生审批、诊断与可靠的会话恢复。
+通过 OAuth 把你的 ChatGPT 订阅接入 DeepSeek Harness，并提供可选的 GPT Image 图片生成与编辑、由用户控制的默认设置、Harness 原生审批、诊断与可靠的会话恢复。
 
 社区 Alpha 项目——与 OpenAI、ChatGPT、Codex、DeepSeek 或 DeepSeek Harness 不存在隶属关系，也未获得其背书。
 
@@ -16,19 +16,19 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.47` |
+| Codex Connect | `0.1.0-alpha.4.49` |
 | DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-24，npm `alpha` 和 `latest` 均指向 4.47。安装此 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-09-26，npm `alpha` 指向 4.49，`latest` 仍为 4.47；本次发布没有提升 `latest`。安装此 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 在原版 DSH `0.1.7-rc.1` 上，普通 Composer 可用，但 Task 控件仍暂停：激活请求会被拒绝，新 Session 不显示这些控件。跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.47
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.49
 dsh web
 ```
 
@@ -79,7 +79,7 @@ Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-lun
 | Codex 搜索 | `enableSearch` | 将整个 profile 的搜索路由切换为 Codex；关闭后恢复之前的路由。 |
 | Luna Reserve | `enableReserveFallback` | 只在服务端为当前已固定账户明确授权时使用隐藏的 Reserve 路由；不修改全局默认模型，也不因普通 `429` 重试。 |
 | 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
-| GPT Image 图片生成 | `enableImageGeneration` | 只接受提示词；可用性、尺寸和额度仍由账户及服务端控制。 |
+| GPT Image 图片生成与编辑 | `enableImageGeneration` | 根据提示词生图，或编辑明确选定的会话图片并使用有顺序的参考图；可用性、尺寸和额度仍由账户及服务端控制。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
 
 **已发布的实验功能：** Alpha 4.35 包含 Luna Reserve 回退，仍默认关闭。真实账户进入 Reserve 及恢复普通模型的过程仍未验证；Alpha 4.34 不包含该功能。
@@ -87,6 +87,8 @@ Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-lun
 启用 `enableReserveFallback: true` 后，账户 UI 和 agent 路由共用一份绑定身份的额度状态，最近有使用需求时按服务端返回的额度窗口后台刷新；有效状态可跨 agent step 复用。普通额度读取也共用缓存，即使 Reserve 已关闭。只有身份完整、非 FedRAMP 且服务端授权时，插件才进入 `gpt-reserve`；普通额度确认恢复后，切回该会话先前的模型和推理强度。Reserve 有自己的额度，不出现在模型选择器中，也不是无限额度。资格由服务端决定，重置时间本身不授权切换。当前版本只支持已知的 `gpt-5.6-luna` 元数据。刷新、身份和验证限制见 [Luna Reserve 回退](reference.zh.md#luna-reserve-回退)。
 
 使用你当前 GPT 订阅计划提供的图片生成能力。成功生成的图片会显示在对话回复下方，无需展开处理过程；原工具卡片仍保留在处理过程里。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
+
+Alpha 4.49 修复了 4.48 中重新上传的副本与历史原图混淆、以及安全失败原因未显示的问题。输入有歧义时要求明确选择，不会静默更换编辑对象。旧安装包保持不变，请使用精确的 4.49 版本。
 
 自动审查在 Harness 策略判定需要审批后执行，不会绕过该策略。启用前请阅读[自动审查行为](auto-review.zh.md)。
 

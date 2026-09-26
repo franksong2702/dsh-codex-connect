@@ -1,0 +1,26 @@
+{
+  "recordedAt": "2026-09-26T02:57:04.224411+00:00",
+  "version": "0.1.0-alpha.4.49",
+  "alpha": "0.1.0-alpha.4.49",
+  "latest": "0.1.0-alpha.4.47",
+  "tagSHA": "7dce08912296680a0bce6633bd78be5827d00dc3",
+  "release": {
+    "isDraft": false,
+    "isPrerelease": true,
+    "publishedAt": "2026-09-26T02:56:29Z",
+    "tagName": "v0.1.0-alpha.4.49",
+    "targetCommitish": "7dce08912296680a0bce6633bd78be5827d00dc3",
+    "url": "https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.1.0-alpha.4.49"
+  },
+  "originalPublishRun": 36212860716,
+  "originalPublishConclusion": "failure at public readback after npm publish succeeded",
+  "recoveryRun": {
+    "conclusion": "success",
+    "headSha": "7dce08912296680a0bce6633bd78be5827d00dc3",
+    "status": "completed",
+    "url": "https://github.com/franksong2702/dsh-codex-connect/actions/runs/36213209903"
+  },
+  "recoveryArchiveSHA256": "ca7fc17ff4f5ba6a3d266c3655447420a6ee9b7b3df983cc42d347708fab5e26",
+  "npmRepublished": false,
+  "latestPromoted": false
+}
