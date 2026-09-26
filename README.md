@@ -4,7 +4,7 @@
 
 English | [中文](docs/README.zh.md)
 
-Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
+Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation and editing, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
 
 Community Alpha — not affiliated with or endorsed by OpenAI, ChatGPT, Codex, DeepSeek, or DeepSeek Harness.
 
@@ -16,19 +16,19 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.47` |
+| Codex Connect | `0.1.0-alpha.4.49` |
 | DeepSeek Harness | `0.1.7-rc.1` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-24, npm `alpha` and `latest` both point to 4.47. Use the exact version below for this DSH pairing; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-09-26, npm `alpha` points to 4.49 while `latest` remains 4.47; publishing this release did not promote `latest`. Use the exact version below for this DSH pairing; a moving npm tag is not a compatibility guarantee for other hosts.
 
 On stock DSH `0.1.7-rc.1`, ordinary Composer works, but Task controls remain paused: activation is rejected and fresh Sessions do not show them. Migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.47
+dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.49
 dsh web
 ```
 
@@ -79,7 +79,7 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 | Codex Search | `enableSearch` | Selects Codex for the entire profile's search route; disabling restores the previously active route. |
 | Luna Reserve | `enableReserveFallback` | Uses the hidden Reserve route only when the backend explicitly authorizes it for the captured account; never changes global defaults or retries a generic `429`. |
 | Image viewing | `enableImageTool` | Adds `view_image` to vision-capable models for local files and validated public HTTP(S) images. |
-| GPT Image generation | `enableImageGeneration` | Prompt-only generation; availability, dimensions, and quota remain account- and service-controlled. |
+| GPT Image generation and editing | `enableImageGeneration` | Generate from a prompt or edit selected conversation images with ordered references. Availability, dimensions, and quota remain account- and service-controlled. |
 | Auto-review | `enableAutoReview` | Sends bounded approval context, tool arguments, working directory, and the planned action to `chatgpt.com`, with confirmation on first enablement. Failures return to human approval. |
 
 **Published experiment:** Alpha 4.35 includes Luna Reserve fallback, disabled by default. Real-account Reserve entry and recovery remain unverified; Alpha 4.34 does not include this feature.
@@ -87,6 +87,8 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 With `enableReserveFallback: true`, the account UI and agent routing share one identity-bound quota state. Background refresh follows the returned quota windows while recently in use; fresh state is reused across agent steps. Ordinary quota reads also share the cache, even with Reserve disabled. The plugin enters `gpt-reserve` only with complete, non-FedRAMP account/user identity and backend Luna Reserve authorization, then restores the session's previous model and reasoning effort after confirmed ordinary-usage recovery. Reserve has its own allowance, is hidden from the model picker, and is not unlimited. The backend decides eligibility; reset times alone do not authorize a switch. This version supports known `gpt-5.6-luna` metadata only. See [Luna Reserve fallback](docs/reference.md#luna-reserve-fallback) for refresh, identity, and verification limits.
 
 Use the image generation capability included with your current GPT subscription. Successful images appear below the conversation answer without opening its processing details; the original tool card remains available there. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
+
+Alpha 4.49 fixes the re-uploaded-copy/original confusion and hidden safe failure reasons found in 4.48. Ambiguous inputs require an explicit selection rather than silently changing the target. The original package remains unchanged; use the exact 4.49 release.
 
 Auto-review operates after Harness policy requires approval; it does not bypass that policy. See [Auto-review behavior](docs/auto-review.md) before enabling it.
 
