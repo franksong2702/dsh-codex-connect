@@ -92,7 +92,12 @@ Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; th
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/en/image-generation.png" alt="GPT Image result with prompt, download actions, and image details" width="780">
 </p>
 
-#### Image editing in Alpha 4.48
+#### Image editing in Alpha 4.49
+
+**Post-release review:** published Alpha 4.48 has two confirmed defects: a re-uploaded preview can select a historical original, and safe edit failure details are hidden. The fixes below apply to Alpha 4.49; the published 4.48 package is not changed or republished.
+
+In Alpha 4.49, a complete `attachment` selector matched to an actual user upload selects that copy's bytes, even when its ID, filename and dimensions match a generated preview. A bare `attachmentId` shared by uploads and generated results fails with an ambiguity message; `assetId` continues to select the exact stored original. Re-uploaded copies remain usable after the historical original is deleted. The model receives the complete bounded reference next to each image; no user lookup of opaque IDs is required. Failed input selections display only fixed, allowlisted reasons and recovery guidance and do not offer an unchanged retry. Unrecognized service errors stay hidden behind a generic explanation.
+
 
 With the existing image capability enabled, attach a target and optional references and describe their roles, for example: “Edit the first image; use only the colors of the second image and keep the subject.” You can also choose **Edit based on this image** on a previous result. The form waits for your instructions before submitting.
 

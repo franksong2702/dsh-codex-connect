@@ -20,6 +20,7 @@ import * as CodexConnect from '../src/index.ts'
 import { OpenAICodexCredentialStore } from '../src/store.ts'
 import { OpenAICodexImageAssetStore } from '../src/image-assets.ts'
 import { decodeImagePresentationMeta } from '../src/image-presentation.ts'
+import { decodeImageInputAttachment } from '../src/image-input-contract.ts'
 
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'))
 const PNG_REFERENCE = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'))
@@ -110,6 +111,8 @@ it.each(['none', 'zstd'] as const)('edits through the real loop, cold-loads phys
   const secondHandleAt = firstWire.indexOf(secondHandle)
   expect(firstHandleAt).toBeGreaterThanOrEqual(0)
   expect(secondHandleAt).toBeGreaterThan(firstHandleAt)
+  expect(firstWire).toContain(JSON.stringify('attachment=' + JSON.stringify(decodeImageInputAttachment(ref))).slice(1, -1))
+  expect(firstWire).toContain(JSON.stringify('attachment=' + JSON.stringify(decodeImageInputAttachment(reference))).slice(1, -1))
   const results = handle.agent.session.snapshotEvents().filter(event => event.type === 'tool/result')
   const first = results.find(event => event.type === 'tool/result' && decodeImagePresentationMeta(event.data.meta)?.operation === 'edit')
   expect(first, JSON.stringify(results)).toBeDefined()

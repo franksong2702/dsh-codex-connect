@@ -143,4 +143,24 @@ describe('image editing browser workflow', () => {
     await expect.element(page.getByRole('button', { name: en.downloadOriginal })).toBeVisible()
     expect(prompts).toHaveLength(0)
   })
+  it.each(['en', 'zh'] as const)('shows safe input failure guidance without an ineffective retry (%s)', async language => {
+    const strings = language === 'en' ? en : zh
+    const reason = 'Error: Target image: is unavailable or does not match a reference in this session. Select or attach the image again.'
+    show({ ...generated(), isError: true, meta: undefined,
+      call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ operation: 'edit', prompt: 'Change sky', target: { attachmentId: 'sha256:absent' } }) },
+      content: [{ type: 'text', text: reason }], error: { name: 'Error', code: 'UNKNOWN' } }, language)
+    await expect.element(page.getByText(reason, { exact: true })).toBeVisible()
+    await expect.element(page.getByText(strings.imageInputRecovery)).toBeVisible()
+    await expect.element(page.getByRole('button', { name: strings.retryImageEdit })).not.toBeInTheDocument()
+    expect(prompts).toHaveLength(0)
+  })
+  it('hides raw service errors and still presents a safe explanation', async () => {
+    const raw = 'Error: Target image: is required. Bearer PRIVATE_FIXTURE_TOKEN /Users/private-account/file.png'
+    show({ ...generated(), isError: true, meta: undefined, content: [{ type: 'text', text: raw }], error: { name: 'Error', code: 'UNKNOWN' } })
+    await expect.element(page.getByText(en.imageUnknownFailure)).toBeVisible()
+    expect(host.textContent).not.toContain('PRIVATE_FIXTURE_TOKEN')
+    expect(host.textContent).not.toContain('/Users/private-account')
+    expect(prompts).toHaveLength(0)
+  })
+
 })

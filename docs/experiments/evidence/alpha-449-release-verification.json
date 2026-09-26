@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "candidate": "0.1.0-alpha.4.49",
+  "reviewedSourceCommit": "804c0820024618016297889bc6c2df35d78bebbd",
+  "baseCommit": "8e685d736da8e605ead11808a7daab5cdaf4b481",
+  "recordedAt": "2026-09-26T02:39:12.095297+00:00",
+  "checks": {
+    "frozenInstall": "passed",
+    "completeCheck": {
+      "files": 125,
+      "tests": 1440,
+      "status": "passed"
+    },
+    "chromium": {
+      "files": 13,
+      "tests": 73,
+      "status": "passed"
+    },
+    "originalReproductions": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 47
+    },
+    "finalMetadataAndPackage": {
+      "status": "passed",
+      "files": 4,
+      "tests": 27,
+      "packedFiles": 126,
+      "diffCheck": "passed"
+    }
+  },
+  "matrix": {
+    "sameArtifact": true,
+    "reports": [
+      {
+        "dshVersion": "0.1.7-rc.1",
+        "pluginVersion": "0.1.0-alpha.4.49",
+        "archiveSha256": "cdaf5593959147614476fdf6a3b5ead7067f4633e56b317aa4452eb1175a06bd",
+        "defaultsUnchanged": true,
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "realProviderRequests": 0
+        }
+      }
+    ]
+  },
+  "fileSha256": {
+    "src/image-history.ts": "a2971f2c2740c7330a2d1ffdd1b6ab07babd0d72b9c006e3318ccf30cd3820b3",
+    "src/image-inputs.ts": "113d41533ff8ee0cde9c6415aa5d11657de779a10fe45ac7c944521c3e26d98d",
+    "src/image-error-contract.ts": "64780e03d3d856d3a4f096fe1cf72ae6d40a63aa8b8f3d846d999557aef1cb5e",
+    "src/adapter.ts": "81d3134d7b448aa78d0017924aee609fad2d3e636469f18948923d63dd4c2e90",
+    "src/client/CodexImageToolView.tsx": "c1343156d7cd3a88c8078b70a2bd1b3f8f904ef0a62864a5647224a843301801",
+    "lib/index.js": "81ac3c27b06e8892e7d77e84561564c04abb57caa02233cf228b0fddfc73e4e9",
+    "lib/client.js": "6839b6f07e1e5b92a6037eb973d41ba6a0629d40f1d89103c301b633502b7c63",
+    "lib/bin.js": "fce137eb91bf3e5ea13035d36bff4077a7db6f4254cf62c6e578bbe5fc332a45"
+  },
+  "scope": "local synthetic tests plus separate source review; no additional live image or model-selection acceptance",
+  "archiveBoundary": "Matrix package precedes only final verified-pair and evidence/reference annotations. Runtime hashes unchanged; final CI and publish workflow must verify the exact merged candidate."
+}

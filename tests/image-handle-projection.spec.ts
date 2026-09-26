@@ -37,4 +37,18 @@ describe('Codex image selection handle projection', () => {
     ] } as GenerateOptions
     expect(withOpenAICodexImageSelectionHandles(options)).toBe(options)
   })
+  it('exposes a complete bounded reference for each uploaded copy without persisting an ordinal', () => {
+    const first = { ...image('sha256:same', 'same.png'), originalDimensions: { width: 12, height: 8 } }
+    const second = { ...first, name: 'renamed.png' }
+    const options = { provider: 'openai-codex', model: 'gpt-5.6-sol', messages: [
+      { role: 'user', content: [{ type: 'image', attachment: first }, { type: 'image', attachment: second }] },
+    ] } as GenerateOptions
+    const projected = withOpenAICodexImageSelectionHandles(options)
+    const texts = projected.messages[0]!.content.filter(block => block.type === 'text').map(block => block.text)
+    expect(texts[0]).toContain(`attachment=${JSON.stringify(first)}`)
+    expect(texts[1]).toContain(`attachment=${JSON.stringify(second)}`)
+    expect(texts[0]).toContain('use its result assetId instead')
+    expect(options.messages[0]!.content).toHaveLength(2)
+  })
+
 })

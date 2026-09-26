@@ -39,12 +39,14 @@ export interface SessionImageInventory {
   attachments: Map<string, Map<string, ImageInputAttachment>>
   /** Keep every result-to-original relation rather than letting the newest preview win. */
   results: Map<string, Map<string, ImagePresentationItem>>
+  /** Explicit user image occurrences, kept separate even when their bytes match a generated preview. */
+  uploads: Map<string, Map<string, ImageInputAttachment>>
   originals: Map<string, OpenAICodexOriginalImageRef>
 }
 
 /** Read one current session's immutable log, including restored and inherited events. */
 export function sessionImageInventory(session: Session): SessionImageInventory {
-  const result: SessionImageInventory = { attachments: new Map(), results: new Map(), originals: new Map() }
+  const result: SessionImageInventory = { attachments: new Map(), results: new Map(), originals: new Map(), uploads: new Map() }
   const addRef = (value: unknown): ImageInputAttachment | undefined => {
     const ref = decodeImageInputAttachment(value)
     if (ref === undefined) return undefined
@@ -54,12 +56,18 @@ export function sessionImageInventory(session: Session): SessionImageInventory {
     result.attachments.set(id, occurrences)
     return ref
   }
-  const add = (content: unknown): void => {
+  const add = (content: unknown, userUpload = false): void => {
     if (!Array.isArray(content)) return
     for (const block of content) {
       const candidate = imageInputObject(block)
       if (candidate?.type !== 'image') continue
-      addRef(candidate.attachment)
+      const ref = addRef(candidate.attachment)
+      if (userUpload && ref !== undefined) {
+        const id = String(ref.attachmentId)
+        const occurrences = result.uploads.get(id) ?? new Map<string, ImageInputAttachment>()
+        occurrences.set(JSON.stringify(ref), ref)
+        result.uploads.set(id, occurrences)
+      }
     }
   }
   for (const event of session.snapshotEvents()) {
@@ -81,7 +89,10 @@ export function sessionImageInventory(session: Session): SessionImageInventory {
       continue
     }
     if (event.type === 'agent/inbox/spliced') {
-      if (Array.isArray(data?.inserted)) for (const message of data.inserted) add(imageInputObject(message)?.content)
+      if (Array.isArray(data?.inserted)) for (const message of data.inserted) {
+        const inserted = imageInputObject(message)
+        add(inserted?.content, imageInputObject(inserted?.source)?.kind === 'user')
+      }
       continue
     }
     if (event.type === 'compaction/summary') {
@@ -90,7 +101,7 @@ export function sessionImageInventory(session: Session): SessionImageInventory {
       continue
     }
     const message = deriveEventMessage(event as SessionEvent)
-    if (message !== null) add(message.content)
+    if (message !== null) add(message.content, event.type === 'user/message' && message.source.kind === 'user')
   }
   return result
 }

@@ -15,6 +15,7 @@ import { IMAGE_PRESENTATION_KIND, IMAGE_PRESENTATION_SCHEMA_VERSION, IMAGE_RESUL
 import { decodeImageToolRequest, IMAGE_INPUT_SCHEMA, IMAGE_REFERENCES_SCHEMA, IMAGE_EDIT_SOURCES_SCHEMA } from './image-input-contract.ts'
 import type { ImageEditSources } from './image-input-contract.ts'
 import { ImageInputError, promptForImageEdit, resolveImageEditInputs } from './image-inputs.ts'
+import { imageTransportErrorMessage } from './image-error-contract.ts'
 
 /** Stable model-callable tool name. */
 export const IMAGE_GENERATE_TOOL_NAME = 'codex_connect_image_generate'
@@ -50,19 +51,7 @@ function fixedTransportMessage(error: unknown): string {
   const code = typeof error === 'object' && error !== null && 'code' in error
     ? (error as { code?: unknown }).code
     : undefined
-  switch (code) {
-    case 'OPENAI_CODEX_SIGNED_OUT': return 'Sign in to OpenAI Codex before generating images.'
-    case 'OPENAI_CODEX_REAUTH_REQUIRED': return 'Renew OpenAI Codex authorization before generating images.'
-    case 'OPENAI_CODEX_RATE_LIMITED': return 'Image generation is temporarily unavailable. Try again later.'
-    case 'OPENAI_CODEX_TIMEOUT': return `Image generation timed out. ${CANCELED_REQUEST_NOTE}`
-    case 'OPENAI_CODEX_CANCELED': return `Image generation was canceled. ${CANCELED_REQUEST_NOTE}`
-    case 'OPENAI_CODEX_NETWORK_ERROR': return `The image generation request lost its network connection. ${CANCELED_REQUEST_NOTE}`
-    case 'OPENAI_CODEX_UPSTREAM_REJECTED': return 'The image generation request was rejected.'
-    case 'OPENAI_CODEX_UPSTREAM_UNAVAILABLE': return 'Image generation is temporarily unavailable.'
-    case 'OPENAI_CODEX_RESPONSE_TOO_LARGE': return 'The image generation response exceeded the safe size limit.'
-    case 'OPENAI_CODEX_MALFORMED_RESPONSE': return 'The image generation response was unreadable.'
-    default: return 'Image generation failed without exposing private response details.'
-  }
+  return imageTransportErrorMessage(code)
 }
 
 function extension(mediaType: CodexImageMediaType): string {
@@ -255,7 +244,7 @@ export function imageGenerateTool(ctx: Context, assets: OpenAICodexImageAssetSto
   const inFlight = new Map<string, Promise<ImageValue>>()
   return defineTool({
     name: IMAGE_GENERATE_TOOL_NAME,
-    description: 'Generate a new image, or edit an explicitly selected session image. For edits use operation=edit and target; optional ordered references have separate purposes. When image editing is enabled, Codex Connect places a model-visible handle line immediately after each request image, numbered in that message and containing its stable attachmentId. When the user says first/second/another attached image, use those adjacent handle lines and copy the matching attachmentId exactly. For older generated originals use exact assetId handles from the conversation. Never guess or use global recent images; never swap target and reference. Ask when the target is ambiguous. An unavailable edit target must not become text-only generation. Results preserve originals and can be edited again; output size and style are service-controlled.',
+    description: 'Generate a new image, or edit an explicitly selected session image. For edits use operation=edit and target; optional ordered references have separate purposes. When image editing is enabled, Codex Connect places a model-visible handle line immediately after each request image, numbered in that message and containing its stable attachmentId. When the user edits an uploaded copy (including first/second attached image), copy the complete attachment reference from the adjacent handle line. An attachmentId shared by an upload and a generated result is ambiguous; ask rather than selecting an older original. For older generated originals use exact assetId handles from the conversation. Never guess or use global recent images; never swap target and reference. Ask when the target is ambiguous. An unavailable edit target must not become text-only generation. Results preserve originals and can be edited again; output size and style are service-controlled.',
     parameters: {
       prompt: { type: 'string', required: true, description: 'The requested new image or changes to the selected target.' },
       operation: { type: 'string', enum: ['generate', 'edit'], description: 'Use edit whenever modifying a selected image. Omission is legacy text generation only.' },

@@ -72,6 +72,19 @@ const standard = {
 afterEach(() => { cleanup(); actionPrompt.mockClear(); actionCancel.mockClear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('Codex image Tool view', () => {
+  it('PR272 review: shows the safe actionable reason for a rejected edit selection', () => {
+    const reason = 'Error: Target image: is unavailable or does not match a reference in this session. Select or attach the image again.'
+    render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{
+      kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', callTime: 1, subCalls: [], isError: true,
+      call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ operation: 'edit', prompt: 'Change the sky', target: { attachmentId: 'sha256:absent' } }) },
+      content: [{ type: 'text', text: reason }], error: { name: 'Error', code: 'UNKNOWN' },
+    }} />)
+    expect(screen.getByText(en.failed)).toBeTruthy()
+    expect(screen.getByText(reason)).toBeTruthy()
+    expect(screen.getByText(en.imageInputRecovery)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: en.retryImageEdit })).toBeNull()
+  })
+
   it.each([false, true])('renders and downloads a nested PTC result (exact original: %s)', async (exact) => {
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ptc'), revokeObjectURL: vi.fn() })
     const content = [
@@ -323,4 +336,17 @@ describe('Codex image Tool view', () => {
     expect(screen.getByText(en.failed)).toBeTruthy()
     expect(screen.queryByText('private response')).toBeNull()
   })
+  it('does not render raw upstream content even when it begins with a known safe reason', () => {
+    const secret = 'Bearer PRIVATE_TEST_TOKEN /Users/private-account/image.png'
+    const raw = 'Error: Target image: is unavailable or does not match a reference in this session. Select or attach the image again. ' + secret
+    render(<CodexImageToolView {...standard} t={t} sessions={actionSessions} block={{
+      kind: 'tool-result', seq: 2, time: 2, callId: 'call-1', callTime: 1, subCalls: [], isError: true,
+      call: { name: 'codex_connect_image_generate', argsRaw: JSON.stringify({ operation: 'edit', prompt: 'Change the sky', target: { attachmentId: 'sha256:absent' } }) },
+      content: [{ type: 'text', text: raw }], error: { name: 'Error', code: 'UNKNOWN' },
+    }} />)
+    expect(screen.getByText(en.imageUnknownFailure)).toBeTruthy()
+    expect(document.body.textContent).not.toContain(secret)
+    expect(document.body.textContent).not.toContain(raw)
+  })
+
 })

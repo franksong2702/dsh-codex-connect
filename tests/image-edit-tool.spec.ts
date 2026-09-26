@@ -18,7 +18,7 @@ import { decodeImagePresentationMeta, decodeImageResultContent } from '../src/im
 import type { ImageEditSources } from '../src/image-input-contract.ts'
 
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64'))
-function pixelPng(red: number, green: number, blue: number): Uint8Array {
+function pixelPng(red: number, green: number, blue: number, width = 1, height = 1): Uint8Array {
   const chunk = (type: string, data: Uint8Array): Buffer => {
     const output = Buffer.alloc(data.byteLength + 12)
     output.writeUInt32BE(data.byteLength); output.write(type, 4, 'ascii'); Buffer.from(data).copy(output, 8)
@@ -30,9 +30,14 @@ function pixelPng(red: number, green: number, blue: number): Uint8Array {
     output.writeUInt32BE((crc ^ 0xffffffff) >>> 0, 8 + data.byteLength)
     return output
   }
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(1); ihdr.writeUInt32BE(1, 4); ihdr[8] = 8; ihdr[9] = 2
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2
+  const raster = Buffer.alloc((width * 3 + 1) * height)
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const at = y * (width * 3 + 1) + 1 + x * 3
+    raster[at] = red; raster[at + 1] = green; raster[at + 2] = blue
+  }
   return Uint8Array.from(Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(Buffer.from([0, red, green, blue]))), chunk('IEND', Buffer.alloc(0))]))
+    chunk('IDAT', deflateSync(raster)), chunk('IEND', Buffer.alloc(0))]))
 }
 const contexts: Context[] = []
 const roots: string[] = []
@@ -87,6 +92,43 @@ function firstAsset(result: Awaited<ReturnType<typeof execute>>) {
 }
 
 describe('session-owned image edit tool', () => {
+  it('PR272 review: a reuploaded preview handle must not silently select the old generated original', async () => {
+    const { ctx, session, editImages, generateImages } = await setup()
+    const large = pixelPng(255, 0, 0, 3072, 1536)
+    generateImages.mockResolvedValueOnce({ apiVersion: 1, traceId: 'synthetic', elapsedMs: 1,
+      responseBytes: large.byteLength, images: [{ b64Json: Buffer.from(large).toString('base64') }] })
+    const generated = await execute(ctx, session, { prompt: 'old generated original' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const storedPreview = await ctx.attachments.readImage(preview)
+    const uploaded = await ctx.attachments.saveImage({ data: storedPreview.data, mediaType: storedPreview.ref.mediaType, name: 'current-upload.webp' })
+    session.append('user/message', createUserMessage({ content: [{ type: 'image', attachment: uploaded }], source: { kind: 'user' } }), { surfaceOp: 'append' })
+    expect(uploaded.attachmentId).toBe(preview.attachmentId)
+    expect(storedPreview.data).not.toEqual(large)
+    expect(uploaded.width).toBeLessThan(3072)
+    const result = await execute(ctx, session, { operation: 'edit', prompt: 'edit the image I just attached', target: target(uploaded) })
+    // A bare handle shared by an upload and an original must request disambiguation,
+    // or resolve to the chosen upload, never silently send the old original bytes.
+    if (!result.isError) {
+      expect(editImages.mock.calls[0]?.[0]).toMatchObject({ images: [{ mediaType: uploaded.mediaType }] })
+      expect(result.meta).toMatchObject({ edit: { target: { attachment: uploaded } } })
+      expect(editImages.mock.calls[0]?.[0]).toMatchObject({ images: [{ data: storedPreview.data }] })
+    } else expect(editImages).not.toHaveBeenCalled()
+  })
+
+  it('PR272 review: a complete reuploaded reference stays usable after the old original is removed', async () => {
+    const { ctx, assets, session, editImages } = await setup()
+    const generated = await execute(ctx, session, { prompt: 'old generated original' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const storedPreview = await ctx.attachments.readImage(preview)
+    const uploaded = await upload(ctx, session, preview.name!, storedPreview.data)
+    await assets.removeImages([firstAsset(generated)])
+    const result = await execute(ctx, session, { operation: 'edit', prompt: 'edit this reattached image', target: { attachment: uploaded } })
+    expect(result.isError, JSON.stringify(result.content)).toBe(false)
+    expect(editImages).toHaveBeenCalledOnce()
+  })
+
   it('edits an admitted upload, records canonical sources and preserves exact input bytes', async () => {
     const { ctx, assets, session, editImages, generateImages } = await setup()
     const ref = await upload(ctx, session)
@@ -347,4 +389,94 @@ describe('session-owned image edit tool', () => {
     expect(editImages).not.toHaveBeenCalled()
     expect(result.meta).not.toHaveProperty('edit')
   })
+  it('rejects a shared bare upload/result id but keeps both explicit choices stable', async () => {
+    const { ctx, assets, session, editImages, generateImages } = await setup()
+    const large = pixelPng(255, 0, 0, 3072, 1536)
+    generateImages.mockResolvedValueOnce({ apiVersion: 1, traceId: 'synthetic', elapsedMs: 1,
+      responseBytes: large.byteLength, images: [{ b64Json: Buffer.from(large).toString('base64') }] })
+    const generated = await execute(ctx, session, { prompt: 'original' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const previewBytes = (await ctx.attachments.readImage(preview)).data
+    const uploaded = await ctx.attachments.saveImage({ data: previewBytes, mediaType: preview.mediaType, name: preview.name! })
+    session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'image', attachment: uploaded }] }), { surfaceOp: 'append' })
+    const ambiguous = await execute(ctx, session, { operation: 'edit', prompt: 'change it', target: target(uploaded) })
+    expect(ambiguous.isError).toBe(true)
+    expect(JSON.stringify(ambiguous.content)).toContain('identifies both an upload and a generated result')
+    expect(editImages).not.toHaveBeenCalled()
+    const fromOriginal = await execute(ctx, session, { operation: 'edit', prompt: 'change original', target: { assetId: firstAsset(generated).assetId } })
+    expect(fromOriginal.isError).toBe(false)
+    expect(editImages.mock.lastCall?.[0]).toMatchObject({ images: [{ data: large }] })
+    const fromUpload = await execute(ctx, session, { operation: 'edit', prompt: 'change copy', target: { attachment: uploaded } })
+    expect(fromUpload.isError).toBe(false)
+    expect(editImages.mock.lastCall?.[0]).toMatchObject({ images: [{ data: previewBytes }] })
+    persistResult(session, fromUpload)
+    await assets.removeImages([firstAsset(generated)])
+    const deniedOriginal = await execute(ctx, session, { operation: 'edit', prompt: 'original still required', target: { assetId: firstAsset(generated).assetId } })
+    expect(deniedOriginal.isError).toBe(true)
+    expect(editImages).toHaveBeenCalledTimes(2)
+    const canonical = decodeImagePresentationMeta(fromUpload.meta)!.edit!
+    const repeat = await execute(ctx, session, { operation: 'edit', prompt: 'change copy', ...canonical })
+    expect(repeat.isError).toBe(false)
+    expect(editImages.mock.lastCall?.[0]).toMatchObject({ images: [{ data: previewBytes }] })
+    expect(repeat.meta).toMatchObject({ edit: { target: { attachment: uploaded } } })
+  })
+
+  it('does not send any request when a reference has shared upload/result identity', async () => {
+    const { ctx, session, editImages } = await setup()
+    const chosen = await upload(ctx, session, 'subject.png', pixelPng(0, 0, 255))
+    const generated = await execute(ctx, session, { prompt: 'reference' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const bytes = (await ctx.attachments.readImage(preview)).data
+    const reference = await upload(ctx, session, 'color.png', bytes)
+    const result = await execute(ctx, session, { operation: 'edit', prompt: 'blue', target: { attachment: chosen },
+      references: [{ image: target(reference), purpose: 'palette' }] })
+    expect(result.isError).toBe(true)
+    expect(JSON.stringify(result.content)).toContain('Reference image 1: identifies both')
+    expect(editImages).not.toHaveBeenCalled()
+    const exact = await execute(ctx, session, { operation: 'edit', prompt: 'blue', target: { attachment: chosen },
+      references: [{ image: { attachment: reference }, purpose: 'palette' }] })
+    expect(exact.isError).toBe(false)
+    expect(exact.meta).toMatchObject({ edit: { references: [{ image: { attachment: reference }, purpose: 'palette' }] } })
+  })
+
+  it('retains upload provenance from serialized inherited events without admitting later uploads', async () => {
+    const { ctx, assets, session, editImages } = await setup()
+    const generated = await execute(ctx, session, { prompt: 'old original' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const bytes = (await ctx.attachments.readImage(preview)).data
+    const uploaded = await upload(ctx, session, preview.name!, bytes)
+    const child = ctx.sessions.fork(session, undefined, SessionId('upload-child'))
+    const later = await upload(ctx, session, 'later.png', pixelPng(0, 0, 255))
+    await assets.removeImages([firstAsset(generated)])
+    const restored = ctx.sessions.prepare(SessionId('restored-upload-child'), {
+      seed: JSON.parse(JSON.stringify(child.snapshotEvents())), meta: JSON.parse(JSON.stringify(child.header)),
+      inheritedEventCount: child.inheritedEventCount,
+    })
+    expect((await execute(ctx, restored, { operation: 'edit', prompt: 'copy', target: { attachment: uploaded } })).isError).toBe(false)
+    expect((await execute(ctx, restored, { operation: 'edit', prompt: 'later', target: { attachment: later } })).isError).toBe(true)
+    expect(editImages).toHaveBeenCalledOnce()
+  })
+
+  it('admits an explicit user inbox image as an upload without treating text references as uploads', async () => {
+    const { ctx, assets, session, editImages } = await setup()
+    const generated = await execute(ctx, session, { prompt: 'old original' })
+    persistResult(session, generated)
+    const preview = decodeImagePresentationMeta(generated.meta)!.images[0]!.preview
+    const uploaded = await ctx.attachments.saveImage({ data: (await ctx.attachments.readImage(preview)).data,
+      mediaType: preview.mediaType, name: preview.name! })
+    const before = session.snapshotEvents.bind(session)
+    const text = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: JSON.stringify({ attachment: uploaded }) }] })
+    const image = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'image', attachment: uploaded }] })
+    const snapshot = vi.spyOn(session, 'snapshotEvents').mockImplementation(() => [...before(),
+      { type: 'agent/inbox/spliced', data: { inserted: [text] } }] as never)
+    await assets.removeImages([firstAsset(generated)])
+    expect((await execute(ctx, session, { operation: 'edit', prompt: 'copy', target: { attachment: uploaded } })).isError).toBe(true)
+    snapshot.mockImplementation(() => [...before(), { type: 'agent/inbox/spliced', data: { inserted: [image] } }] as never)
+    expect((await execute(ctx, session, { operation: 'edit', prompt: 'copy', target: { attachment: uploaded } })).isError).toBe(false)
+    expect(editImages).toHaveBeenCalledOnce()
+  })
+
 })
