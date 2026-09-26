@@ -5,7 +5,7 @@ import { parseOpenAICodexVerifiedCompatibility } from '../src/update.ts'
 const catalog = {
   schemaVersion: 1 as const,
   checkedAt: '2026-09-23',
-  latestDshVersion: '0.1.7-rc.1',
+  latestDshVersion: '0.1.7-rc.2',
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
     { version: '0.1.0-alpha.4.15', verifiedDshVersions: ['0.1.1-rc.2'] },
@@ -43,6 +43,7 @@ const catalog = {
     { version: '0.1.0-alpha.4.47', verifiedDshVersions: ['0.1.7-rc.1'] },
     { version: '0.1.0-alpha.4.48', verifiedDshVersions: ['0.1.7-rc.1'] },
     { version: '0.1.0-alpha.4.49', verifiedDshVersions: ['0.1.7-rc.1'] },
+    { version: '0.1.0-alpha.4.50', verifiedDshVersions: ['0.1.7-rc.1', '0.1.7-rc.2'] },
   ],
 }
 
@@ -50,7 +51,7 @@ describe('Codex Connect verified DSH compatibility', () => {
   it('keeps the committed public catalog valid', async () => {
     const contents = await readFile(new URL('../verified-compatibility.json', import.meta.url), 'utf8')
     expect(parseOpenAICodexVerifiedCompatibility(JSON.parse(contents) as unknown)).toMatchObject({
-      latestDshVersion: '0.1.7-rc.1',
+      latestDshVersion: '0.1.7-rc.2',
       pluginVersions: catalog.pluginVersions,
     })
   })

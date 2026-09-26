@@ -1,0 +1,1184 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.0-alpha.4.50",
+  "base": "58281373c1ba1db7b10ed074a61ecc5a4a73f2b3",
+  "sourceSHA256": {
+    "src/reserve-usage.ts": "801763199c5a65a6ec8776c95b76ca18e238a3fc852ebce72ce5f195fa90e5b2",
+    "src/view-image.ts": "dedc666feb7c291c0baa59b31dc77db2145f3aea014f31a10c9cdb9d364a8775",
+    "src/adaptive-task-checkpoint.ts": "e57b83fae22176ddde04d2decf8a3232d288df75ab5c4053bbb373ecc076c0c1",
+    "src/reserve-state.ts": "75adc539e892236024e9ed6307d3f543e38743c8a4f72d598fa5a65d78d73b84",
+    "src/search-route-override.ts": "ae3eaf394c0e26758fb86de737153ffc7959145bec98363fe6c621e09b511eca",
+    "src/image-presentation.ts": "5afc71cd5169c51a90c13e40b0515ff1955d5017b51fa019aead6bd9878581a6",
+    "src/provider-proxy.ts": "c5180c9fc0b36865ec99aba56ea6f3a3fee37d0a35181305238d9579fa14c9bb",
+    "src/usage.ts": "77977a33a2b79e32aae2b0b74d4502dde1a24f278e20d82d11bbb241476c26a0",
+    "src/doctor.ts": "c6b6e8a5b516a86ea30c488026ace56d864a2a71a90f2937bab6682d0b645f69",
+    "src/auto-review-cli.ts": "ea4b35218ce986516579dbf09f2ab7a0f3f5ebe71afd393d6b5dcd1ed96d1eba",
+    "src/adaptive-task-delegation-host.ts": "e5ab7dc274e7b92316e53de0a509ef2ab0a946c3b0ba0b23191e880483332c49",
+    "src/message-source.ts": "e5a8819a83591a2cfd5a2cf0e9379de2717f520125230ca37228fecd015dd0b7",
+    "src/fast-mode.ts": "1f54b545660ed36b2c998ac16e858863a27fa8d4c2953c155af7eb2c5468aa46",
+    "src/adaptive-task-delegation-ledger.ts": "79269cdc0a08a98cd6e9cb4b8e21fa65cf25587564ceabb14a6b8b111c182f02",
+    "src/native-compaction.ts": "985ded1899a6e23bf85dab46bd00353554956271321b7a6a689ddd88573f2fa2",
+    "src/auto-review-backend.ts": "7e6de5e9c17d0374ea65a044a22f79dba483c23764cce06312c7efeca166528d",
+    "src/invariant.ts": "5bd3302b24b7b26be098102b5d72916acafe485649e536eab5814628162b8589",
+    "src/model-routes.ts": "7222a1eda43bd4d6226ee402f5215312ba9851f7b59e14e5b991bd07159b0c33",
+    "src/image-assets.ts": "16859461f642275df8de3e6731eefaf09e3abe955cca239c5a552ca2b3144e2d",
+    "src/search.ts": "1b98dcd5b3fba86e23d162faada7e3515e7b152a35832035662dbd0f0394702d",
+    "src/adaptive-task-transitions.ts": "1ec62fe7ed50758526f5ab835b9a564c00d9fa229eb07428452d36b08b03d941",
+    "src/history-migration.ts": "7b46676bcd5f991da2ec10d6bb68b4115037f4cc70ffb188317030fe42c95e82",
+    "src/update-paths.ts": "3164d83f122bba48c36f74bd6621b608b829bbc023d67c9ef3123f59a6435ef2",
+    "src/adaptive-task-evidence.ts": "283df1351621379e2bf33a8211c8cb44f58767f48062fe9de3bd4f7c921a4faf",
+    "src/proxy-routes.ts": "65e063f656af515420b18fc3060acb3538bdefcbeeec04db9f80c967f8ceba7e",
+    "src/request-backoff.ts": "04b38842a180e82e4e1a3a2c16be21313e6636686ce1916903515529c95b4755",
+    "src/adaptive-task-context.ts": "bb1af96952ef589ca3650dc69bc7aac507fac96fdf848b625ceb645da69c2e65",
+    "src/fast-mode-paths.ts": "8ca36f2bc1fffccc8f33a88c6d90a382e3dca9a3a7046fb4787693e805e37d89",
+    "src/auth-routes.ts": "dfd30716153c0ccd6af2760728a811cc1f4cb18c394786e0a61c98f91d6ba13e",
+    "src/auto-review-probe.ts": "2bd1e27e457c85032512bf3f5c3c922b24243d09bc066391d396f457ba230599",
+    "src/model-catalog.ts": "95f92cb7b49ab77a70e9ae884a138d88bc13a0b789bb148ebe138677149a05c2",
+    "src/adaptive-task-scope.ts": "19fac16eba3c4846774748e2c2faf732cdcf13d284852ad85c4a7624a55d9003",
+    "src/adaptive-task-http.ts": "502b81a0dc84266c2c14cfdc64122b8c3a63ad3fedcdd04f34d47e854b34bb4d",
+    "src/model-contract.ts": "e5d13038f23fea9e2f203a5f7ac29985f54e85f26f3bcd768d98fd839ddcd9e2",
+    "src/adaptive-task-contract.ts": "033d62cf5a4ff6741132b7abfed7308f8c058a35217a7d970d679bdc507102e5",
+    "src/settings-contract.ts": "c9bb66cf95e4a2ab1d4418999b5fa497da99bb6f5d3c50b9fefa09f646becddb",
+    "src/image-inputs.ts": "113d41533ff8ee0cde9c6415aa5d11657de779a10fe45ac7c944521c3e26d98d",
+    "src/auto-review-contract.ts": "1e91762c82038389e0493eb1b46b0681cb63386805d65a2ba25078981845189c",
+    "src/adaptive-task-publication.ts": "e98cb1b118312cffc67f3a3fdf9dfa5a6e048699042411c6037ed8fc8d3f7a62",
+    "src/backend-request-policy.ts": "897c0ded8c9cceeeaf939c1630dcce360f95e25fbbc7cc84eb73207485e888fa",
+    "src/image-format.ts": "a2e3c76c9151b8a8e4d1cf6c006b4c98dd7a59890e251c9c1e520a2f48281523",
+    "src/adaptive-task-delegation-contract.ts": "1f70250281ba79c460586621ee53edce910fd7db7c8285d048c035faad8b60c3",
+    "src/adaptive-task-store.ts": "b4369eab7436c8acff2d910615f5d213a2293cb6acbcb2b2f22d1f2c75dd4a11",
+    "src/backend-request.ts": "46a0b01778ba422204f653667a4314a17eea2cf728ac8f04cc4631a978921edb",
+    "src/image-assets-contract.ts": "c7d96b3905de4c1d839843b38a354f85178f404b75acbc174095e1892420e244",
+    "src/image-error-contract.ts": "64780e03d3d856d3a4f096fe1cf72ae6d40a63aa8b8f3d846d999557aef1cb5e",
+    "src/update-routes.ts": "547aa5acbda8452df5067ab36da5b80dd4c741eb702c9095fdf2fe3026508e43",
+    "src/image-tool.ts": "fbf19a8abd4d7ae948a4dc2a1cfa877835bd1cea5b6bb111ad7f4e233f25887d",
+    "src/image-asset-routes.ts": "f9e5ca0a4e531dbb9f61f97350d28ba2e94f9200360203b31de99f5f67214ce3",
+    "src/bin.ts": "d1d4459c8a44ef8ae04e81507d614ec5435a5ce6a463e4f3ebd48c585c578575",
+    "src/undici-runtime.ts": "424932cfd8f9173052d41bf350139c9d62c5f75dc8bf4841441ea7392ec64633",
+    "src/auth-paths.ts": "86223a58ca4af03328bec9d95fefae02474c1c0263522caaec45ce3a088ec466",
+    "src/fast-mode-defaults.ts": "dda0457391d08ed91f536f638bc5d4e79033d59bfdbe0bc21bc0dcf665de242f",
+    "src/capability-cli.ts": "f7d08d7e4654dc12d70db9a37d7de383718f6ea5dcad9189105a82a3e0e6bde1",
+    "src/trusted-origins.ts": "3f843b8851288132a716a359005ed122c2f23d95c59a36771e79f65eda5f27a5",
+    "src/auto-review.ts": "0ab9717261bddc3e22480bbf2471594b0aaaf4a4f03ae631590a6decc255be29",
+    "src/image-history.ts": "a2971f2c2740c7330a2d1ffdd1b6ab07babd0d72b9c006e3318ccf30cd3820b3",
+    "src/adapter.ts": "81d3134d7b448aa78d0017924aee609fad2d3e636469f18948923d63dd4c2e90",
+    "src/adaptive-task-runtime.ts": "0370d0a83884b1a1cb3d1902d55c0b770ffbbd0845ec2181cd36ca3b988b0d00",
+    "src/adaptive-task-control-runtime.ts": "e1d9379e3b1fc88caf1306a3e27d4bb4f950113e9c904807bd03a3cfea064798",
+    "src/image-input-contract.ts": "39896dfde4ff2ead209d725241bc37909203b727d07485a0131a077e1a7d9bb4",
+    "src/auth-error.ts": "e593303916009648e6264a9ba5c7be12e7546238038919f72195d88c636ff223",
+    "src/transport.ts": "2d33bfd23cea65bb60d8eae54c04f9a2cbd06cbab7503dc02f8a0421962645a7",
+    "src/capability-diagnostics.ts": "92f82563aa2f0f97d1d309591bc2dc5b14a11afc873bf40f1dca01a643e9a9aa",
+    "src/index.ts": "92372882cc79601ce60286e342a9ce7d862e819054bfc4345cda0d8a60069b81",
+    "src/version.ts": "d7be267d5edaca332d04d90b4fdc937e4f153fc9d1a246225249d44d82f0be83",
+    "src/public-http.ts": "163ad59fbf94671daa7cc8efe7cefb6990c78bffccfc8307cc092b65b5431623",
+    "src/account-profile.ts": "e69568520106f6fa7aec3056dd3881de2c244761d4aff1d46e5551f39531f176",
+    "src/request-diagnostics.ts": "6768c5ca0f56d5b3f277590a03647d22b2378ee5bfd573d2fecd9009c70f2c9a",
+    "src/capability-probe.ts": "840532ea92f26494bc45bd2a3ba13f96fb0cf59e4907fe3923206eae8405ecfa",
+    "src/adaptive-task-artifacts.ts": "b9f68606fb6baf7a719174537e51b40db9b180da19877016187a8275635ee83c",
+    "src/image-edit-request.ts": "4ddbb9c8f48bb4f76592a4d755ccff0d8bf9c187f746829a5676ffc8b7321a12",
+    "src/base64.ts": "5312612a7ec8936ceaa0a91c8bdc5ae34090a348d53d1626eac7305c23607ee7",
+    "src/proxy-paths.ts": "e983a261faa8acda5ffa26ad3c44bfec7d8012f65b3fecaf3ea56f6856d6138b",
+    "src/reserve-routing.ts": "dd30b197d85f54a3fd7db1eec81eb831e80721c31fd050f050b93988fc5fc336",
+    "src/compatibility.ts": "9783933ab5b760f404439816b7bb048916d7fe9bf79e8238c3363e33b78dec5a",
+    "src/auth.ts": "8cd0564e8f9160b13755d2ebc9f4b27bacd4ef011ae2cdae242f31feee707ce3",
+    "src/store.ts": "fd97aadb4e3d97eef49ab31449eff777c5aa7f5809bf88922e21918db5ee9911",
+    "src/quota-state.ts": "4bdb9b445190c4afa3ebe89bf112a29bc836cae0def8b3a87ef2f5f6fc32894c",
+    "src/update.ts": "82ba08ed5ccd0d3bd1457e87f8d2e77881f29c88e10fa61ad370263d4fc497ff",
+    "src/adaptive-task-delegation.ts": "5410d721ad02c0c04ae31d560217e7fbdd441b98922d76596af387df805afd62",
+    "src/client/index.tsx": "1aeec5a809130b9a5af13cfeebf3c2054a75baab7aeebd83b9f7fe5cf28e4cb1",
+    "src/client/PublishedAdaptiveTaskControl.tsx": "c294ff55d9f9535527fc5724f62f42041059af3b6a786542f2bb1ff374b92977",
+    "src/client/OpenAICodexQuotaIndicator.tsx": "97ed16cbc295c03dad1aa15626514b0ba0bf079c43d708df64a20808b272dc99",
+    "src/client/OpenAICodexUpdateNotice.tsx": "ae4c367cf4e1b60a866ac57a0b6badae4dc2824bd521b76b4b9c477b1e708a57",
+    "src/client/locales.ts": "e7ed1f030e2e417905d54ba65c92839f46e2fff2113325883d0fa11e09ba5b3d",
+    "src/client/OpenAICodexConfiguration.tsx": "c504e394eaae102477d5cbcceaf56a3ea51f1103e21c26c380cf43335ce4d705",
+    "src/client/request-json.ts": "7b48feb86afad3c3625d5e0c5185647cbf4f83d2916d113092acbeee41e9e77e",
+    "src/client/OpenAICodexSettings.tsx": "2d37d388ab62df44b252889c7ef258bde28835b7fc41c0231a7e03522bd7d1ea",
+    "src/client/OpenAICodexFastModeToggle.tsx": "b90be83856ab07c34c8f6a749e914b619ff7998f3254a11a2e902040a552ce0e",
+    "src/client/OpenAICodexModelsCard.tsx": "476eefd5da44aff2c49e2642979c0aadfc3387a1b5056363174093054b6eee31",
+    "src/client/TaskDelegationConsent.tsx": "d8b0bbd5676c8b816782e0d79792ec4622fdd5f7057f1e92a437e46f57ce6c41",
+    "src/client/update-store.ts": "9d3289d6750c3a0079887b27ae197107cbc2527c3b6c842413c1f2fae136f7d6",
+    "src/client/config-form.ts": "6f7352f45c467b688c1a75caa1878cbb28f21bed6b3ba2327694d9f7bfa7f94f",
+    "src/client/CodexImageTurnTail.tsx": "3dcc54cb6a06f535be65398e65dc3eb3109e912d10c640d6ded2ed58ebbe8500",
+    "src/client/account-store.ts": "6b8d40d17bd06beac5cde8c125c19e86caaa538c27e49da93d4ef685c59ebb31",
+    "src/client/OpenAICodexPluginCard.tsx": "bf57a2b69c0c791b0d9ce37a3daf49acc84ff9f76810dee0e3a82407c20774ea",
+    "src/client/CodexImageGallery.tsx": "2886c0d3f6e7eaa16ecdb707445e726ca9fd3124039002a2dcda98dc39710214",
+    "src/client/AdaptiveTaskControl.tsx": "6024672e50151ae8e69e23b363b9fc333ec84cf5961d538125d56696a99ca24c",
+    "src/client/image-result-presentation.ts": "4bd40832a515981d34c4270f03f49ff6513356b73d4438b43c9824827fe85c76",
+    "src/client/CodexImageToolView.tsx": "c1343156d7cd3a88c8078b70a2bd1b3f8f904ef0a62864a5647224a843301801"
+  },
+  "runtimeSHA256": {
+    "lib/client.js": "a504ca36553904ed2aeff4ac3d99a391a8bbf2e358272b7469de753061fd9527",
+    "lib/models-DV5vWzMC.js": "b5f218db8aeaa48c66f114702389017fc76296ae16bd228dfe5b8d21207b8868",
+    "lib/bin.js": "d547638ad57c048f1972de60f133ed1c34b70931a9324627cd74e0a1e45a594f",
+    "lib/index.js": "115db6115858152b03729245d21d5930fb13026a2cc0ede42fcdf85e0732ab41",
+    "lib/openai-codex-responses-BG-O8Ytj.js": "3b6808764d491c1f6e1c3411ccbe74da27178815f3b944c6570f094d408db0df",
+    "lib/invariant.js": "7f87b7a1de7c8d071e15739a9f4223a7b41f2a79784c3b2de42c4acfee102c30",
+    "lib/invariant.d.ts": "cb61343f496a0735d9052a7447a596db17c106b65f2288e785306a79f57cb61f",
+    "lib/undici-runtime-Ctml-NLj.js": "17b03669143d76480464213d49a4f26a55bd328ce5c404f2eacd02e27a8eb343",
+    "lib/index.d.ts": "af26e6eaa115dfdeb9a31043f20f4695ccb6e1a849b7e29713c0665e6f5ba92a"
+  },
+  "validation": {
+    "rc1Full": {
+      "files": 125,
+      "passed": 1452,
+      "failed": 0
+    },
+    "rc1Browser": {
+      "files": 13,
+      "passed": 73,
+      "failed": 0
+    },
+    "rc2Browser": {
+      "files": 13,
+      "passed": 73,
+      "failed": 0
+    },
+    "rc2Focused": {
+      "files": 9,
+      "passed": 130,
+      "failed": 0
+    },
+    "compatibilityRed": {
+      "passed": 14,
+      "failed": 1,
+      "skipped": 0
+    },
+    "mandatoryUiRed": {
+      "passed": 0,
+      "failed": 5,
+      "skipped": 43
+    },
+    "compatibilityFinal": {
+      "passed": 48,
+      "failed": 0,
+      "skipped": 0
+    },
+    "rc2Additional": {
+      "passed": 178,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "limits": {
+    "liveImageRequests": 0,
+    "liveModelSelectionRequests": 0,
+    "dailyServicesChanged": false,
+    "latestPromotion": false,
+    "taskOrchestrationReopened": false
+  },
+  "rc2SourceFixture": {
+    "host": "0.1.7-rc.2",
+    "devFixtureExtra": "@deepseek-ai/dsh-util-code-language@0.1.7-rc.2",
+    "priorBrowser": "failed-module-resolution then timeout",
+    "realProviderRequests": 0,
+    "steps": [
+      {
+        "name": "install",
+        "exit": 0
+      },
+      {
+        "name": "typecheck",
+        "exit": 0
+      },
+      {
+        "name": "browser",
+        "exit": 0
+      },
+      {
+        "name": "focused",
+        "exit": 0
+      }
+    ]
+  },
+  "independentReviews": [
+    {
+      "verdict": "BLOCKED",
+      "finding": "Required UI peers omitted from same-version checks",
+      "inputSha256": "606e0875417e94d844c90acf5f1631c0a1257addc16c365fcb6be6c4df1181e0",
+      "reportSha256": "8c3f3cee329239eba3293401c4a8c84c55d443216d7ab13f2551079f5acd0540"
+    },
+    {
+      "verdict": "PASS",
+      "model": "gpt-6-astra",
+      "inputSha256": "fc62714c31cab46943d41b4fb41b69cb7737b8af6740d970e5228b471ff5ac47",
+      "reportSha256": "39eb7ac3d99fcf39ae0d24f297984c3d933cf17f1116a604368a22d231d06646"
+    }
+  ],
+  "investigationFailures": [
+    "Initial undeclared canary rc.2 fixture changed to rc.3 after exact rc.2 support was introduced; original failure retained locally.",
+    "rc.2 source typecheck required pending:null in three test fixtures.",
+    "rc.2 source-browser fixture initially lacked the new external UI code-language module; installed the actual exact rc.2 helper, no shim or host modification; initial run timed out.",
+    "Pre-review-fix installation matrix was stopped; no acceptance claimed for it."
+  ],
+  "apiComparison": [
+    {
+      "package": "@deepseek-ai/dsh-agent",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "e7b8bf1be4205401c0b0f146148719e1755dc98abc878c8b98fcd0ecc290e76d",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-agent-loop",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "1f5ee5e938655ca0f501daa491c5c09f810ae1c0b71a86fcdd32b5462a8563c8",
+      "changed": [
+        "lib/types/runtime-context.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-atomic-write",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "224ba6b23293385afe0a3a644737f33ede05b5d1475c3992866fa2eeb3a17b07",
+      "changed": [
+        "lib/types/index.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-attachment",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "74495a054b54ced8636026f56fc531a3549b07729dec76bad5abe09fdfdb5540",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-authorization",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "8667ca6b2ca0e884233b00e1c1b1d219239ef54846951ef4fdf12a67b4e57eae",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-client-ui-chat",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "473d1f8f6e5d5e76493df540a590533fbbe7e1524b0eb2aad1624a9ad744fa4c",
+      "changed": [
+        "lib/types/client/chat/AssistantMarkdown.d.ts",
+        "lib/types/client/contract/chat-visibility.d.ts",
+        "lib/types/client/index.d.ts",
+        "lib/types/client/locale.d.ts",
+        "lib/types/client/conversation-nodes/message.d.ts",
+        "lib/types/client/chat/QuotaNoticeHost.d.ts",
+        "lib/types/client/contract/slots.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-client-ui-layout",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "f8d1c8c4ca87329cc2921aff237334f01067d0173e57e3c2ec64e10ab2951909",
+      "changed": [
+        "lib/types/client/index.d.ts",
+        "lib/types/client/service.d.ts",
+        "lib/types/client/shortcut-locales.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-client-ui-primitives",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "e39faf31606713e64f926ecfea8804a9cb7009bedebc5f6c406e86c53f1f539b",
+      "changed": [
+        "lib/types/Button.d.ts",
+        "lib/types/code-highlighting.d.ts",
+        "lib/types/settings-form/fields.d.ts",
+        "lib/types/focus.d.ts",
+        "lib/types/guide-artwork.d.ts",
+        "lib/types/markdown/highlight.d.ts",
+        "lib/types/HoverCard.d.ts",
+        "lib/types/icons/index.d.ts",
+        "lib/types/index.d.ts",
+        "lib/types/input-modality.d.ts",
+        "lib/types/keyboard-composition.d.ts",
+        "lib/types/Menu.d.ts",
+        "lib/types/MenuSurface.d.ts",
+        "lib/types/Modal.d.ts",
+        "lib/types/plugin-artwork.d.ts",
+        "lib/types/icons/shared-artwork.d.ts",
+        "lib/types/ShortcutKeys.d.ts",
+        "lib/types/Tooltip.d.ts",
+        "lib/types/useModalLayer.d.ts"
+      ],
+      "removed": [
+        "lib/types/OnboardingSurface.d.ts"
+      ]
+    },
+    {
+      "package": "@deepseek-ai/dsh-client-ui-tool",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "5ae2c1a13e553b4fb5a7e4852ad63002253d7ae31f777b8b2ae9e48d8ec0e2ac",
+      "changed": [
+        "lib/types/client/tool/components/ToolRow.d.ts",
+        "lib/types/client/tool/models/web-card-model.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-commands",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "3ba2638b147cf7fc0462b8117c7f9affa2ab0ebc82c9d40b6b49699d96ed07b3",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-compaction",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "3282a00bec6d784cce04ea8f686c32894bb6e69bc9af20fb5fc77dfd68b19ad9",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-compaction-basic",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "b759fc49f76470fef70e86997fb1af2141dae64a03edfefba94cc3966c10f35f",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-fs",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "016d426d34c3ba1bcc94579db94364bfc3d123f5a09d711c3162af5d6912b62b",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-home-paths",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "c92e867f45fdacdabef17505f2cf9efa0648840701455d50d22112afbea40b68",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-host-webserver",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "e828e6c1bca886537f96ad455fe98239a57f007ff4882f84752c8eb3ce4b0cea",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-invariants",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "c5ee1f5582c365c54d853e77a3d8f89b9a1d04586268f8d6b4a30e02f1e6c091",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "34270b89310f6cd027106b0fefb58bde3ef144dd74146c5f975ed4266e0bb3c1",
+      "changed": [
+        "lib/types/content.d.ts",
+        "lib/types/error.d.ts",
+        "lib/types/index.d.ts",
+        "lib/types/types.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm-pi-ai",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "3fd5bc7df79eb41a48cbf48c626ff7410e3dee5e36687cc94d8586c59725196a",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-session",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "f7deaec7289aa3b93cf8f8551a59cb811ada63ddea97d3e4c87f9b6f59c1e783",
+      "changed": [
+        "lib/types/index.d.ts",
+        "lib/types/tool-history.d.ts",
+        "lib/types/types.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "b810feb11e4ea635948763c8c079ea02e07728c0d86975e160ca18c6c08e5ff3",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-session-projection",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "e8e457916347304645c14ddf8780ded998dbc90588baeae9df4d42c180b510f2",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-settings",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "934205e502d20c2a8afc6f697c582e9e9a093c61165d8f8ea5b2c0ca5f299a95",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-tools",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "1ed94fb52cc9106ec30f9a999e1262deef9cb514b9d745e968f1f6ec9c995f80",
+      "changed": [
+        "lib/types/index.d.ts"
+      ],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-util-values",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "5e61a75f41d682800285c933104eb4a50ca114769d0f15e3f06e23c91c895db7",
+      "changed": [],
+      "removed": []
+    },
+    {
+      "package": "@deepseek-ai/dsh-web",
+      "version": "0.1.7-rc.2",
+      "gitHead": null,
+      "tarballSHA256": "ac6554bb0abb3f2ec593324e58f61db4e7ccbefd0feede999697b9527283ba5b",
+      "changed": [],
+      "removed": []
+    }
+  ],
+  "recordedAt": "2026-09-26T05:58:38.867269+00:00",
+  "matrix": {
+    "pluginVersion": "0.1.0-alpha.4.50",
+    "sameArtifact": true,
+    "reports": [
+      {
+        "dshVersion": "0.1.7-rc.1",
+        "nodeVersion": "v22.22.3",
+        "pluginVersion": "0.1.0-alpha.4.50",
+        "pluginArtifactSha256": "d7c50c41fc39f024d08c1b45444aec640f1ab1d4107059e0733de213dd0bc1ff",
+        "defaultsUnchanged": true,
+        "capabilities": {
+          "enableProxy": false,
+          "enableSearch": false,
+          "enableReserveFallback": false,
+          "enableNativeCompaction": false,
+          "enableImageTool": false,
+          "enableImageGeneration": false,
+          "enableAutoReview": false
+        },
+        "runtime": {
+          "schemaVersion": 1,
+          "provider": "openai-codex",
+          "modelCount": 10,
+          "reasoningModelCount": 10,
+          "preparedModelCount": 10,
+          "disposalVerified": true,
+          "reserveTransitionsVerified": true,
+          "nativeCompactionLifecycle": {
+            "syntheticOnly": true,
+            "freshProcesses": 10,
+            "encodings": [
+              "none",
+              "zstd"
+            ],
+            "phases": [
+              "write",
+              "resume-fork",
+              "verify-child",
+              "failure-paths",
+              "automatic"
+            ],
+            "reports": [
+              {
+                "phase": "write",
+                "realTransaction": true,
+                "physicalCheckpoint": true,
+                "checkpointEstimatedTokens": 228,
+                "shadowedEstimatedTokens": 7792,
+                "compression": "none",
+                "pid": 59264
+              },
+              {
+                "phase": "resume-fork",
+                "resumedWithCreationDisabled": true,
+                "toolRoundTrip": true,
+                "reasoningReplay": true,
+                "forkPersisted": true,
+                "parentChildIsolated": true,
+                "compression": "none",
+                "pid": 59271
+              },
+              {
+                "phase": "verify-child",
+                "childResumed": true,
+                "childToolRoundTrip": true,
+                "parentUnchanged": true,
+                "compression": "none",
+                "pid": 59273
+              },
+              {
+                "phase": "failure-paths",
+                "fallbackAndCancellationVerified": true,
+                "cases": [
+                  "http-reject",
+                  "truncated",
+                  "empty-native",
+                  "incomplete-terminal",
+                  "oversized-checkpoint",
+                  "oversized-stream",
+                  "caller-cancel"
+                ],
+                "compression": "none",
+                "pid": 59277
+              },
+              {
+                "phase": "automatic",
+                "syntheticOnly": true,
+                "scenarios": [
+                  {
+                    "scenario": "pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "below-threshold",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 1100
+                  },
+                  {
+                    "scenario": "auto-disabled",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "other-error",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "INVALID_REQUEST"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-bounded",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED",
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-no-progress",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "repeated-pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 2,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 2,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "unshrinkable-tail",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 2,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 13841
+                  }
+                ],
+                "compression": "none",
+                "pid": 59278
+              },
+              {
+                "phase": "write",
+                "realTransaction": true,
+                "physicalCheckpoint": true,
+                "checkpointEstimatedTokens": 228,
+                "shadowedEstimatedTokens": 7792,
+                "compression": "zstd",
+                "pid": 59282
+              },
+              {
+                "phase": "resume-fork",
+                "resumedWithCreationDisabled": true,
+                "toolRoundTrip": true,
+                "reasoningReplay": true,
+                "forkPersisted": true,
+                "parentChildIsolated": true,
+                "compression": "zstd",
+                "pid": 59284
+              },
+              {
+                "phase": "verify-child",
+                "childResumed": true,
+                "childToolRoundTrip": true,
+                "parentUnchanged": true,
+                "compression": "zstd",
+                "pid": 59292
+              },
+              {
+                "phase": "failure-paths",
+                "fallbackAndCancellationVerified": true,
+                "cases": [
+                  "http-reject",
+                  "truncated",
+                  "empty-native",
+                  "incomplete-terminal",
+                  "oversized-checkpoint",
+                  "oversized-stream",
+                  "caller-cancel"
+                ],
+                "compression": "zstd",
+                "pid": 59294
+              },
+              {
+                "phase": "automatic",
+                "syntheticOnly": true,
+                "scenarios": [
+                  {
+                    "scenario": "pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "below-threshold",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 1100
+                  },
+                  {
+                    "scenario": "auto-disabled",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "other-error",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "INVALID_REQUEST"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-bounded",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED",
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-no-progress",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "repeated-pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 2,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 2,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "unshrinkable-tail",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 2,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 13841
+                  }
+                ],
+                "compression": "zstd",
+                "pid": 59298
+              }
+            ]
+          },
+          "images": {
+            "syntheticOnly": true,
+            "generated": 2,
+            "edited": 2,
+            "codeRuns": 2,
+            "dispatchEvent": "tool/ptc-dispatch",
+            "originalDownloadVerified": true,
+            "inheritedOriginalVerified": true,
+            "earlierForkDenied": true,
+            "unrelatedSessionDenied": true,
+            "editSourcesVerified": true,
+            "inheritedEditVerified": true,
+            "invalidEditRefused": true,
+            "realProviderRequests": 0
+          }
+        }
+      },
+      {
+        "dshVersion": "0.1.7-rc.2",
+        "nodeVersion": "v22.22.3",
+        "pluginVersion": "0.1.0-alpha.4.50",
+        "pluginArtifactSha256": "d7c50c41fc39f024d08c1b45444aec640f1ab1d4107059e0733de213dd0bc1ff",
+        "defaultsUnchanged": true,
+        "capabilities": {
+          "enableProxy": false,
+          "enableSearch": false,
+          "enableReserveFallback": false,
+          "enableNativeCompaction": false,
+          "enableImageTool": false,
+          "enableImageGeneration": false,
+          "enableAutoReview": false
+        },
+        "runtime": {
+          "schemaVersion": 1,
+          "provider": "openai-codex",
+          "modelCount": 10,
+          "reasoningModelCount": 10,
+          "preparedModelCount": 10,
+          "disposalVerified": true,
+          "reserveTransitionsVerified": true,
+          "nativeCompactionLifecycle": {
+            "syntheticOnly": true,
+            "freshProcesses": 10,
+            "encodings": [
+              "none",
+              "zstd"
+            ],
+            "phases": [
+              "write",
+              "resume-fork",
+              "verify-child",
+              "failure-paths",
+              "automatic"
+            ],
+            "reports": [
+              {
+                "phase": "write",
+                "realTransaction": true,
+                "physicalCheckpoint": true,
+                "checkpointEstimatedTokens": 228,
+                "shadowedEstimatedTokens": 7792,
+                "compression": "none",
+                "pid": 62193
+              },
+              {
+                "phase": "resume-fork",
+                "resumedWithCreationDisabled": true,
+                "toolRoundTrip": true,
+                "reasoningReplay": true,
+                "forkPersisted": true,
+                "parentChildIsolated": true,
+                "compression": "none",
+                "pid": 62203
+              },
+              {
+                "phase": "verify-child",
+                "childResumed": true,
+                "childToolRoundTrip": true,
+                "parentUnchanged": true,
+                "compression": "none",
+                "pid": 62205
+              },
+              {
+                "phase": "failure-paths",
+                "fallbackAndCancellationVerified": true,
+                "cases": [
+                  "http-reject",
+                  "truncated",
+                  "empty-native",
+                  "incomplete-terminal",
+                  "oversized-checkpoint",
+                  "oversized-stream",
+                  "caller-cancel"
+                ],
+                "compression": "none",
+                "pid": 62210
+              },
+              {
+                "phase": "automatic",
+                "syntheticOnly": true,
+                "scenarios": [
+                  {
+                    "scenario": "pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "below-threshold",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 1100
+                  },
+                  {
+                    "scenario": "auto-disabled",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "other-error",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "INVALID_REQUEST"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-bounded",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED",
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-no-progress",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "repeated-pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 2,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 2,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "unshrinkable-tail",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 2,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 13841
+                  }
+                ],
+                "compression": "none",
+                "pid": 62214
+              },
+              {
+                "phase": "write",
+                "realTransaction": true,
+                "physicalCheckpoint": true,
+                "checkpointEstimatedTokens": 228,
+                "shadowedEstimatedTokens": 7792,
+                "compression": "zstd",
+                "pid": 62219
+              },
+              {
+                "phase": "resume-fork",
+                "resumedWithCreationDisabled": true,
+                "toolRoundTrip": true,
+                "reasoningReplay": true,
+                "forkPersisted": true,
+                "parentChildIsolated": true,
+                "compression": "zstd",
+                "pid": 62221
+              },
+              {
+                "phase": "verify-child",
+                "childResumed": true,
+                "childToolRoundTrip": true,
+                "parentUnchanged": true,
+                "compression": "zstd",
+                "pid": 62226
+              },
+              {
+                "phase": "failure-paths",
+                "fallbackAndCancellationVerified": true,
+                "cases": [
+                  "http-reject",
+                  "truncated",
+                  "empty-native",
+                  "incomplete-terminal",
+                  "oversized-checkpoint",
+                  "oversized-stream",
+                  "caller-cancel"
+                ],
+                "compression": "zstd",
+                "pid": 62236
+              },
+              {
+                "phase": "automatic",
+                "syntheticOnly": true,
+                "scenarios": [
+                  {
+                    "scenario": "pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "below-threshold",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 1100
+                  },
+                  {
+                    "scenario": "auto-disabled",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "other-error",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 0,
+                    "ordinaryRequests": 3,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "INVALID_REQUEST"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-bounded",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 1,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED",
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "overflow-no-progress",
+                    "syntheticOnly": true,
+                    "trigger": "agent/request-error",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [
+                      "CONTEXT_WINDOW_EXCEEDED"
+                    ],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "repeated-pressure",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 2,
+                    "ordinaryRequests": 4,
+                    "surfaceReplacements": 2,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 9266
+                  },
+                  {
+                    "scenario": "unshrinkable-tail",
+                    "syntheticOnly": true,
+                    "trigger": "agent/pre-step",
+                    "nativeRequests": 1,
+                    "ordinaryRequests": 2,
+                    "surfaceReplacements": 0,
+                    "failureCodes": [],
+                    "measuredTokensBefore": 13841
+                  }
+                ],
+                "compression": "zstd",
+                "pid": 62242
+              }
+            ]
+          },
+          "images": {
+            "syntheticOnly": true,
+            "generated": 2,
+            "edited": 2,
+            "codeRuns": 2,
+            "dispatchEvent": "tool/ptc-dispatch",
+            "originalDownloadVerified": true,
+            "inheritedOriginalVerified": true,
+            "earlierForkDenied": true,
+            "unrelatedSessionDenied": true,
+            "editSourcesVerified": true,
+            "inheritedEditVerified": true,
+            "invalidEditRefused": true,
+            "realProviderRequests": 0
+          }
+        }
+      }
+    ],
+    "archiveScope": "Tested before final evidence and verified-pair annotations; identical final runtime bytes. Exact-head CI rechecks the final archive."
+  }
+}

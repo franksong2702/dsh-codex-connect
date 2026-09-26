@@ -23,8 +23,9 @@ function json(value: unknown, status = 200): Response {
   })
 }
 
-function directoryState(model: string, provider = 'openai-codex'): ModelDirectoryState {
+function directoryState(model: string, provider = 'openai-codex'): ModelDirectoryState & { pending: null } {
   return {
+    pending: null,
     current: { provider, model },
     routable: true,
     groups: [],

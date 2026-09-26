@@ -5,11 +5,18 @@
   },
   "dshPluginApi": {
     "version": "0.1.7-rc.1",
-    "versions": ["0.1.7-rc.1"],
+    "versions": [
+      "0.1.7-rc.1",
+      "0.1.7-rc.2"
+    ],
     "packages": [
       "@deepseek-ai/dsh-agent",
       "@deepseek-ai/dsh-atomic-write",
       "@deepseek-ai/dsh-attachment",
+      "@deepseek-ai/dsh-client-ui-chat",
+      "@deepseek-ai/dsh-client-ui-layout",
+      "@deepseek-ai/dsh-client-ui-primitives",
+      "@deepseek-ai/dsh-client-ui-tool",
       "@deepseek-ai/dsh-compaction",
       "@deepseek-ai/dsh-home-paths",
       "@deepseek-ai/dsh-host-webserver",

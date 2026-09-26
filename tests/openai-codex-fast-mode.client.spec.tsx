@@ -13,8 +13,9 @@ function t(key: OpenAICodexSettingsKey): string {
   return en[key]
 }
 
-function directoryState(model: string, provider = 'openai-codex'): ModelDirectoryState {
+function directoryState(model: string, provider = 'openai-codex'): ModelDirectoryState & { pending: null } {
   return {
+    pending: null,
     current: { provider, model },
     routable: true,
     groups: [],
