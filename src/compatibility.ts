@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-rc.1'
-export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION] as const
+export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION, '0.1.7-rc.2'] as const
 export const SUPPORTED_DSH_PLUGIN_API_RANGE = SUPPORTED_DSH_PLUGIN_API_VERSIONS.join(' || ')
 export const SUPPORTED_PI_AI_RANGE = '0.85.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
@@ -14,6 +14,10 @@ export const DSH_PLUGIN_API_PACKAGES = [
   '@deepseek-ai/dsh-agent',
   '@deepseek-ai/dsh-atomic-write',
   '@deepseek-ai/dsh-attachment',
+  '@deepseek-ai/dsh-client-ui-chat',
+  '@deepseek-ai/dsh-client-ui-layout',
+  '@deepseek-ai/dsh-client-ui-primitives',
+  '@deepseek-ai/dsh-client-ui-tool',
   '@deepseek-ai/dsh-compaction',
   '@deepseek-ai/dsh-home-paths',
   '@deepseek-ai/dsh-host-webserver',
@@ -167,7 +171,7 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
   const piVersion = packages[PI_AI_PACKAGE].installed
   const matchedPair = dshVersion === packages['@deepseek-ai/dsh-llm-pi-ai'].installed
     && dshVersion === packages['@deepseek-ai/dsh-compaction'].installed
-    && dshVersion === SUPPORTED_DSH_PLUGIN_API_VERSION
+    && typeof dshVersion === 'string' && isSupportedDshPluginApiVersion(dshVersion)
     && piVersion === SUPPORTED_PI_AI_RANGE
   return {
     schemaVersion: COMPATIBILITY_SCHEMA_VERSION,

@@ -7,7 +7,7 @@ import { OpenAICodexQuotaIndicator } from '../src/client/OpenAICodexQuotaIndicat
 import { en } from '../src/client/locales.ts'
 
 let hidden = false
-const state: ModelDirectoryState = { current: { provider: 'openai-codex', model: 'gpt-5.1-codex' }, routable: true, groups: [], failures: [], status: 'ready', error: null }
+const state: ModelDirectoryState & { pending: null } = { pending: null, current: { provider: 'openai-codex', model: 'gpt-5.1-codex' }, routable: true, groups: [], failures: [], status: 'ready', error: null }
 const directory: SnapshotStore<ModelDirectoryState> = { getSnapshot: () => state, subscribe: () => () => {}, update: () => {}, set: () => {} }
 const success = () => new Response(JSON.stringify({ status: 'signed-in', usage: { rateLimits: [] } }), { headers: { 'content-type': 'application/json' } })
 const mount = async () => { await act(async () => { render(<OpenAICodexQuotaIndicator directory={directory} t={key => en[key]} />) }) }

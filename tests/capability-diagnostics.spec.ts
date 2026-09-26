@@ -48,6 +48,39 @@ describe('capability evidence', () => {
     expect(f.probe).not.toHaveBeenCalled()
   })
 
+  it('accepts a complete rc.2 set and rejects mixed or missing host peers without reading credentials', async () => {
+    const f = fixture()
+    f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
+      '@deepseek-ai/dsh-llm': '0.1.7-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2',
+      '@deepseek-ai/dsh-compaction': '0.1.7-rc.2', '@earendil-works/pi-ai': '0.85.1',
+    } })
+    f.readVersion.mockResolvedValue('0.1.7-rc.2')
+    expect((await f.diagnostics.inspect({ ...f.request, probe: false })).checks.runtime.status).toBe('supported')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.7-rc.1' : '0.1.7-rc.2')
+    expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? undefined : '0.1.7-rc.2')
+    expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('unknown')
+    expect(f.read).not.toHaveBeenCalled()
+    expect(f.probe).not.toHaveBeenCalled()
+  })
+
+  it.each(['dsh-client-ui-chat', 'dsh-client-ui-layout', 'dsh-client-ui-primitives', 'dsh-client-ui-tool'])(
+    'rejects mixed or missing required UI peer %s before credential access', async peer => {
+      const f = fixture()
+      f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
+        '@deepseek-ai/dsh-llm': '0.1.7-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2',
+        '@deepseek-ai/dsh-compaction': '0.1.7-rc.2', '@earendil-works/pi-ai': '0.85.1',
+      } })
+      const name = `@deepseek-ai/${peer}`
+      f.readVersion.mockImplementation(async key => key === name ? '0.1.7-rc.1' : '0.1.7-rc.2')
+      expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
+      f.readVersion.mockImplementation(async key => key === name ? undefined : '0.1.7-rc.2')
+      expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('unknown')
+      expect(f.read).not.toHaveBeenCalled()
+      expect(f.probe).not.toHaveBeenCalled()
+    },
+  )
+
   it('treats file metadata and catalog membership as unknown without reading credentials or probing', async () => {
     const f = fixture()
     const report = await f.diagnostics.inspect({ ...f.request, probe: false })
