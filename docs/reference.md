@@ -94,6 +94,11 @@ Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; th
 
 #### Image editing in Alpha 4.48
 
+**Post-release review:** published Alpha 4.48 has two confirmed defects: a re-uploaded preview can select a historical original, and safe edit failure details are hidden. The fixes below describe this unreleased patch, not a republished 4.48.
+
+In this patch, a complete `attachment` selector matched to an actual user upload selects that copy's bytes, even when its ID, filename and dimensions match a generated preview. A bare `attachmentId` shared by uploads and generated results fails with an ambiguity message; `assetId` continues to select the exact stored original. Re-uploaded copies remain usable after the historical original is deleted. The model receives the complete bounded reference next to each image; no user lookup of opaque IDs is required. Failed input selections display only fixed, allowlisted reasons and recovery guidance and do not offer an unchanged retry. Unrecognized service errors stay hidden behind a generic explanation.
+
+
 With the existing image capability enabled, attach a target and optional references and describe their roles, for example: “Edit the first image; use only the colors of the second image and keep the subject.” You can also choose **Edit based on this image** on a previous result. The form waits for your instructions before submitting.
 
 The tool `codex_connect_image_generate` accepts `{"operation":"edit","prompt":"change the background","target":{"attachmentId":"<exact session attachment ID>"},"references":[]}`. Each optional reference is `{"image":{"attachmentId":"<exact ID>"},"purpose":"colors only"}`. Stored original results can instead use `{"assetId":"<exact original ID>"}`. These placeholders are illustrative, not usable IDs or permission grants. Normal conversation users do not need to look up IDs: the model receives stable image handles.

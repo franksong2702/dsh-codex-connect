@@ -13,10 +13,12 @@ import {
   IMAGE_EDIT_MAX_PIXELS, IMAGE_EDIT_MAX_DIMENSION,
 } from './image-edit-request.ts'
 import type { ImageEditInputBytes } from './image-edit-request.ts'
+import { imageInputFailureMessage } from './image-error-contract.ts'
+import type { ImageInputLabel, ImageInputFailureReason } from './image-error-contract.ts'
 
 export class ImageInputError extends Error {}
-function fail(label: string, reason: string): never {
-  throw new ImageInputError(`${label}: ${reason}`)
+function fail(label: ImageInputLabel, reason: ImageInputFailureReason): never {
+  throw new ImageInputError(imageInputFailureMessage(label, reason))
 }
 
 /** Includes no input IDs or raw metadata in error messages. */
@@ -29,7 +31,7 @@ export function promptForImageEdit(prompt: string, sources: ImageEditSources): s
 }
 
 interface Candidate {
-  label: string
+  label: ImageInputLabel
   source: ImageInputRef
   ref: ImageAttachmentRef | OpenAICodexOriginalImageRef
 }
@@ -55,7 +57,7 @@ export async function resolveImageEditInputs(
   const inputs = [sources.target, ...sources.references.map(ref => ref.image)]
   if (inputs.length > Math.min(IMAGE_EDIT_MAX_INPUTS, limits.maxImagesPerMessage)) fail('Image batch', 'too many inputs for this deployment.')
   const candidates: Candidate[] = inputs.map((source, index) => {
-    const label = index === 0 ? 'Target image' : `Reference image ${String(index)}`
+    const label: ImageInputLabel = index === 0 ? 'Target image' : `Reference image ${index}`
     if ('assetId' in source) {
       const ref = inventory.originals.get(source.assetId)
       if (ref === undefined) fail(label, 'is unavailable in this session. Select or attach the image again.')
@@ -66,7 +68,14 @@ export async function resolveImageEditInputs(
     const selectorKey = 'attachment' in source ? JSON.stringify(source.attachment) : undefined
     const ref = selectorKey === undefined ? occurrences?.values().next().value : occurrences?.get(selectorKey)
     if (ref === undefined) fail(label, 'is unavailable or does not match a reference in this session. Select or attach the image again.')
-    const results = [...(inventory.results.get(id)?.values() ?? [])].filter(result =>
+    const uploads = inventory.uploads.get(id)
+    const allResults = [...(inventory.results.get(id)?.values() ?? [])]
+    if (selectorKey === undefined && source.usePreview !== true && uploads !== undefined && allResults.length > 0) {
+      fail(label, 'identifies both an upload and a generated result. Select the uploaded attachment explicitly or choose an exact original image.')
+    }
+    // A complete recorded upload reference means these attachment bytes, not an older original.
+    const explicitUpload = selectorKey !== undefined && uploads?.has(selectorKey) === true
+    const results = explicitUpload ? [] : allResults.filter(result =>
       selectorKey === undefined || JSON.stringify(result.preview) === selectorKey)
     const result = results[0]
     if (result !== undefined && source.usePreview !== true) {

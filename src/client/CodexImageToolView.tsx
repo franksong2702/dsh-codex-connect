@@ -14,6 +14,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { imagePresentationForResult, promptForImageToolBlock, imageRequestForToolBlock, imageRequestFollowUp } from './image-result-presentation.ts'
 import type { ImageInputRef } from '../image-input-contract.ts'
+import { safeImageFailure } from '../image-error-contract.ts'
 import type { ImagePresentationMeta } from '../image-presentation.ts'
 import { openAICodexOriginalImageUrl } from '../image-assets-contract.ts'
 import type { OpenAICodexOriginalImageRef } from '../image-assets-contract.ts'
@@ -327,9 +328,11 @@ function labels(t: Translate<OpenAICodexSettingsKey>): CodexImageGalleryLabels {
 function errorState(block: Extract<CodexImageToolViewProps['block'], { kind: 'tool-result' }>, t: Translate<OpenAICodexSettingsKey>) {
   const code = block.error?.code
   const canceled = code === 'ABORTED' || code === 'ABORTED_BEFORE_DISPATCH' || code === 'TOOL_ABORTED'
-  if (canceled) return { title: t('canceled'), detail: t('canceledDetail') }
-  const reauth = code === 'OPENAI_CODEX_REAUTH_REQUIRED' || contentText(block.content)?.includes('authorization') === true
-  return { title: t('failed'), detail: reauth ? t('reauthRequired') : undefined }
+  if (canceled) return { title: t('canceled'), detail: t('canceledDetail'), retryable: true, recovery: undefined }
+  const safe = safeImageFailure(block.content)
+  const reauth = code === 'OPENAI_CODEX_REAUTH_REQUIRED' || safe?.recovery === 'account'
+  return { title: t('failed'), detail: reauth ? t('reauthRequired') : safe?.message ?? t('imageUnknownFailure'),
+    retryable: !reauth && (safe?.retryable ?? true), recovery: safe?.recovery }
 }
 
 export function CodexImageToolView({ block, sessionId, t, sessions, configScope }: CodexImageToolViewProps) {
@@ -363,7 +366,9 @@ export function CodexImageToolView({ block, sessionId, t, sessions, configScope 
         <strong>{state.title}</strong>
         {state.detail === undefined ? null : <span style={detail}>{state.detail}</span>}
         {contentText(block.content)?.includes('may still be processing') === true ? <span style={detail}>{t('imageRequestUncertain')}</span> : null}
-        {request === undefined || !actionsEnabled ? null : <div style={actionRow}>
+        {state.recovery === 'input' ? <span style={detail}>{t('imageInputRecovery')}</span> : null}
+        {state.recovery === 'storage' ? <span style={detail}>{t('imageStorageRecovery')}</span> : null}
+        {request === undefined || !actionsEnabled || !state.retryable ? null : <div style={actionRow}>
           <button type="button" style={action} disabled={sessionActions.pending !== null} aria-busy={sessionActions.pending === 'follow-up'} onClick={() => { void sessionActions.followUp(imageRequestFollowUp(request)) }}>
             {sessionActions.pending === 'follow-up' ? t('actionSending') : t(request.operation === 'edit' ? 'retryImageEdit' : 'retryGeneration')}
           </button>

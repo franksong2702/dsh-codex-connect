@@ -120,7 +120,7 @@ export const IMAGE_ATTACHMENT_INPUT_SCHEMA = {
 } as const
 export const IMAGE_INPUT_SCHEMA = {
   type: 'object', additionalProperties: false,
-  description: 'Select exactly one: assetId for an original result, attachmentId from this session, or a complete attachment reference. For wording like first/second image, copy the stable attachmentId from the model-visible handle line adjacent to that request image. usePreview=true is only for an explicitly chosen lower-resolution preview.',
+  description: 'Select exactly one: assetId for an original result, attachmentId from this session, or a complete attachment reference. For uploaded copies, including first/second attached image, copy the complete attachment reference from the adjacent handle line. A bare attachmentId shared with a generated result is ambiguous; assetId explicitly selects a stored original. usePreview=true is only for an explicitly chosen lower-resolution preview.',
   properties: {
     assetId: { type: 'string' }, attachmentId: { type: 'string' }, attachment: IMAGE_ATTACHMENT_INPUT_SCHEMA,
     usePreview: { type: 'boolean' },

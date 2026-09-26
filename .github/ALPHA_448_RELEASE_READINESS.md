@@ -1,5 +1,8 @@
 # Alpha 4.48 delivery checkpoint — 2026-09-25
 
+> Post-release correction (2026-09-26): Alpha 4.48 was published from `8e685d7`, but an independent report subsequently reproduced two P2 defects missed by the previous review: uploaded-copy/original conflation and hidden actionable edit failures. The prior pass is withdrawn. See `docs/agent-notes/issue-272-post-release-fixes.md` for the unreleased repair and exact reproduction evidence. The remainder below is the historical pre-release record, not current patch approval.
+
+
 Status: PR #272 is submitted; release candidate prepared. Independent reviewer completion and final exact-head CI remain mandatory before merge or publication.
 
 ## Identity
