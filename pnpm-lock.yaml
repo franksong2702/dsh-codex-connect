@@ -61,8 +61,8 @@ importers:
         specifier: 0.1.7-rc.1
         version: 0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)(@deepseek-ai/dsh-invariants@0.1.7-rc.1(@deepseek-ai/cordis@4.0.4))(@deepseek-ai/dsh-scope@0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)(@deepseek-ai/dsh-invariants@0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)))
       '@deepseek-ai/dsh-client-locale':
-        specifier: 0.1.7-rc.1
-        version: 0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)
+        specifier: 0.1.7-rc.2
+        version: 0.1.7-rc.2(@deepseek-ai/cordis@4.0.4)
       '@deepseek-ai/dsh-client-store':
         specifier: 0.1.7-rc.1
         version: 0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)
@@ -701,8 +701,8 @@ packages:
       '@deepseek-ai/cordis': ~4.0.4
       '@deepseek-ai/dsh-scope': 0.1.7-rc.1
 
-  '@deepseek-ai/dsh-client-locale@0.1.7-rc.1':
-    resolution: {integrity: sha512-7DmI05k+FUZaDk0SEqJahDQn75SoENuUeoFjPG1nzXXxU8xq1KsE5kWgKlwtbOTCpbvn/ax4F5FhRjZnpJZQkg==}
+  '@deepseek-ai/dsh-client-locale@0.1.7-rc.2':
+    resolution: {integrity: sha512-zkRt/JrBvS7w1TPi/dOo0QCqjkcAApq7nNoeIL2lX0VlzwHD86Hrg/n/YJJlg1i0nvOEtZDibR9FGwa/X2wpvA==}
     peerDependencies:
       '@deepseek-ai/cordis': ~4.0.4
 
@@ -4038,7 +4038,7 @@ snapshots:
       '@deepseek-ai/dsh-typert-protocol': 0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)
       zod: 4.4.3
 
-  '@deepseek-ai/dsh-client-locale@0.1.7-rc.1(@deepseek-ai/cordis@4.0.4)':
+  '@deepseek-ai/dsh-client-locale@0.1.7-rc.2(@deepseek-ai/cordis@4.0.4)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.4(@deepseek-ai/cordis-plugin-include@1.0.9)(@deepseek-ai/cordis-plugin-loader@1.0.5)
       '@deepseek-ai/schemastery': 3.18.4

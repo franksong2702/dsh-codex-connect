@@ -154,7 +154,7 @@
     "@deepseek-ai/dsh-attachment-local": "0.1.7-rc.1",
     "@deepseek-ai/dsh-authorization": "0.1.7-rc.1",
     "@deepseek-ai/dsh-client-connection": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-client-locale": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.1.7-rc.2",
     "@deepseek-ai/dsh-client-store": "0.1.7-rc.1",
     "@deepseek-ai/dsh-client-ui-chat": "0.1.7-rc.1",
     "@deepseek-ai/dsh-client-ui-conversation": "0.1.7-rc.1",
