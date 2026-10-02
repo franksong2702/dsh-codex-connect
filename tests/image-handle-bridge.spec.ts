@@ -62,6 +62,16 @@ describe('image selection handle projection consistency', () => {
     expect(appendImageSelectionHandles(content)).toBeUndefined()
   })
 
+  it('adds the canonical handle when adjacent text names a different image', () => {
+    const attachment = image('sha256:current', 'current.png')
+    const staleText = imageSelectionHandleText(1, image('sha256:previous', 'previous.png'))
+    const replaced = appendImageSelectionHandles([
+      { type: 'image', attachment }, { type: 'text', text: staleText },
+    ])
+    expect(replaced?.[1]).toEqual({ type: 'text', text: imageSelectionHandleText(1, attachment) })
+    expect(replaced?.[2]).toEqual({ type: 'text', text: staleText })
+  })
+
   it('skips images whose attachment does not decode to a canonical reference', () => {
     const content: ContentBlock[] = [
       { type: 'image', attachment: { ...image('sha256:bad'), unexpected: true } as ImageAttachmentRef },
@@ -78,7 +88,7 @@ describe('image selection handle projection consistency', () => {
   })
 })
 
-async function setup(options: { enabled: boolean; provider?: string; tools?: string[] }) {
+async function setup(options: { enabled: boolean; provider?: string; tools?: string[]; unknownRoute?: boolean }) {
   const ctx = new Context()
   contexts.push(ctx)
   await ctx.plugin(SessionStore)
@@ -101,7 +111,7 @@ async function setup(options: { enabled: boolean; provider?: string; tools?: str
   })
   const execute = () => ctx.tools.execute({ signal: new AbortController().signal, callId: 'bridge-1' as never,
     name: 'image_echo', arguments: {},
-    agent: { id: session.id, options: { provider: options.provider ?? 'kimi-coding' }, session } as never })
+    agent: { id: session.id, options: { provider: options.unknownRoute === true ? undefined : options.provider ?? 'kimi-coding' }, session } as never })
   return { ctx, session, execute, attachment }
 }
 
@@ -126,6 +136,13 @@ describe('persistent image handle bridge', () => {
     const result = await execute()
     const texts = (result.content as ContentBlock[]).filter(block => block.type === 'text')
     expect(texts.some(block => block.text.startsWith(IMAGE_HANDLE_LINE_PREFIX))).toBe(false)
+  })
+
+  it.each([undefined, ''])('keeps results unchanged when the provider cannot be verified (%s)', async provider => {
+    const { execute } = await setup({ enabled: true, ...(provider === undefined ? { unknownRoute: true } : { provider }) })
+    const result = await execute()
+    expect(result.isError).not.toBe(true)
+    expect((result.content as ContentBlock[]).some(block => block.type === 'text' && block.text.startsWith(IMAGE_HANDLE_LINE_PREFIX))).toBe(false)
   })
 
   it('honors the tool name filter', async () => {

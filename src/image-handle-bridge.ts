@@ -60,10 +60,10 @@ export function appendImageSelectionHandles(content: readonly ContentBlock[]): C
     // a bare unaddressable id would not help the model build an edit target.
     if (decodeImageInputAttachment(block.attachment) === undefined) continue
     // Idempotent: a handle line directly after the image means one is already there.
+    const handle = imageSelectionHandleText(imageIndex, block.attachment)
     const following = content[index + 1]
-    if (following?.type === 'text' && typeof following.text === 'string'
-      && following.text.startsWith(IMAGE_HANDLE_LINE_PREFIX)) continue
-    replaced.push({ type: 'text', text: imageSelectionHandleText(imageIndex, block.attachment) })
+    if (following?.type === 'text' && following.text === handle) continue
+    replaced.push({ type: 'text', text: handle })
     changed = true
   }
   return changed ? replaced : undefined
@@ -82,7 +82,8 @@ export function registerImageHandleBridge(ctx: Context, options: ImageHandleBrid
       if (!options.enabled()) return decision
       if (decision.kind !== 'accept' || Object.hasOwn(decision, 'value')) return decision
       if (result.isError) return decision
-      if (routeProvider(exec) === OPENAI_CODEX_PROVIDER) return decision
+      const provider = routeProvider(exec)
+      if (typeof provider !== 'string' || provider.trim() === '' || provider === OPENAI_CODEX_PROVIDER) return decision
       const toolNames = options.tools?.()
       if (toolNames !== undefined && toolNames.length > 0 && !toolNames.includes(exec.name)) return decision
       const content = decision.content ?? result.content
