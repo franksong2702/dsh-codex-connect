@@ -155,4 +155,4 @@ pnpm run check:dsh-install
 
 Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包含派生自 [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex) 的软件；上游内容继续保留 Copyright 2026 Yan-Zero。两部分均按 Apache-2.0 发布，详情见 [NOTICE](../NOTICE)。
 
-下一本地候选版本将 `gpt-6.1-sol` 加入手动模型目录与配置选择器，支持 Low、Medium、High、Xhigh、Max；Default 不显式发送推理强度，不支持 Ultra 编排。Codex 目录默认上下文保持 272,000，允许的本地配置上限为 872,000；这不是 API 产品窗口，也不能证明账户访问权限。详见[元数据与验证](agent-notes/gpt61-sol-support.md)。不会扩大 Adaptive Task 授权。
+已发布的 `0.2.0-alpha.1` 将 `gpt-6.1-sol` 加入手动模型目录与配置选择器，支持 Low、Medium、High、Xhigh、Max；Default 不显式发送推理强度，不支持 Ultra 编排。Codex 目录默认上下文保持 272,000，允许的本地配置上限为 872,000；这不是 API 产品窗口，也不能证明账户访问权限。详见[元数据与验证](agent-notes/gpt61-sol-support.md)。不会扩大 Adaptive Task 授权。
