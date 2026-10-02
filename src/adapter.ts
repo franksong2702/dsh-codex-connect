@@ -23,7 +23,7 @@ import type { ReserveRequestPermits } from './reserve-state.ts'
 import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
-import { decodeImageInputAttachment } from './image-input-contract.ts'
+import { imageSelectionHandleText } from './image-input-contract.ts'
 
 export { OPENAI_CODEX_ASTRA_MODEL_ID, OPENAI_CODEX_TRANSPORT, openAICodexModelCatalog, withOpenAICodexAstra, withOpenAICodexModels } from './model-catalog.ts'
 
@@ -216,13 +216,7 @@ export function withOpenAICodexImageSelectionHandles(options: GenerateOptions): 
       content.push(block)
       if (block.type !== 'image') continue
       imageIndex += 1
-      const name = block.attachment.name === undefined ? '' : ` ${JSON.stringify(block.attachment.name)}`
-      const attachment = decodeImageInputAttachment(block.attachment)
-      const exactSelection = attachment === undefined ? '' : ` To edit this uploaded copy, use attachment=${JSON.stringify(attachment)}. For a generated original, use its result assetId instead.`
-      content.push({
-        type: 'text',
-        text: `[Codex Connect image ${String(imageIndex)} in this message:${name} attachmentId=${String(block.attachment.attachmentId)}. For image editing, this ID alone may also identify a historical generated preview.${exactSelection}]`,
-      })
+      content.push({ type: 'text', text: imageSelectionHandleText(imageIndex, block.attachment) })
       contentChanged = true
     }
     if (!contentChanged) return message

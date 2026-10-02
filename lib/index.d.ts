@@ -927,6 +927,8 @@ export interface Config {
   enableImageTool?: boolean;
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean;
+  /** Restrict the image handle bridge to these tool names; omitted processes every tool. */
+  imageHandleBridgeTools?: string[] | undefined;
   /** Optional profile-scoped image route model hint; empty uses the default route hint. */
   imageModelHint?: string;
   /** Record that this profile accepted the Auto-review data disclosure. */
@@ -958,6 +960,7 @@ export interface VolatileConfig {
   enableNativeCompaction: Volatile<boolean>;
   enableImageTool: Volatile<boolean>;
   enableImageGeneration: Volatile<boolean>;
+  imageHandleBridgeTools: Volatile<string[] | undefined>;
   imageModelHint: Volatile<string>;
   autoReviewDisclosureAcknowledged: Volatile<boolean>;
   enableAutoReview: Volatile<boolean>;
