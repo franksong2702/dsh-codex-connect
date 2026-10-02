@@ -16,21 +16,23 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.54` |
+| Codex Connect | `0.2.0-alpha.1` |
 | DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1` or `0.2.0-rc.2` (consistent package set) |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
-As of 2026-09-30, npm `alpha` points to 4.54 while `latest` remains 4.50; this publication did not promote `latest`. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-10-01, npm `alpha` and `latest` both point to `0.2.0-alpha.1`. Default installation therefore selects this Alpha; the `latest` tag does not make it a stable release. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
 
-Alpha 4.54 preserves initial system instructions and tool definitions when DSH 0.2.0-rc.2 calls the pinned Codex provider, corrects diagnostics when the host and plugin own different provider-library versions, and strengthens Canary's normal-request checks. It retains Alpha 4.53's core maintenance changes, existing-task recovery and safety, and 4.52's [opt-in local request metrics](docs/request-metrics.md). Collection stays off until a private directory is configured; unknown usage is not zero. No Task reopening or model-library/OAuth upgrade is included.
+[`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.
+
+It retains Alpha 4.54's handling of initial system instructions and tool definitions on DSH 0.2.0-rc.2, diagnostics for differing host/plugin provider libraries, and Canary's normal-request checks, along with Alpha 4.53's core maintenance changes, existing-task recovery and safety, and 4.52's [opt-in local request metrics](docs/request-metrics.md). Collection stays off until a private directory is configured; unknown usage is not zero. No Task reopening or model-library/OAuth upgrade is included.
 
 The package passed keyless installation/runtime regression on all four exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.54
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.1
 dsh web
 ```
 
@@ -153,4 +155,4 @@ pnpm run check:dsh-install
 
 Copyright 2026 Frank Song for Codex Connect modifications and additional work. This project contains software derived from [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex); Copyright 2026 Yan-Zero is retained for upstream material. Both are distributed under Apache-2.0; see [NOTICE](NOTICE).
 
-The next local candidate adds `gpt-6.1-sol` to the manual model catalog and configuration selector. It exposes Low, Medium, High, Xhigh and Max; Default omits effort, and Ultra orchestration is unsupported. Codex catalog defaults remain 272,000 tokens with an optional 872,000 local ceiling, not the API product window or proof of account access. See [metadata and validation](docs/agent-notes/gpt61-sol-support.md). No Adaptive Task grants are expanded.
+Published `0.2.0-alpha.1` adds `gpt-6.1-sol` to the manual model catalog and configuration selector. It exposes Low, Medium, High, Xhigh and Max; Default omits effort, and Ultra orchestration is unsupported. Codex catalog defaults remain 272,000 tokens with an optional 872,000 local ceiling, not the API product window or proof of account access. See [metadata and validation](docs/agent-notes/gpt61-sol-support.md). No Adaptive Task grants are expanded.
