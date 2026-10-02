@@ -1,0 +1,165 @@
+{
+  "dshVersion": "0.2.0-rc.2",
+  "pluginVersion": "0.2.0-alpha.1",
+  "sha256": "afe0c5e9cb08d10912ddf215c8b7f601b9a6d51adfa5cb0cb34e2e7ae8c7258a",
+  "integrity": "sha512-gS1Xh27k6dU3FeI5XN/sX72pdWy6ypr9MkiAki/u28mmxTS+sqyGRFXTdIR8BUb3J/zKcWQJoadNkv8zR7Qd3g==",
+  "node": "v22.19.0",
+  "hostPackages": 278,
+  "installedFileCount": 146,
+  "allPublishedFilesVerifiedAfterInstallAndReinstall": true,
+  "installed": true,
+  "basicStartup": true,
+  "removed": true,
+  "reinstalled": true,
+  "effectiveProviderRemoved": true,
+  "packageLinkRemoved": true,
+  "profileResolutionRemoved": true,
+  "providerRediscovered": true,
+  "userPatchPreserved": true,
+  "userDataPreserved": true,
+  "syntheticOpaqueAuthMarkerPreserved": true,
+  "syntheticAuthMarkerRemovedBeforeBoot": true,
+  "defaultsUnchanged": true,
+  "unrelatedDependenciesPreserved": true,
+  "syntheticOnly": true,
+  "realProviderRequests": 0,
+  "runtime": {
+    "modelCount": 11,
+    "solPrepared": true,
+    "providerDisposalVerified": true,
+    "realProviderRequests": 0
+  },
+  "commands": [
+    {
+      "label": "version",
+      "command": "dsh --version",
+      "exitCode": 0,
+      "durationMs": 109
+    },
+    {
+      "label": "before",
+      "command": "dsh --profile web --dump-config",
+      "exitCode": 0,
+      "durationMs": 60
+    },
+    {
+      "label": "install",
+      "command": "dsh plugin --profile web add file:<fixture>/release.tgz",
+      "exitCode": 0,
+      "durationMs": 11661
+    },
+    {
+      "label": "after-install",
+      "command": "dsh --profile web --dump-config",
+      "exitCode": 0,
+      "durationMs": 69
+    },
+    {
+      "label": "boot",
+      "command": "dsh web --help",
+      "exitCode": 0,
+      "durationMs": 874
+    },
+    {
+      "label": "doctor",
+      "command": "dsh plugin --profile web exec dsh-codex-connect doctor --json --install-anchor <fixture>/host/node_modules/@deepseek-ai/dsh/package.json",
+      "exitCode": 0,
+      "durationMs": 528
+    },
+    {
+      "label": "status",
+      "command": "dsh plugin --profile web exec dsh-codex-connect status --json",
+      "exitCode": 1,
+      "durationMs": 229
+    },
+    {
+      "label": "runtime",
+      "command": "node basic-runtime.mjs",
+      "exitCode": 0,
+      "durationMs": 242
+    },
+    {
+      "label": "seed-unrelated",
+      "command": "dsh plugin --profile web add file:<fixture>/unrelated-fixture",
+      "exitCode": 0,
+      "durationMs": 513
+    },
+    {
+      "label": "configured",
+      "command": "dsh --profile web --dump-config",
+      "exitCode": 0,
+      "durationMs": 62
+    },
+    {
+      "label": "remove",
+      "command": "dsh plugin --profile web remove dsh-codex-connect",
+      "exitCode": 0,
+      "durationMs": 593
+    },
+    {
+      "label": "after-remove",
+      "command": "dsh --profile web --dump-config",
+      "exitCode": 0,
+      "durationMs": 62
+    },
+    {
+      "label": "removed-boot",
+      "command": "dsh web --help",
+      "exitCode": 0,
+      "durationMs": 615
+    },
+    {
+      "label": "reinstall",
+      "command": "dsh plugin --profile web add file:<fixture>/release.tgz",
+      "exitCode": 0,
+      "durationMs": 7321
+    },
+    {
+      "label": "after-reinstall",
+      "command": "dsh --profile web --dump-config",
+      "exitCode": 0,
+      "durationMs": 62
+    },
+    {
+      "label": "reinstalled-boot",
+      "command": "dsh web --help",
+      "exitCode": 0,
+      "durationMs": 684
+    },
+    {
+      "label": "reinstalled-doctor",
+      "command": "dsh plugin --profile web exec dsh-codex-connect doctor --json --install-anchor <fixture>/host/node_modules/@deepseek-ai/dsh/package.json",
+      "exitCode": 0,
+      "durationMs": 458
+    },
+    {
+      "label": "reinstalled-runtime",
+      "command": "node basic-runtime.mjs",
+      "exitCode": 0,
+      "durationMs": 248
+    }
+  ],
+  "cacheDeletionAttempted": false,
+  "cacheContentsAudited": false,
+  "testFixtureCorrection": {
+    "firstAttempt": "invalid YAML appended after empty-array document",
+    "correction": "use a single YAML patch array with config field",
+    "productDefect": false,
+    "completedStagesNotRepeated": true
+  },
+  "schemaVersion": 1,
+  "sourceSHA": "ba75aa66579bdb22f179c949628e9593b60bf469",
+  "pnpmVersion": "10.30.3",
+  "webStartup": {
+    "command": "dsh web --host 127.0.0.1 --port 0 --no-open",
+    "ephemeralPort": 49883,
+    "httpStatus": 401,
+    "realProviderRequests": 0,
+    "processExited": true
+  },
+  "dailyPackageMetadata": {
+    "unchanged": true,
+    "checkedFiles": 4,
+    "changed": []
+  }
+}

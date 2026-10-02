@@ -18,21 +18,23 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.1.0-alpha.4.54` |
+| Codex Connect | `0.2.0-alpha.1` |
 | DeepSeek Harness | `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1` 或 `0.2.0-rc.2`（包版本必须一致） |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-截至 2026-09-30，npm `alpha` 指向 4.54，`latest` 仍为 4.50；本次发布没有提升 `latest`。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-10-01，npm `alpha` 和 `latest` 均指向 `0.2.0-alpha.1`。默认安装会选择此 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
-Alpha 4.54 在 DSH 0.2.0-rc.2 调用固定版本的 Codex 提供方时保留初始系统指令和工具定义，修正宿主与插件使用不同提供方库版本时的诊断，并补强 Canary 的普通请求检查。继续保留 Alpha 4.53 的核心维护改动、已有任务恢复与安全检查，以及 4.52 的[可选本地请求计量](request-metrics.zh.md)。配置私有目录后才采集；未知用量不当作零。不恢复 Task，也不升级模型库或 OAuth。
+[`0.2.0-alpha.1`](release-notes/0.2.0-alpha.1.md) 通过模型目录补充增加 `gpt-6.1-sol`，并开始较短的独立插件编号。四个受支持的 DSH 版本不变，无需升级宿主。
+
+它保留 Alpha 4.54 的改动，在 DSH 0.2.0-rc.2 调用固定版本的 Codex 提供方时保留初始系统指令和工具定义，修正宿主与插件使用不同提供方库版本时的诊断，并补强 Canary 的普通请求检查。继续保留 Alpha 4.53 的核心维护改动、已有任务恢复与安全检查，以及 4.52 的[可选本地请求计量](request-metrics.zh.md)。配置私有目录后才采集；未知用量不当作零。不恢复 Task，也不升级模型库或 OAuth。
 
 该安装包已通过上方四个精确 DSH 版本的无凭据安装及运行回归验证。Task 控件仍暂停：激活请求会被拒绝，现有宿主的浏览器回归中，新 Session 不显示这些控件。这些检查不代表真实 OAuth 或完整用户验收；跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.54
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.1
 dsh web
 ```
 
@@ -153,4 +155,4 @@ pnpm run check:dsh-install
 
 Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包含派生自 [Yan-Zero/dsh-codex](https://github.com/Yan-Zero/dsh-codex) 的软件；上游内容继续保留 Copyright 2026 Yan-Zero。两部分均按 Apache-2.0 发布，详情见 [NOTICE](../NOTICE)。
 
-下一本地候选版本将 `gpt-6.1-sol` 加入手动模型目录与配置选择器，支持 Low、Medium、High、Xhigh、Max；Default 不显式发送推理强度，不支持 Ultra 编排。Codex 目录默认上下文保持 272,000，允许的本地配置上限为 872,000；这不是 API 产品窗口，也不能证明账户访问权限。详见[元数据与验证](agent-notes/gpt61-sol-support.md)。不会扩大 Adaptive Task 授权。
+已发布的 `0.2.0-alpha.1` 将 `gpt-6.1-sol` 加入手动模型目录与配置选择器，支持 Low、Medium、High、Xhigh、Max；Default 不显式发送推理强度，不支持 Ultra 编排。Codex 目录默认上下文保持 272,000，允许的本地配置上限为 872,000；这不是 API 产品窗口，也不能证明账户访问权限。详见[元数据与验证](agent-notes/gpt61-sol-support.md)。不会扩大 Adaptive Task 授权。
