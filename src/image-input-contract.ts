@@ -59,6 +59,19 @@ export function decodeImageInputAttachment(value: unknown): ImageInputAttachment
   }
 }
 
+/**
+ * Stable model-visible selection handle text shared by the Codex request-time
+ * projection and the persistent tool-result bridge, so every route sees
+ * byte-identical handles.
+ */
+export function imageSelectionHandleText(imageIndex: number, attachment: ImageAttachmentRef): string {
+  const name = attachment.name === undefined ? '' : ` ${JSON.stringify(attachment.name)}`
+  const decoded = decodeImageInputAttachment(attachment)
+  const exactSelection = decoded === undefined ? ''
+    : ` To edit this uploaded copy, use attachment=${JSON.stringify(decoded)}. For a generated original, use its result assetId instead.`
+  return `[Codex Connect image ${String(imageIndex)} in this message:${name} attachmentId=${String(attachment.attachmentId)}. For image editing, this ID alone may also identify a historical generated preview.${exactSelection}]`
+}
+
 /** Exactly one selector; a guessed ID or caller-provided metadata is not an authorization proof. */
 export function decodeImageInputRef(value: unknown): ImageInputRef | undefined {
   const ref = imageInputObject(value)

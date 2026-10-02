@@ -51,6 +51,7 @@ import { taskIdentity } from './adaptive-task-store.ts'
 import { registerAdaptiveTaskHttp } from './adaptive-task-http.ts'
 import { ADAPTIVE_TASK_MODELS } from './adaptive-task-contract.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
+import { registerImageHandleBridge } from './image-handle-bridge.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
@@ -281,6 +282,8 @@ export interface Config {
   enableImageTool?: boolean
   /** Register the optional prompt-only image generation tool. */
   enableImageGeneration?: boolean
+  /** Restrict the image handle bridge to these tool names; omitted processes every tool. */
+  imageHandleBridgeTools?: string[] | undefined
   /** Optional profile-scoped image route model hint; empty uses the default route hint. */
   imageModelHint?: string
   /** Record that this profile accepted the Auto-review data disclosure. */
@@ -330,6 +333,7 @@ const configSchema = z.object({
   enableNativeCompaction: z.boolean().default(false).volatile(),
   enableImageTool: z.boolean().default(false).volatile(),
   enableImageGeneration: z.boolean().default(false).volatile(),
+  imageHandleBridgeTools: z.union([z.const(undefined), z.array(z.string())]).volatile(),
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default('').volatile(),
   autoReviewDisclosureAcknowledged: z.boolean().default(false).volatile(),
   enableAutoReview: z.boolean().default(false).volatile(),
@@ -355,6 +359,7 @@ export interface VolatileConfig {
   enableNativeCompaction: Volatile<boolean>
   enableImageTool: Volatile<boolean>
   enableImageGeneration: Volatile<boolean>
+  imageHandleBridgeTools: Volatile<string[] | undefined>
   imageModelHint: Volatile<string>
   autoReviewDisclosureAcknowledged: Volatile<boolean>
   enableAutoReview: Volatile<boolean>
@@ -467,6 +472,12 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
       () => resolveOpenAICodexSettings(current()).enableImageGeneration,
     ),
   )
+  registerImageHandleBridge(ctx, {
+    // The bridge rides on the image-generation gate: when GPT Image is on,
+    // every route gets selection handles, not just the openai-codex adapter.
+    enabled: () => configValue(config.enableImageGeneration) === true,
+    tools: () => configValue(config.imageHandleBridgeTools),
+  })
   ctx.inject(['webServer'], webCtx => {
     registerOpenAICodexAuthRoutes(webCtx, credentials, trustedOrigins, fastMode, proxyManager, resolveProviderProxyUrl,
       configValue(config.oauthTimeoutMs) ?? OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS, quota)
