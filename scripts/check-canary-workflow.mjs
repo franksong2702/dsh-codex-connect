@@ -46,7 +46,7 @@ const matrixReports = matrixVersions.map(dshVersion => ({
   capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveTransitionsVerified: true,
     nativeCompactionLifecycle: { syntheticOnly: true, freshProcesses: 10, encodings: ['none', 'zstd'], phases: ['write', 'resume-fork', 'verify-child', 'failure-paths', 'automatic'] },
-    images: { syntheticOnly: true, generated: 2, edited: 2, codeRuns: 2, editSourcesVerified: true, inheritedEditVerified: true, invalidEditRefused: true, dispatchEvent: 'tool/code-dispatch', originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true, realProviderRequests: 0 },
+    images: { syntheticOnly: true, generated: 2, edited: 2, codeRuns: 2, editSourcesVerified: true, inheritedEditVerified: true, invalidEditRefused: true, selectionHandlesVerified: true, dispatchEvent: 'tool/code-dispatch', originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true, realProviderRequests: 0 },
   },
 }))
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.43')
@@ -59,6 +59,7 @@ for (const [name, change] of [
   ['missing edit sources', reports => { delete reports[0].runtime.images.editSourcesVerified }],
   ['missing inherited edit', reports => { reports[0].runtime.images.inheritedEditVerified = false }],
   ['missing invalid-edit refusal', reports => { reports[0].runtime.images.invalidEditRefused = false }],
+  ['missing cross-route image handles', reports => { delete reports[0].runtime.images.selectionHandlesVerified }],
   ['unexpected real image request', reports => { reports[0].runtime.images.realProviderRequests = 1 }],
   ['invalid package bytes', reports => { reports[0].pluginArtifactSha256 = 'not-a-digest' }],
   ['wrong host version', reports => { reports[0].dshVersion = '0.1.7-alpha.1' }],

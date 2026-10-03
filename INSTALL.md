@@ -2,6 +2,8 @@
 
 Published `0.2.0-alpha.1` is installation/runtime-regression verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1` or `0.2.0-rc.2`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
 
+The source adaptation for exact DSH `0.2.1-alpha.1` is an unreleased development candidate. The published `0.2.0-alpha.1` artifact rejects this host; do not infer support from its unchanged source version label or the npm tags. The [compatibility investigation](docs/agent-notes/dsh-021-compatibility.md) records the distinction. A separately authorized release with a new plugin version is required before this becomes an npm installation pairing.
+
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
 Channel snapshot on 2026-10-01: npm `alpha` and `latest` both point to `0.2.0-alpha.1`. Default installation selects this Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.

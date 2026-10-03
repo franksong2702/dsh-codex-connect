@@ -25,6 +25,7 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.runtime.images.generated !== 2 || report.runtime.images.edited !== 2 || report.runtime.images.codeRuns !== 2
       || report.runtime.images.editSourcesVerified !== true || report.runtime.images.inheritedEditVerified !== true
       || report.runtime.images.invalidEditRefused !== true
+      || report.runtime.images.selectionHandlesVerified !== true
       || !['tool/code-dispatch', 'tool/ptc-dispatch'].includes(report.runtime.images.dispatchEvent)
       || report.runtime.images.originalDownloadVerified !== true
       || report.runtime.images.inheritedOriginalVerified !== true

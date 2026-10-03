@@ -9,7 +9,8 @@
       "0.1.7-rc.1",
       "0.1.7-rc.2",
       "0.2.0-rc.1",
-      "0.2.0-rc.2"
+      "0.2.0-rc.2",
+      "0.2.1-alpha.1"
     ],
     "packages": [
       "@deepseek-ai/dsh-agent",
@@ -22,7 +23,6 @@
       "@deepseek-ai/dsh-compaction",
       "@deepseek-ai/dsh-home-paths",
       "@deepseek-ai/dsh-host-webserver",
-      "@deepseek-ai/dsh-invariants",
       "@deepseek-ai/dsh-llm",
       "@deepseek-ai/dsh-llm-pi-ai",
       "@deepseek-ai/dsh-fs",

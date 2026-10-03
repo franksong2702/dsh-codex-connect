@@ -21,6 +21,8 @@ This guide describes the published pairing below. Check `dsh --version` first an
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
+**Development candidate:** the exact DSH `0.2.1-alpha.1` adaptation is unreleased. The published `0.2.0-alpha.1` package rejects that host; its verified pairings above remain unchanged. See the [compatibility investigation](docs/agent-notes/dsh-021-compatibility.md) for the source candidate and verification boundary.
+
 As of 2026-10-01, npm `alpha` and `latest` both point to `0.2.0-alpha.1`. Default installation therefore selects this Alpha; the `latest` tag does not make it a stable release. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
 
 [`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.

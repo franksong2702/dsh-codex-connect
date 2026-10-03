@@ -20,7 +20,7 @@ export function imageRuntimeService(manifest) {
 export async function checkInstalledImages(importHost, CodexConnect, toolsManifest) {
   const runtimeKey = imageRuntimeService(toolsManifest)
   const [{ Context }, { default: Llm }, { default: Sessions, SessionId },
-    { default: Projections }, { default: Prompt }, { default: Tools },
+    { default: Projections }, { default: Prompt }, { default: Tools, defineTool },
     { default: Agents }, { default: Loop }] = await Promise.all([
     '@deepseek-ai/cordis', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session',
     '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-system-prompt',
@@ -151,9 +151,35 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
     assert.equal(edited, 2)
     assert.equal(codeRuns, 2)
     assert.equal(networkAttempts, 0)
+
+    // Exercise #302 through the installed host's real post-execute waterfall.
+    // Route identities and image metadata are synthetic; no non-Codex model runs.
+    const bridgeAttachment = { attachmentId: 'sha256:compatibility-bridge', mediaType: 'image/png',
+      width: 1, height: 1, bytes: PNG.length, name: 'bridge.png' }
+    let bridgeContent = [{ type: 'image', attachment: bridgeAttachment }]
+    ctx.tools.register(defineTool({ name: 'compatibility_image_echo', description: 'Synthetic image handle fixture',
+      parameters: {}, output: { schema: { type: 'object', additionalProperties: false, properties: {} },
+        render: () => bridgeContent }, async execute() { return {} } }))
+    const bridgeSession = ctx.sessions.create(SessionId('image-handle-fixture'))
+    const bridgeExecute = async provider => {
+      const value = await ctx.tools.execute({ name: 'compatibility_image_echo', arguments: {}, callId: 'handle-fixture',
+        signal: new AbortController().signal,
+        agent: { id: bridgeSession.id, session: bridgeSession, options: { provider, model: 'synthetic' } } })
+      assert.equal(value.isError, false, JSON.stringify(value))
+      return value.content
+    }
+    const handles = content => content.filter(block => block.type === 'text' && block.text.startsWith('[Codex Connect image '))
+    assert.equal(handles(await bridgeExecute('openai-codex')).length, 0)
+    assert.equal(handles(await bridgeExecute(undefined)).length, 0)
+    bridgeContent = await bridgeExecute('synthetic-non-codex')
+    assert.equal(handles(bridgeContent).length, 1)
+    assert.ok(handles(bridgeContent)[0].text.includes(`attachment=${JSON.stringify(bridgeAttachment)}`))
+    assert.deepEqual(await bridgeExecute('synthetic-non-codex'), bridgeContent)
+    assert.equal(networkAttempts, 0)
     return { syntheticOnly: true, generated, edited, codeRuns, dispatchEvent: dispatch[0].type,
       originalDownloadVerified: true, inheritedOriginalVerified: true, earlierForkDenied: true, unrelatedSessionDenied: true,
-      editSourcesVerified: true, inheritedEditVerified: true, invalidEditRefused: true, realProviderRequests: 0 }
+      editSourcesVerified: true, inheritedEditVerified: true, invalidEditRefused: true,
+      selectionHandlesVerified: true, realProviderRequests: 0 }
   } finally {
     try { await ctx.fiber.dispose() } finally {
       globalThis.fetch = previousFetch
