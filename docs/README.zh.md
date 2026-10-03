@@ -23,6 +23,8 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
+**开发候选：**精确 DSH `0.2.1-alpha.1` 的适配尚未发布。已发布的 `0.2.0-alpha.1` 包会拒绝该宿主；上表中已验证的发布组合保持不变。源码候选和验证边界见[兼容性调查](agent-notes/dsh-021-compatibility.md)。
+
 截至 2026-10-01，npm `alpha` 和 `latest` 均指向 `0.2.0-alpha.1`。默认安装会选择此 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 [`0.2.0-alpha.1`](release-notes/0.2.0-alpha.1.md) 通过模型目录补充增加 `gpt-6.1-sol`，并开始较短的独立插件编号。四个受支持的 DSH 版本不变，无需升级宿主。
