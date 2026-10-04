@@ -1,12 +1,12 @@
 # Installation Runbook for CLI Agents
 
-Published `0.2.0-alpha.1` is installation/runtime-regression verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1` or `0.2.0-rc.2`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
+Published `0.2.0-alpha.2` is installation/runtime-regression verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
 
-The source adaptation for exact DSH `0.2.1-alpha.1` is an unreleased development candidate. The published `0.2.0-alpha.1` artifact rejects this host; do not infer support from its unchanged source version label or the npm tags. The [compatibility investigation](docs/agent-notes/dsh-021-compatibility.md) records the distinction. A separately authorized release with a new plugin version is required before this becomes an npm installation pairing.
+The exact DSH `0.2.1-alpha.1` adaptation is published in `0.2.0-alpha.2`. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects this host. See the [release notes](docs/release-notes/0.2.0-alpha.2.md) for scope and verification limits; keyless compatibility does not establish live-account acceptance.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-10-01: npm `alpha` and `latest` both point to `0.2.0-alpha.1`. Default installation selects this Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
+Channel snapshot on 2026-10-04: npm `alpha` points to `0.2.0-alpha.2`; `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
 
 ## Safety requirements
 
@@ -32,14 +32,21 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.5-alpha.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.2` | `0.1.0-alpha.4.41` |
-| `0.1.7-rc.1` | `0.2.0-alpha.1` |
-| `0.1.7-rc.2` | `0.2.0-alpha.1` |
-| `0.2.0-rc.1` | `0.2.0-alpha.1` |
-| `0.2.0-rc.2` | `0.2.0-alpha.1` |
+| `0.1.7-rc.1` | `0.2.0-alpha.2` |
+| `0.1.7-rc.2` | `0.2.0-alpha.2` |
+| `0.2.0-rc.1` | `0.2.0-alpha.2` |
+| `0.2.0-rc.2` | `0.2.0-alpha.2` |
+| `0.2.1-alpha.1` | `0.2.0-alpha.2` |
 
 If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-`0.2.0-alpha.1` requires one consistent DSH plugin API version from the four rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.1` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+`0.2.0-alpha.2` requires one consistent DSH plugin API version from the five modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.2` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+
+### 0.2.0-alpha.2 published delivery
+
+[PR #305](https://github.com/franksong2702/dsh-codex-connect/pull/305) prepares the exact DSH `0.2.1-alpha.1` compatibility repair from #304 and cross-route image selection handle repair from #302. [Exact-main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/37164650566) and the [protected publication](https://github.com/franksong2702/dsh-codex-connect/actions/runs/37165294347) succeeded for `0c186e73ebe7495d2fe16dc8c8cb38021293251d`; the matching [prerelease](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.2) is available.
+
+Independent post-publication verification matched the public npm archive byte-for-byte to the protected workflow artifact and the five-host installation matrix. SHA-256: `95a4599300eef03badcbe51452751f72c0295695876128805897c6fd9b0153d1`. Registry SHA-512 integrity, SHA-1, package identity, exact new-host peer and removal of the retired invariant peer also passed. npm `alpha` is `0.2.0-alpha.2`; `latest` remains `0.2.0-alpha.1`. The immutable package retains the previous pre-publication README recommendation; use this repository's updated exact installation command. No daily-service upgrade, real OAuth/model/image request, new-host authenticated browser acceptance or physical Windows/mobile acceptance is included. Task remains paused and experimental defaults remain off.
 
 ### 0.2.0-alpha.1 published delivery
 
@@ -130,10 +137,10 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
    ```
 
-   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1` or `0.2.0-rc.2`, use `0.2.0-alpha.1`:
+   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, use `0.2.0-alpha.2`:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.1
+   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.2
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -144,7 +151,7 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
    If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.41'` only for the DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` combinations, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.46'` only for DSH `0.1.7-rc.1`.
 
-   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1` or `0.2.0-rc.2`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.1'`.
+   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.2'`.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
