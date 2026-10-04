@@ -136,6 +136,10 @@
     {
       "version": "0.1.0-alpha.4.48",
       "highlights": ["image-generation", "quota-fast-mode"]
+    },
+    {
+      "version": "0.2.0-alpha.2",
+      "highlights": ["runtime-compatibility", "image-generation"]
     }
   ]
 }
