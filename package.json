@@ -85,6 +85,7 @@
     "NOTICE"
   ],
   "dependencies": {
+    "@napi-rs/keyring": "2.1.0",
     "@deepseek-ai/schemastery": "3.18.4",
     "@earendil-works/pi-ai": "0.85.1",
     "undici": "^8.10.0"

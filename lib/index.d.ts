@@ -17,6 +17,14 @@ declare module '@deepseek-ai/dsh-llm' {
 //#region src/account-profile.d.ts
 type OpenAICodexAccountProfileSource = 'oauth' | 'generated';
 //#endregion
+//#region src/secure-store.d.ts
+/** Injectable seam for synthetic tests; production always uses the OS credential store. */
+interface CredentialKeyStore {
+  read(): Promise<Uint8Array | undefined>;
+  write(key: Uint8Array): Promise<void>;
+  delete(): Promise<void>;
+}
+//#endregion
 //#region src/store.d.ts
 /** Provider route and pi-ai provider id owned by this bundle. */
 export declare const OPENAI_CODEX_PROVIDER = "openai-codex";
@@ -26,7 +34,7 @@ export declare const OPENAI_CODEX_AUTH_FILENAME = ".openai-codex-auth.json";
 export declare const OPENAI_CODEX_ACCOUNT_LIMIT = 16;
 /** Maximum serialized credential document size. */
 export declare const OPENAI_CODEX_AUTH_DOCUMENT_LIMIT: number;
-/** Suffix used for the one-time version-1 rollback copy. */
+/** Legacy backup path; explicit migration encrypts this in place, never creates a plaintext copy. */
 export declare const OPENAI_CODEX_AUTH_V1_BACKUP_SUFFIX = ".v1-backup";
 interface OpenAICodexAccountSummary {
   accountKey: string;
@@ -46,20 +54,27 @@ interface CapturedOpenAICodexAccount extends CredentialStore {
  * @returns the absolute owner-only document path.
  */
 export declare function openAICodexAuthPath(dshHome?: string): string;
-/** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
+/** Encrypted pi-ai store scoped to the single OpenAI Codex provider. */
 export declare class OpenAICodexCredentialStore implements CredentialStore {
   /** Absolute credential document path. */
   readonly filename: string;
-  /** Owner-only version-1 rollback copy, created at the first migration write. */
+  /** Existing legacy rollback copy, encrypted only by explicit migration. */
   readonly version1BackupFilename: string;
+  private readonly keyStore;
   /**
    * @param filename - explicit document path, defaulting under `$DSH_HOME`.
    */
-  constructor(filename?: string);
+  constructor(filename?: string, keyStore?: CredentialKeyStore);
   /** Read and validate the current document without acquiring the writer lock. */
   private readDocument;
   private readDocumentAt;
   private writeDocument;
+  /** Fail before opening an OAuth browser when storage or migration is unavailable. */
+  prepareSecureStorage(): Promise<void>;
+  /** Explicit, offline migration only. Validate both inputs before writes; never make a plaintext backup. */
+  migrateLegacyStorage(options: {
+    confirmStopped: boolean;
+  }): Promise<void>;
   /** @inheritdoc */
   read(providerId: string): Promise<Credential | undefined>;
   /**
@@ -84,6 +99,7 @@ export declare class OpenAICodexCredentialStore implements CredentialStore {
   /** @inheritdoc */
   delete(providerId: string): Promise<void>;
   /** Allow the provider's 15-second refresh plus bounded filesystem completion. */
+  private prepareDirectory;
   private withWriterLock;
 }
 //#endregion

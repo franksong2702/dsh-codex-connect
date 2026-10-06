@@ -10,7 +10,7 @@ import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai'
 import { CODEX_CONNECT_VERSION, diagnoseOpenAICodex } from './doctor.ts'
 import { loginOpenAICodex, logoutOpenAICodex, openAICodexAuthStatus } from './auth.ts'
 import { migrateOpenAICodexSearchHistory } from './history-migration.ts'
-import { openAICodexAuthPath } from './store.ts'
+import { OpenAICodexCredentialStore } from './store.ts'
 import { normalizeTrustedOrigin, OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { runCapabilityCommand } from './capability-cli.ts'
 import { runAutoReviewProbeCommand } from './auto-review-cli.ts'
@@ -90,6 +90,7 @@ function printHelp(): void {
     'Usage: dsh-codex-connect <doctor|login|logout|status> [--device-code|--json]',
     '       dsh-codex-connect doctor [--install-anchor <absolute-dsh-package.json>] [--json]',
     '       dsh-codex-connect migrate-history [--apply --confirm-stopped] [--root <path>] [--json]',
+    '       dsh-codex-connect migrate-credentials --confirm-stopped',
     '       dsh-codex-connect trust-origin <origin>',
     '       dsh-codex-connect trusted-origins [--json]',
     '       dsh-codex-connect untrust-origin <origin>',
@@ -102,6 +103,7 @@ function printHelp(): void {
     '  login          sign in with a separate ChatGPT OAuth session',
     '  logout         remove the dsh credential without changing ~/.codex',
     '  migrate-history find or repair Alpha 4.10 private search events (dry-run by default)',
+    '  migrate-credentials encrypt legacy credentials using the OS keyring (Harness must be stopped)',
     '  status         report non-secret dsh credential state',
     '  trust-origin   allow one exact browser origin to reach Web OAuth routes',
     '  trusted-origins list the currently allowed browser origins',
@@ -150,6 +152,20 @@ export async function run(argv: readonly string[]): Promise<number> {
     return 0
   }
   const [rawAction, ...flags] = argv
+  if (rawAction === 'migrate-credentials') {
+    if (flags.length !== 1 || flags[0] !== '--confirm-stopped') {
+      process.stderr.write('dsh-codex-connect: migrate-credentials requires exactly --confirm-stopped\n')
+      return 1
+    }
+    try {
+      await new OpenAICodexCredentialStore().migrateLegacyStorage({ confirmStopped: true })
+      process.stdout.write('Codex Connect: credential migration completed; no plaintext backup was created.\n')
+      return 0
+    } catch (error: unknown) {
+      process.stderr.write(`dsh-codex-connect: credential migration failed: ${safeMessage(error)}\n`)
+      return 1
+    }
+  }
   if (rawAction === 'capabilities') return runCapabilityCommand(flags)
   if (rawAction === 'auto-review-probe') return runAutoReviewProbeCommand(flags)
   if (rawAction === 'metrics') return runRequestMetricsCommand(flags)
@@ -302,7 +318,7 @@ export async function run(argv: readonly string[]): Promise<number> {
       }
       case 'logout':
         await logoutOpenAICodex()
-        process.stdout.write(`Codex Connect: signed out; removed ${openAICodexAuthPath()}\n`)
+        process.stdout.write('Codex Connect: signed out; removed encrypted credentials and the OS-store key.\n')
         return 0
       case 'login': {
         const readline = createInterface({ input: process.stdin, output: process.stdout })
@@ -314,7 +330,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         } finally {
           readline.close()
         }
-        process.stdout.write(`Codex Connect: signed in; credentials saved to ${openAICodexAuthPath()}\n`)
+        process.stdout.write('Codex Connect: signed in; credentials encrypted with an OS-store key.\n')
         return 0
       }
     }

@@ -5,9 +5,10 @@ import type {} from '@deepseek-ai/dsh-commands'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ApprovalOutcome } from '@deepseek-ai/dsh-user-approval'
 import type { ApprovalRequestEvent } from '@deepseek-ai/dsh-user-approval/types'
-import type { AutoReviewBackend } from './auto-review-backend.ts'
-import { OpenAICodexAutoReviewBackend } from './auto-review-backend.ts'
-import { AutoReviewState, buildAutoReviewContext, resolveAutoReviewAction } from './auto-review-contract.ts'
+import type { AutoReviewAssessment, AutoReviewBackend, AutoReviewBackendResult } from './auto-review-backend.ts'
+import { OpenAICodexAutoReviewBackend, parseAutoReviewAssessment } from './auto-review-backend.ts'
+import type { AutoReviewAction, AutoReviewActionPolicy } from './auto-review-contract.ts'
+import { AutoReviewState, buildAutoReviewContext, redactAutoReviewText, resolveAutoReviewAction, resolveAutoReviewLocalPolicy } from './auto-review-contract.ts'
 import { OPENAI_CODEX_PROVIDER } from './store.ts'
 import type { OpenAICodexCredentialStore } from './store.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
@@ -22,22 +23,41 @@ function notice(summary: string, text: string) {
   })
 }
 
+function requestCancelled(request: ApprovalRequestEvent): boolean {
+  return request.signal?.aborted === true
+}
+
 /** Stateful DSH answerer implementing Codex rejection and retry semantics. */
 export class OpenAICodexAutoReviewAnswerer {
   constructor(
     private readonly backend: AutoReviewBackend,
     readonly state: AutoReviewState = new AutoReviewState(),
     private readonly log: (message: string) => void = () => undefined,
+    private readonly resolvePolicy: (action: AutoReviewAction) => Promise<AutoReviewActionPolicy> = resolveAutoReviewLocalPolicy,
   ) {}
 
   /** Decide one exact approval request or preserve the human answerer chain. */
   async answer(request: ApprovalRequestEvent, next: () => Promise<ApprovalOutcome>): Promise<ApprovalOutcome> {
     if (request.agent.session.requestHeader()?.config.provider !== OPENAI_CODEX_PROVIDER) return next()
+    if (requestCancelled(request)) return 'cancelled'
     const action = resolveAutoReviewAction(request)
     if (action === undefined) return next()
 
     const override = this.state.consume(request.agent, action)
     if (override === 'matched') {
+      let currentPolicy: AutoReviewActionPolicy
+      try { currentPolicy = await this.resolvePolicy(action) } catch {
+        currentPolicy = { humanReason: 'The current target cannot be revalidated.' }
+      }
+      if (requestCancelled(request)) return 'cancelled'
+      if ('humanReason' in currentPolicy) {
+        request.agent.inject(notice(
+          'The approved retry needs fresh human approval.',
+          `The one-shot approval was consumed. ${currentPolicy.humanReason} The host must review the current action again.`,
+        ))
+        this.log(`Codex Auto-review delegated stale exact override to human approval ${action.fingerprint}`)
+        return next()
+      }
       this.state.recordDecision(request.agent, action, false, 'Explicit exact-action override')
       this.log(`Codex Auto-review allowed exact override ${action.fingerprint}`)
       return 'allowed-once'
@@ -51,11 +71,28 @@ export class OpenAICodexAutoReviewAnswerer {
     }
     if (this.state.breakerOpen(request.agent, action.turn)) return next()
 
-    const result = await this.backend.review({
-      action,
-      context: buildAutoReviewContext(request.agent),
-      ...request.signal === undefined ? {} : { signal: request.signal },
-    })
+    const context = buildAutoReviewContext(request.agent)
+    let policy: AutoReviewActionPolicy
+    try { policy = await this.resolvePolicy(action) } catch { return requestCancelled(request) ? 'cancelled' : next() }
+    if (requestCancelled(request)) return 'cancelled'
+    if ('humanReason' in policy || context.hasTrustedUserEvidence !== true) {
+      request.agent.inject(notice(
+        'This action requires human approval.',
+        'humanReason' in policy ? policy.humanReason : 'Retained, unredacted trusted user evidence is unavailable. The reviewer cannot grant authorization.',
+      ))
+      this.log(`Codex Auto-review delegated to human approval ${action.fingerprint}`)
+      return next()
+    }
+
+    let result: AutoReviewBackendResult
+    try {
+      result = await this.backend.review({
+        action,
+        context,
+        ...request.signal === undefined ? {} : { signal: request.signal },
+      })
+    } catch { return requestCancelled(request) ? 'cancelled' : next() }
+    if (requestCancelled(request)) return 'cancelled'
     if (result.status === 'unavailable') return next()
     if (result.status === 'cancelled') return 'cancelled'
     if (result.status === 'timeout') {
@@ -69,14 +106,29 @@ export class OpenAICodexAutoReviewAnswerer {
       return retry ? 'rejected' : next()
     }
 
-    const denied = result.assessment.outcome === 'deny'
-    const denial = this.state.recordDecision(request.agent, action, denied, result.assessment.rationale)
-    this.log(`Codex Auto-review ${denied ? 'denied' : 'allowed'} ${action.fingerprint} risk=${result.assessment.risk_level} authorization=${result.assessment.user_authorization}`)
+    // Runtime validation also covers injected backends, beyond the network parser.
+    let assessment: AutoReviewAssessment | undefined
+    try { assessment = parseAutoReviewAssessment(JSON.stringify(result.assessment)) } catch { return next() }
+    if (assessment === undefined) return next()
+    const denied = assessment.outcome === 'deny'
+    if (!denied && (assessment.risk_level === 'high' || assessment.risk_level === 'critical'
+      || assessment.user_authorization === 'unknown'
+      || (assessment.risk_level === 'medium' || policy.riskFloor === 'medium') && assessment.user_authorization === 'low')) {
+      request.agent.inject(notice(
+        'This action requires human approval.',
+        'The reviewer assessment does not satisfy the local risk and authorization requirements. A model decision cannot replace human approval for high risk or security-sensitive actions.',
+      ))
+      this.log(`Codex Auto-review delegated to human approval ${action.fingerprint} risk=${assessment.risk_level} authorization=${assessment.user_authorization}`)
+      return next()
+    }
+    const rationale = redactAutoReviewText(assessment.rationale).text
+    const denial = this.state.recordDecision(request.agent, action, denied, rationale)
+    this.log(`Codex Auto-review ${denied ? 'denied' : 'allowed'} ${action.fingerprint} risk=${assessment.risk_level} authorization=${assessment.user_authorization}`)
     if (!denied) return 'allowed-once'
 
     request.agent.inject(notice(
       'Codex Auto-review denied an action.',
-      `Untrusted reviewer rationale: ${result.assessment.rationale}\n${REJECTION_GUIDANCE}\nA user can approve one exact retry with /approve ${denial!.id}.`,
+      `Untrusted reviewer rationale: ${rationale}\n${REJECTION_GUIDANCE}\nA user can approve one exact retry with /approve ${denial!.id}.`,
     ))
     if (this.state.breakerOpen(request.agent, action.turn)) {
       request.agent.cancel({ kind: 'hook', reason: 'Codex Auto-review denial circuit breaker opened' }, { keepInbox: true })

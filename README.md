@@ -108,7 +108,7 @@ OAuth credentials are stored on the host running DSH and used there to authentic
 
 ### Does uninstalling sign me out?
 
-No. OAuth state is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default). The plugin does not copy or modify `~/.codex/auth.json`. Use **Sign out all accounts**, or `logout` before uninstalling, only when deleting credentials is intentional.
+No. OAuth state is encrypted with an OS-held key, separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default). The plugin does not copy or modify `~/.codex/auth.json`. Use **Sign out all accounts**, or `logout` before uninstalling, only when deleting credentials is intentional.
 
 ### Can I switch accounts for different conversations?
 

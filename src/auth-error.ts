@@ -1,4 +1,5 @@
 /** Public diagnostics never include arbitrary provider messages or nested causes. */
+import { CredentialStorageError } from './secure-store.ts'
 const REQUEST_AUTH_MESSAGES = {
   MISSING_CREDENTIAL: 'OpenAI Codex request account is unavailable. Please select an account or sign in again.',
   AUTH_FAILED: 'OpenAI Codex operation failed. Please try again.',
@@ -27,6 +28,7 @@ const PUBLIC_MESSAGES = new Set([
 
 /** Return a bounded diagnostic from a closed vocabulary, never upstream response text. */
 export function publicAuthError(error: unknown): string {
+  if (error instanceof CredentialStorageError) return 'Secure credential storage failed. Unlock/configure your OS credential store. Legacy plaintext credentials require stopping Harness and explicitly running migrate-credentials --confirm-stopped; see the secure-storage guide.'
   const message = error instanceof Error ? error.message : ''
   if (PUBLIC_MESSAGES.has(message)) return message
   if (/^OpenAI Codex usage request failed with HTTP [1-5][0-9]{2}$/u.test(message)) return message

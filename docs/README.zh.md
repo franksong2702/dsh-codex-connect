@@ -108,7 +108,7 @@ OAuth 凭据保存在运行 DSH 的主机上，由该主机用于向 OpenAI 认�
 
 ### 卸载插件会退出登录吗？
 
-不会。OAuth 状态单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`），插件不会复制或修改 `~/.codex/auth.json`。只有确实要删除凭据时，才使用 **退出所有账户**，或在卸载前运行 `logout`。
+不会。OAuth 状态通过操作系统凭据库中的密钥加密，单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`），插件不会复制或修改 `~/.codex/auth.json`。只有确实要删除凭据时，才使用 **退出所有账户**，或在卸载前运行 `logout`。
 
 ### 可以给不同对话分别切换账户吗？
 

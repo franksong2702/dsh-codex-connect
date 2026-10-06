@@ -109,7 +109,8 @@ describe('OpenAICodexCredentialStore', () => {
   it('rejects malformed and over-broad documents without echoing their contents', async () => {
     const auth = await store()
     await writeFile(auth.filename, '{"version":1,"credential":{"type":"oauth","access":"leaked-secret"}}', { mode: 0o600 })
-    const failure = await auth.read(OPENAI_CODEX_PROVIDER).catch((error: unknown) => error)
+    await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/explicit migration/)
+    const failure = await auth.migrateLegacyStorage({ confirmStopped: true }).catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(Error)
     expect(String(failure)).toContain('refresh')
     expect(String(failure)).not.toContain('leaked-secret')
@@ -125,43 +126,49 @@ describe('OpenAICodexCredentialStore', () => {
     const auth = await store()
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential()))
     expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
-      version: 2,
-      activeAccountId: 'account-1',
-      credentials: [{ type: 'oauth', accountId: 'account-1' }],
+      version: 3,
+      cipher: 'aes-256-gcm',
     })
+    expect(await readFile(auth.filename, 'utf8')).not.toContain('access-secret')
+    expect(await readFile(auth.filename, 'utf8')).not.toContain('refresh-secret')
+    expect(await readFile(auth.filename, 'utf8')).not.toContain('account-1')
     await expect(auth.modify('other', () => Promise.resolve(credential())))
       .rejects.toThrow(/does not own provider/)
     expect(await auth.read('other')).toBeUndefined()
   })
 
-  it('migrates version 1 on write and preserves one owner-only rollback copy', async () => {
+  it('requires explicit version 1 migration and never creates a plaintext rollback copy', async () => {
     const auth = await store()
     const original = `${JSON.stringify({ version: 1, credential: credential('old') }, null, 2)}\n`
     await writeFile(auth.filename, original, { mode: 0o600 })
 
+    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2')))).rejects.toThrow(/explicit migration/)
+    expect(await readFile(auth.filename, 'utf8')).toBe(original)
+    await expect(auth.migrateLegacyStorage({ confirmStopped: false })).rejects.toThrow(/confirm-stopped/)
+    await auth.migrateLegacyStorage({ confirmStopped: true })
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2')))
 
     expect(JSON.parse(await readFile(auth.filename, 'utf8'))).toMatchObject({
-      version: 2,
-      activeAccountId: 'account-2',
-      credentials: [{ accountId: 'account-1' }, { accountId: 'account-2' }],
+      version: 3,
+      cipher: 'aes-256-gcm',
     })
-    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(original)
-    if (process.platform !== 'win32') expect((await stat(auth.version1BackupFilename)).mode & 0o777).toBe(0o600)
+    expect(await auth.read(OPENAI_CODEX_PROVIDER)).toMatchObject({ accountId: 'account-2' })
+    expect(await auth.accounts()).toHaveLength(2)
+    await expect(stat(auth.version1BackupFilename)).rejects.toMatchObject({ code: 'ENOENT' })
 
     await auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('newer', 'account-3')))
-    expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(original)
+    await expect(stat(auth.version1BackupFilename)).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
-  it('refuses to replace version 1 when an existing rollback copy does not match', async () => {
+  it('does not change either legacy file when its rollback copy is malformed', async () => {
     const auth = await store()
     const original = `${JSON.stringify({ version: 1, credential: credential('old') }, null, 2)}\n`
-    const unrelated = `${JSON.stringify({ version: 1, credential: credential('other', 'other-account') }, null, 2)}\n`
+    const unrelated = '{"version":1,"credential":{"access":"synthetic-backup-secret"}}'
     await writeFile(auth.filename, original, { mode: 0o600 })
     await writeFile(auth.version1BackupFilename, unrelated, { mode: 0o600 })
 
-    await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('new', 'account-2'))))
-      .rejects.toThrow(/rollback copy does not match/u)
+    await expect(auth.migrateLegacyStorage({ confirmStopped: true }))
+      .rejects.toThrow(/type must be oauth/u)
     expect(await readFile(auth.filename, 'utf8')).toBe(original)
     expect(await readFile(auth.version1BackupFilename, 'utf8')).toBe(unrelated)
   })
@@ -245,8 +252,8 @@ describe('OpenAICodexCredentialStore', () => {
     await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('overflow', 'overflow'))))
       .rejects.toThrow(/at most 16 accounts/u)
 
-    await writeFile(auth.filename, ' '.repeat(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT + 1), { mode: 0o600 })
-    await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/exceeds 524288 bytes/u)
+    await writeFile(auth.filename, ' '.repeat(1024 * 1024 + 1), { mode: 0o600 })
+    await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/exceeds 1048576 bytes/u)
     await rm(auth.filename)
     await expect(auth.modify(OPENAI_CODEX_PROVIDER, () => Promise.resolve(credential('x'.repeat(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT)))))
       .rejects.toThrow(/credential document exceeds/u)
@@ -258,6 +265,7 @@ describe('OpenAICodexCredentialStore', () => {
     await expect(auth.read(OPENAI_CODEX_PROVIDER)).rejects.toThrow(/regular file/u)
     await rm(auth.filename, { recursive: true })
     await writeFile(auth.filename, JSON.stringify({ version: 1, credential: credential() }), { mode: 0o600 })
+    await auth.migrateLegacyStorage({ confirmStopped: true })
     await auth.activate((await auth.accounts())[0]!.accountKey)
     await auth.delete(OPENAI_CODEX_PROVIDER)
     await expect(stat(auth.filename)).rejects.toMatchObject({ code: 'ENOENT' })
