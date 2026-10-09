@@ -27,13 +27,21 @@ Codex 目录来自已安装的 `@earendil-works/pi-ai` 包，不是实时查询�
 
 GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 
-- **Fast Mode** 只为当前对话请求优先服务（`service_tier: 'priority'`）。默认关闭，也不会更换模型。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
+- **Fast Mode** 只为当前对话请求优先服务（`service_tier: 'priority'`）。默认关闭，不会更换模型或降低推理强度。新对话和新子代理的 Fast Mode 默认值也不改变推理强度。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
 - Profile 中的「新对话默认使用 Fast Mode」和「新子代理对话默认使用 Fast Mode」互相独立，初始均关闭。只在新会话启动时应用；修改设置不会倒改已有会话，也不会覆盖 Composer 中的手动选择。单个对话的 Fast Mode 状态仍保存在进程内，因此插件重启后恢复该对话会回到标准速度；之后新建的会话仍按已保存的默认值启动。
 - **额度条**在已登录且标签页可见时通常每 60 秒刷新一次（隐藏时暂停，失败后延长重试间隔），只显示服务端实际返回的 `5h` 和 `7d` 窗口，并显示精确剩余百分比与重置时间。`gpt-5.3-codex-spark` 使用独立的 Spark 额度桶。Codex Connect 不会虚构缺失窗口，也不会根据套餐名称隐藏已返回窗口。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中的 Fast Mode 与额度控件" width="820">
 </p>
+
+## 普通子代理的推理强度
+
+DSH `0.2.0-rc.2` 和 `0.2.1-alpha.1` 的普通 Harness 子代理支持显式指定推理强度。先启用宿主的子代理模型选择设置，授权精确的 `openai-codex` / `gpt-6.1-sol` 路由，再新建主对话，让会话记录这项策略。子代理工具需使用支持 `agentOptions` 的后端，例如 Harness 进程内后端或 DSH SDK，并设置 `modelSelectionSettings: true`。外部 Codex、Claude Code 和 ACP 后端不支持这个选择接口。
+
+先通过 `list_subagent_models` 查看已授权路由与公开的推理强度，再在普通 `subagent` 工具调用中，连同必需的任务参数传入 `provider: "openai-codex"`、`model: "gpt-6.1-sol"` 和 `reasoning_effort: "max"`。允许模型列表记录的是提供方／模型组合；强度是每次调用的独立字段，由所选模型校验。插件供账户卡片使用的 `/models` 响应不是宿主发现推理强度的接口。这不启用已冻结的 Adaptive Task，也不需要插件级强度默认值。
+
+Workflow 的 `agent()` 是宿主的另一个接口：这两个精确 DSH 版本仅接受 `label`、`phase`、`schema`、`provider` 和 `model`，不接受 `reasoningEffort` 或 `reasoning_effort`；普通子代理设置不会为 Workflow 添加这些参数。模型元数据与本地路由校验不能证明账户具有调用权限。
 
 ## 可选能力
 

@@ -52,7 +52,7 @@ export function registerAdaptiveTaskHttp(ctx: Context, runtime: {
   state(sessionId: string, principal: string): Promise<AdaptiveTaskState>
   command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState>
 }): void {
-  ctx.webServer.register({ kind: 'exact', path: ADAPTIVE_TASK_PATH, async handler(req, res) {
+  ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: ADAPTIVE_TASK_PATH, async handler(req, res) {
     const rejected = ctx.connection.requestRejection(req)
     if (rejected !== undefined) { reply(res, rejected, { error: 'TASK_BROWSER_AUTH_REQUIRED' }); return }
     if (req.headers['sec-fetch-site'] === 'cross-site') { reply(res, 403, { error: 'TASK_BROWSER_AUTH_REQUIRED' }); return }
@@ -74,5 +74,5 @@ export function registerAdaptiveTaskHttp(ctx: Context, runtime: {
       const code = error instanceof AdaptiveTaskError ? error.code : 'TASK_OPERATION_FAILED'
       reply(res, code === 'TASK_OWNER_MISMATCH' || code === 'TASK_BROWSER_AUTH_REQUIRED' ? 403 : 409, { error: code })
     }
-  } })
+  } }), 'Authenticated task route')
 }
