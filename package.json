@@ -175,7 +175,7 @@
     "@deepseek-ai/dsh-fs": "0.1.7-rc.1",
     "@deepseek-ai/dsh-fs-local": "0.1.7-rc.1",
     "@deepseek-ai/dsh-home-paths": "0.1.7-rc.1",
-    "@deepseek-ai/dsh-host-webserver": "0.1.7-rc.1",
+    "@deepseek-ai/dsh-host-webserver": "0.1.7-rc.2",
     "@deepseek-ai/dsh-invariants": "0.1.7-rc.1",
     "@deepseek-ai/dsh-launch-environment": "0.1.7-rc.1",
     "@deepseek-ai/dsh-llm": "0.1.7-rc.1",
