@@ -9,6 +9,7 @@ import { checkInstalledNativeCompaction } from './check-installed-native-compact
 import { checkInstalledImages } from './check-installed-images.mjs'
 import { createInstalledHostContext } from './installed-host-context.mjs'
 import { checkInstalledMetrics } from './check-installed-metrics.mjs'
+import { checkInstalledTaskHttp } from './check-installed-task-http.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const PROVIDER_ID = 'openai-codex'
@@ -94,6 +95,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     }
 
     const requestMetrics = await checkInstalledMetrics(importHost, OpenAICodex, packagePath)
+    const taskHttpLifecycle = await checkInstalledTaskHttp(importHost, OpenAICodex)
     const reserveTransitionsVerified = await checkInstalledReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
@@ -109,6 +111,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       nativeCompactionLifecycle,
       images,
       requestMetrics,
+      taskHttpLifecycle,
     }
   } finally {
     await ctx.fiber.dispose()

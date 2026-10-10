@@ -79,6 +79,24 @@ it('bounds read-only readiness retries without sending any mutation', async () =
   mount(); await expect.element(page.getByRole('button', { name: 'Existing task controls', exact: true })).toBeVisible()
   expect(reads).toBe(3)
 })
+it('keeps a failed legacy-task read recoverable without enabling stale safety exits', async () => {
+  let broken = false
+  vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init?: RequestInit) => {
+    expect(init?.method).toBe('GET')
+    return broken ? new Response('', { status: 400 }) : Response.json(state('interrupted'))
+  }))
+  mount()
+  await expect.element(page.getByRole('button', { name: 'Existing task controls', exact: true })).toBeVisible()
+  broken = true
+  await page.getByRole('button', { name: 'Existing task controls', exact: true }).click()
+  await expect.element(page.getByRole('alert')).toBeVisible()
+  expect(await page.getByRole('button', { name: 'Take over manually', exact: true }).elements()).toHaveLength(0)
+  expect(element!.textContent).not.toContain('Recorded state: off')
+  broken = false
+  await page.getByRole('button', { name: 'Read state again', exact: true }).click()
+  await expect.element(page.getByText('Recorded state: interrupted', { exact: false })).toBeVisible()
+  await expect.element(page.getByRole('button', { name: 'Take over manually', exact: true })).toBeEnabled()
+})
 it('cancels an old session read and never lets its late response create controls in the new session', async () => {
   let resolveOld!: (value: Response) => void, oldSignal: AbortSignal | undefined
   const fetch = vi.fn(async (url: unknown, init?: RequestInit) => {
