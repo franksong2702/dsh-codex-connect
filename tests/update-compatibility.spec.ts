@@ -4,7 +4,7 @@ import { parseOpenAICodexVerifiedCompatibility } from '../src/update.ts'
 
 const catalog = {
   schemaVersion: 1 as const,
-  checkedAt: '2026-10-04',
+  checkedAt: '2026-10-10',
   latestDshVersion: '0.2.1-alpha.1',
   pluginVersions: [
     { version: '0.1.0-alpha.4.14', verifiedDshVersions: ['0.1.0-rc.7'] },
@@ -50,6 +50,7 @@ const catalog = {
     { version: '0.1.0-alpha.4.54', verifiedDshVersions: ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2'] },
     { version: '0.2.0-alpha.1', verifiedDshVersions: ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2'] },
     { version: '0.2.0-alpha.2', verifiedDshVersions: ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1'] },
+    { version: '0.2.0-alpha.3', verifiedDshVersions: ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1'] },
   ],
 }
 
