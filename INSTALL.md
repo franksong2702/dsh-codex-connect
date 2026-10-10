@@ -8,6 +8,8 @@ Install `dsh-codex-connect` into one requested DeepSeek Harness profile without 
 
 Channel snapshot on 2026-10-04: npm `alpha` points to `0.2.0-alpha.2`; `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
 
+The secure-storage source candidate adds an OS credential-store requirement and explicit legacy migration. The published release instructions below do not install this candidate. Read [secure storage](docs/secure-storage.md) before separately approving installation, migration or login.
+
 ## Safety requirements
 
 - Never read, print, copy, move, or modify `~/.codex/auth.json`.

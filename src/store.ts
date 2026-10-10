@@ -1,9 +1,10 @@
 /**
- * Owner-only persistent OAuth credential storage for the OpenAI Codex bundle.
+ * OS-keyring-encrypted persistent OAuth credential storage for the OpenAI Codex bundle.
  * @module dsh-codex-connect/store
  */
 
 import { createHash } from 'node:crypto'
+import { constants } from 'node:fs'
 import { mkdir, open, rm } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import type { Credential, CredentialInfo, CredentialStore, OAuthCredential } from '@earendil-works/pi-ai'
@@ -13,6 +14,12 @@ import {
   resolveOpenAICodexAccountProfiles,
   type OpenAICodexAccountProfileSource,
 } from './account-profile.ts'
+import {
+  CREDENTIAL_ENVELOPE_LIMIT, CREDENTIAL_ENVELOPE_VERSION, CredentialStorageError,
+  OSCredentialKeyStore, credentialKey, decryptCredentialDocument, encryptCredentialDocument,
+  type CredentialKeyStore,
+} from './secure-store.ts'
+import { assertCredentialParent } from './secure-path.ts'
 
 /** Provider route and pi-ai provider id owned by this bundle. */
 export const OPENAI_CODEX_PROVIDER = 'openai-codex'
@@ -29,7 +36,7 @@ export const OPENAI_CODEX_ACCOUNT_LIMIT = 16
 /** Maximum serialized credential document size. */
 export const OPENAI_CODEX_AUTH_DOCUMENT_LIMIT = 512 * 1024
 
-/** Suffix used for the one-time version-1 rollback copy. */
+/** Legacy backup path; explicit migration encrypts this in place, never creates a plaintext copy. */
 export const OPENAI_CODEX_AUTH_V1_BACKUP_SUFFIX = '.v1-backup'
 
 type StoredOAuthCredential = OAuthCredential & { accountId: string }
@@ -200,31 +207,37 @@ export function openAICodexAuthPath(dshHome?: string): string {
   return resolve(join(resolveDshHome(dshHome), OPENAI_CODEX_AUTH_FILENAME))
 }
 
-/** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
+/** Encrypted pi-ai store scoped to the single OpenAI Codex provider. */
 export class OpenAICodexCredentialStore implements CredentialStore {
   /** Absolute credential document path. */
   readonly filename: string
 
-  /** Owner-only version-1 rollback copy, created at the first migration write. */
+  /** Existing legacy rollback copy, encrypted only by explicit migration. */
   readonly version1BackupFilename: string
+  private readonly keyStore: CredentialKeyStore
 
   /**
    * @param filename - explicit document path, defaulting under `$DSH_HOME`.
    */
-  constructor(filename: string = openAICodexAuthPath()) {
+  constructor(filename: string = openAICodexAuthPath(), keyStore?: CredentialKeyStore) {
     this.filename = resolve(filename)
     this.version1BackupFilename = join(dirname(this.filename), `${basename(this.filename)}${OPENAI_CODEX_AUTH_V1_BACKUP_SUFFIX}`)
+    this.keyStore = keyStore ?? new OSCredentialKeyStore(this.filename)
   }
 
   /** Read and validate the current document without acquiring the writer lock. */
   private async readDocument(): Promise<AuthDocument | undefined> {
-    return this.readDocumentAt(this.filename)
+    const document = await this.readDocumentAt(this.filename)
+    // An old rollback copy can also contain tokens; do not ignore a plaintext backup.
+    await this.readDocumentAt(this.version1BackupFilename)
+    return document
   }
 
-  private async readDocumentAt(filename: string): Promise<AuthDocument | undefined> {
+  private async readDocumentAt(filename: string, allowLegacy = false): Promise<AuthDocument | undefined> {
+    await assertCredentialParent(filename, true)
     let handle
     try {
-      handle = await open(filename, 'r')
+      handle = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW)
     } catch (error) {
       if (isENOENT(error)) return undefined
       throw error
@@ -232,31 +245,62 @@ export class OpenAICodexCredentialStore implements CredentialStore {
     try {
       const info = await handle.stat()
       if (!info.isFile()) throw new Error(`openai-codex: ${filename} must be a regular file`)
+      if (process.getuid !== undefined && info.uid !== process.getuid()) throw new CredentialStorageError('The credential document is not owned by the current user.')
       assertOwnerOnly(filename, info.mode)
-      if (info.size > OPENAI_CODEX_AUTH_DOCUMENT_LIMIT) {
-        throw new Error(`openai-codex: ${filename} exceeds ${String(OPENAI_CODEX_AUTH_DOCUMENT_LIMIT)} bytes`)
+      if (info.size > CREDENTIAL_ENVELOPE_LIMIT) {
+        throw new Error(`openai-codex: ${filename} exceeds ${String(CREDENTIAL_ENVELOPE_LIMIT)} bytes`)
       }
-      return parseDocument(await handle.readFile('utf8'), filename)
+      const text = await handle.readFile('utf8')
+      let raw: unknown
+      try { raw = JSON.parse(text) } catch { throw new CredentialStorageError('The credential document is not valid JSON.') }
+      if (typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['version'] === CREDENTIAL_ENVELOPE_VERSION) {
+        const plaintext = decryptCredentialDocument(raw, filename, await credentialKey(this.keyStore, false))
+        if (Buffer.byteLength(plaintext) > OPENAI_CODEX_AUTH_DOCUMENT_LIMIT) throw new CredentialStorageError('The decrypted credential document exceeds the size limit.')
+        return parseDocument(plaintext, filename)
+      }
+      if (!allowLegacy) throw new CredentialStorageError('Legacy plaintext credentials require explicit migration: stop Harness, then run dsh-codex-connect migrate-credentials --confirm-stopped. No credentials were imported or changed.')
+      if (Buffer.byteLength(text) > OPENAI_CODEX_AUTH_DOCUMENT_LIMIT) throw new CredentialStorageError('The legacy credential document exceeds the size limit.')
+      return parseDocument(text, filename)
     } finally {
       await handle.close()
     }
   }
 
-  private async writeDocument(document: AuthDocumentV2, previous?: AuthDocument): Promise<void> {
+  private async writeDocument(document: AuthDocumentV2): Promise<void> {
     const text = serializeDocument(document)
-    if (previous?.version === 1) {
-      const existingBackup = await this.readDocumentAt(this.version1BackupFilename)
-      if (existingBackup === undefined) {
-        await writeFileAtomic(this.version1BackupFilename, serializeDocument(previous), {
-          mode: 0o600,
-          dirMode: 0o700,
-        })
-      } else if (existingBackup.version !== 1
-        || serializeDocument(existingBackup) !== serializeDocument(previous)) {
-        throw new Error(`openai-codex: ${this.version1BackupFilename} rollback copy does not match the current version 1 credential`)
+    const key = await credentialKey(this.keyStore, true)
+    await assertCredentialParent(this.filename)
+    await writeFileAtomic(this.filename, encryptCredentialDocument(text, this.filename, key), { mode: 0o600, dirMode: 0o700 })
+  }
+
+  /** Fail before opening an OAuth browser when storage or migration is unavailable. */
+  async prepareSecureStorage(): Promise<void> {
+    await this.prepareDirectory()
+    await this.withWriterLock(async () => {
+      await this.readDocument()
+      await credentialKey(this.keyStore, true)
+    })
+  }
+
+  /** Explicit, offline migration only. Validate both inputs before writes; never make a plaintext backup. */
+  async migrateLegacyStorage(options: { confirmStopped: boolean }): Promise<void> {
+    if (options.confirmStopped !== true) throw new CredentialStorageError('Credential migration requires explicit --confirm-stopped confirmation.')
+    await this.prepareDirectory()
+    await this.withWriterLock(async () => {
+      const document = await this.readDocumentAt(this.filename, true)
+      const backup = await this.readDocumentAt(this.version1BackupFilename, true)
+      if (document === undefined && backup === undefined) return
+      const key = await credentialKey(this.keyStore, true)
+      // Backup first: a failed primary write leaves the original primary usable for a retry.
+      for (const [filename, value] of [[this.version1BackupFilename, backup], [this.filename, document]] as const) {
+        if (value === undefined) continue
+        const plaintext = serializeDocument(value)
+        await assertCredentialParent(filename)
+        await writeFileAtomic(filename, encryptCredentialDocument(plaintext, filename, key), { mode: 0o600, dirMode: 0o700 })
+        const verified = await this.readDocumentAt(filename)
+        if (verified === undefined || serializeDocument(verified) !== plaintext) throw new CredentialStorageError('Encrypted migration readback failed; stop and retain the current files for recovery.')
       }
-    }
-    await writeFileAtomic(this.filename, text, { mode: 0o600, dirMode: 0o700 })
+    })
   }
 
   /** @inheritdoc */
@@ -308,7 +352,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
     fn: (current: Credential | undefined) => Promise<Credential | undefined>,
     options?: Parameters<CredentialStore['modify']>[2],
   ): Promise<StoredOAuthCredential | undefined> {
-    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await this.prepareDirectory()
     return this.withWriterLock(async () => {
       const document = await this.readDocument()
       if (document === undefined) return undefined
@@ -328,7 +372,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         version: AUTH_FORMAT_VERSION,
         activeAccountId: activeCredential(document).accountId,
         credentials: credentials.map(cloneCredential),
-      }, document)
+      })
       return cloneCredential(validated)
     })
   }
@@ -354,7 +398,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
 
   /** Select a stored account using its browser-safe key. */
   async activate(selectedAccountKey: string): Promise<OAuthCredential> {
-    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await this.prepareDirectory()
     return this.withWriterLock(async () => {
       const document = await this.readDocument()
       if (document === undefined) throw new Error('openai-codex: account not found')
@@ -365,14 +409,14 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         version: AUTH_FORMAT_VERSION,
         activeAccountId: selected.accountId,
         credentials: credentials.map(cloneCredential),
-      }, document)
+      })
       return cloneCredential(selected)
     })
   }
 
   /** Remove one account; active removal requires an explicit stored replacement. */
   async removeAccount(selectedAccountKey: string, replacementAccountKey?: string): Promise<void> {
-    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await this.prepareDirectory()
     await this.withWriterLock(async () => {
       const document = await this.readDocument()
       if (document === undefined) throw new Error('openai-codex: account not found')
@@ -396,6 +440,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
       await rm(this.version1BackupFilename, { force: true })
       if (remaining.length === 0) {
         await rm(this.filename, { force: true })
+        await this.keyStore.delete()
         return
       }
       await this.writeDocument({
@@ -416,7 +461,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
     if (providerId !== OPENAI_CODEX_PROVIDER) {
       throw new Error(`openai-codex: credential store does not own provider "${providerId}"`)
     }
-    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await this.prepareDirectory()
     return this.withWriterLock(async () => {
       const currentDocument = await this.readDocument()
       const current = currentDocument === undefined ? undefined : cloneCredential(activeCredential(currentDocument))
@@ -436,7 +481,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         version: AUTH_FORMAT_VERSION,
         activeAccountId: validated.accountId,
         credentials: credentials.map(cloneCredential),
-      }, currentDocument)
+      })
       return cloneCredential(validated)
     })
   }
@@ -444,14 +489,21 @@ export class OpenAICodexCredentialStore implements CredentialStore {
   /** @inheritdoc */
   async delete(providerId: string): Promise<void> {
     if (providerId !== OPENAI_CODEX_PROVIDER) return
-    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await this.prepareDirectory()
     await this.withWriterLock(async () => {
       await rm(this.filename, { force: true })
       await rm(this.version1BackupFilename, { force: true })
+      await this.keyStore.delete()
     })
   }
 
   /** Allow the provider's 15-second refresh plus bounded filesystem completion. */
+  private async prepareDirectory(): Promise<void> {
+    await assertCredentialParent(this.filename, true)
+    await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
+    await assertCredentialParent(this.filename)
+  }
+
   private withWriterLock<T>(operation: () => Promise<T>): Promise<T> {
     return withFileLock(this.filename, operation, { waitMs: 20_000 })
   }

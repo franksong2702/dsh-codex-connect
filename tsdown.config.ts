@@ -45,6 +45,7 @@ export default [
     },
     deps: {
       neverBundle: [
+        '@napi-rs/keyring',
         '@earendil-works/pi-ai',
         '@deepseek-ai/schemastery',
         '@deepseek-ai/cordis',
@@ -71,7 +72,7 @@ export default [
     fixedExtension: false,
     dts: false,
     clean: false,
-    deps: { alwaysBundle: [/.*/u] },
+    deps: { neverBundle: ['@napi-rs/keyring'], alwaysBundle: [/^(?!@napi-rs\/keyring(?:\/|$)).*/u] },
     define: {
       __CODEX_CONNECT_VERSION__: JSON.stringify(PACKAGE_VERSION),
     },

@@ -24,6 +24,10 @@ describe('Auto-review backend protocol', () => {
     expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, extra: true }))).toBeUndefined()
     expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, rationale: '' }))).toBeUndefined()
     expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, rationale: 'x'.repeat(4097) }))).toBeUndefined()
+    expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, risk_level: ['high'] }))).toBeUndefined()
+    expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, user_authorization: ['medium'] }))).toBeUndefined()
+    expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, risk_level: 'unknown' }))).toBeUndefined()
+    expect(parseAutoReviewAssessment(JSON.stringify({ ...assessment, user_authorization: null }))).toBeUndefined()
     expect(parseAutoReviewAssessment('not-json')).toBeUndefined()
   })
 
