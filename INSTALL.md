@@ -1,12 +1,12 @@
 # Installation Runbook for CLI Agents
 
-Published `0.2.0-alpha.2` is installation/runtime-regression verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Earlier DSH pairings retain their separately published plugin versions below.
+Published `0.2.0-alpha.3` is installation/runtime-regression verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. It adds official Desktop sign-in compatibility without changing the declared host set. Earlier DSH pairings retain their separately published plugin versions below.
 
 The exact DSH `0.2.1-alpha.1` adaptation is published in `0.2.0-alpha.2`. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects this host. See the [release notes](docs/release-notes/0.2.0-alpha.2.md) for scope and verification limits; keyless compatibility does not establish live-account acceptance.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-10-04: npm `alpha` points to `0.2.0-alpha.2`; `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
+Channel snapshot on 2026-10-10: npm `alpha` points to `0.2.0-alpha.3`; `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha, not a stable release. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
 
 ## Safety requirements
 
@@ -32,15 +32,21 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.5-alpha.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.2` | `0.1.0-alpha.4.41` |
-| `0.1.7-rc.1` | `0.2.0-alpha.2` |
-| `0.1.7-rc.2` | `0.2.0-alpha.2` |
-| `0.2.0-rc.1` | `0.2.0-alpha.2` |
-| `0.2.0-rc.2` | `0.2.0-alpha.2` |
-| `0.2.1-alpha.1` | `0.2.0-alpha.2` |
+| `0.1.7-rc.1` | `0.2.0-alpha.3` |
+| `0.1.7-rc.2` | `0.2.0-alpha.3` |
+| `0.2.0-rc.1` | `0.2.0-alpha.3` |
+| `0.2.0-rc.2` | `0.2.0-alpha.3` |
+| `0.2.1-alpha.1` | `0.2.0-alpha.3` |
 
 If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
-`0.2.0-alpha.2` requires one consistent DSH plugin API version from the five modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.2` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+`0.2.0-alpha.3` requires one consistent DSH plugin API version from the five modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.3` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+
+### 0.2.0-alpha.3 Desktop published delivery
+
+[PR #317](https://github.com/franksong2702/dsh-codex-connect/pull/317) adds official Desktop OAuth browser-launch compatibility and Desktop-specific account diagnostics without changing Web behavior, host support or default models. [Exact-main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/38035495747) and the [protected publication](https://github.com/franksong2702/dsh-codex-connect/actions/runs/38036148904) succeeded for `174811c27ae151536f671069a0087be71bb72891`; the matching [prerelease](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.3) is available.
+
+Independent read-only verification returned `already-complete` and matched the public npm archive byte-for-byte to the workflow artifact and all five strict installed-host checks. SHA-256: `05b873f251802ff794facd9ccab0b3f22289f13625bcc4379fbd87aece40f903`. Package identity, registry SHA-512/SHA-1, exact tag commit and prerelease passed. npm `alpha` is `0.2.0-alpha.3`; `latest` remains `0.2.0-alpha.1`. The immutable archive keeps the pre-publication README recommendation; use this repository's exact commands. See [the release notes](docs/release-notes/0.2.0-alpha.3.md) and the separate [Desktop local-build acceptance](#official-desktop). No daily installation upgrade, service restart, dependency refresh, new live-account npm acceptance or experimental activation is included.
 
 ### 0.2.0-alpha.2 published delivery
 
@@ -137,10 +143,10 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
    ```
 
-   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, use `0.2.0-alpha.2`:
+   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, use `0.2.0-alpha.3`:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.2
+   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.3
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -151,7 +157,7 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
    If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.41'` only for the DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` combinations, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.46'` only for DSH `0.1.7-rc.1`.
 
-   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.2'`.
+   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.3'`.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
@@ -172,14 +178,16 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
 Desktop uses the same plugin package, but owns a separate `desktop` profile and its bundled runtime. Check the installed Desktop version against the exact host table above; a Web installation does not enable the plugin in Desktop. Do not replace Desktop's runtime or copy a Web profile over it.
 
-For a local adaptation build, build and pack this branch, then use Desktop's own **Plugins** page or its bundled CLI to install the archive. A local archive is not the published npm artifact even if its package version is unchanged; retain its source commit and SHA-256 separately. On macOS the bundled CLI is:
+Install the exact published version using Desktop's own **Plugins** page or its bundled CLI. On macOS the bundled CLI is:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add /absolute/path/to/local-plugin.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-codex-connect@0.2.0-alpha.3
 ```
 
 Start Desktop once to initialize its profile and fully quit it before CLI package operations. Use the intended `DSH_HOME`; do not inherit an unrelated Web instance's home. Preserve profile patches, default models, optional capabilities and OAuth state. Reopen Desktop after installing. Its Plugins page can enable an installed but inactive bundle; a dependency entry alone is not proof of activation.
+
+For a local build, build and pack its exact source, then replace the package spec in the command with an absolute archive path. A local archive is not the immutable npm package even if its version is unchanged; retain its source commit and SHA-256 separately.
 
 On Desktop with pnpm 11, `ERR_PNPM_IGNORED_BUILDS` may leave the package installed but inactive. In the requested Desktop profile's `pnpm-workspace.yaml`, explicitly decline the two observed optional dependency build scripts, preserving other settings:
 
@@ -189,7 +197,7 @@ allowBuilds:
   protobufjs: false
 ```
 
-Then repeat the exact archive installation and verify activation. Do not blanket-enable dependency scripts or bypass peer compatibility checks. This is a scoped installation workaround, not a claim that all Desktop package operations are certified.
+Then repeat the selected package installation and verify activation. Do not blanket-enable dependency scripts or bypass peer compatibility checks. This is a scoped installation workaround, not a claim that all Desktop package operations are certified.
 
 The Desktop adaptation detects only the official `dsh-app://app` document for OAuth launch behavior: it opens the validated HTTPS authorization link directly through the desktop shell, rather than preopening a blank window. A null window handle is expected when Electron opens an external browser; it is not proof that the browser successfully opened. **Open login in browser**, cancellation and manual callback remain available. Never add `dsh-app://app` to the HTTP trusted-origin list. A Desktop-specific rejected-origin error calls for restart/version diagnostics, not a `--profile web trust-origin` command.
 
