@@ -168,6 +168,33 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
    When signed out, select **Authorize**. When signed in, use **Sign out** or **View quota**; use **More settings** for plugin options. If authorization is abandoned, use **Reopen authorization** or **Cancel sign-in** and retry; cancellation does not delete an existing account. Pending authorization expires after 10 minutes by default (`oauthTimeoutMs` in plugin configuration, applied on load).
 
+### Official Desktop
+
+Desktop uses the same plugin package, but owns a separate `desktop` profile and its bundled runtime. Check the installed Desktop version against the exact host table above; a Web installation does not enable the plugin in Desktop. Do not replace Desktop's runtime or copy a Web profile over it.
+
+For a local adaptation build, build and pack this branch, then use Desktop's own **Plugins** page or its bundled CLI to install the archive. A local archive is not the published npm artifact even if its package version is unchanged; retain its source commit and SHA-256 separately. On macOS the bundled CLI is:
+
+```sh
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add /absolute/path/to/local-plugin.tgz
+```
+
+Start Desktop once to initialize its profile and fully quit it before CLI package operations. Use the intended `DSH_HOME`; do not inherit an unrelated Web instance's home. Preserve profile patches, default models, optional capabilities and OAuth state. Reopen Desktop after installing. Its Plugins page can enable an installed but inactive bundle; a dependency entry alone is not proof of activation.
+
+On Desktop with pnpm 11, `ERR_PNPM_IGNORED_BUILDS` may leave the package installed but inactive. In the requested Desktop profile's `pnpm-workspace.yaml`, explicitly decline the two observed optional dependency build scripts, preserving other settings:
+
+```yaml
+allowBuilds:
+  '@google/genai': false
+  protobufjs: false
+```
+
+Then repeat the exact archive installation and verify activation. Do not blanket-enable dependency scripts or bypass peer compatibility checks. This is a scoped installation workaround, not a claim that all Desktop package operations are certified.
+
+The Desktop adaptation detects only the official `dsh-app://app` document for OAuth launch behavior: it opens the validated HTTPS authorization link directly through the desktop shell, rather than preopening a blank window. A null window handle is expected when Electron opens an external browser; it is not proof that the browser successfully opened. **Open login in browser**, cancellation and manual callback remain available. Never add `dsh-app://app` to the HTTP trusted-origin list. A Desktop-specific rejected-origin error calls for restart/version diagnostics, not a `--profile web trust-origin` command.
+
+On 2026-10-10 the maintainer reported successful login and normal use on DSH Desktop `0.2.0-rc.2` with the local adaptation archive (SHA-256 `9ac6fd1ea1def6bfaa6440c4727e5ea3587c2c9f3fd1c2cb9bb4377dcf001d41`). This is user-reported acceptance of that exact local build, not independent live-account verification of a later npm artifact. Synthetic UI/browser tests and isolated Desktop Host startup cover separate checks; image generation/editing and full Windows/mobile acceptance are not established by this report.
+
 ### Remote browser access
 
 The default Web OAuth boundary is loopback-only. When DSH runs on one device and you open it from another device on a trusted network through an IP address or domain, run the following on the device that runs DSH with the exact origin from the browser address bar:
