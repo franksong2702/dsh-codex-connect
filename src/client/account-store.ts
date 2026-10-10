@@ -1,6 +1,7 @@
 /** Shared, in-memory OAuth UI state. No token or browser storage is used here. */
 import type { OpenAICodexUsage } from '../usage.ts'
 import { BrowserRequestTimeoutError, requestJson } from './request-json.ts'
+import { isOfficialDesktopShell } from './browser-launch.ts'
 import {
   OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
   OPENAI_CODEX_AUTH_CANCEL_PATH,
@@ -300,7 +301,9 @@ export class OpenAICodexAccountStore {
   async signIn(): Promise<void> {
     if (this.disposed || this.snapshot.busy) return
     this.stopPolling()
-    const popup = window.open('about:blank', '_blank')
+    const desktop = isOfficialDesktopShell()
+    // Desktop rejects blank windows; Web must preopen while the user gesture is active.
+    const popup = desktop ? null : window.open('about:blank', '_blank')
     this.popup = popup
     if (popup !== null) popup.opener = null
     const retained = this.snapshot.status.status === 'signed-in' || this.snapshot.status.status === 'reauth-required'
@@ -309,7 +312,10 @@ export class OpenAICodexAccountStore {
     try {
       const challenge = parseChallenge(await this.request(OPENAI_CODEX_AUTH_LOGIN_PATH, 'POST'))
       if (this.disposed) { popup?.close(); return }
-      if (popup !== null) popup.location.replace(challenge.url)
+      if (desktop) {
+        // Electron opens HTTPS externally and returns null, not a retained Window.
+        try { window.open(challenge.url, '_blank', 'noopener,noreferrer') } catch { /* Keep the manual link below. */ }
+      } else if (popup !== null) popup.location.replace(challenge.url)
       this.publish({
         status: retained, busy: false, accounts: this.snapshot.accounts,
         operation: { kind: 'waiting-authorization' }, loginUrl: challenge.url,
