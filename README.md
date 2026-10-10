@@ -16,14 +16,16 @@ This guide describes the published pairing below. Check `dsh --version` first an
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.2.0-alpha.2` |
+| Codex Connect | `0.2.0-alpha.3` |
 | DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2` or `0.2.1-alpha.1` (consistent package set) |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
+[`0.2.0-alpha.3`](docs/release-notes/0.2.0-alpha.3.md) adds official Desktop sign-in compatibility and Desktop-specific account diagnostics while preserving the Web flow. Desktop uses its own profile and bundled CLI; follow the [Desktop installation instructions](INSTALL.md#official-desktop). The declared host versions, defaults and account storage are unchanged.
+
 [`0.2.0-alpha.2`](docs/release-notes/0.2.0-alpha.2.md) publishes exact DSH `0.2.1-alpha.1` compatibility and the cross-route image selection handle repair. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects that host. Existing supported hosts do not require an upgrade.
 
-As of 2026-10-04, npm `alpha` points to `0.2.0-alpha.2`, while `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha; the `latest` tag does not make it a stable release. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-10-10, npm `alpha` points to `0.2.0-alpha.3`, while `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha; the `latest` tag does not make it a stable release. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
 
 [`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.
 
@@ -31,10 +33,12 @@ It retains Alpha 4.54's handling of initial system instructions and tool definit
 
 The package passed keyless installation/runtime regression on all five exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
+Separately, the maintainer reported successful login and normal use on Desktop `0.2.0-rc.2` with the identified local adaptation build. The released client differs only by the package-version string; this is not new live-account acceptance of the public npm artifact. See the [Desktop acceptance record](INSTALL.md#official-desktop).
+
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.2
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.3
 dsh web
 ```
 

@@ -18,14 +18,16 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.2.0-alpha.2` |
+| Codex Connect | `0.2.0-alpha.3` |
 | DeepSeek Harness | `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2` 或 `0.2.1-alpha.1`（包版本必须一致） |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
+[`0.2.0-alpha.3`](release-notes/0.2.0-alpha.3.md) 增加官方 Desktop 登录适配和桌面版专用账户诊断，保留 Web 登录行为。Desktop 使用独立的 profile 和自带 CLI，请遵循[Desktop 安装说明](../INSTALL.md#official-desktop)。声明的宿主版本、默认设置和账户存储不变。
+
 [`0.2.0-alpha.2`](release-notes/0.2.0-alpha.2.md) 已发布精确 DSH `0.2.1-alpha.1` 的兼容适配，以及跨模型路由的图片选择句柄修复。较早的 `0.2.0-alpha.1` 安装包保持不变，仍拒绝该宿主。原有受支持宿主无需升级。
 
-截至 2026-10-04，npm `alpha` 指向 `0.2.0-alpha.2`，`latest` 仍为 `0.2.0-alpha.1`。默认安装仍选择较早的 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-10-10，npm `alpha` 指向 `0.2.0-alpha.3`，`latest` 仍为 `0.2.0-alpha.1`。默认安装仍选择较早的 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 [`0.2.0-alpha.1`](release-notes/0.2.0-alpha.1.md) 通过模型目录补充增加 `gpt-6.1-sol`，并开始较短的独立插件编号。四个受支持的 DSH 版本不变，无需升级宿主。
 
@@ -33,10 +35,12 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 该安装包已通过上方五个精确 DSH 版本的无凭据安装及运行回归验证。Task 控件仍暂停：激活请求会被拒绝，现有宿主的浏览器回归中，新 Session 不显示这些控件。这些检查不代表真实 OAuth、真实账户图片编辑、新宿主的已登录浏览器验收或完整用户验收；跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
+另有维护者报告：已在 Desktop `0.2.0-rc.2` 用已记录的本地适配包完成登录并正常使用。发布客户端与该客户端仅版本字符串不同；这不代表公开 npm 包的重新登录验收。参见[Desktop 验收记录](../INSTALL.md#official-desktop)。
+
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.2
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.3
 dsh web
 ```
 
