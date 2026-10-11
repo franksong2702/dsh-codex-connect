@@ -144,6 +144,7 @@ The main plugin options are:
 | `enableImageGeneration` | `false` | Register GPT Image generation and explicit editing in Alpha 4.48 |
 | `imageModelHint` | empty | Optional unverified image route hint; empty keeps the default request |
 | `enableAutoReview` | `false` | Review eligible approval requests with Codex |
+| `enableComposerQuotaPill` | `false` | Show the Codex 5-hour and weekly quota pill in the composer tool row; leave off when another plugin owns that row |
 | `searchModel` | `gpt-5.6-sol` | Model used by standalone search |
 | `searchMode` | `cached` | `cached`, `indexed`, or `live` |
 | `searchContextSize` | `medium` | `low`, `medium`, or `high` |

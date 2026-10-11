@@ -113,6 +113,7 @@ const CONFIG_FIELDS = [
   'imageModelHint',
   'autoReviewDisclosureAcknowledged',
   'enableAutoReview',
+  'enableComposerQuotaPill',
   'searchModel',
   'searchMode',
   'searchContextSize',
@@ -924,6 +925,17 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
               onChange={event => { update('imageModelHint', event.currentTarget.value) }}
             />
             <span style={bodyStyle}>{t('imageModelHintHelp')}</span>
+          </label>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              checked={draft.enableComposerQuotaPill}
+              onChange={event => { update('enableComposerQuotaPill', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableComposerQuotaPill')}</span>
+              <span style={bodyStyle}>{t('enableComposerQuotaPillHelp')}</span>
+            </span>
           </label>
           <label style={toggleRowStyle}>
             <input

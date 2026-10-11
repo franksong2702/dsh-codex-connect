@@ -307,6 +307,8 @@ export interface Config {
   autoReviewDisclosureAcknowledged?: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview?: boolean
+  /** Show the compact Codex quota pill in the composer tool row. Off by default so another plugin can own that surface. */
+  enableComposerQuotaPill?: boolean
   /** Model used for auxiliary standalone searches. */
   searchModel?: string
   /** Cached, indexed, or live web access. */
@@ -363,6 +365,7 @@ const configSchema = z.object({
   imageModelHint: z.transform(z.string(), parseOpenAICodexImageModelHint).default('').volatile(),
   autoReviewDisclosureAcknowledged: z.boolean().default(false).volatile(),
   enableAutoReview: z.boolean().default(false).volatile(),
+  enableComposerQuotaPill: z.boolean().default(false).volatile(),
   searchModel: z.string().default(DEFAULT_OPENAI_CODEX_SEARCH_MODEL).volatile(),
   searchMode: z.union(['cached', 'indexed', 'live'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_MODE).volatile(),
   searchContextSize: z.union(['low', 'medium', 'high'] as const).default(DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE).volatile(),
@@ -392,6 +395,7 @@ export interface VolatileConfig {
   imageModelHint: Volatile<string>
   autoReviewDisclosureAcknowledged: Volatile<boolean>
   enableAutoReview: Volatile<boolean>
+  enableComposerQuotaPill: Volatile<boolean>
   searchModel: Volatile<string>
   searchMode: Volatile<OpenAICodexSearchMode>
   searchContextSize: Volatile<OpenAICodexSearchContextSize>
@@ -421,7 +425,8 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     enableNewSubagentFastMode: configValue(config.enableNewSubagentFastMode),
     enableImageTool: configValue(config.enableImageTool), enableImageGeneration: configValue(config.enableImageGeneration),
     imageModelHint: configValue(config.imageModelHint), autoReviewDisclosureAcknowledged: configValue(config.autoReviewDisclosureAcknowledged),
-    enableAutoReview: configValue(config.enableAutoReview), searchModel: configValue(config.searchModel), searchMode: configValue(config.searchMode),
+    enableAutoReview: configValue(config.enableAutoReview), enableComposerQuotaPill: configValue(config.enableComposerQuotaPill),
+    searchModel: configValue(config.searchModel), searchMode: configValue(config.searchMode),
     searchContextSize: configValue(config.searchContextSize), searchMaxOutputTokens: configValue(config.searchMaxOutputTokens),
     outputVerbosity: configValue(config.outputVerbosity), reasoningSummary: configValue(config.reasoningSummary),
   }).filter(([, value]) => value !== undefined)) as OpenAICodexSettingsInput

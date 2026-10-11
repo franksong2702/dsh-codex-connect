@@ -177,6 +177,11 @@ export interface OpenAICodexSettingsConfig {
   autoReviewDisclosureAcknowledged: boolean
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview: boolean
+  /**
+   * Opt-in composer pill showing the Codex rate-limit windows. Off by default:
+   * the composer tool row is shared, and another plugin may own that surface.
+   */
+  enableComposerQuotaPill: boolean
   searchModel: string
   searchMode: OpenAICodexSearchMode
   searchContextSize: OpenAICodexSearchContextSize
@@ -203,6 +208,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   imageModelHint: DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
   autoReviewDisclosureAcknowledged: false,
   enableAutoReview: false,
+  enableComposerQuotaPill: false,
   searchModel: DEFAULT_OPENAI_CODEX_SEARCH_MODEL,
   searchMode: DEFAULT_OPENAI_CODEX_SEARCH_MODE,
   searchContextSize: DEFAULT_OPENAI_CODEX_SEARCH_CONTEXT_SIZE,
@@ -286,6 +292,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const imageModelHint = value['imageModelHint']
   const autoReviewDisclosureAcknowledged = value['autoReviewDisclosureAcknowledged']
   const enableAutoReview = value['enableAutoReview']
+  const enableComposerQuotaPill = value['enableComposerQuotaPill']
   const searchModel = value['searchModel']
   const searchMode = value['searchMode']
   const searchContextSize = value['searchContextSize']
@@ -310,6 +317,8 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (autoReviewDisclosureAcknowledged !== undefined && typeof autoReviewDisclosureAcknowledged !== 'boolean') return undefined
   // Older Host snapshots predate Auto-review; absence maps to its safe default.
   if (enableAutoReview !== undefined && typeof enableAutoReview !== 'boolean') return undefined
+  // Older Host snapshots predate the composer quota pill; absence maps to its safe default.
+  if (enableComposerQuotaPill !== undefined && typeof enableComposerQuotaPill !== 'boolean') return undefined
   if (typeof searchModel !== 'string' || searchModel.trim().length === 0) return undefined
   if (searchMode !== 'cached' && searchMode !== 'indexed' && searchMode !== 'live') return undefined
   if (searchContextSize !== 'low' && searchContextSize !== 'medium' && searchContextSize !== 'high') return undefined
@@ -334,6 +343,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     imageModelHint: imageModelHint ?? DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
     autoReviewDisclosureAcknowledged: autoReviewDisclosureAcknowledged ?? false,
     enableAutoReview: enableAutoReview ?? false,
+    enableComposerQuotaPill: enableComposerQuotaPill ?? false,
     searchModel,
     searchMode,
     searchContextSize,

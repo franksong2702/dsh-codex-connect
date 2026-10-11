@@ -133,6 +133,7 @@ export function apply(ctx: ClientContext): void {
       locale: namespace,
       inject: (sessionId): OpenAICodexQuotaIndicatorInjected => ({
         directory: scope.modelDirectories.directoryFor(sessionId).store,
+        configScope,
       }),
     }, OpenAICodexQuotaIndicator))
   })

@@ -784,6 +784,11 @@ interface OpenAICodexSettingsConfig {
   autoReviewDisclosureAcknowledged: boolean;
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview: boolean;
+  /**
+   * Opt-in composer pill showing the Codex rate-limit windows. Off by default:
+   * the composer tool row is shared, and another plugin may own that surface.
+   */
+  enableComposerQuotaPill: boolean;
   searchModel: string;
   searchMode: OpenAICodexSearchMode;
   searchContextSize: OpenAICodexSearchContextSize;
@@ -1127,6 +1132,8 @@ export interface Config {
   autoReviewDisclosureAcknowledged?: boolean;
   /** Let the hidden Codex reviewer answer eligible DSH approval requests. */
   enableAutoReview?: boolean;
+  /** Show the compact Codex quota pill in the composer tool row. Off by default so another plugin can own that surface. */
+  enableComposerQuotaPill?: boolean;
   /** Model used for auxiliary standalone searches. */
   searchModel?: string;
   /** Cached, indexed, or live web access. */
@@ -1161,6 +1168,7 @@ export interface VolatileConfig {
   imageModelHint: Volatile<string>;
   autoReviewDisclosureAcknowledged: Volatile<boolean>;
   enableAutoReview: Volatile<boolean>;
+  enableComposerQuotaPill: Volatile<boolean>;
   searchModel: Volatile<string>;
   searchMode: Volatile<OpenAICodexSearchMode>;
   searchContextSize: Volatile<OpenAICodexSearchContextSize>;

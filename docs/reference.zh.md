@@ -144,6 +144,7 @@ Alpha 4.49 中，完整 `attachment` 选择器匹配到实际用户上传记录�
 | `enableImageGeneration` | `false` | 注册 GPT Image 图片生成及 Alpha 4.48 的显式编辑 |
 | `imageModelHint` | 空字符串 | 可选的未验证图片路由提示；留空保持默认请求 |
 | `enableAutoReview` | `false` | 使用 Codex 审查符合条件的审批请求 |
+| `enableComposerQuotaPill` | `false` | 在输入框右侧显示 Codex 的 5 小时与每周额度药丸；该位置已由其他插件占用时保持关闭 |
 | `searchModel` | `gpt-5.6-sol` | 独立搜索使用的模型 |
 | `searchMode` | `cached` | `cached`、`indexed` 或 `live` |
 | `searchContextSize` | `medium` | `low`、`medium` 或 `high` |

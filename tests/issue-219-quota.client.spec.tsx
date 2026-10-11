@@ -1,16 +1,29 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { ModelDirectoryState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { OpenAICodexQuotaIndicator } from '../src/client/OpenAICodexQuotaIndicator.tsx'
+import type { OpenAICodexConfigForm } from '../src/client/config-form.ts'
 import { en } from '../src/client/locales.ts'
+import { DEFAULT_OPENAI_CODEX_SETTINGS } from '../src/settings-contract.ts'
+import type { OpenAICodexSettingsConfig } from '../src/settings-contract.ts'
+
+const configScope = ((): Pick<OpenAICodexConfigForm, 'getSnapshot' | 'subscribe'> => {
+  const snapshot: ConfigFormSnapshot<OpenAICodexSettingsConfig> = {
+    status: 'ready',
+    value: { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableComposerQuotaPill: true },
+    base: undefined, user: undefined, revision: 7, writable: true, mode: 'host',
+  }
+  return { subscribe: () => () => undefined, getSnapshot: () => snapshot }
+})()
 
 let hidden = false
 const state: ModelDirectoryState & { pending: null } = { pending: null, current: { provider: 'openai-codex', model: 'gpt-5.1-codex' }, routable: true, groups: [], failures: [], status: 'ready', error: null }
 const directory: SnapshotStore<ModelDirectoryState> = { getSnapshot: () => state, subscribe: () => () => {}, update: () => {}, set: () => {} }
 const success = () => new Response(JSON.stringify({ status: 'signed-in', usage: { rateLimits: [] } }), { headers: { 'content-type': 'application/json' } })
-const mount = async () => { await act(async () => { render(<OpenAICodexQuotaIndicator directory={directory} t={key => en[key]} />) }) }
+const mount = async () => { await act(async () => { render(<OpenAICodexQuotaIndicator directory={directory} configScope={configScope} t={key => en[key]} />) }) }
 const tick = async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms) }) }
 const visibility = (value: boolean) => { hidden = value; fireEvent(document, new Event('visibilitychange')) }
 
