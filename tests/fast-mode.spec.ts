@@ -68,16 +68,16 @@ describe('OpenAI Codex Fast Mode adapter boundary', () => {
     const fixture = providerFixture()
     const registry = new FastModeRegistry()
     const wrapped = withOpenAICodexFastMode(fixture.provider, registry)
-    const options: SimpleStreamOptions = { sessionId: 'session-a', temperature: 0.2 }
+    const options: SimpleStreamOptions = { sessionId: 'session-a', temperature: 0.2, reasoning: 'max' }
     wrapped.streamSimple(model('openai-codex'), {} as PiContext, options)
     expect(fixture.streamSimple).toHaveBeenCalledWith(expect.anything(), expect.anything(), options)
     registry.set('session-a', true)
     wrapped.streamSimple(model('openai-codex'), {} as PiContext, options)
     const enabledOptions = fixture.streamSimple.mock.lastCall?.[2] as SimpleStreamOptions | undefined
-    expect(enabledOptions).toEqual(expect.objectContaining({ sessionId: 'session-a', temperature: 0.2 }))
+    expect(enabledOptions).toEqual(expect.objectContaining({ sessionId: 'session-a', temperature: 0.2, reasoning: 'max' }))
     expect(enabledOptions?.onPayload).toBeTypeOf('function')
-    expect(await enabledOptions?.onPayload?.({ model: 'gpt-5', input: [] }, model('openai-codex')))
-      .toEqual({ model: 'gpt-5', input: [], service_tier: 'priority' })
+    expect(await enabledOptions?.onPayload?.({ model: 'gpt-5', input: [], reasoning: { effort: 'max' } }, model('openai-codex')))
+      .toEqual({ model: 'gpt-5', input: [], reasoning: { effort: 'max' }, service_tier: 'priority' })
     wrapped.streamSimple(model('openai-codex'), {} as PiContext, { temperature: 0.2 })
     expect(fixture.streamSimple).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), { temperature: 0.2 })
     await Promise.resolve()

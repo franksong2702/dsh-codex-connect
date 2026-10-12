@@ -1,0 +1,9 @@
+# Task route lifecycle
+
+Issue #314 reports empty HTTP 400 responses after a live profile edit. The Task route discarded the disposer returned by `WebServer.register`. The host owns the route table independently of the registering plugin Context, so disposing the plugin left its handler registered. Re-enabling the plugin could encounter a duplicate route and requests could reach the disposed Context.
+
+`registerAdaptiveTaskHttp` now registers through `ctx.effect`, which owns both registration and removal. The authentication checks, public activation pause, stored grants and request counts are unchanged. Integration tests use the real WebServer and Connection with synthetic browser credentials: disabling removes the route; repeated re-enabling restores JSON responses and rejects missing, forged and cross-site credentials. A prior-process owner-bound task remains interrupted, rejects a different valid browser credential and permits only the retained safety exits.
+
+Unconfirmed state is still distinct from a confirmed ordinary conversation. Authentication failures, missing live roots and malformed/empty responses do not prove that no historical task exists. The client retains its read/recovery entry and suppresses stale mutations until a successful read. Browser regression covers an empty 400 after a known legacy task and successful readback afterward. This repair does not hide every failed probe or resolve the separate presentation question for a session with no live root.
+
+Issue #313 is clarified in the bilingual operational reference. Ordinary Host subagents already support per-call `reasoning_effort` under the Host's recorded model-selection policy and a capable backend. Workflow `agent()` is a distinct, narrower interface. Fast Mode adds priority service and preserves effort; its adapter regression checks both the option and an existing wire effort. No new configuration or frozen automation entry is added.

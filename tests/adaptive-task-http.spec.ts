@@ -75,7 +75,7 @@ async function fixture() {
   } } as never)
   await host.plugin(WebServer, { host: '127.0.0.1', port: 0 })
   await host.plugin(Connection)
-  await host.plugin(Product, {})
+  let product = await host.plugin(Product, {})
   let html = 'Synthetic authenticated index'
   const assets = new Map<string, Buffer>()
   host.webServer.register({ kind: 'exact', path: '/', handler(req, res) {
@@ -116,6 +116,8 @@ async function fixture() {
     })
   }
   return { host, agent, origin, cookie, headers, read, body, wires, seedLegacy,
+    async disable() { await product.dispose() },
+    async enable() { product = await host.plugin(Product, {}) },
     setPage(value: string, entries: Array<[string, Buffer]>) { html = value; for (const [name, bytes] of entries) assets.set(name, bytes) },
     post: (content = body(), override: Record<string, string> = {}) => http(origin + ADAPTIVE_TASK_PATH, { method: 'POST', headers: { ...headers, ...override }, body: content }) }
 }
@@ -148,6 +150,52 @@ it('rejects missing cookie, forged cookie and cross-origin mutation before creat
     expect([401, 403]).toContain((await f.post(f.body(), override)).status)
   }
   expect(JSON.parse((await f.read()).text).mode).toBe('off'); expect(f.wires).toHaveLength(0)
+})
+it('removes the task route on disable and re-registers it with live authentication after repeated reloads', async () => {
+  const f = await fixture()
+  for (let reload = 0; reload < 2; reload++) {
+    expect((await f.read()).status).toBe(200)
+    await f.disable()
+    expect((await f.read()).status).toBe(404)
+    await f.enable()
+    const ordinary = await f.read()
+    expect(ordinary.status).toBe(200)
+    expect(ordinary.headers['content-type']).toContain('application/json')
+    expect(JSON.parse(ordinary.text)).toMatchObject({ mode: 'off', canStart: false })
+    for (const [headers, status] of [
+      [{}, 401], [{ cookie: f.cookie + 'tampered' }, 401],
+      [{ ...f.headers, 'sec-fetch-site': 'cross-site' }, 403],
+    ] as const) {
+      const rejected = await http(f.origin + ADAPTIVE_TASK_PATH + '?sessionId=' + f.agent.id, { headers })
+      expect(rejected.status).toBe(status)
+      expect(JSON.parse(rejected.text)).toEqual({ error: 'TASK_BROWSER_AUTH_REQUIRED' })
+    }
+    const missing = await http(f.origin + ADAPTIVE_TASK_PATH + '?sessionId=unknown-task', { headers: f.headers })
+    expect(missing.status).toBe(409)
+    expect(JSON.parse(missing.text)).toEqual({ error: 'TASK_LIVE_ROOT_REQUIRED' })
+  }
+  expect(f.wires).toHaveLength(0)
+})
+it('preserves an owner-bound legacy task and its safety exits after disable and re-enable', async () => {
+  const f = await fixture(); await f.seedLegacy()
+  await f.disable(); await f.enable()
+  const recovered = await f.read()
+  expect(recovered.status).toBe(200)
+  const state = JSON.parse(recovered.text)
+  expect(state).toMatchObject({ mode: 'interrupted', reserved: 3, maximumRequests: 10, canStart: false })
+  const issued = await http(f.host.connection.authenticatedUrl(f.origin))
+  const other = issued.headers['set-cookie']![0]!.split(';')[0]!
+  const denied = await http(f.origin + ADAPTIVE_TASK_PATH + '?sessionId=' + f.agent.id, { headers: { ...f.headers, cookie: other } })
+  expect(denied.status).toBe(403)
+  expect(JSON.parse(denied.text)).toEqual({ error: 'TASK_OWNER_MISMATCH' })
+  expect((await f.post(f.body('resume', state.revision))).status).toBe(409)
+  const stopped = await f.post(f.body('stop', state.revision))
+  expect(stopped.status).toBe(200)
+  expect(JSON.parse(stopped.text)).toMatchObject({ mode: 'stopped', reserved: 3 })
+  const manual = await f.post(f.body('manual', JSON.parse(stopped.text).revision))
+  expect(manual.status).toBe(200)
+  expect(JSON.parse(manual.text)).toMatchObject({ mode: 'manual', reserved: 3, maximumRequests: 10 })
+  expect(f.wires).toHaveLength(0)
 })
 it('prevents another valid browser credential from inspecting or controlling a bound task', async () => {
   const f = await fixture(); await f.seedLegacy()

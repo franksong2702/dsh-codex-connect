@@ -27,13 +27,21 @@ An explicit OAuth `invalid_grant` rejection during refresh shows the reauthoriza
 
 For GPT Codex conversations, the Composer shows Fast Mode and quota:
 
-- **Fast Mode** requests priority service (`service_tier: 'priority'`) for that conversation only. It is off by default and does not change the model. Actual speed and quota consumption depend on the service; a fixed speed multiplier is not guaranteed.
+- **Fast Mode** requests priority service (`service_tier: 'priority'`) for that conversation only. It is off by default and does not change the model or lower reasoning effort. The new-session and new-subagent Fast Mode defaults also leave effort unchanged. Actual speed and quota consumption depend on the service; a fixed speed multiplier is not guaranteed.
 - The profile's **Fast Mode for new conversations** and **Fast Mode for new subagent conversations** settings are independent and both off by default. Each is applied only when a new session starts; changing either setting does not retroactively alter existing sessions or override a Composer choice. Per-conversation Fast Mode state is process-local, so resuming after a plugin restart returns that conversation to Standard speed; subsequent new sessions still use the saved profile defaults.
 - **Quota bars** normally refresh every 60 seconds while signed in and the tab is visible (hidden tabs pause; failures back off) and show only the `5h` and `7d` windows returned by the server, with the exact remaining percentage and reset time. `gpt-5.3-codex-spark` uses its separate Spark bucket. Codex Connect never invents missing windows or suppresses returned windows based on a plan name.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="Fast Mode and quota controls in the DeepSeek Harness Composer" width="820">
 </p>
+
+## Reasoning effort for ordinary subagents
+
+With DSH `0.2.0-rc.2` or `0.2.1-alpha.1`, ordinary Harness subagents can request an explicit reasoning effort. Enable the Host's subagent model-selection setting, authorize the exact `openai-codex` / `gpt-6.1-sol` route, and start a fresh top-level conversation so it records that policy. The subagent tool must use a backend with `agentOptions` support, such as an in-process Harness backend or DSH SDK, and have `modelSelectionSettings: true`. External Codex, Claude Code and ACP backends do not support this selection interface.
+
+Use `list_subagent_models` to inspect the authorized routes and advertised efforts, then pass `provider: "openai-codex"`, `model: "gpt-6.1-sol"`, and `reasoning_effort: "max"` in the ordinary `subagent` tool call, alongside its required task arguments. The allowed-model list contains provider/model pairs; effort is a separate per-call field validated against the selected model. The plugin's `/models` account-card response is not the Host's reasoning discovery interface. This does not enable the frozen Adaptive Task feature or require a plugin-wide effort default.
+
+Workflow `agent()` is a separate Host interface: these exact DSH versions accept only `label`, `phase`, `schema`, `provider`, and `model`. They do not accept `reasoningEffort` or `reasoning_effort`; the ordinary subagent setting does not add those Workflow options. Model metadata and local route validation do not prove account entitlement.
 
 ## Optional capabilities
 

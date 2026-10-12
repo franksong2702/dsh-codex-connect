@@ -23,7 +23,8 @@ function harness(rejection?: number) {
   let handler!: (req: IncomingMessage, res: ServerResponse) => Promise<void>
   const runtime = { state: vi.fn(async () => state), command: vi.fn(async () => state) }
   const ctx = { connection: { requestRejection: vi.fn(() => rejection) },
-    webServer: { register: (entry: { handler: typeof handler }) => { handler = entry.handler } } }
+    effect: (setup: () => () => void) => setup(),
+    webServer: { register: (entry: { handler: typeof handler }) => { handler = entry.handler; return () => undefined } } }
   registerAdaptiveTaskHttp(ctx as unknown as Parameters<typeof registerAdaptiveTaskHttp>[0], runtime)
   return { runtime, async send(value?: AdaptiveTaskCommand) {
     const body = value === undefined ? '' : JSON.stringify(value)
