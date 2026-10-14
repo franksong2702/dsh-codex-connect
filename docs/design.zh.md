@@ -16,7 +16,7 @@ Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。
 
 ## OAuth 持久化
 
-插件使用 `$DSH_HOME/.openai-codex-auth.json`，与 Codex CLI/Desktop 状态分离。格式 version 2 最多保存 16 个 OAuth 账户，并明确指定唯一当前账户。原 version 1 文件仍可读取，第一次修改凭据时才迁移；迁移前会先生成仅所有者可读的 `.openai-codex-auth.json.v1-backup` 回退副本。若该副本已存在，它必须仅所有者可读且与当前 version 1 文件一致，否则迁移会在替换主文件前停止。移除任一账户或执行退出登录时会删除该副本，避免已移除凭据继续留存。文档大小上限为 512 KiB。POSIX 上拒绝组/其他用户可读文件，也拒绝非普通文件；写入采用原子替换，所有修改使用 Harness 跨进程文件锁，返回给调用方的是凭据副本。
+插件使用 AES-256-GCM 加密 `$DSH_HOME/.openai-codex-auth.json`，密钥保存在 macOS Keychain、Windows Credential Manager 或明确要求的 Linux Secret Service 中。外部加密格式为 version 3，内部多账户文档保留 version 2、16 个账户及 512 KiB 明文上限。旧 version 1/version 2 文件必须在停止 Harness 后明确迁移；正常读取、登录和刷新不会自动导入。迁移会加密已有的回退副本，不创建新的明文备份。密钥不可用、写入验证失败或解密认证失败时会停止操作，不回退到明文。仅所有者访问权限、原子写入、跨进程锁及凭据副本行为保留。迁移、恢复和原生平台验证限制见 [安全存储说明](secure-storage.md)。
 
 浏览器账户路由只返回插件派生的稳定键、本地显示名称、OAuth token 中存在邮箱时的脱敏地址以及当前账户状态，不返回 provider 原始 account id 或 token 字段。账户切换和删除与浏览器 OAuth 串行执行；每个模型请求会在解析授权前固定当前账户，令牌刷新只更新该账户，不会改变当前选择。OAuth 解析完成后，额度、图片生成和 Auto-review 请求会查找与该 access token 精确配套的 account id，因此并发切换账户不会混用两个账户的凭据。仍有其他账户时，删除当前账户必须由调用方明确指定接替账户；provider 级退出登录会删除全部账户。浏览器 origin 授权单独存放于 `$DSH_HOME/.openai-codex-trusted-origins.json`，格式为 `version: 1`、`mode: "allowlist"` 和规范化的精确 HTTP(S) origin；其中不含 OAuth 内容，且只能通过独立 CLI 修改。
 

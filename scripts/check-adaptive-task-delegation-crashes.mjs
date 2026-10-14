@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { tmpdir } from 'node:os'
 import { spawn } from 'node:child_process'
 import { build } from 'tsdown'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
@@ -17,6 +18,7 @@ if (args[1] !== undefined) assert.equal(JSON.parse(await readFile(join(runtimeRo
 const cache = join(runtimeRoot, 'node_modules/.cache')
 await mkdir(cache, { recursive: true })
 const directory = await realpath(await mkdtemp(join(cache, 'task-crash-matrix-')))
+const keyringDirectory = await mkdtemp(join(tmpdir(), 'task-crash-synthetic-keyring-'))
 const stages = ['prepared', 'host-created-before-ledger-publish', 'published', 'child-reserved-before-fetch',
   'result-artifact-before-settle', 'settled-before-cleanup', 'cleaned-before-parent-tool-result',
   'parent-result-flushed-before-delivery', 'delivery-recorded']
@@ -62,7 +64,9 @@ try {
   const bundleSha256 = createHash('sha256').update(await readFile(entry)).digest('hex')
   for (const compression of ['none', 'zstd']) for (const [index, stage] of stages.entries()) {
     const profile = await realpath(await mkdtemp(join(directory, `${compression}-${index}-`)))
-    const env = { ...environment, DSH_HOME: join(profile, 'home'), OTEL_SDK_DISABLED: 'true', CRASH_COMPRESSION: compression }
+    const env = { ...environment, DSH_HOME: join(profile, 'home'), OTEL_SDK_DISABLED: 'true', CRASH_COMPRESSION: compression,
+      DSH_SYNTHETIC_KEYRING: '1', DSH_SYNTHETIC_KEYRING_DIRECTORY: keyringDirectory,
+      NODE_OPTIONS: `--import ${JSON.stringify(pathToFileURL(join(root, 'scripts/synthetic-keyring.mjs')).href)}` }
     const writer = await killAtBarrier(entry, profile, stage, env)
     const recovery = await runBoundedCommand(process.execPath, [entry, profile, 'recover', stage], { cwd: root, env, timeoutMs: 20000 })
     assert.equal(recovery.error, undefined); assert.equal(recovery.cleanupError, undefined)
@@ -91,4 +95,7 @@ try {
   console.log(JSON.stringify({ kind: 'task-delegation-independent-crash-matrix', passed: true, bundleSha256,
     node: process.version, packages, stages: stages.length, encodings: 2, cases: reports.length,
     freshProcesses: reports.length * 2, syntheticOnly: true, reports }))
-} finally { await rm(directory, { recursive: true, force: true }) }
+} finally {
+  await rm(directory, { recursive: true, force: true })
+  await rm(keyringDirectory, { recursive: true, force: true })
+}

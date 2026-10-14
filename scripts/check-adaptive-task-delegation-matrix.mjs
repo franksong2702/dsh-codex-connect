@@ -37,7 +37,8 @@ async function main() {
   const registry = cachedTaskRegistry(join(ROOT, 'node_modules/.cache/task-matrix/manifests'))
   try {
     const bundle = join(root, 'bundle'); await build({ config: false,
-      entry: Object.fromEntries(entries.map(name => [name, join(ROOT, 'tests', `${name}.ts`)])), outDir: bundle,
+      entry: { ...Object.fromEntries(entries.map(name => [name, join(ROOT, 'tests', `${name}.ts`)])),
+        'synthetic-keyring-setup': join(ROOT, 'tests/support/keyring-mock.ts') }, outDir: bundle,
       platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
     const files = (await readdir(bundle)).filter(name => name.endsWith('.mjs')).sort()
@@ -55,6 +56,7 @@ async function main() {
       // Source fixtures must retain the plugin-owned provider version; the host adapter owns its nested dependency.
       metadata.dependencies['@earendil-works/pi-ai'] = pkg.dependencies['@earendil-works/pi-ai']
       metadata.dependencies.undici = pkg.dependencies.undici; metadata.type = 'module'
+      metadata.dependencies['@napi-rs/keyring'] = pkg.dependencies['@napi-rs/keyring']
       await writeFile(join(host, 'package.json'), JSON.stringify(metadata))
       const env = { ...scrubCanaryEnvironment(process.env), PATH: dirname(process.execPath) + delimiter + process.env.PATH, DSH_HOME: join(host, 'synthetic-home'),
         DSH_TELEMETRY_MODE: 'DISABLED', OTEL_SDK_DISABLED: 'true', npm_config_userconfig: join(host, 'empty.npmrc'),
@@ -76,7 +78,7 @@ async function main() {
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), `import {it,expect} from 'vitest'; import {writeFileSync} from 'node:fs';\nit('uses the exact isolated host without a neighboring runtime', async()=>{ const entries=${JSON.stringify(identity.entries)}; for(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(path));} writeFileSync(${JSON.stringify(join(host, 'identity.json'))}, JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}})); });\n`)
       await copyFile(join(ROOT, 'scripts/adaptive-task-delegation-network-guard.mjs'), join(host, 'network-guard.mjs'))
-      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
+      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs'), join(host, 'tests/synthetic-keyring-setup.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       const test = await runBoundedCommand(process.execPath, [join(vitest, 'vitest.mjs'), 'run', '--config', join(host, 'vitest.config.mjs'), '--reporter=json', '--outputFile', join(host, 'tests.json')], { cwd: host, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
       if (test.error || test.cleanupError || test.status !== 0) {

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
@@ -310,10 +310,15 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
     validateDoctorResult(doctor, dshHome, REPO_ROOT, { allowUndeclaredCanaryVersion, dshVersion })
 
     const runtime = await runCommand(process.execPath, [
+      '--import', join(REPO_ROOT, 'scripts/synthetic-keyring.mjs'),
       RUNTIME_CHECK,
       join(dshHome, 'profiles', 'web', 'package.json'),
       join(installRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
-    ], { cwd: workspace, env })
+    ], { cwd: workspace, env: {
+      ...env, DSH_SYNTHETIC_KEYRING: '1',
+      DSH_SYNTHETIC_KEYRING_DIRECTORY: join(tempRoot, 'synthetic-keyring'),
+      NODE_OPTIONS: `${env.NODE_OPTIONS ?? ''} --import ${JSON.stringify(pathToFileURL(join(REPO_ROOT, 'scripts/synthetic-keyring.mjs')).href)}`.trim(),
+    } })
     requireSuccess('installed runtime contract', runtime, 'compatibility')
     const runtimeReport = parseOneLineJson(runtime.stdout, 'installed runtime contract')
     if (runtimeReport?.['schemaVersion'] !== JSON_SCHEMA_VERSION

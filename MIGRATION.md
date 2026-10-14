@@ -1,3 +1,5 @@
+> Secure-storage development candidate: stop Harness and explicitly migrate legacy plaintext OAuth files. See [secure storage](docs/secure-storage.md); ordinary login/refresh does not import them.
+
 # Migrating from `dsh-codex`
 
 ## Alpha 4.43 candidate: upgrade the Harness together

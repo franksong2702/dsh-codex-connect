@@ -201,4 +201,4 @@ origin allowlist 只控制访问 DSH 的权限，不会把 OpenAI 跳转到浏�
 
 如果启动报告 `openai-codex` 冲突，请检查有效配置，只移除已经确认的旧 `dsh-codex` bundle 或手动 provider 条目。不要删除凭据或无关 provider。包迁移及 Alpha 4.10 搜索历史修复见 [MIGRATION.md](../MIGRATION.md)。
 
-OAuth 单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）；`~/.codex/auth.json` 绝不会被复制或修改。移除包不会删除 OAuth 状态。只有确实要删除凭据时才运行 `logout`。
+OAuth 通过操作系统凭据库中的密钥加密，单独保存在 `$DSH_HOME/.openai-codex-auth.json`（默认 `~/.dsh`）；`~/.codex/auth.json` 绝不会被复制或修改。移除包不会删除 OAuth 状态。只有确实要删除凭据时才运行 `logout`。

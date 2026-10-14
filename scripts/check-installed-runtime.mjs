@@ -109,6 +109,13 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       nativeCompactionLifecycle,
       images,
       requestMetrics,
+      syntheticCredentialStore: (() => {
+        const stats = globalThis[Symbol.for('codex-connect.synthetic-keyring')]
+        if (stats === undefined || stats.reads < 1 || stats.writes < 1) {
+          throw new Error('Installed encrypted credential checks require the synthetic keyring preload')
+        }
+        return { syntheticOnly: true, nativeBindingLoaded: false, ...stats }
+      })(),
     }
   } finally {
     await ctx.fiber.dispose()
