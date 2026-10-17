@@ -7,3 +7,10 @@ allowBuilds:
   protobufjs: false
 
 autoInstallPeers: true
+
+# Patch affected transitive dependencies without upgrading the DSH host API set.
+overrides:
+  'undici@>=7.0.0 <7.29.1': 7.29.1
+  'katex@>=0.11.0 <0.18.2': 0.18.9
+  'source-map-js@>=1.0.0 <1.2.2': 1.2.2
+  'compression@>=1.0.0 <1.8.2': 1.8.2
