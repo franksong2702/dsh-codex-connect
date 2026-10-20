@@ -1,5 +1,6 @@
 /** OpenAI Codex adapter assembled from public dsh-llm-pi-ai extension points. */
 
+import type { OpenAICodexReasoningEffort } from './reasoning-contract.ts'
 import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-works/pi-ai'
 import type { Context as PiContext, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
@@ -158,6 +159,7 @@ export function createOpenAICodexProfile(
   wrapProvider?: (provider: Provider) => Provider,
   preflight?: OpenAICodexPreflightActivity,
   retryPolicy: ResolvedRetryPolicy = resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
+  reasoningEffort?: OpenAICodexReasoningEffort,
 ): ResolvedPiAiProviderProfile & { piProvider: Provider } {
   const effectiveProvider = contextWindowOverrides === undefined
     ? provider
@@ -171,6 +173,7 @@ export function createOpenAICodexProfile(
     requestImagePixelBudget: OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
     requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
     retryPolicy,
+    ...(reasoningEffort === undefined ? {} : { reasoning: reasoningEffort }),
     configuredMaxTokens: new Map(),
     modelErrors: new Map<string, string>(),
     piProvider: requestProvider(effectiveProvider, fastMode, proxyManager, resolveProxyUrl, backendRequests, wrapProvider, preflight),
@@ -255,6 +258,7 @@ export function createOpenAICodexAdapter(
   imageEditingEnabled?: () => boolean,
   preflightActivity?: OpenAICodexPreflightConfig,
   retryPolicyConfig?: RetryPolicyConfig,
+  resolveReasoningEffort?: () => OpenAICodexReasoningEffort | undefined,
 ): PiAiAdapter {
   if (retryPolicyConfig === null) throw new TypeError('dsh-codex-connect retryPolicy must be an object or omitted')
   const retryPolicy = resolveRetryPolicy(retryPolicyConfig, 'dsh-codex-connect retryPolicy')
@@ -263,10 +267,13 @@ export function createOpenAICodexAdapter(
   const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
+  let previousReasoningEffort: OpenAICodexReasoningEffort | undefined
   const currentProfiles = (): Map<string, ResolvedPiAiProviderProfile> => {
     const overrides = contextWindowOverrides?.()
-    if (profiles === undefined || !deepEqualJson(previousOverrides, overrides)) {
-      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides, backendRequests, taskDispatch?.wrapProvider, preflight, retryPolicy)
+    const reasoningEffort = resolveReasoningEffort?.()
+    if (profiles === undefined || previousReasoningEffort !== reasoningEffort || !deepEqualJson(previousOverrides, overrides)) {
+      const profile = createOpenAICodexProfile(provider, fastMode, proxyManager, resolveProxyUrl, overrides, backendRequests, taskDispatch?.wrapProvider, preflight, retryPolicy, reasoningEffort)
+      previousReasoningEffort = reasoningEffort
       previousOverrides = overrides === undefined ? undefined : { ...overrides }
       // PiAiAdapter keys snapshots by map identity; captured calls keep the old map.
       profiles = new Map([[OPENAI_CODEX_PROVIDER, profile]])

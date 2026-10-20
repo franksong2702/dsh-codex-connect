@@ -27,17 +27,24 @@ Codex 目录来自已安装的 `@earendil-works/pi-ai` 包，不是实时查询�
 
 GPT Codex 对话的 Composer 会显示 Fast Mode 与额度：
 
-**源码变更，尚未发布：** 精确匹配 Codex `gpt-6-astra` 和 `gpt-6.1-sol` 的对话提供互斥的 Standard、Fast、Ultrafast 选择。只有显式选择当前对话的 Ultrafast 后才发送 `service_tier: 'ultrafast'`，模型、推理强度与 SSE 传输不变。Ultrafast 默认关闭，不从新会话或子代理默认设置继承；其他模型显示禁用的 Ultrafast。切换模型（包括切走再切回）、登录/退出及账户操作会使付费选择失效，请求派发前还会复核实际账户、模型和实时选择。辅助压缩/标题请求不会继承 Ultrafast。旧布尔 Fast 接口和已保存的 Fast 偏好继续支持；选择 Ultrafast 时，旧 GET 返回 409，避免错误显示为标准模式。
+**源码变更，尚未发布：** 精确匹配 Codex `gpt-6-astra` 和 `gpt-6.1-sol` 的对话提供互斥的 Standard、Fast、Ultrafast 选择。只有显式选择当前对话的 Ultrafast 或明确配置启动偏好后才发送 `service_tier: 'ultrafast'`，模型、推理强度与 SSE 传输不变。省略新偏好时 Ultrafast 仍默认关闭，旧 Fast 布尔值不能启用它；其他模型显示禁用的 Ultrafast。切换模型（包括切走再切回）、登录/退出及账户操作会使付费选择失效，请求派发前还会复核实际账户、模型和实时选择。辅助压缩/标题请求不会继承 Ultrafast。旧布尔 Fast 接口和已保存的 Fast 偏好继续支持；选择 Ultrafast 时，旧 GET 返回 409，避免错误显示为标准模式。
 
 Ultrafast 消耗更多额度。官方文档区分可用的 Pro500、Enterprise/Edu 账户与 Pro100/200；插件不会根据套餐名称或缓存目录推断资格。账户资格与实际服务等级始终保持**未核实**，成功响应也不构成确认。按钮表示请求偏好，不是计费、速度或服务端接受的证据。不新增私有资格端点、OAuth 权限、付费探测或资格缓存。普通 403/429/网络故障不会被判为无资格。选择器不会回退或重放失败请求；现有提供方/宿主重试策略继续用于同一请求等级。不确定的控件写入只能通过显式读取恢复，不会自动重放 POST。详见[实现与验收边界](agent-notes/ultrafast-conversation-speed.md)。
 
 - **Fast Mode** 只为当前对话请求优先服务（`service_tier: 'priority'`）。默认关闭，不会更换模型或降低推理强度。新对话和新子代理的 Fast Mode 默认值也不改变推理强度。实际速度和额度消耗取决于服务端，不保证固定提速倍数。
 - Profile 中的「新对话默认使用 Fast Mode」和「新子代理对话默认使用 Fast Mode」互相独立，初始均关闭。只在新会话启动时应用；修改设置不会倒改已有会话，也不会覆盖 Composer 中的手动选择。单个对话的 Fast Mode 状态仍保存在进程内，因此插件重启后恢复该对话会回到标准速度；之后新建的会话仍按已保存的默认值启动。
+- **源码后续变更，尚未发布：** `newSessionSpeedMode` 与 `newSubagentSpeedMode` 可独立设置为 `standard`、`fast` 或 `ultrafast`。显式值优先于对应旧 Fast 布尔值；省略或 `null` 沿用保留的旧偏好。更多设置提供两个选择器，选定显式值后禁用对应旧开关。只在新会话启动时捕获一次，不改变恢复会话、已有会话或之后的手动选择。Ultrafast 须先登录再创建会话，且仅适用于精确受支持的 Codex 模型；其他初始路由使用 Standard，不据此认定付费权益。切换模型或账户（包括切走再切回）会使旧启动意图失效；异步读取账户期间的手动选择也优先。首个 Host 请求路由或 Composer 已有的速度读取负责绑定偏好，不增加提供方请求。受支持模型缺少登录时明确报错，重试不会自动降为 Standard，直到手动或生命周期变更解除。参见[启动默认值说明](agent-notes/new-session-speed-defaults.md)。
 - **额度条**在已登录且标签页可见时通常每 60 秒刷新一次（隐藏时暂停，失败后延长重试间隔），只显示服务端实际返回的 `5h` 和 `7d` 窗口，并显示精确剩余百分比与重置时间。`gpt-5.3-codex-spark` 使用独立的 Spark 额度桶。Codex Connect 不会虚构缺失窗口，也不会根据套餐名称隐藏已返回窗口。
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/franksong2702/dsh-codex-connect/main/docs/assets/composer-capabilities.jpg" alt="DeepSeek Harness Composer 中的 Fast Mode 与额度控件" width="820">
 </p>
+
+## 可选的配置级推理默认值
+
+**源码变更，尚未发布：** 可在 Codex Connect 插件配置行设置 `reasoningEffort: max`（或其他受支持强度），也可在更多设置中选择默认推理强度。仅在 Host 请求未显式指定强度时使用；请求值优先。省略保持提供方原行为，`null` 可屏蔽下层继承的默认值。保存后新准备的请求使用新值，已准备的请求保留原配置快照。不改变 Fast/Ultrafast 服务档位、输出上限或聊天模型。
+
+`GET /plugins/dsh-codex-connect/models` 返回 Host 实际提供的 `reasoning.efforts` 和可选 `reasoning.defaultEffort`，不读取凭据，也不查询账户访问权限。元数据来自已安装的 adapter，包含插件对静态目录的受支持补充。配置不受某模型支持的强度不会隐藏该模型，但发送前会报 `UNSUPPORTED_REASONING_EFFORT`，不解析凭据或访问网络；请求显式指定的受支持强度仍可覆盖默认值。配置接受 `off`、`minimal`、`low`、`medium`、`high`、`xhigh`、`max`，实际可用值由所选模型决定。Workflow `agent()` 参数白名单由 Host 控制，此设置不会扩展该白名单。
 
 ## 普通子代理的推理强度
 

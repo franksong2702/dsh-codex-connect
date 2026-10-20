@@ -11,7 +11,7 @@ interface CapturedRoute {
   handler(req: IncomingMessage, res: ServerResponse): Promise<void> | void
 }
 
-function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[]): CapturedRoute {
+function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[] | Promise<readonly OpenAICodexModelCatalogEntry[]>): CapturedRoute {
   let captured: CapturedRoute | undefined
   const ctx = {
     webServer: {
@@ -67,6 +67,15 @@ describe('Codex Connect model catalog route', () => {
     expect(res.observed.status).toBe(200)
     expect(JSON.parse(res.observed.body ?? 'null')).toEqual(catalog)
     expect(resolveCatalog).toHaveBeenCalledOnce()
+  })
+
+  it('awaits actual asynchronous adapter discovery before serializing its reasoning metadata', async () => {
+    const catalog = [{ id: 'synthetic', name: 'Synthetic', contextWindow: 128, maxContextWindow: 128,
+      contextLimitSource: 'catalog-default' as const, reasoning: { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' } }]
+    const res = response()
+    await capture(async () => catalog).handler(request(), res)
+    expect(res.observed.status).toBe(200)
+    expect(JSON.parse(res.observed.body!)).toEqual(catalog)
   })
 
   it('rejects mutations and untrusted peers before reading the catalog', async () => {

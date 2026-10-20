@@ -96,7 +96,7 @@ function settingsScopeFixture(
     const next = { ...snapshot.value! }
     for (const op of ops) {
       if (op.path.length !== 1) throw new Error('fixture requires top-level fields')
-      Object.assign(next, { [op.path[0]!]: op.op === 'set' ? op.value : undefined })
+      Object.assign(next, { [op.path[0]!]: op.op === 'set' ? ['reasoningEffort', 'newSessionSpeedMode', 'newSubagentSpeedMode'].includes(String(op.path[0])) && op.value === null ? undefined : op.value : undefined })
     }
     snapshot = { ...snapshot, value: next, revision: (snapshot.revision ?? 0) + 1 }
     for (const listener of listeners) listener()
@@ -467,6 +467,45 @@ describe('OpenAI Codex Plugin configuration card', () => {
     fireEvent.click(screen.getByRole('button', { name: en.discard }))
     expect(reloaded.checked).toBe(true)
     expect(mutate).toHaveBeenCalledTimes(1)
+  })
+
+  it('saves separate explicit speed defaults and resets to the preserved legacy preference', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableNewSessionFastMode: true })
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const top = await screen.findByRole('combobox', { name: en.newSessionSpeedMode })
+    const child = screen.getByRole('combobox', { name: en.newSubagentSpeedMode })
+    fireEvent.change(top, { target: { value: 'ultrafast' } })
+    fireEvent.change(child, { target: { value: 'standard' } })
+    expect((screen.getByRole('checkbox', { name: /Fast Mode for new conversations/u }) as HTMLInputElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(mutate).toHaveBeenLastCalledWith([
+      { op: 'set', path: ['newSessionSpeedMode'], value: 'ultrafast' },
+      { op: 'set', path: ['newSubagentSpeedMode'], value: 'standard' },
+    ], 0)
+    fireEvent.change(top, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await waitFor(() => { expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['newSessionSpeedMode'], value: null }], 1) })
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(scope.getSnapshot().value).toMatchObject({ newSessionSpeedMode: undefined, newSubagentSpeedMode: 'standard', enableNewSessionFastMode: true })
+    expect((screen.getByRole('checkbox', { name: /Fast Mode for new conversations/u }) as HTMLInputElement).disabled).toBe(false)
+  })
+
+  it('saves a reasoning fallback and resets it with a null mask through the Host revision queue', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const select = await screen.findByRole('combobox', { name: /Default reasoning effort/u })
+    fireEvent.change(select, { target: { value: 'max' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['reasoningEffort'], value: 'max' }], 0)
+    fireEvent.change(select, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await waitFor(() => { expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['reasoningEffort'], value: null }], 1) })
+    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
+    expect(scope.getSnapshot().value?.reasoningEffort).toBeUndefined()
   })
 
   it('saves independent, default-off Fast Mode choices for new top-level and subagent sessions', async () => {

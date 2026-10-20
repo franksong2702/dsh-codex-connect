@@ -56,3 +56,9 @@ export function projectOpenAICodexSpeedPayload(
   delete standard['service_tier']
   return standard
 }
+
+/** Preserve an optional new-session preference until settings layers have merged. */
+export function parseOpenAICodexSpeedDefault(value: unknown): OpenAICodexSpeedMode | null | undefined {
+  if (value === undefined || value === null || isOpenAICodexSpeedMode(value)) return value
+  throw new TypeError('OpenAI Codex new-session speed must be standard, fast, ultrafast, null or omitted')
+}

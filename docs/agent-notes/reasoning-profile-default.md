@@ -1,0 +1,9 @@
+# Explicit profile reasoning fallback — 2026-10-20
+
+Refs #313. The plugin exposes optional `reasoningEffort` through the public PiAiAdapter `profile.reasoning` seam already available on the oldest supported DSH adapter. Omission preserves the existing provider behavior. Explicit request reasoning wins through the Host's existing precedence; null masks composition defaults. Live settings invalidate future profile maps while prepared calls retain their original map.
+
+The same-origin catalog uses actual `adapter.resolveModel()` reasoning metadata. It does not call credential-gated generic discovery, hardcode per-model effort lists, or infer account entitlement. Static context-window provenance and selector visibility remain unchanged. The browser decoder accepts older catalogs without reasoning and clones validated effort metadata, including future effort ids. Unsupported defaults preserve discovery and fail through the Host's existing `UNSUPPORTED_REASONING_EFFORT` check before credentials and transport; no clamping or retry downgrade is introduced.
+
+The custom settings editor saves through the existing Host revision queue and uses a null reset mask. The Workflow agent parameter allowlist is unchanged. Ordinary subagent request controls remain governed by the Host and its backend support. No new model, service tier, output limit, authentication permission or provider request is added.
+
+Validation uses actual Host settings, actual PiAiAdapter and pi-ai SSE with synthetic OAuth fixtures and an intercepted fetch. It covers omission, explicit request precedence, live changes/prepared snapshots, unsupported effort rejection before auth/transport, credential-free discovery, old/future wire metadata, asynchronous catalog routing and browser save/reset mutations. These fixtures do not establish live-account access or paid-model acceptance.

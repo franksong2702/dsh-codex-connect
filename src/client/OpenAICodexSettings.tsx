@@ -454,7 +454,7 @@ export function OpenAICodexSettings({ t, configScope, updater, account, embedded
       ? t('modelsModuleDefault')
       : t('modelsModuleSelected', { count: config.models.length })
     if (module === 'network') return t(config?.enableProxy === true ? 'networkModuleProxy' : 'networkModuleDirect')
-    const count = config === undefined ? 0 : [config.enableSearch, config.enableReserveFallback, config.enableNewSessionFastMode, config.enableNewSubagentFastMode, config.enableNativeCompaction, config.enableImageTool, config.enableImageGeneration, config.enableAutoReview].filter(Boolean).length
+    const count = config === undefined ? 0 : [config.enableSearch, config.enableReserveFallback, (config.newSessionSpeedMode ?? (config.enableNewSessionFastMode ? 'fast' : 'standard')) !== 'standard', (config.newSubagentSpeedMode ?? (config.enableNewSubagentFastMode ? 'fast' : 'standard')) !== 'standard', config.enableNativeCompaction, config.enableImageTool, config.enableImageGeneration, config.enableAutoReview].filter(Boolean).length
     return t('capabilitiesModuleEnabled', { count })
   }
 

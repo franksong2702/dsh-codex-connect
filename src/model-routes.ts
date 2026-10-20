@@ -20,7 +20,7 @@ function json(res: ServerResponse, status: number, value: unknown): void {
 /** Register the read-only catalog route consumed by Plugin configuration. */
 export function registerOpenAICodexModelCatalogRoute(
   ctx: Context,
-  resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[],
+  resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[] | Promise<readonly OpenAICodexModelCatalogEntry[]>,
   trustedOrigins: OpenAICodexTrustedOriginsStore,
 ): void {
   ctx.effect(() => ctx.webServer.register({
@@ -30,7 +30,7 @@ export function registerOpenAICodexModelCatalogRoute(
       if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
       const decision = await trustedRequestDecision(req, trustedOrigins)
       if (!decision.trusted) return json(res, 403, { error: decision.error })
-      return json(res, 200, resolveCatalog())
+      return json(res, 200, await resolveCatalog())
     },
   }), 'dsh-codex-connect: model catalog route')
 }

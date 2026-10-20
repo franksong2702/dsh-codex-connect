@@ -79,6 +79,35 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it.each([['en', 390, en], ['zh', 390, zh], ['en', 960, en], ['zh', 960, zh]] as const)('saves independent speed defaults and a legacy reset in %s at %i pixels', async (_language, width, copy) => {
+    await page.viewport(width, 844)
+    host.style.width = '100%'
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture({ enableNewSessionFastMode: true })
+    root.render(createElement(OpenAICodexConfiguration, { scope, t: key => copy[key], activeModule: 'capabilities' }))
+    const top = page.getByRole('combobox', { name: copy.newSessionSpeedMode, exact: true })
+    const child = page.getByRole('combobox', { name: copy.newSubagentSpeedMode, exact: true })
+    await expect.element(top).toHaveValue('')
+    await expect.element(child).toHaveValue('')
+    await top.selectOptions('ultrafast')
+    await child.selectOptions('standard')
+    await expect.element(page.getByRole('checkbox', { name: copy.enableNewSessionFastMode })).toBeDisabled()
+    await expect.element(page.getByText(copy.ultrafastDisclosure, { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.settingsSaved, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenLastCalledWith([
+      { op: 'set', path: ['newSessionSpeedMode'], value: 'ultrafast' },
+      { op: 'set', path: ['newSubagentSpeedMode'], value: 'standard' },
+    ], 0)
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth)
+    await top.selectOptions('')
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.settingsSaved, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenLastCalledWith([{ op: 'set', path: ['newSessionSpeedMode'], value: null }], 1)
+    await expect.element(page.getByRole('checkbox', { name: copy.enableNewSessionFastMode })).toBeEnabled()
+    expect(scope.getSnapshot().value).toMatchObject({ newSessionSpeedMode: undefined, newSubagentSpeedMode: 'standard', enableNewSessionFastMode: true })
+  })
+
   it.each([['en', 390, en], ['zh', 390, zh], ['en', 960, en], ['zh', 960, zh]] as const)('keeps the native-context opt-in at peer level in %s at %i pixels without a second confirmation', async (_language, width, copy) => {
     await page.viewport(width, 844)
     host.style.width = '100%'

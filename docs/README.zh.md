@@ -14,16 +14,20 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 ## 快速开始
 
-本指南推荐 Codex Connect `0.2.0-alpha.7` / DSH `0.2.1-rc.2`；其他受支持的精确宿主版本见下表。请先运行 `dsh --version`，再用 `doctor --json` 做本地诊断；单凭 CLI 版本无法证明实际安装的模型运行库版本，缺少版本元数据时会报告未知。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
+本指南推荐 Codex Connect `0.2.0-alpha.9` / DSH `0.2.1-rc.2`；其他受支持的精确宿主版本见下表。请先运行 `dsh --version`，再用 `doctor --json` 做本地诊断；单凭 CLI 版本无法证明实际安装的模型运行库版本，缺少版本元数据时会报告未知。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.2.0-alpha.7` |
+| Codex Connect | `0.2.0-alpha.9` |
 | DeepSeek Harness | `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-alpha.4`、`0.2.1-alpha.5`、`0.2.1-rc.1` 或 `0.2.1-rc.2`（包版本必须一致） |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
-**已发布的图片恢复版本：** [`0.2.0-alpha.7`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.7) 在 Harness 预览保存失败时保留已完成、已验证的原图，支持下载原图和明确选择继续编辑。工具说明明确：聊天可继续使用 DeepSeek，图片由 Codex Connect 的独立 ChatGPT OAuth 通道处理。上方十一个精确宿主组合均保留验证；底层图片接口与凭据行为不变。合成检查不代表真实账户或 Desktop 验收。
+**已发布的维护版本：** [`0.2.0-alpha.9`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.9) 增加可选的推理强度回退设置，以及新顶层会话和普通子代理会话各自独立的 Standard / Fast / Ultrafast 默认设置。显式请求中的推理强度和后续手动速度选择优先；省略或重置时保留对应的旧默认行为。已有／恢复会话继续受到尊重。Ultrafast 仍要求登录并匹配可用的模型／账户路由；资格与实际服务档位仍未知。finite SSE 和 Task 暂停状态不变；不声称已测得提速倍数或完成真实账户／Desktop 验收。
+
+**历史维护版本：** [`0.2.0-alpha.8`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.8) 增加显式会话级 Standard / Fast / Ultrafast 选择，保留宿主重试策略，将 GPT-6.1 Sol 默认上下文设为 500,000 token，并修复恢复／文件身份及 Windows 打包检查。Ultrafast 仅对文档列明的两个 Codex 模型显式启用；不包含新主会话／子代理的默认设置。资格与实际服务档位仍报告未知，保留 finite SSE 及原有可选功能默认行为。不声称已测得提速或完成真实账户／Desktop 验收。
+
+**历史图片恢复版本：** [`0.2.0-alpha.7`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.7) 在 Harness 预览保存失败时保留已完成、已验证的原图，支持下载原图和明确选择继续编辑。工具说明明确：聊天可继续使用 DeepSeek，图片由 Codex Connect 的独立 ChatGPT OAuth 通道处理。上方十一个精确宿主组合均保留验证；底层图片接口与凭据行为不变。合成检查不代表真实账户或 Desktop 验收。
 
 `0.2.0-alpha.4` 将精确宿主支持扩展到 DSH `0.2.1-alpha.2` 和 `0.2.1-alpha.3`，保留原有五个宿主。原有受支持宿主无需升级；Task 仍暂停，默认设置不变。
 
@@ -33,7 +37,7 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 历史发布 [`0.2.0-alpha.2`](release-notes/0.2.0-alpha.2.md) 已发布精确 DSH `0.2.1-alpha.1` 的兼容适配，以及跨模型路由的图片选择句柄修复。较早的 `0.2.0-alpha.1` 安装包保持不变，仍拒绝该宿主。原有受支持宿主无需升级。
 
-截至 2026-10-19，npm `alpha` 指向 `0.2.0-alpha.7`，`latest` 仍为 `0.2.0-alpha.1`。默认安装仍选择较早的 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-10-20，npm `alpha` 指向 `0.2.0-alpha.9`，`latest` 仍为 `0.2.0-alpha.1`。默认安装仍选择较早的 Alpha；`latest` 标签不代表稳定版。安装这些 DSH 组合请使用下方精确版本命令；会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 历史发布 [`0.2.0-alpha.1`](release-notes/0.2.0-alpha.1.md) 通过模型目录补充增加 `gpt-6.1-sol`，并开始较短的独立插件编号。四个受支持的 DSH 版本不变，无需升级宿主。
 
@@ -46,7 +50,7 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.7
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.9
 dsh web
 ```
 

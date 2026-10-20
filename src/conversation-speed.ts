@@ -42,6 +42,7 @@ export class ConversationSpeedRegistry extends FastModeRegistry {
   /** Separate plugin instances cannot reuse each other's choices or observations. */
   readonly workspace = randomUUID()
   private readonly controls = new Map<string, Control>()
+  private readonly startupDefaults = new Map<string, { workspace: string; accountKey?: string | undefined; ready: boolean }>()
   private readonly controlLimit: number
   private accountEpoch = 0
   constructor(limit = OPENAI_CODEX_FAST_MODE_MAX_SESSIONS, private readonly selectionKey?: (sessionId: string) => string | undefined) {
@@ -50,20 +51,22 @@ export class ConversationSpeedRegistry extends FastModeRegistry {
   }
   override set(sessionId: unknown, enabled: boolean): void {
     super.set(sessionId, enabled)
+    this.startupDefaults.delete(sessionId as string)
     this.controls.delete(sessionId as string)
   }
   override delete(sessionId: unknown): void {
     super.delete(sessionId)
+    this.startupDefaults.delete(sessionId as string)
     if (typeof sessionId === 'string') this.controls.delete(sessionId)
   }
-  override clear(): void { super.clear(); this.controls.clear() }
+  override clear(): void { super.clear(); this.controls.clear(); this.startupDefaults.clear() }
 
   /** Login/logout/account commands invalidate paid choices, including an A/B/A round trip. */
-  invalidateAccountSelections(): void { this.accountEpoch++; this.controls.clear() }
+  invalidateAccountSelections(): void { this.accountEpoch++; this.controls.clear(); this.startupDefaults.clear() }
 
   /** A committed Host model choice retires the old control, preserving legacy Fast. */
   invalidateModelSelection(sessionId: unknown): void {
-    if (isFastModeSessionId(sessionId)) this.controls.delete(sessionId)
+    if (isFastModeSessionId(sessionId)) { this.controls.delete(sessionId); this.startupDefaults.delete(sessionId) }
   }
 
   workspaceFor(sessionId: unknown): string {
@@ -83,7 +86,50 @@ export class ConversationSpeedRegistry extends FastModeRegistry {
     this.controls.delete(sessionId)
     while (this.controls.size >= this.controlLimit) this.controls.delete(this.controls.keys().next().value!)
     this.controls.set(sessionId, control)
+    const pending = this.startupDefaults.get(sessionId)
+    if (pending?.ready && pending.accountKey !== undefined) {
+      this.startupDefaults.delete(sessionId)
+      if (pending.workspace === scope.workspace && pending.workspace === this.workspaceFor(sessionId)
+        && pending.accountKey === scope.accountKey && supportsOpenAICodexUltrafast(scope.provider, scope.model)) {
+        return this.selectSpeed(sessionId, scope, control.generation, control.revision, 'ultrafast')
+      }
+    }
     return this.snapshot(control)
+  }
+
+  /** Capture the startup opt-in before model routing exists; async reads cannot overwrite newer commands. */
+  async seedUltrafastDefault(sessionId: string, resolveAccountKey: () => Promise<string | undefined>, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted()
+    if (!isFastModeSessionId(sessionId)) throw new TypeError('Invalid speed session')
+    if (this.controls.has(sessionId) || super.isEnabled(sessionId)) return
+    const pending: { workspace: string; accountKey?: string | undefined; ready: boolean } = { workspace: this.workspaceFor(sessionId), ready: false }
+    while (this.startupDefaults.size >= this.controlLimit) this.startupDefaults.delete(this.startupDefaults.keys().next().value!)
+    this.startupDefaults.set(sessionId, pending)
+    try {
+      const accountKey = await resolveAccountKey()
+      signal?.throwIfAborted()
+      if (this.startupDefaults.get(sessionId) !== pending || pending.workspace !== this.workspaceFor(sessionId)) return
+      pending.accountKey = accountKey
+      pending.ready = true
+    } catch (error) {
+      const current = this.startupDefaults.get(sessionId) === pending
+      if (current) this.startupDefaults.delete(sessionId)
+      if (!current && signal?.aborted !== true) return
+      throw error
+    }
+  }
+
+  /** Resolve the one startup intent against the Host's admitted route, before request preparation. */
+  applyStartupDefault(sessionId: string, route: { provider: string; model: string }): void {
+    const pending = this.startupDefaults.get(sessionId)
+    if (pending === undefined || !pending.ready) return
+    if (pending.workspace !== this.workspaceFor(sessionId) || !supportsOpenAICodexUltrafast(route.provider, route.model)) {
+      this.startupDefaults.delete(sessionId)
+      return
+    }
+    // Keep missing-auth failures sticky until an explicit account/model/manual command retires the intent.
+    if (pending.accountKey === undefined) throw new TypeError('ULTRAFAST_SIGN_IN_REQUIRED')
+    this.readSpeed(sessionId, { ...route, workspace: pending.workspace, accountKey: pending.accountKey })
   }
 
   selectSpeed(sessionId: string, scope: ConversationSpeedScope, generation: string, revision: number, mode: OpenAICodexSpeedMode): ConversationSpeedState {
@@ -99,14 +145,16 @@ export class ConversationSpeedRegistry extends FastModeRegistry {
       if (this.selectionKey !== undefined && this.selectionKey(sessionId) === undefined) throw new TypeError('ULTRAFAST_SELECTION_UNAVAILABLE')
       if (this.selectionKey !== undefined && scope.workspace !== this.workspaceFor(sessionId)) throw new TypeError('SPEED_SELECTION_STALE')
     }
+    this.startupDefaults.delete(sessionId)
     super.set(sessionId, mode === 'fast')
     control.mode = mode
     control.revision++
     return this.snapshot(control)
   }
 
+  /** Legacy boolean clients cannot represent a selected or pending startup Ultrafast preference. */
   isUltrafastSelected(sessionId: unknown): boolean {
-    return typeof sessionId === 'string' && this.controls.get(sessionId)?.mode === 'ultrafast'
+    return typeof sessionId === 'string' && (this.controls.get(sessionId)?.mode === 'ultrafast' || this.startupDefaults.has(sessionId))
   }
 
   captureSpeed(sessionId: unknown): CapturedConversationSpeed {

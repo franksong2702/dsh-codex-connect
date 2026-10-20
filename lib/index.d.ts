@@ -23,6 +23,15 @@ interface OpenAICodexPreflightConfig {
   maxDurationMs: number;
 }
 //#endregion
+//#region src/speed-mode-contract.d.ts
+type OpenAICodexSpeedMode = 'standard' | 'fast' | 'ultrafast';
+//#endregion
+//#region src/reasoning-contract.d.ts
+/** Optional profile reasoning policy; model support remains owned by the Host adapter. */
+declare const OPENAI_CODEX_REASONING_EFFORTS: readonly ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+/** Reasoning levels accepted by the public PiAiAdapter profile. */
+type OpenAICodexReasoningEffort = typeof OPENAI_CODEX_REASONING_EFFORTS[number];
+//#endregion
 //#region src/account-profile.d.ts
 type OpenAICodexAccountProfileSource = 'oauth' | 'generated';
 //#endregion
@@ -586,7 +595,6 @@ export declare function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage;
 export declare function readOpenAICodexRateLimits(store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>): Promise<OpenAICodexUsage>;
 //#endregion
 //#region src/settings-contract.d.ts
-/** Node-free settings contract shared by the Host plugin and browser card. */
 /** Stable Harness settings namespace owned by this plugin. */
 export declare const OPENAI_CODEX_SETTINGS_NAMESPACE = "llm-openai-codex";
 /** Suggested local HTTP proxy shown by the settings UI; it is never enabled by default. */
@@ -620,6 +628,8 @@ export declare const DEFAULT_OPENAI_CODEX_SEARCH_MAX_OUTPUT_TOKENS = 10000;
 interface OpenAICodexSettingsConfig {
   /** Model ids advertised in selectors; undefined advertises the full catalog. */
   models: string[] | undefined;
+  /** Optional fallback when a request does not specify reasoning effort. */
+  reasoningEffort: OpenAICodexReasoningEffort | undefined;
   /** Route Codex Connect requests through the explicitly configured proxy. */
   enableProxy: boolean;
   /** Credential-free HTTP(S) proxy origin; inactive while enableProxy is false. */
@@ -636,6 +646,10 @@ interface OpenAICodexSettingsConfig {
   enableReserveFallback: boolean;
   /** Default Fast Mode for newly started top-level sessions; existing sessions are unchanged. */
   enableNewSessionFastMode: boolean;
+  /** Explicit new top-level default; omission retains the legacy Fast preference. */
+  newSessionSpeedMode: OpenAICodexSpeedMode | undefined;
+  /** Independent new-subagent default, with the same legacy omission behavior. */
+  newSubagentSpeedMode: OpenAICodexSpeedMode | undefined;
   /** Independent default for newly started subagent sessions. */
   enableNewSubagentFastMode: boolean;
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
@@ -655,7 +669,10 @@ interface OpenAICodexSettingsConfig {
 }
 export declare const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig>;
 /** Input settings allow null to disable overrides inherited from a lower settings layer. */
-interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides'>> {
+interface OpenAICodexSettingsInput extends Partial<Omit<OpenAICodexSettingsConfig, 'contextWindowOverrides' | 'reasoningEffort' | 'newSessionSpeedMode' | 'newSubagentSpeedMode'>> {
+  reasoningEffort?: OpenAICodexReasoningEffort | null | undefined;
+  newSessionSpeedMode?: OpenAICodexSpeedMode | null | undefined;
+  newSubagentSpeedMode?: OpenAICodexSpeedMode | null | undefined;
   contextWindowOverrides?: Readonly<Record<string, number | null>> | null | undefined;
 }
 /** Fill the schema defaults even when called without Cordis validation. */
@@ -924,6 +941,11 @@ export declare const inject: string[];
 export declare const OPENAI_CODEX_SETTINGS_NS = "llm-openai-codex";
 /** Plain configuration accepted by direct Cordis composition and unit tests. */
 export interface Config {
+  /** Explicit new-session preferences; omitted/null retains the corresponding legacy Fast default. */
+  newSessionSpeedMode?: OpenAICodexSpeedMode | null | undefined;
+  newSubagentSpeedMode?: OpenAICodexSpeedMode | null | undefined;
+  /** Optional fallback effort; explicit request effort wins. Null resets an inherited value. */
+  reasoningEffort?: OpenAICodexReasoningEffort | null | undefined;
   /** Optional Host model-request retry policy; omission preserves defaults. Reload to change. */
   retryPolicy?: RetryPolicyConfig | undefined;
   /** Opt-in absolute owner-only directory for local request evidence; never uploads telemetry. Restart to change. */
@@ -981,6 +1003,9 @@ export interface Config {
 }
 /** Runtime configuration exposes each editable field through Cordis's public Volatile type. */
 export interface VolatileConfig {
+  newSessionSpeedMode: Volatile<OpenAICodexSpeedMode | null | undefined>;
+  newSubagentSpeedMode: Volatile<OpenAICodexSpeedMode | null | undefined>;
+  reasoningEffort: Volatile<OpenAICodexReasoningEffort | null | undefined>;
   retryPolicy?: RetryPolicyConfig | undefined;
   requestMetricsDirectory?: string | undefined;
   requestMetricsMaxBytes: number;

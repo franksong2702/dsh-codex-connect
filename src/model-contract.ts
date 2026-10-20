@@ -52,6 +52,8 @@ export interface OpenAICodexModelCatalogEntry {
   /** Local configuration ceiling; account/route capacity can differ. */
   maxContextWindow: number
   contextLimitSource: 'codex-catalog' | 'catalog-default'
+  /** Actual Host-advertised choices; absent for models without reasoning support. */
+  reasoning?: { efforts: { id: string; name: string }[]; defaultEffort?: string }
 }
 
 /** Validate the model catalog before it enters React state. */
@@ -72,8 +74,30 @@ export function decodeOpenAICodexModelCatalog(value: unknown): OpenAICodexModelC
       || !isValidOpenAICodexContextBudget(maxContextWindow, Number.MAX_SAFE_INTEGER)
       || !isValidOpenAICodexContextBudget(contextWindow, maxContextWindow)
       || (contextLimitSource !== 'codex-catalog' && contextLimitSource !== 'catalog-default')) return undefined
+    const reasoning = decodeReasoning(record['reasoning'])
+    if (record['reasoning'] !== undefined && reasoning === undefined) return undefined
     ids.add(id)
-    catalog.push({ id, name, contextWindow, maxContextWindow, contextLimitSource })
+    catalog.push({ id, name, contextWindow, maxContextWindow, contextLimitSource, ...(reasoning === undefined ? {} : { reasoning }) })
   }
   return catalog
+}
+
+function decodeReasoning(value: unknown): OpenAICodexModelCatalogEntry['reasoning'] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const choices = record['efforts']
+  if (!Array.isArray(choices) || choices.length === 0 || choices.length > 64) return undefined
+  const efforts: { id: string; name: string }[] = []
+  const ids = new Set<string>()
+  for (const choice of choices) {
+    if (typeof choice !== 'object' || choice === null || Array.isArray(choice)) return undefined
+    const item = choice as Record<string, unknown>
+    if (typeof item['id'] !== 'string' || item['id'].length === 0 || item['id'].length > 128 || ids.has(item['id'])
+      || typeof item['name'] !== 'string' || item['name'].length === 0 || item['name'].length > 256) return undefined
+    ids.add(item['id'])
+    efforts.push({ id: item['id'], name: item['name'] })
+  }
+  const defaultEffort = record['defaultEffort']
+  if (defaultEffort !== undefined && (typeof defaultEffort !== 'string' || !ids.has(defaultEffort))) return undefined
+  return { efforts, ...(defaultEffort === undefined ? {} : { defaultEffort }) }
 }
