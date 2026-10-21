@@ -16,8 +16,8 @@ const SPEED_ACTIVE_COLOR = '#f97316'
  * portals the list into document.body, opens it upward above the bottom
  * anchored Composer row (portal + align end + side top) and keeps it inside
  * the viewport, repositioning on scroll and resize while open. The request
- * lifecycle and routes are unchanged. Paid-row account gating deliberately
- * includes Fast as well as Ultrafast; Standard remains selectable.
+ * lifecycle and routes are unchanged. Account availability gates Ultrafast
+ * exactly as before; Fast and Standard remain selectable.
  */
 export function OpenAICodexSpeedControl({ sessionId, model, t, available = true }: { sessionId: string; model: string; t: Translate; available?: boolean }) {
   const [selection, setSelection] = useState<ConversationSpeedState>()
@@ -119,9 +119,9 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
           ? t('speedMenuUltrafastTitle')
           : t('speedMenuStandardTitle')
   // The button only blocks while a read/write is in flight (main's contract).
-  // While the shared account mutates or no account is signed in, the menu's
-  // paid rows (Fast, Ultrafast) are blocked with a reason; Standard stays
-  // selectable because it is not a paid choice.
+  // Account availability gates Ultrafast exactly as before; Fast and Standard
+  // stay selectable while the shared account mutates or no account is signed
+  // in.
   const disabled = busy
   return <span style={{ display: 'inline-flex', position: 'relative' }}>
     <Menu open={menuOpen && status === 'ready' && selection !== undefined} onClose={closeMenu}
@@ -183,9 +183,9 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
     }}>{t('ultrafastDisclosure')}</p>
     {selection !== undefined && SPEED_MODES.map(mode => {
       const checked = selection.mode === mode
-      const itemDisabled = mode === 'fast' ? !available : mode === 'ultrafast' && !canUltra
-      const reason = mode === 'ultrafast' ? t(itemDisabled ? 'ultrafastUnavailable' : 'ultrafastDisclosure')
-        : mode === 'fast' && itemDisabled ? t('speedPaidUnavailable') : undefined
+      // Fast is deliberately not account-gated (main's contract); only Ultrafast is.
+      const itemDisabled = mode === 'ultrafast' && !canUltra
+      const reason = mode === 'ultrafast' ? t(itemDisabled ? 'ultrafastUnavailable' : 'ultrafastDisclosure') : undefined
       const row = <button key={mode} type="button" role="menuitemradio"
         data-speed-mode={mode}
         aria-checked={checked} disabled={itemDisabled}

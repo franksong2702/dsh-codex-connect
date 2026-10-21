@@ -57,7 +57,7 @@ it('retains an explicit choice and its generation across navigation away and bac
   expect(screen.getByRole('button', { name: en.speedMenuUltrafastTitle }).getAttribute('aria-pressed')).toBe('true')
   expect(fetch.registry.readSpeed('session', fetch.scope())).toEqual(chosen)
 })
-it('blocks only paid menu items during shared account mutations and rereads after account replacement', async () => {
+it('blocks only Ultrafast during shared account mutations and keeps Fast selectable', async () => {
   const fetch = await backend()
   let state: AccountSnapshot = { status: { status: 'signed-in', usage: { rateLimits: [] } }, busy: false,
     accounts: [{ accountKey: 'synthetic-a', active: true, displayName: 'offline', profileSource: 'generated' }], operation: { kind: 'idle' } }
@@ -74,22 +74,22 @@ it('blocks only paid menu items during shared account mutations and rereads afte
   fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitemradio', { name: 'Ultrafast' }))
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuUltrafastTitle }).getAttribute('aria-pressed')).toBe('true') })
   act(() => { fetch.accountChanged(); state = { ...state, busy: true, operation: { kind: 'activating', accountKey: 'synthetic-b' } }; listeners.forEach(listener => { listener() }) })
-  // Deliberate tightening: both paid rows are blocked; Standard stays usable.
+  // Main's account-gating contract: only Ultrafast is blocked; Fast stays
+  // selectable exactly like Standard.
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
   let menu = openSpeedMenu(view, en.speedMenuStandardTitle)
-  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', true)
-  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' }).getAttribute('title')).toBe(en.speedPaidUnavailable)
+  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' }).getAttribute('title')).toBe(en.ultrafastUnavailable)
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
-  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Standard' }))
-  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false') })
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
   act(() => { state = { ...state, busy: false, operation: { kind: 'idle' }, accounts: [{ ...state.accounts[0]!, accountKey: 'synthetic-b' }] }; listeners.forEach(listener => { listener() }) })
-  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
-  menu = openSpeedMenu(view, en.speedMenuStandardTitle)
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle })).toHaveProperty('disabled', false) })
+  menu = openSpeedMenu(view, en.speedMenuFastTitle)
   expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', false)
-  expect(fetch.registry.readSpeed('session', fetch.scope()).mode).toBe('standard')
+  expect(fetch.registry.readSpeed('session', fetch.scope()).mode).toBe('fast')
 })
 it.each(['gpt-6.1-sol', 'gpt-6-astra'])('starts %s in Standard and selects mutually exclusive Fast/Ultrafast without claiming service confirmation', async model => {
   const fetch = await backend(), d = directory(model)
@@ -229,7 +229,7 @@ it('arrow keys move menu focus and Enter selects the focused option', async () =
   await waitFor(() => { expect(view.getByRole('button', { name: speedTitle('speedMenuUltrafastTitle') }).getAttribute('aria-pressed')).toBe('true') })
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['ultrafast'])
 })
-it('keeps the compact button enabled while the shared account is busy and blocks only paid rows', async () => {
+it('keeps the compact button enabled while the shared account is busy and blocks only Ultrafast', async () => {
   await backend()
   let state: AccountSnapshot = { status: { status: 'signed-in', usage: { rateLimits: [] } }, busy: false,
     accounts: [{ accountKey: 'synthetic-a', active: true, displayName: 'offline', profileSource: 'generated' }], operation: { kind: 'idle' } }
@@ -240,7 +240,7 @@ it('keeps the compact button enabled while the shared account is busy and blocks
   act(() => { state = { ...state, busy: true, operation: { kind: 'activating', accountKey: 'synthetic-b' } }; listeners.forEach(listener => { listener() }) })
   await waitFor(() => { expect(view.getByRole('button', { name: speedTitle('speedMenuStandardTitle') })).toHaveProperty('disabled', false) })
   const menu = openSpeedMenu(view, speedTitle('speedMenuStandardTitle'))
-  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', true)
+  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
   act(() => { state = { ...state, busy: false, operation: { kind: 'idle' }, accounts: [{ ...state.accounts[0]!, accountKey: 'synthetic-b' }] }; listeners.forEach(listener => { listener() }) })
@@ -249,6 +249,17 @@ it('keeps the compact button enabled while the shared account is busy and blocks
     expect(within(reopened).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
     expect(within(reopened).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', false)
   })
+})
+it('keeps Fast selectable while the shared account is signed out and blocks only Ultrafast', async () => {
+  await backend()
+  const state: AccountSnapshot = { status: { status: 'signed-out' }, busy: false, accounts: [], operation: { kind: 'idle' } }
+  const account = { getSnapshot: () => state, subscribe: () => () => {} }
+  const view = render(<OpenAICodexFastModeToggle directory={directory().store} account={account} sessionId="session" t={t} />)
+  await waitFor(() => { expect(view.getByRole('button', { name: speedTitle('speedMenuStandardTitle') })).toHaveProperty('disabled', false) })
+  const menu = openSpeedMenu(view, speedTitle('speedMenuStandardTitle'))
+  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
+  expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
+  expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
 })
 it('keeps the Ultrafast menu option disabled without a confirmed account', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ generation: 'stub-speed', revision: 0, mode: 'standard', model: 'gpt-6.1-sol',
