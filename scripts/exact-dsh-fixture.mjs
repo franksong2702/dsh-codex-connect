@@ -38,11 +38,37 @@ export function exactDshFixtureManifest(overrides) {
   return { private: true, dependencies: { ...overrides }, overrides: { ...overrides } }
 }
 
-/** Read a public, exact npm manifest with a bounded network deadline. */
-export async function readDshRegistryManifest(name, version) {
-  const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`, {
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!response.ok) throw new Error(`npm registry returned HTTP ${response.status} for ${name}@${version}`)
-  return response.json()
+const REGISTRY_ATTEMPTS = 3
+const REGISTRY_ATTEMPT_TIMEOUT_MS = 30_000
+
+/** Whether an HTTP status is a transient registry condition worth retrying. */
+function retryableRegistryStatus(status) {
+  return status === 408 || status === 429 || status >= 500
+}
+
+/**
+ * Read a public, exact npm manifest with a bounded deadline per attempt.
+ * Network errors, timeouts and 408/429/5xx are retried with backoff; any
+ * other HTTP status fails at once.
+ */
+export async function readDshRegistryManifest(name, version, {
+  fetchImpl = fetch,
+  sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
+} = {}) {
+  const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`
+  let last
+  for (let attempt = 1; attempt <= REGISTRY_ATTEMPTS; attempt++) {
+    if (attempt > 1) await sleep(1_000 * 2 ** (attempt - 2))
+    let response
+    try {
+      response = await fetchImpl(url, { signal: AbortSignal.timeout(REGISTRY_ATTEMPT_TIMEOUT_MS) })
+    } catch (error) {
+      last = error
+      continue
+    }
+    if (response.ok) return response.json()
+    last = new Error(`npm registry returned HTTP ${response.status} for ${name}@${version}`)
+    if (!retryableRegistryStatus(response.status)) throw last
+  }
+  throw new Error(`npm registry unavailable for ${name}@${version} after ${REGISTRY_ATTEMPTS} attempts: ${last instanceof Error ? last.message : String(last)}`, { cause: last })
 }

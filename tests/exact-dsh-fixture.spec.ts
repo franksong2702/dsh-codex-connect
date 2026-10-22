@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 // The install checker is plain Node tooling, outside the TypeScript source build.
 // @ts-expect-error JavaScript helper has no declaration file.
-import { exactDshFixtureManifest, resolveExactDshOverrides } from '../scripts/exact-dsh-fixture.mjs'
+import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from '../scripts/exact-dsh-fixture.mjs'
 
 describe('exact DSH install fixture', () => {
   it('pins transitive and peer DSH packages despite floating ranges, without pinning third parties', async () => {
@@ -37,5 +37,41 @@ describe('exact DSH install fixture', () => {
 
   it('rejects a newer manifest instead of silently testing the wrong host', async () => {
     await expect(resolveExactDshOverrides('0.1.5-alpha.1', async (name: string) => ({ name, version: '0.1.5-rc.1' }))).rejects.toThrow('exact')
+  })
+
+  describe('registry reader', () => {
+    const manifest = { name: '@deepseek-ai/dsh', version: '0.2.1-rc.1' }
+    const ok = () => new Response(JSON.stringify(manifest), { status: 200 })
+    const status = (code: number) => () => new Response('', { status: code })
+    const timeout = () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError') }
+    const read = async (responses: Array<() => Response>) => {
+      const delays: number[] = []
+      let calls = 0
+      const result = readDshRegistryManifest(manifest.name, manifest.version, {
+        fetchImpl: async () => responses[calls++]!(),
+        sleep: async (ms: number) => { delays.push(ms) },
+      })
+      return { result, delays, calls: () => calls }
+    }
+
+    it('retries timeouts and transient statuses with backoff before succeeding', async () => {
+      const run = await read([timeout, status(503), ok])
+      await expect(run.result).resolves.toEqual(manifest)
+      expect(run.calls()).toBe(3)
+      expect(run.delays).toEqual([1_000, 2_000])
+    })
+
+    it('fails at once on a non-transient status', async () => {
+      const run = await read([status(404), ok])
+      await expect(run.result).rejects.toThrow('HTTP 404')
+      expect(run.calls()).toBe(1)
+      expect(run.delays).toEqual([])
+    })
+
+    it('gives up after three attempts and keeps the last cause', async () => {
+      const run = await read([timeout, status(429), timeout])
+      await expect(run.result).rejects.toThrow(/after 3 attempts: The operation was aborted due to timeout/u)
+      expect(run.calls()).toBe(3)
+    })
   })
 })

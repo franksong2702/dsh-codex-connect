@@ -26,6 +26,10 @@ for (const name of required) {
 
 const forbidden = names.filter(name => /(^|\/)(?:\.env(?:\.|$)|\.git|node_modules|tests?|scripts?|src)(?:\/|$)|auth\.json$|credential|token/iu.test(name))
 if (forbidden.length > 0) throw new Error(`packed artifact contains forbidden files: ${forbidden.join(', ')}`)
+const internalDocs = names.filter(name => /^docs\/(?:agent-notes|experiments|reviews)\//u.test(name))
+if (internalDocs.length > 0) {
+  throw new Error(`packed artifact contains internal maintenance records: ${internalDocs.join(', ')}`)
+}
 if (names.includes('docs/design/codex-connect-images-v4.md')) {
   throw new Error('core packed artifact must not include the images implementation design')
 }
