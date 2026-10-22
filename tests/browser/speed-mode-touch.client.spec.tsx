@@ -9,13 +9,14 @@ let host: HTMLDivElement | undefined
 let outside: HTMLButtonElement | undefined
 const touchCommands = commands as unknown as {
   tapTouch(selector: string): Promise<void>
-  touchPointCount(): Promise<number>
 }
 afterEach(() => { root?.unmount(); host?.remove(); outside?.remove(); vi.unstubAllGlobals() })
 
 it('uses Playwright touchscreen input in a 390x844 touch-capable context without accidental selection', async () => {
   await page.viewport(390, 844)
-  expect(await touchCommands.touchPointCount()).toBeGreaterThan(0)
+  expect(window.innerWidth).toBe(390)
+  expect(window.innerHeight).toBe(844)
+  expect(window.navigator.maxTouchPoints).toBeGreaterThan(0)
 
   let revision = 0
   let mode = 'standard'
@@ -57,8 +58,14 @@ it('uses Playwright touchscreen input in a 390x844 touch-capable context without
   await expect.element(menu).toBeVisible()
   expect(posts).toEqual([])
 
-  await touchCommands.tapTouch('[aria-label="Ultrafast details"]')
-  await expect.element(page.getByRole('menuitem', { name: 'Ultrafast details', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await touchCommands.tapTouch('[data-openai-codex-speed-menu="standard"]')
+  await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+  expect(posts).toEqual([])
+  await touchCommands.tapTouch('[data-openai-codex-speed-menu="standard"]')
+  await expect.element(page.getByRole('menu')).toBeVisible()
+
+  await touchCommands.tapTouch(`[aria-label="${en.speedUltrafastDetails}"]`)
+  await expect.element(page.getByRole('menuitem', { name: en.speedUltrafastDetails, exact: true })).toHaveAttribute('aria-expanded', 'true')
   await expect.element(page.getByText(en.ultrafastDisclosure, { exact: true })).toBeVisible()
   expect(posts).toEqual([])
 
