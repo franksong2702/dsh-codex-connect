@@ -8,6 +8,10 @@ Maintain authorization/accounts, ordinary manual model use, installation, exact-
 
 A proposal needs an identifiable user problem, repeatable supporting evidence and an acceptable maintenance/host-dependency cost before entering the next roadmap. Missing evidence is grounds to defer, not an instruction to build more experiment infrastructure. Reconsideration requires an explicit maintainer decision; green CI or a scheduled reminder cannot reopen a frozen track.
 
+### Bounded admission — issue #384, 2026-10-22
+
+The maintainer explicitly approved a minimal PR for model-callable, default-off, read-only quota observation and optional skill guidance. This exception admits only a projection of existing identity-bound quota data: shared-window remaining percentages, reset times, local observation time and unknown/stale states. It excludes balances, account identifiers, credentials and raw responses. It does not admit automatic model/account switching, scheduling, a general budget system or renewed Adaptive Task development. Existing defaults, permissions, cancellation, cache isolation and failure backoff remain obligations. The approval authorizes implementation/review; it is not release or live-account acceptance.
+
 ## Disposition
 
 | Surface | Disposition | Retained obligations |

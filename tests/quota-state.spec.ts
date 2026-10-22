@@ -68,14 +68,15 @@ describe('OpenAICodexQuotaState acceptance', () => {
 
   it('keeps sequential cache reads from postponing the t=60 refresh', async () => {
     const { state } = setup()
-    await state.read()
-    await vi.advanceTimersByTimeAsync(10_000); await state.read()
+    expect((await state.read()).fetchedAt).toBe(0)
+    await vi.advanceTimersByTimeAsync(10_000); expect((await state.read()).fetchedAt).toBe(0)
     await vi.advanceTimersByTimeAsync(10_000); await state.read()
     expect(readResponse).toHaveBeenCalledTimes(1)
     await vi.advanceTimersByTimeAsync(39_999)
     expect(readResponse).toHaveBeenCalledTimes(1)
     await vi.advanceTimersByTimeAsync(1)
     await flush(); expect(readResponse).toHaveBeenCalledTimes(2)
+    expect((await state.read()).fetchedAt).toBe(60_000)
     await state.dispose()
   })
 

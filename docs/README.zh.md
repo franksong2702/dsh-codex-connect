@@ -116,6 +116,8 @@ Alpha 4.49 修复了 4.48 中重新上传的副本与历史原图混淆、以及
 
 自动审查在 Harness 策略判定需要审批后执行，不会绕过该策略。启用前请阅读[自动审查行为](auto-review.zh.md)。
 
+**可选的模型额度查询：** 在插件 profile 配置中显式设置 `enableQuotaTool: true` 并重新加载插件后，会注册只读工具 `codex_connect_quota`。默认关闭，自定义设置卡没有该开关。它只返回共享 Codex 窗口的剩余比例、重置时间和新鲜度，不返回余额或账户标识。详见[额度查询](quota-tool.md)及可选的 [skill 示例](skills/codex-quota-awareness/SKILL.md)。百分比不是任务预算；资源限制不能成为降低要求、跳过测试或安全检查的理由。
+
 ## 常见问题与重要限制
 
 ### 凭据保存在哪里？

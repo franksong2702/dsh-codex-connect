@@ -11,6 +11,8 @@ import { OpenAICodexReauthRequiredError, OpenAICodexUsageHttpError, parseOpenAIC
 /** Public usage and private routing authority from the same response. */
 export interface OpenAICodexQuotaSnapshot {
   usage: OpenAICodexUsage
+  /** Local successful-response observation time, in Unix milliseconds; cache hits preserve it. */
+  fetchedAt: number
   identity?: ReserveIdentity
   decision: ReserveUsageDecision
   authoritySignal: AbortSignal
@@ -163,7 +165,7 @@ export class OpenAICodexQuotaState {
             context => readOpenAICodexUsageResponse(auth, context.signal, enabled && identity !== undefined, context.fetch),
           )
       epoch.throwIfAborted()
-      return { usage: parseOpenAICodexUsage(value), ...(identity === undefined ? {} : { identity }),
+      return { usage: parseOpenAICodexUsage(value), fetchedAt: Date.now(), ...(identity === undefined ? {} : { identity }),
         decision: identity === undefined ? { kind: 'unavailable' } : parseReserveUsage(value, identity), authoritySignal }
     }
     // Renewed credentials do not inherit a rejected session's cooldown; keys never retain raw tokens.
@@ -202,7 +204,7 @@ export class OpenAICodexQuotaState {
       epoch.throwIfAborted()
       current.snapshot = result
       delete current.error
-      current.fetchedAt = Date.now()
+      current.fetchedAt = result.fetchedAt
       current.failures = 0
       current.refreshAt = refreshDeadline(result, model, current.fetchedAt, enabled)
       this.schedule(current.refreshAt)

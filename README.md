@@ -116,6 +116,8 @@ Alpha 4.49 fixes the re-uploaded-copy/original confusion and hidden safe failure
 
 Auto-review operates after Harness policy requires approval; it does not bypass that policy. See [Auto-review behavior](docs/auto-review.md) before enabling it.
 
+**Optional model quota observation:** profile composition can set `enableQuotaTool: true` and reload the plugin to expose the read-only `codex_connect_quota` tool. It is off by default and has no custom settings-card toggle. It reports shared Codex window percentages, reset times and freshness, excluding balances and account identifiers. See [quota observation](docs/quota-tool.md) and the optional [skill example](docs/skills/codex-quota-awareness/SKILL.md). Percentages are not task budgets; resource limits never justify dropping requirements, tests or safety checks.
+
 ## FAQ and important limits
 
 ### Where are my credentials stored?

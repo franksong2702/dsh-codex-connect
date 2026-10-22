@@ -47,6 +47,7 @@ import { createConversationSpeedRegistry } from './conversation-speed.ts'
 import { registerOpenAICodexFastModeDefaults } from './fast-mode-defaults.ts'
 import { assertNoOpenAICodexProviderConflict } from './doctor.ts'
 import { imageGenerateTool } from './image-tool.ts'
+import { quotaTool } from './quota-tool.ts'
 import { viewImageTool } from './view-image.ts'
 import { OpenAICodexTransport } from './transport.ts'
 import type { OpenAICodexTransportV1 } from './transport.ts'
@@ -76,6 +77,7 @@ declare module '@deepseek-ai/cordis' {
 
 export { VIEW_IMAGE_TOOL_NAME } from './view-image.ts'
 export { IMAGE_GENERATE_TOOL_NAME } from './image-tool.ts'
+export { QUOTA_TOOL_NAME } from './quota-tool.ts'
 export {
   assertNoOpenAICodexProviderConflict,
   diagnoseOpenAICodex,
@@ -268,6 +270,8 @@ export interface Config {
   requestMetricsDirectory?: string | undefined
   /** Per-process journal limit; reaching it stops recording with a warning, not model execution. */
   requestMetricsMaxBytes?: number
+  /** Startup-only opt-in to read-only, model-callable shared Codex quota observation. */
+  enableQuotaTool?: boolean
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number
   /** Model ids advertised in selectors; omitted to advertise the full catalog. */
@@ -343,6 +347,7 @@ const configSchema = z.object({
   }).description('Optional Host model-request retry policy. Omit for existing defaults; reload the plugin after changes. More retries can consume more quota. The Host retry plugin executes this policy; cancellation and request accounting remain Host-owned.'),
   requestMetricsDirectory: z.union([z.const(undefined), z.string()]),
   requestMetricsMaxBytes: z.number().step(1).min(4096).max(64 * 1024 * 1024).default(16 * 1024 * 1024),
+  enableQuotaTool: z.boolean().default(false).description('Register read-only shared Codex quota observation for models. Reload the plugin after changes. Does not switch models/accounts or schedule work.'),
   oauthTimeoutMs: z.number().step(1).min(1_000).max(1_800_000).default(OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS),
   models: z.union([z.const(undefined), z.array(z.string())]).volatile(),
   enableProxy: z.boolean().default(false).volatile(),
@@ -379,6 +384,7 @@ export interface VolatileConfig {
   retryPolicy?: RetryPolicyConfig | undefined
   requestMetricsDirectory?: string | undefined
   requestMetricsMaxBytes: number
+  enableQuotaTool: boolean
   oauthTimeoutMs: number
   models: Volatile<string[] | undefined>
   enableProxy: Volatile<boolean>
@@ -467,6 +473,9 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
     resolveProxyUrl: resolveProviderProxyUrl,
   })
+  if (config.enableQuotaTool === true) {
+    ctx.inject(['tools'], toolCtx => toolCtx.tools.register(quotaTool(quota)))
+  }
   const reservePermits = new ReserveRequestPermits()
   const stopReserveRouting = registerReserveRouting(ctx, {
     quota,

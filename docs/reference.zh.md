@@ -192,6 +192,7 @@ Alpha 4.49 中，完整 `attachment` 选择器匹配到实际用户上传记录�
 | `searchContextSize` | `medium` | `low`、`medium` 或 `high` |
 | `searchMaxOutputTokens` | `10000` | 搜索使用的正整数输出预算 |
 | `requestMetricsDirectory` | 不设置／关闭 | 启动配置中的私有绝对路径，记录[本地请求计量](request-metrics.zh.md)，不上传遥测 |
+| `enableQuotaTool` | `false` | 启动时注册只读 `codex_connect_quota`；修改 profile 配置后重载插件。见[额度查询](quota-tool.md)。 |
 | `requestMetricsMaxBytes` | `16777216` | 每进程单日志上限，整数 `4096`–`67108864`；不配置目录则不采集 |
 
 Sol61（`gpt-6.1-sol`）的缺失条目或已知旧内置静态元数据使用 500,000 token 基础默认值。显式提供方元数据及用户覆盖值依次优先；重置恢复有效基础默认值。872,000 本地覆盖上限及输出上限不变。这遵循[官方 Work/Codex 产品默认策略](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)，不是端点容量实测。详见[来源校准边界](agent-notes/sol61-context-default.md)。宿主压缩策略不变，但计算预算可能随更大的上下文输入而变化。

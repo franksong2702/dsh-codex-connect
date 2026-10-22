@@ -192,6 +192,7 @@ The main plugin options are:
 | `searchContextSize` | `medium` | `low`, `medium`, or `high` |
 | `searchMaxOutputTokens` | `10000` | Positive integer output budget for search |
 | `requestMetricsDirectory` | absent / off | Startup-only private absolute directory for [local request evidence](request-metrics.md); no telemetry upload |
+| `enableQuotaTool` | `false` | Startup-only read-only `codex_connect_quota` tool; reload after editing profile configuration. See [quota observation](quota-tool.md). |
 | `requestMetricsMaxBytes` | `16777216` | Startup-only per-process journal cap, integer `4096`–`67108864`; no directory means no collection |
 
 Sol61 (`gpt-6.1-sol`) uses a 500,000-token base default for its missing entry or known stale bundled-static metadata. Explicit provider metadata and then user overrides take precedence; a reset returns to the effective base default. Its 872,000 local override ceiling and output limit are unchanged. This follows the [official Work/Codex product default](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex), not an endpoint capacity measurement. See the [source-calibration boundary](agent-notes/sol61-context-default.md). Host compression policy is unchanged, although its calculated budgets can reflect the larger context input.

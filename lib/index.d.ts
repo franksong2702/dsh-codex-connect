@@ -395,6 +395,72 @@ export declare const VIEW_IMAGE_TOOL_NAME = "view_image";
 /** Stable model-callable tool name. */
 export declare const IMAGE_GENERATE_TOOL_NAME = "codex_connect_image_generate";
 //#endregion
+//#region src/usage.d.ts
+/** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
+export declare const OPENAI_CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
+/** One quota window expressed as remaining capacity for direct UI rendering. */
+interface OpenAICodexRateLimitWindow {
+  /** Percent still available in this window. */
+  readonly remainingPercent: number;
+  /** Server-declared rolling-window length in seconds. */
+  readonly windowSeconds: number;
+  /** Server-declared reset time as Unix seconds, when supplied and valid. */
+  readonly resetAt?: number;
+}
+/** One separately metered Codex quota bucket. */
+interface OpenAICodexRateLimit {
+  /** Stable server feature id. */
+  readonly id: string;
+  /** Optional server-provided display name. */
+  readonly name?: string;
+  /** Available rolling windows for this bucket. */
+  readonly windows: readonly OpenAICodexRateLimitWindow[];
+}
+/** Optional exact prepaid-credit balance returned by ChatGPT. */
+interface OpenAICodexCredits {
+  /** Whether the balance is unmetered. */
+  readonly unlimited: boolean;
+  /** Exact provider-formatted balance when finite and disclosed. */
+  readonly balance?: string;
+}
+/** Optional exact workspace member spend limit returned by ChatGPT. */
+interface OpenAICodexIndividualLimit {
+  /** Exact configured limit. */
+  readonly limit: string;
+  /** Exact amount consumed. */
+  readonly used: string;
+  /** Exact amount still available. */
+  readonly remaining: string;
+  /** Percent still available for progress rendering. */
+  readonly remainingPercent: number;
+}
+/** Secret-free quota projection returned to the browser. */
+interface OpenAICodexUsage {
+  /** Rolling Codex rate-limit buckets. */
+  readonly rateLimits: readonly OpenAICodexRateLimit[];
+  /** Exact prepaid-credit balance when supported for this account. */
+  readonly credits?: OpenAICodexCredits;
+  /** Exact workspace member limit when supported for this account. */
+  readonly individualLimit?: OpenAICodexIndividualLimit;
+}
+/**
+ * Convert the provider response into the small secret-free object sent to the browser.
+ * @param value - opaque JSON returned by the ChatGPT usage endpoint.
+ * @returns core and additionally metered quota buckets with remaining percentages.
+ */
+export declare function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage;
+/**
+ * Read current quota without issuing a model request. OAuth is refreshed through
+ * the same provider-native credential lifecycle used by normal Codex turns.
+ * @param store - plugin-owned OAuth credential store.
+ * @returns current rate-limit buckets safe to expose to the local browser page.
+ */
+export declare function readOpenAICodexRateLimits(store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>): Promise<OpenAICodexUsage>;
+//#endregion
+//#region src/quota-tool.d.ts
+/** Stable Host tool name; no account/model selector or refresh bypass is accepted. */
+export declare const QUOTA_TOOL_NAME = "codex_connect_quota";
+//#endregion
 //#region src/compatibility-policy.d.ts
 /** Shared deterministic policy for Host and browser; no filesystem, process or runtime imports. */
 export declare const COMPATIBILITY_SCHEMA_VERSION: 1;
@@ -531,68 +597,6 @@ export declare function assertNoOpenAICodexProviderConflict(providerIds: readonl
  * OAuth document, refreshes a token, or starts an authorization flow.
  */
 export declare function diagnoseOpenAICodex(options?: OpenAICodexDiagnosticOptions): Promise<OpenAICodexDiagnosticReport>;
-//#endregion
-//#region src/usage.d.ts
-/** Fixed endpoint used by the official Codex client for ChatGPT rate limits. */
-export declare const OPENAI_CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
-/** One quota window expressed as remaining capacity for direct UI rendering. */
-interface OpenAICodexRateLimitWindow {
-  /** Percent still available in this window. */
-  readonly remainingPercent: number;
-  /** Server-declared rolling-window length in seconds. */
-  readonly windowSeconds: number;
-  /** Server-declared reset time as Unix seconds, when supplied and valid. */
-  readonly resetAt?: number;
-}
-/** One separately metered Codex quota bucket. */
-interface OpenAICodexRateLimit {
-  /** Stable server feature id. */
-  readonly id: string;
-  /** Optional server-provided display name. */
-  readonly name?: string;
-  /** Available rolling windows for this bucket. */
-  readonly windows: readonly OpenAICodexRateLimitWindow[];
-}
-/** Optional exact prepaid-credit balance returned by ChatGPT. */
-interface OpenAICodexCredits {
-  /** Whether the balance is unmetered. */
-  readonly unlimited: boolean;
-  /** Exact provider-formatted balance when finite and disclosed. */
-  readonly balance?: string;
-}
-/** Optional exact workspace member spend limit returned by ChatGPT. */
-interface OpenAICodexIndividualLimit {
-  /** Exact configured limit. */
-  readonly limit: string;
-  /** Exact amount consumed. */
-  readonly used: string;
-  /** Exact amount still available. */
-  readonly remaining: string;
-  /** Percent still available for progress rendering. */
-  readonly remainingPercent: number;
-}
-/** Secret-free quota projection returned to the browser. */
-interface OpenAICodexUsage {
-  /** Rolling Codex rate-limit buckets. */
-  readonly rateLimits: readonly OpenAICodexRateLimit[];
-  /** Exact prepaid-credit balance when supported for this account. */
-  readonly credits?: OpenAICodexCredits;
-  /** Exact workspace member limit when supported for this account. */
-  readonly individualLimit?: OpenAICodexIndividualLimit;
-}
-/**
- * Convert the provider response into the small secret-free object sent to the browser.
- * @param value - opaque JSON returned by the ChatGPT usage endpoint.
- * @returns core and additionally metered quota buckets with remaining percentages.
- */
-export declare function parseOpenAICodexUsage(value: unknown): OpenAICodexUsage;
-/**
- * Read current quota without issuing a model request. OAuth is refreshed through
- * the same provider-native credential lifecycle used by normal Codex turns.
- * @param store - plugin-owned OAuth credential store.
- * @returns current rate-limit buckets safe to expose to the local browser page.
- */
-export declare function readOpenAICodexRateLimits(store: Pick<OpenAICodexCredentialStore, 'captureActiveAccount'>): Promise<OpenAICodexUsage>;
 //#endregion
 //#region src/settings-contract.d.ts
 /** Stable Harness settings namespace owned by this plugin. */
@@ -952,6 +956,8 @@ export interface Config {
   requestMetricsDirectory?: string | undefined;
   /** Per-process journal limit; reaching it stops recording with a warning, not model execution. */
   requestMetricsMaxBytes?: number;
+  /** Startup-only opt-in to read-only, model-callable shared Codex quota observation. */
+  enableQuotaTool?: boolean;
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number;
   /** Model ids advertised in selectors; omitted to advertise the full catalog. */
@@ -1009,6 +1015,7 @@ export interface VolatileConfig {
   retryPolicy?: RetryPolicyConfig | undefined;
   requestMetricsDirectory?: string | undefined;
   requestMetricsMaxBytes: number;
+  enableQuotaTool: boolean;
   oauthTimeoutMs: number;
   models: Volatile<string[] | undefined>;
   enableProxy: Volatile<boolean>;

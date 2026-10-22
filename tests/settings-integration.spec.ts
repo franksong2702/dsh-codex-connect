@@ -104,6 +104,7 @@ describe('OpenAI Codex Host settings integration', () => {
     expect(fullCatalog.length).toBeGreaterThan(2)
     expect(ctx.tools.get(OpenAICodex.VIEW_IMAGE_TOOL_NAME)).toBeUndefined()
     expect(ctx.tools.get(OpenAICodex.IMAGE_GENERATE_TOOL_NAME)).toBeUndefined()
+    expect(ctx.tools.get(OpenAICodex.QUOTA_TOOL_NAME)).toBeUndefined()
     const approvalAgent = { id: 'settings-approval-fixture' } as unknown as Agent
     await expect(ctx.waterfall('approval/request', {
       agent: approvalAgent,
