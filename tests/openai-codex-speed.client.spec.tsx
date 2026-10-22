@@ -82,8 +82,12 @@ it('blocks only Ultrafast during shared account mutations and keeps Fast selecta
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' }).getAttribute('title')).toBe(en.ultrafastUnavailable)
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
+  const postsBeforeDisabledActivation = fetch.mock.calls.filter(([, init]) => init.method === 'POST').length
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' }))
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(postsBeforeDisabledActivation)
   fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['ultrafast', 'fast'])
   act(() => { state = { ...state, busy: false, operation: { kind: 'idle' }, accounts: [{ ...state.accounts[0]!, accountKey: 'synthetic-b' }] }; listeners.forEach(listener => { listener() }) })
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle })).toHaveProperty('disabled', false) })
   menu = openSpeedMenu(view, en.speedMenuFastTitle)
@@ -230,7 +234,7 @@ it('arrow keys move menu focus and Enter selects the focused option', async () =
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['ultrafast'])
 })
 it('keeps the compact button enabled while the shared account is busy and blocks only Ultrafast', async () => {
-  await backend()
+  const fetch = await backend()
   let state: AccountSnapshot = { status: { status: 'signed-in', usage: { rateLimits: [] } }, busy: false,
     accounts: [{ accountKey: 'synthetic-a', active: true, displayName: 'offline', profileSource: 'generated' }], operation: { kind: 'idle' } }
   const listeners = new Set<() => void>()
@@ -243,6 +247,8 @@ it('keeps the compact button enabled while the shared account is busy and blocks
   expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' }))
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(0)
   act(() => { state = { ...state, busy: false, operation: { kind: 'idle' }, accounts: [{ ...state.accounts[0]!, accountKey: 'synthetic-b' }] }; listeners.forEach(listener => { listener() }) })
   await waitFor(() => {
     const reopened = openSpeedMenu(view, speedTitle('speedMenuStandardTitle'))
@@ -251,7 +257,7 @@ it('keeps the compact button enabled while the shared account is busy and blocks
   })
 })
 it('keeps Fast selectable while the shared account is signed out and blocks only Ultrafast', async () => {
-  await backend()
+  const fetch = await backend()
   const state: AccountSnapshot = { status: { status: 'signed-out' }, busy: false, accounts: [], operation: { kind: 'idle' } }
   const account = { getSnapshot: () => state, subscribe: () => () => {} }
   const view = render(<OpenAICodexFastModeToggle directory={directory().store} account={account} sessionId="session" t={t} />)
@@ -260,6 +266,11 @@ it('keeps Fast selectable while the shared account is signed out and blocks only
   expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
   expect(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' })).toHaveProperty('disabled', false)
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Ultrafast' }))
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(0)
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['fast'])
 })
 it('keeps the Ultrafast menu option disabled without a confirmed account', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => json({ generation: 'stub-speed', revision: 0, mode: 'standard', model: 'gpt-6.1-sol',
