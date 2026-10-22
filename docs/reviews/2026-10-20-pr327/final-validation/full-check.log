@@ -1,0 +1,452 @@
+
+> dsh-codex-connect@0.2.0-alpha.9 check <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> pnpm run check:release-workflow && pnpm run check:canary-workflow && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run check:env-proxy-import && pnpm run check:isolated-import && pnpm run check:capability-cli && pnpm run check:request-metrics && pnpm --silent run check:compatibility && pnpm run pack:check
+
+
+> dsh-codex-connect@0.2.0-alpha.9 check:release-workflow <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-release-workflow.mjs
+
+Release CI decision: 13 assertions passed
+npm readback regressions: mismatch, recovery, bounded retries, failures, and diagnostic privacy passed
+release recovery regressions: provenance, exact CI, integrity, expiry, conflicts, read-only default, confirmation, and idempotence passed
+release workflow contract: 39/39 assertions passed
+
+> dsh-codex-connect@0.2.0-alpha.9 check:canary-workflow <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-canary-workflow.mjs && node scripts/check-dsh-next-contract.mjs
+
+canary workflow contract: 93/93 assertions passed
+canary maintenance: tracker freshness, decisions and workflow health scenarios passed
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.1.7-rc.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.1.7-rc.1. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.527Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.1.7-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.1.7-rc.2. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.548Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.0-rc.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.0-rc.1. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.570Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.0-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.0-rc.2. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.592Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-alpha.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-alpha.1. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.611Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-alpha.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-alpha.2. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.632Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-alpha.3","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-alpha.3. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.652Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-alpha.4","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-alpha.4. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.674Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-alpha.5","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-alpha.5. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.695Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-rc.1. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.714Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-rc.2. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.733Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":false,"acceptanceScope":"not-assessed","candidateVersion":"0.1.7-rc.3","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"candidate-compatible","stage":"isolated-install","summary":"The isolated next install check passed for undeclared DSH 0.1.7-rc.3. Declared versions: 0.1.7-rc.1, 0.1.7-rc.2, 0.2.0-rc.1, 0.2.0-rc.2, 0.2.1-alpha.1, 0.2.1-alpha.2, 0.2.1-alpha.3, 0.2.1-alpha.4, 0.2.1-alpha.5, 0.2.1-rc.1, 0.2.1-rc.2. Full user acceptance remains separate.","checkedAt":"2026-10-20T08:45:35.755Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":false,"acceptanceScope":"not-assessed","candidateVersion":"0.1.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"skipped","classification":"not-newer","stage":"compare-candidate","summary":"DSH next is 0.1.1-rc.2, which does not supersede the declared supported version 0.1.7-rc.1; the isolated candidate check was skipped.","checkedAt":"2026-10-20T08:45:35.755Z","checkExecuted":false}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"skipped","classification":"duplicate","stage":"compare-candidate","summary":"DSH next matches latest at 0.2.1-rc.2; the latest canary owns this candidate.","checkedAt":"2026-10-20T08:45:35.756Z","checkExecuted":false}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"fail","classification":"compatibility","stage":"isolated-install","summary":"isolated candidate check failed","checkedAt":"2026-10-20T08:45:35.777Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"fail","classification":"compatibility","stage":"isolated-install","summary":"isolated candidate check failed","checkedAt":"2026-10-20T08:45:35.796Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"fail","classification":"infrastructure","stage":"isolated-install","summary":"isolated candidate check failed","checkedAt":"2026-10-20T08:45:35.816Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":true,"acceptanceScope":"not-assessed","candidateVersion":"0.2.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"pass","classification":"declared-compatible","stage":"isolated-install","summary":"The isolated next regression passed for declared DSH 0.2.1-rc.2. Full user acceptance was not assessed by this check.","checkedAt":"2026-10-20T08:45:35.837Z","checkExecuted":true}
+canary multi-version regression: 18 child-routing scenarios passed
+{"schemaVersion":1,"channel":"latest","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":false,"acceptanceScope":"not-assessed","candidateVersion":"0.1.1-rc.2","nodeVersion":"v22.22.3","pluginCommit":null,"status":"skipped","classification":"not-newer","stage":"compare-candidate","summary":"DSH latest is 0.1.1-rc.2, which does not supersede the declared supported version 0.1.7-rc.1; the isolated candidate check was skipped.","checkedAt":"2026-10-20T08:45:35.840Z","checkExecuted":false}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":false,"acceptanceScope":"not-assessed","candidateVersion":"9.9.9-next.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"fail","classification":"compatibility","stage":"isolated-install","summary":"candidate fixture exit 1","checkedAt":"2026-10-20T08:45:35.861Z","checkExecuted":true}
+{"schemaVersion":1,"channel":"next","supportedVersion":"0.1.7-rc.1","supportedVersions":["0.1.7-rc.1","0.1.7-rc.2","0.2.0-rc.1","0.2.0-rc.2","0.2.1-alpha.1","0.2.1-alpha.2","0.2.1-alpha.3","0.2.1-alpha.4","0.2.1-alpha.5","0.2.1-rc.1","0.2.1-rc.2"],"declaredSupport":false,"acceptanceScope":"not-assessed","candidateVersion":"9.9.9-next.1","nodeVersion":"v22.22.3","pluginCommit":null,"status":"fail","classification":"infrastructure","stage":"isolated-install","summary":"candidate fixture exit 2","checkedAt":"2026-10-20T08:45:35.881Z","checkExecuted":true}
+DSH next checker contract: 76/76 assertions passed
+
+> dsh-codex-connect@0.2.0-alpha.9 lint <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> pnpm run lint:metadata && pnpm run lint:source
+
+
+> dsh-codex-connect@0.2.0-alpha.9 lint:metadata <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/lint.mjs
+
+release metadata: 44 regression cases passed
+Pinned OAuth source, JWT decoding, callback cleanup and refresh rejection patches verified
+
+> dsh-codex-connect@0.2.0-alpha.9 lint:source <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> eslint src --max-warnings=0 && node scripts/check-source-lint.mjs
+
+Source lint gate: 6 invalid cases rejected; 2 valid cases accepted
+
+> dsh-codex-connect@0.2.0-alpha.9 typecheck <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> tsc -p tsconfig.json && tsc -p tsconfig.client.json
+
+
+> dsh-codex-connect@0.2.0-alpha.9 test <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> vitest run
+
+
+ RUN  v4.1.11 <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+
+ ✓ tests/openai-codex-settings.client.spec.tsx (68 tests) 3429ms
+ ✓ tests/native-compaction-probes.spec.ts (13 tests) 5403ms
+   ✓ rehearses the three-dispatch bridge and rejects fallback without live network  368ms
+   ✓ rehearses real DSH JSONL write and fresh-process restore with synthetic responses  881ms
+   ✓ stops failed native persistence acceptance before fallback or a resume dispatch  515ms
+   ✓ retains diagnosis for synthetic case-only recall without accepting or retrying it  837ms
+   ✓ retains diagnosis for synthetic wrapped recall without accepting or retrying it  845ms
+   ✓ retains diagnosis for synthetic wrong recall without accepting or retrying it  879ms
+   ✓ retains diagnosis for synthetic empty recall without accepting or retrying it  877ms
+ ✓ tests/image-edit-tool.spec.ts (37 tests) 8083ms
+     ✓ PR272 review: a reuploaded preview handle must not silently select the old generated original  304ms
+     ✓ PR272 review: a complete reuploaded reference stays usable after the old original is removed  337ms
+     ✓ review: preserves both complete references when identical uploads have different display names  387ms
+     ✓ review: does not promote a complete upload reference to an unrelated generated occurrence  339ms
+     ✓ keeps ordered reference purposes and sends every input  380ms
+     ✓ refuses ambiguous preview-to-original mapping instead of choosing the most recent result  306ms
+     ✓ supports A to A1 to A2 and A1 to another result without overwriting earlier originals  388ms
+     ✓ allows inherited originals after restore but not images created after the fork  316ms
+     ✓ rejects a shared bare upload/result id but keeps both explicit choices stable  694ms
+     ✓ does not send any request when a reference has shared upload/result identity  369ms
+     ✓ retains upload provenance from serialized inherited events without admitting later uploads  409ms
+     ✓ admits an explicit user inbox image as an upload without treating text references as uploads  315ms
+ ✓ tests/adaptive-task-transitions.spec.ts (9 tests) 2860ms
+   ✓ preserves current higher counters and retained child replay records after old v1 receipts are evicted  593ms
+   ✓ rejects unknown delivery and missing evidence before creating a representable downgrade  580ms
+   ✓ keeps v2 authority unchanged if interrupted after archive persistence but before root replacement  584ms
+   ✓ round-trips manual v1 through its retained archive and rejects archive tampering  380ms
+ ✓ tests/adaptive-task-host.spec.ts (38 tests) 7972ms
+   ✓ retains the task grant and exact original session through persisted unload/resume (none)  333ms
+   ✓ retains the task grant and exact original session through persisted unload/resume (zstd)  396ms
+   ✓ expands pre-handoff checkpoints from original evidence and permits new target-route compaction  439ms
+ ✓ tests/proxy-shutdown.spec.ts (7 tests) 4117ms
+   ✓ destroys its stalled connect socket during disposal without a caller timeout  1036ms
+   ✓ destroys its stalled tls socket during disposal without a caller timeout  1025ms
+   ✓ destroys its stalled headers socket during disposal without a caller timeout  1027ms
+   ✓ destroys its stalled body socket during disposal without a caller timeout  1024ms
+ ✓ tests/native-compaction-controlled-cases.spec.ts (31 tests) 9499ms
+   ✓ runs retained-user through real DSH persistence and two processes with request-derived synthetic answers  935ms
+   ✓ runs assistant-origin through real DSH persistence and two processes with request-derived synthetic answers  949ms
+   ✓ blocks assistant-origin/missing-native-target before synthetic transport without retry  559ms
+   ✓ blocks assistant-origin/plaintext-leak before synthetic transport without retry  874ms
+   ✓ blocks retained-user/retained-user-lost before synthetic transport without retry  900ms
+   ✓ blocks assistant-origin/checkpoint-altered before synthetic transport without retry  885ms
+   ✓ blocks assistant-origin/checkpoint-missing before synthetic transport without retry  862ms
+   ✓ retains strict failure and diagnostics for controlled case-only answers  868ms
+   ✓ retains strict failure and diagnostics for controlled wrapped answers  920ms
+   ✓ retains strict failure and diagnostics for controlled wrong answers  829ms
+   ✓ retains strict failure and diagnostics for controlled empty answers  842ms
+ ✓ tests/adaptive-task-consent.spec.ts (22 tests) 9038ms
+   ✓ keeps legacy/off behavior, explicitly migrates without child authority, and preserves the root budget  401ms
+   ✓ executes only explicit evidence consent, then archives/downgrades/remigrates without replay or budget reset  1182ms
+   ✓ authorizes an explicitly selected gpt-6-sol child route without widening the default start  876ms
+   ✓ authorizes an explicitly selected gpt-6-luna child route without widening the default start  710ms
+   ✓ fences duplicate operations, changed digests, stale UI and another owner before changing consent  314ms
+   ✓ requires idle consent but stop/manual can cancel an active child and preserve debits  744ms
+   ✓ retains full receipts while allowing stop/manual/revocation/downgrade even without the model catalog  711ms
+   ✓ blocks downgrade if ordinary parent delivery evidence disappears despite a recorded ledger flag  718ms
+   ✓ keeps signed-cookie activation closed and preserves existing delegation safety exits and ownership  554ms
+ ✓ tests/reserve-routing.spec.ts (21 tests) 1144ms
+ ✓ tests/astra-reasoning.spec.ts (44 tests) 893ms
+ ✓ tests/adaptive-task-store.spec.ts (11 tests) 2485ms
+   ✓ serializes reservations across independent store objects instead of losing parallel updates  2021ms
+ ✓ tests/image-edit-session.spec.ts (5 tests) 2011ms
+   ✓ edits through the real loop and cold-loads the retained original ('none', preview unavailable: false)  538ms
+   ✓ edits through the real loop and cold-loads the retained original ('zstd', preview unavailable: false)  445ms
+   ✓ edits through the real loop and cold-loads the retained original ('none', preview unavailable: true)  422ms
+   ✓ edits through the real loop and cold-loads the retained original ('zstd', preview unavailable: true)  464ms
+ ✓ tests/metadata-read-races.spec.ts (32 tests) 806ms
+ ✓ tests/store.spec.ts (15 tests) 1328ms
+     ✓ enforces account and serialized document limits  473ms
+ ✓ tests/native-compaction-lifecycle.spec.ts (2 tests) 2204ms
+   ✓ runs the real DSH transaction, storage, resume, fork and tool replay (none)  1148ms
+   ✓ runs the real DSH transaction, storage, resume, fork and tool replay (zstd)  1055ms
+ ✓ tests/transport.spec.ts (31 tests) 530ms
+ ✓ tests/image-asset-routes.spec.ts (20 tests) 368ms
+ ✓ tests/image-edit-transport.spec.ts (27 tests) 546ms
+ ✓ tests/adaptive-task-http.spec.ts (8 tests) 597ms
+ ✓ tests/account-store.client.spec.tsx (22 tests) 705ms
+ ✓ tests/native-compaction.spec.ts (35 tests) 590ms
+ ✓ tests/native-context-settings.spec.ts (4 tests) 889ms
+   ✓ requires a committed opt-in, uses automatic host triggers, and preserves replay after disabling  569ms
+ ✓ tests/native-compaction-automatic.spec.ts (9 tests) 1274ms
+ ✓ tests/image-tool-view.client.spec.tsx (28 tests) 438ms
+ ✓ tests/account-callback.client.spec.tsx (17 tests) 553ms
+ ✓ tests/metrics-response-lifecycle.spec.ts (12 tests) 736ms
+ ✓ tests/adaptive-task-evidence.spec.ts (28 tests) 445ms
+ ✓ tests/credential-lock-wait.spec.ts (6 tests) 13064ms
+   ✓ waits through a slow refresh before modify  2583ms
+   ✓ waits through a slow refresh before captured  2621ms
+   ✓ waits through a slow refresh before activate  2596ms
+   ✓ waits through a slow refresh before remove  2617ms
+   ✓ waits through a slow refresh before logout  2606ms
+ ✓ tests/request-metrics.spec.ts (30 tests) 254ms
+ ✓ tests/speed-defaults-wire.spec.ts (9 tests) 302ms
+ ✓ tests/host-runtime-metadata.spec.ts (19 tests) 378ms
+ ✓ tests/request-account.spec.ts (4 tests) 265ms
+ ✓ tests/image-tool-local-attachment.spec.ts (1 test) 268ms
+ ✓ tests/oauth-jwt-decoding.spec.ts (24 tests) 832ms
+ ✓ tests/history-migration.spec.ts (8 tests) 229ms
+ ✓ tests/oauth-socket-regression.spec.ts (3 tests) 631ms
+   ✓ timeout closes an accepted incomplete OAuth request  522ms
+ ✓ tests/diagnostic-response-lifecycle.spec.ts (6 tests) 327ms
+ ✓ tests/adapter-auth-boundary.spec.ts (7 tests) 373ms
+ ✓ tests/backend-request.spec.ts (7 tests) 286ms
+ ✓ tests/adaptive-task-delegation-ledger.spec.ts (42 tests) 14251ms
+   ✓ requires consent and exact fencing, supports different authorized routes, and isolates roots  433ms
+   ✓ snapshots queued arguments and rejects duplicate call conflicts without spawning twice  340ms
+   ✓ shares the root lock for child/auxiliary debits and enforces child cap and parent floor  2867ms
+   ✓ revocation to stopped fences publication/reservation/late success  346ms
+   ✓ stop after preparation prevents publication and an expired deadline prevents reservation  469ms
+   ✓ requires verified cleanup and separately reconciled delivery; neither is inferred from success  436ms
+   ✓ recovers prepared without replay or refund; old epoch loses all mutation authority  338ms
+   ✓ recovers running without replay or refund; old epoch loses all mutation authority  410ms
+   ✓ recovers settling without replay or refund; old epoch loses all mutation authority  507ms
+   ✓ recovers succeeded without replay or refund; old epoch loses all mutation authority  439ms
+   ✓ retains all 32 admitted cancelled/failed run receipts and rejects the 33rd before any work  3112ms
+   ✓ refuses byte capacity before admission while leaving room to finish the last accepted run  1619ms
+ ✓ tests/openai-codex-speed.client.spec.tsx (9 tests) 465ms
+ ✓ tests/context-window-settings.spec.ts (12 tests) 248ms
+ ✓ tests/view-image.spec.ts (4 tests) 210ms
+ ✓ tests/image-turn-tail.client.spec.tsx (3 tests) 139ms
+ ✓ tests/task-artifact-native.spec.ts (17 tests | 1 skipped) 112ms
+ ✓ tests/account-cancel-snapshot.client.spec.tsx (2 tests) 351ms
+ ✓ tests/installation-metadata.spec.ts (6 tests) 139ms
+ ✓ tests/request-metrics-review.spec.ts (18 tests) 106ms
+ ✓ tests/codex-image-gallery.client.spec.tsx (6 tests) 336ms
+ ✓ tests/oauth-manual-callback.spec.ts (4 tests) 268ms
+ ✓ tests/search-bounds.spec.ts (5 tests) 112ms
+ ✓ tests/compatibility.spec.ts (36 tests) 74ms
+ ✓ tests/search.spec.ts (11 tests) 226ms
+ ✓ tests/metadata-leaf-safety.spec.ts (5 tests) 106ms
+ ✓ tests/capability-probe.spec.ts (27 tests) 174ms
+ ✓ tests/openai-codex-fast-mode.client.spec.tsx (13 tests) 239ms
+ ✓ tests/task-state-native.spec.ts (16 tests) 139ms
+ ✓ tests/astra-tool-replay.spec.ts (4 tests) 146ms
+ ✓ tests/openai-codex-quota-indicator.client.spec.tsx (20 tests) 251ms
+ ✓ tests/adaptive-task-delegation.spec.ts (33 tests) 14840ms
+   ✓ executes read/submit through real host and shared governor with durable normal delivery (none)  744ms
+   ✓ executes read/submit through real host and shared governor with durable normal delivery (zstd)  773ms
+   ✓ selects a second authorized child route instead of hard-coding Luna/Low  753ms
+   ✓ rejects out-of-scope model/source and forged parent call without spawning  307ms
+   ✓ unobserved findings fail and parent receives a bounded failed outcome  560ms
+   ✓ retains a parent request and stops a child at the shared budget floor  578ms
+   ✓ revocation during a pending child request prevents later fetch and drains ownership (manual)  574ms
+   ✓ revocation during a pending child request prevents later fetch and drains ownership (stopped)  553ms
+   ✓ deadline and disposal cancel owned transport without refund or subsequent fetch  659ms
+   ✓ create failure yields no child fetch, preserves receipt and does not retry  626ms
+   ✓ cleanup failure blocks new root dispatch and is not promoted to success  643ms
+   ✓ lost reply reconciliation uses the original durable call/result, without new provider work  691ms
+   ✓ unloads/resumes the persisted parent and reconciles a lost reply without respawning (none)  562ms
+   ✓ unloads/resumes the persisted parent and reconciles a lost reply without respawning (zstd)  629ms
+   ✓ a publication failure cleans the owned child before any child request  449ms
+   ✓ revocation after host creation but before ledger publication never dispatches the child  379ms
+   ✓ the actual child deadline cancels a hung request and preserves the spent debit  1445ms
+   ✓ ordinary parent Stop cancels child ownership and is consumed as durable revocation  539ms
+   ✓ a native picker change while creating a child revokes its first fetch and restores ordinary parent control  340ms
+   ✓ v2 compaction is counted and handoff restores the original journal (native=false)  467ms
+   ✓ v2 compaction is counted and handoff restores the original journal (native=true)  380ms
+ ✓ tests/openai-codex-update.client.spec.tsx (6 tests) 279ms
+ ✓ tests/dependency-security.spec.ts (22 tests) 159ms
+ ✓ tests/metrics-pending-cancel.spec.ts (3 tests) 116ms
+ ✓ tests/usage.spec.ts (20 tests) 84ms
+ ✓ tests/oauth-cancel-commit.spec.ts (1 test) 44ms
+ ✓ tests/auth-routes.spec.ts (54 tests) 115ms
+ ✓ tests/auth-refresh-state.spec.ts (8 tests) 110ms
+ ✓ tests/auto-review.spec.ts (26 tests) 83ms
+ ✓ tests/context-window-stream.spec.ts (3 tests) 91ms
+ ✓ tests/preflight-adapter.spec.ts (27 tests) 348ms
+ ✓ tests/auto-review-contract.spec.ts (31 tests) 35ms
+ ✓ tests/doctor.spec.ts (10 tests) 77ms
+ ✓ tests/synthetic-keyring-preload.spec.ts (3 tests) 225ms
+ ✓ tests/bin.spec.ts (24 tests) 31ms
+ ✓ tests/oauth-provider-cancellation.spec.ts (1 test) 141ms
+ ✓ tests/protected-http.integration.spec.ts (5 tests) 95ms
+ ✓ tests/auto-review-request.spec.ts (1 test) 63ms
+ ✓ tests/task-flush-native.spec.ts (4 tests | 1 skipped) 74ms
+ ✓ tests/settings-integration.spec.ts (2 tests) 100ms
+ ✓ tests/auth-manual-callback.spec.ts (65 tests) 85ms
+ ✓ tests/ultrafast-lifecycle.spec.ts (2 tests) 33ms
+ ✓ tests/usage-response-lifecycle.spec.ts (4 tests) 63ms
+ ✓ tests/issue-219-diagnostics.spec.ts (22 tests) 110ms
+ ✓ tests/trusted-origins.spec.ts (13 tests) 46ms
+ ✓ tests/reserve-state.spec.ts (10 tests) 18ms
+ ✓ tests/adaptive-task-delegation-host.spec.ts (3 tests) 50ms
+ ✓ tests/image-assets.spec.ts (3 tests) 48ms
+ ✓ tests/auto-review-probe.spec.ts (16 tests) 55ms
+ ✓ tests/retry-policy.spec.ts (25 tests) 46ms
+ ✓ tests/codex-compaction.spec.ts (1 test) 50ms
+ ✓ tests/loader-composition.spec.ts (2 tests) 63ms
+ ✓ tests/versioning-policy.spec.ts (8 tests) 28ms
+ ✓ tests/reasoning-default.spec.ts (6 tests) 54ms
+ ✓ tests/settings-contract.spec.ts (38 tests) 85ms
+ ✓ tests/capability-cli.spec.ts (10 tests) 61ms
+ ✓ tests/task-flush-access.spec.ts (4 tests) 36ms
+ ✓ tests/speed-defaults.spec.ts (16 tests) 57ms
+ ✓ tests/preflight-response.spec.ts (3 tests) 38ms
+ ✓ tests/auth-refresh-safety.spec.ts (1 test) 28ms
+ ✓ tests/backend-request-review.spec.ts (12 tests) 32ms
+ ✓ tests/transport-lifecycle.spec.ts (1 test) 15ms
+ ✓ tests/image-tool.spec.ts (12 tests) 47ms
+ ✓ tests/issue-219-quota.client.spec.tsx (5 tests) 40ms
+ ✓ tests/diagnostic-frame-types.spec.ts (7 tests) 26ms
+ ✓ tests/secure-store.spec.ts (14 tests) 187ms
+ ✓ tests/runtime-identity-client.client.spec.ts (25 tests) 27ms
+ ✓ tests/update.spec.ts (11 tests) 27ms
+ ✓ tests/provider-proxy.spec.ts (8 tests) 95ms
+ ✓ tests/image-handle-bridge.spec.ts (13 tests) 34ms
+ ✓ tests/quota-state.spec.ts (37 tests) 55ms
+ ✓ tests/model-contract.spec.ts (16 tests) 32ms
+ ✓ tests/ultrafast-wire.spec.ts (2 tests) 31ms
+ ✓ tests/provider-proxy-classification.spec.ts (5 tests) 24ms
+ ✓ tests/speed-mode-routes.spec.ts (11 tests) 16ms
+ ✓ tests/backend-route-review.spec.ts (3 tests) 20ms
+ ✓ tests/ultrafast-dispatch.spec.ts (7 tests) 38ms
+ ✓ tests/issue-211-repair.spec.ts (8 tests) 34ms
+ ✓ tests/math-dependency-security.spec.ts (8 tests) 21ms
+ ✓ tests/account-store-desktop.client.spec.tsx (27 tests) 30ms
+ ✓ tests/adaptive-task-delegation-matrix-contract.spec.ts (12 tests) 14ms
+ ✓ tests/adaptive-task-ui-report.spec.ts (38 tests) 24ms
+ ✓ tests/update-routes.spec.ts (19 tests) 43ms
+ ✓ tests/proxy-routes.spec.ts (11 tests) 32ms
+ ✓ tests/capability-docs.spec.ts (3 tests) 13ms
+ ✓ tests/adaptive-task-publication.spec.ts (35 tests) 21ms
+ ✓ tests/public-http.spec.ts (9 tests) 16ms
+ ✓ tests/adaptive-task-matrix-contract.spec.ts (6 tests) 17ms
+ ✓ tests/conversation-speed.spec.ts (19 tests) 20ms
+ ✓ tests/reserve-usage.spec.ts (25 tests) 16ms
+ ✓ tests/fast-mode-routes.spec.ts (7 tests) 14ms
+ ✓ tests/client-registration.spec.ts (7 tests) 13ms
+ ✓ tests/account-request-timeout.client.spec.tsx (2 tests) 13ms
+ ✓ tests/install-version-guidance.spec.ts (28 tests) 19ms
+ ✓ tests/persistence-plugin-fixture.spec.ts (11 tests) 10ms
+ ✓ tests/task-artifact-read-identity.spec.ts (7 tests) 10ms
+ ✓ tests/core-transport-isolation.spec.ts (4 tests) 12ms
+ ✓ tests/update-store-freshness.client.spec.ts (12 tests) 33ms
+ ✓ tests/search-route-override.spec.ts (11 tests) 13ms
+ ✓ tests/openai-codex-plugin-card.client.spec.tsx (1 test) 27ms
+ ✓ tests/native-compaction-recall-diagnostics.spec.ts (15 tests) 8ms
+ ✓ tests/adapter.spec.ts (17 tests) 23ms
+ ✓ tests/config-form.client.spec.ts (11 tests) 7ms
+ ✓ tests/runtime-identity.spec.ts (41 tests) 10ms
+ ✓ tests/capability-diagnostics.spec.ts (32 tests) 21ms
+ ✓ tests/image-input-contract.spec.ts (23 tests) 5ms
+ ✓ tests/speed-mode-contract.spec.ts (14 tests) 8ms
+ ✓ tests/preflight-watchdog.spec.ts (4 tests) 9ms
+ ✓ tests/image-error-contract.spec.ts (25 tests) 6ms
+ ✓ tests/request-json.client.spec.tsx (8 tests) 16ms
+ ✓ tests/exact-dsh-fixture.spec.ts (4 tests) 5ms
+ ✓ tests/preflight-config.spec.ts (14 tests) 6ms
+ ✓ tests/image-presentation.spec.ts (7 tests) 4ms
+ ✓ tests/fast-mode-defaults.spec.ts (2 tests) 7ms
+ ✓ tests/request-metrics-docs.spec.ts (4 tests) 20ms
+ ✓ tests/update-compatibility.spec.ts (2 tests) 6ms
+ ✓ tests/sol61-context-default.spec.ts (12 tests) 15ms
+ ✓ tests/pi-context.spec.ts (9 tests) 3ms
+ ✓ tests/http-auth.spec.ts (8 tests) 3ms
+ ✓ tests/image-format.spec.ts (3 tests) 3ms
+ ✓ tests/auto-review-cli.spec.ts (11 tests) 6ms
+ ✓ tests/dsh-matrix-diagnostics.spec.ts (5 tests) 4ms
+ ✓ tests/fast-mode.spec.ts (5 tests) 7ms
+ ✓ tests/bundle-defaults.spec.ts (1 test) 3ms
+ ✓ tests/account-profile.spec.ts (3 tests) 4ms
+ ✓ tests/task-matrix-failure-summary.spec.ts (3 tests) 3ms
+ ✓ tests/image-handle-projection.spec.ts (3 tests) 3ms
+ ✓ tests/native-compaction-runtime.spec.ts (8 tests) 2ms
+ ✓ tests/model-routes.spec.ts (3 tests) 3ms
+ ✓ tests/auth-error.spec.ts (5 tests) 2ms
+ ✓ tests/auto-review-backend.spec.ts (2 tests) 2ms
+ ✓ tests/settings-atomic-integration.spec.ts (1 test) 2ms
+
+ Test Files  171 passed (171)
+      Tests  2318 passed | 2 skipped (2320)
+   Start at  16:45:53
+   Duration  19.26s (transform 4.31s, setup 1.31s, import 24.68s, tests 123.84s, environment 6.83s)
+
+
+> dsh-codex-connect@0.2.0-alpha.9 build <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> tsdown
+
+ℹ tsdown v0.23.1 powered by rolldown v1.2.14
+ℹ config file: <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6/tsdown.config.ts
+ℹ entry: src/index.ts, src/invariant.ts
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: src/bin.ts
+ℹ target: es2024
+ℹ tsconfig: tsconfig.json
+ℹ entry: src/client/index.tsx
+ℹ target: node22.19.0
+ℹ tsconfig: tsconfig.json
+ℹ Build start
+
+ WARN  We recommend using the ESM format instead of CommonJS.
+The ESM format is compatible with modern platforms and runtimes, and most new libraries are now distributed only in ESM format.
+Learn more at https://nodejs.org/en/learn/modules/publishing-a-package#how-did-we-get-here
+
+ℹ Cleaning 9 files
+ℹ [CJS] lib/client.js  366.08 kB │ gzip: 81.43 kB
+ℹ [CJS] 1 files, total: 366.08 kB
+✔ Build complete in 1064ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/dsh-atomic-write
+- @deepseek-ai/dsh-home-paths
+- @earendil-works/pi-ai
+- @deepseek-ai/cosmokit
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+- @deepseek-ai/dsh-typert-protocol
+- @deepseek-ai/dsh-util-values
+- @deepseek-ai/dsh-timeout
+- @deepseek-ai/dsh-llm
+- @deepseek-ai/dsh-web
+- partial-json
+ℹ [ESM] Granting execute permission to lib/bin.js
+ℹ [ESM] lib/bin.js                              329.13 kB │ gzip: 88.05 kB
+ℹ [ESM] lib/openai-codex-responses-Lnp5x1aX.js  110.03 kB │ gzip: 27.09 kB
+ℹ [ESM] lib/models-C36D3Ycq.js                   35.01 kB │ gzip:  8.58 kB
+ℹ [ESM] 3 files, total: 474.16 kB
+✔ Build complete in 1179ms
+ℹ [ESM] lib/index.js                    593.96 kB │ gzip: 147.99 kB
+ℹ [ESM] lib/invariant.js                  0.58 kB │ gzip:   0.35 kB
+ℹ [ESM] lib/undici-runtime-Ctml-NLj.js    1.17 kB │ gzip:   0.49 kB
+ℹ [ESM] lib/index.d.ts                   55.01 kB │ gzip:  14.98 kB
+ℹ [ESM] lib/invariant.d.ts                0.54 kB │ gzip:   0.32 kB
+ℹ [ESM] 5 files, total: 651.26 kB
+✔ Build complete in 1186ms
+
+> dsh-codex-connect@0.2.0-alpha.9 check:env-proxy-import <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-env-proxy-import.mjs
+
+environment proxy import: {"node":"v22.22.3","dispatcher":"EnvHttpProxyAgent","preserved":true}
+custom v1 import, unrelated fetch and ownership passed
+
+> dsh-codex-connect@0.2.0-alpha.9 check:isolated-import <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-isolated-import.mjs
+
+isolated plugin import passed without host schemastery or pi-ai peers
+direct doctor read-only checks passed: standalone, selected, invalid anchor, ASAR unknown; six positive controls; no subprocess/network/private reads/writes
+
+> dsh-codex-connect@0.2.0-alpha.9 check:capability-cli <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-capability-cli.mjs
+
+capability-cli: offline report, legacy rejection before probing, zero proxy connects, unchanged credentials, and natural child exit verified
+
+> dsh-codex-connect@0.2.0-alpha.9 check:request-metrics <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-request-metrics.mjs
+
+Built request metrics CLI: JSON/human output, unknown usage, no quota conversion, and invalid input checks passed (synthetic evidence only)
+{"schemaVersion":1,"status":"compatible","node":{"supported":"^22.19.0 || >=24.0.0","installed":"v22.22.3","status":"compatible"},"packages":{"@deepseek-ai/dsh-llm":{"supported":"0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4 || 0.2.1-alpha.5 || 0.2.1-rc.1 || 0.2.1-rc.2","installed":"0.1.7-rc.1","status":"compatible"},"@deepseek-ai/dsh-llm-pi-ai":{"supported":"0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4 || 0.2.1-alpha.5 || 0.2.1-rc.1 || 0.2.1-rc.2","installed":"0.1.7-rc.1","status":"compatible"},"@deepseek-ai/dsh-compaction":{"supported":"0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4 || 0.2.1-alpha.5 || 0.2.1-rc.1 || 0.2.1-rc.2","installed":"0.1.7-rc.1","status":"compatible"},"@earendil-works/pi-ai":{"supported":"0.85.1","installed":"0.85.1","status":"compatible"}}}
+
+> dsh-codex-connect@0.2.0-alpha.9 pack:check <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> node scripts/check-pack-command.test.mjs && node scripts/check-pack-inventory.test.mjs && node scripts/check-pack.mjs
+
+ok - real pack spawn resolves linux command
+ok - real pack spawn resolves win32 command
+ok 1 - clean nine-file inventory permits non-lib package files
+ok 2 - changed hashes and hash lengths do not change the contract
+ok 3 - all nine Finder-style copies are reported
+ok 4 - extra stale hash chunk is rejected: lib/models-Ab12_-xy.js
+ok 5 - missing chunk family is rejected: lib/models-Ab12_-xy.js
+ok 6 - extra stale hash chunk is rejected: lib/openai-codex-responses-CD34-uvw.js
+ok 7 - missing chunk family is rejected: lib/openai-codex-responses-CD34-uvw.js
+ok 8 - extra stale hash chunk is rejected: lib/undici-runtime-Ef56_abc.js
+ok 9 - missing chunk family is rejected: lib/undici-runtime-Ef56_abc.js
+ok 10 - missing stable entry is rejected: lib/bin.js
+ok 11 - missing stable entry is rejected: lib/client.js
+ok 12 - missing stable entry is rejected: lib/index.js
+ok 13 - missing stable entry is rejected: lib/index.d.ts
+ok 14 - missing stable entry is rejected: lib/invariant.js
+ok 15 - missing stable entry is rejected: lib/invariant.d.ts
+ok 16 - unexpected artifact is rejected: lib/nested/index.js
+ok 17 - unexpected artifact is rejected: lib/nested/models-abc.js
+ok 18 - unexpected artifact is rejected: lib/index.old.js
+ok 19 - unexpected artifact is rejected: lib/legacy.js
+ok 20 - unexpected artifact is rejected: lib/new-legitimate-family-abc.js
+ok 21 - unexpected artifact is rejected: lib/models-abc.js.map
+ok 22 - unexpected artifact is rejected: lib/models-.js
+ok 23 - unexpected artifact is rejected: lib
+ok 24 - duplicate stable manifest entry is rejected
+ok 25 - duplicate chunk manifest entry is rejected
+ok 26 - empty lib inventory is rejected
+passed 26 pack inventory fixture tests
+validated 180 packed files (1679252 bytes, 3752713 unpacked bytes)

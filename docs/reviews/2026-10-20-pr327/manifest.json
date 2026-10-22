@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "redactions": [
+    "ANSI codes",
+    "local user home",
+    "local macOS temporary-root prefix",
+    "trailing line whitespace and extra blank lines at EOF"
+  ],
+  "artifacts": [
+    {
+      "path": "initial-validation/result.json",
+      "rawSha256": "d7a2091b802f83a1f1a72bae875c22b2e3ac29426b666ef31c87a90578b777d4",
+      "publishedSha256": "4402e885598a9bc1c86acbe98ad669498f82744a6e86d9c24d3db27b53afd575"
+    },
+    {
+      "path": "initial-validation/full-check.log",
+      "rawSha256": "7851668ef9e5505c820463698ebe894cd8870ff771abe39a5ef6b326fc231f29",
+      "publishedSha256": "21baa2618d396e25a5c9d8c600832dbab35ec08c06e8f8b24b2a4dfc373776c3"
+    },
+    {
+      "path": "initial-validation/browser.log",
+      "rawSha256": "a1a16658f9f761f992e3bf32e56abafeff4ff1ac78acc88628666d301e9b676a",
+      "publishedSha256": "29ed7f722b7abb53f6489d5b33e4262df8fb13a31d3a1c423c3130e71695975f"
+    },
+    {
+      "path": "final-validation/result.json",
+      "rawSha256": "865585497a5d6cdf90984ea0771d88c86fba0baed4dbe462a3c7bb9ebe2d0655",
+      "publishedSha256": "865585497a5d6cdf90984ea0771d88c86fba0baed4dbe462a3c7bb9ebe2d0655"
+    },
+    {
+      "path": "final-validation/full-check.log",
+      "rawSha256": "64f7a187ce26749f2793c64188a456b3fc3a279f4b007db7a64c3d9933231568",
+      "publishedSha256": "338db149b41351e8c07706d02bb6c3c9b98573d8313da1ba00cf0f0abad962b0"
+    },
+    {
+      "path": "final-validation/browser.log",
+      "rawSha256": "6ec0c5fa92f017c4e4396ecd18d75d47b8bb94a15cf49515a7e7536d23e9675c",
+      "publishedSha256": "92e938cebb6b887ef4b1b0665755d2b3e9302d6034edb686b215b81418e4cb4a"
+    },
+    {
+      "path": "final-validation/prepare-test-browser.log",
+      "rawSha256": "b4cca940f7754e7256ec63c58f5d4ff337b248d1d90dbe816fefd552d777161c",
+      "publishedSha256": "7f5a28a11e8ce71ee24474987041404e955e045f349dd56846ba62cd88caac51"
+    }
+  ]
+}

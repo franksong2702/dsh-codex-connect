@@ -1,0 +1,110 @@
+# Native boundary regression observations — 2026-10-20
+# Absolute workstation paths and terminal color codes are removed; test messages and outcomes are retained.
+
+## Negative control: missing native entry
+Command: pnpm exec vitest run tests/secure-store.spec.ts -t "normalizes native null"
+Exit code: 1
+
+ RUN  v4.1.11 <isolated-pr327-worktree>
+
+ ❯ tests/secure-store.spec.ts (13 tests | 1 failed | 12 skipped) 4ms
+     × normalizes native null for missing entries without replacing a missing decryption key 3ms
+     ↓ uses the resolved pathname only as an OS-entry locator and generates independent random keys
+     ↓ fails closed before OAuth or a token write if the OS store is locked
+     ↓ sanitizes native read/write/delete errors without exposing their messages or causes
+     ↓ does not create a replacement key when an encrypted document has lost its key
+     ↓ authenticates ciphertext, metadata, pathname and fresh nonces
+     ↓ verifies OS-store writes and never replaces malformed keys
+     ↓ encrypts both legacy versions and an existing rollback copy with explicit consent
+     ↓ rejects an overlooked plaintext backup and refuses symlink imports
+     ↓ retries a partially encrypted migration with the original key and untouched primary
+     ↓ deletes the OS key when the final account is removed
+     ↓ rejects writable parent directories and user-controlled directory symlinks before migration
+     ↓ rejects unsafe backup permissions before writing any migrated file
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  16:32:31
+   Duration  116ms (transform 33ms, setup 12ms, import 35ms, tests 4ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/secure-store.spec.ts > OS-protected encrypted storage > normalizes native null for missing entries without replacing a missing decryption key
+AssertionError: expected null to be undefined
+
+- Expected:
+undefined
+
++ Received:
+null
+
+ ❯ tests/secure-store.spec.ts:25:31
+     23|     const write = vi.spyOn(AsyncEntry.prototype, 'setSecret')
+     24|     const keys = new OSCredentialKeyStore(path)
+     25|     expect(await keys.read()).toBeUndefined()
+       |                               ^
+     26|     await expect(credentialKey(keys, false)).rejects.toThrow('no OS-st…
+     27|     expect(write).not.toHaveBeenCalled()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+## Negative control: native byte array
+Command: pnpm exec vitest run tests/secure-store.spec.ts -t "normalizes native null"
+Exit code: 1
+
+ RUN  v4.1.11 <isolated-pr327-worktree>
+
+ ❯ tests/secure-store.spec.ts (14 tests | 1 failed | 13 skipped) 4ms
+     ↓ rejects malformed native key representations without overwriting the entry
+     × normalizes native null and byte arrays without replacing a missing decryption key 4ms
+     ↓ uses the resolved pathname only as an OS-entry locator and generates independent random keys
+     ↓ fails closed before OAuth or a token write if the OS store is locked
+     ↓ sanitizes native read/write/delete errors without exposing their messages or causes
+     ↓ does not create a replacement key when an encrypted document has lost its key
+     ↓ authenticates ciphertext, metadata, pathname and fresh nonces
+     ↓ verifies OS-store writes and never replaces malformed keys
+     ↓ encrypts both legacy versions and an existing rollback copy with explicit consent
+     ↓ rejects an overlooked plaintext backup and refuses symlink imports
+     ↓ retries a partially encrypted migration with the original key and untouched primary
+     ↓ deletes the OS key when the final account is removed
+     ↓ rejects writable parent directories and user-controlled directory symlinks before migration
+     ↓ rejects unsafe backup permissions before writing any migrated file
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
+   Start at  16:37:35
+   Duration  116ms (transform 40ms, setup 17ms, import 37ms, tests 4ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/secure-store.spec.ts > OS-protected encrypted storage > normalizes native null and byte arrays without replacing a missing decryption key
+CredentialStorageError: openai-codex: OS credential-store write verification failed; no credential document was written.
+ ❯ credentialKey src/secure-store.ts:69:11
+     67|   const saved = await store.read()
+     68|   if (saved === undefined || saved.byteLength !== key.byteLength || !t…
+     69|     throw new CredentialStorageError('OS credential-store write verifi…
+       |           ^
+     70|   }
+     71|   return key
+ ❯ tests/secure-store.spec.ts:43:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+## After complete fix
+Command: pnpm exec vitest run tests/secure-store.spec.ts tests/auto-review.spec.ts tests/auto-review-contract.spec.ts
+Exit code: 0
+
+ RUN  v4.1.11 <isolated-pr327-worktree>
+
+ ✓ tests/auto-review-contract.spec.ts (31 tests) 16ms
+ ✓ tests/secure-store.spec.ts (14 tests) 44ms
+ ✓ tests/auto-review.spec.ts (26 tests) 67ms
+
+ Test Files  3 passed (3)
+      Tests  71 passed (71)
+   Start at  16:37:58
+   Duration  453ms (transform 169ms, setup 42ms, import 404ms, tests 127ms, environment 0ms)

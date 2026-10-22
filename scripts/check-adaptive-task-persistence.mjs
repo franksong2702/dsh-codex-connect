@@ -4,12 +4,14 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { tmpdir } from 'node:os'
 import { build } from 'tsdown'
 import { runBoundedCommand } from './bounded-command.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cache = join(root, 'node_modules/.cache'); await mkdir(cache, { recursive: true })
 const workspace = await mkdtemp(join(cache, 'adaptive-task-persistence-'))
+const keyringDirectory = await mkdtemp(join(tmpdir(), 'task-persistence-synthetic-keyring-'))
 const reports = []
 try {
   await build({ config: false, entry: { fixture: join(root, 'scripts/adaptive-task-persistence-fixture.ts') }, outDir: workspace,
@@ -18,7 +20,9 @@ try {
   const digest = createHash('sha256').update(await readFile(entry)).digest('hex')
   for (const compression of ['none', 'zstd']) for (const phase of ['write', 'resume']) {
     const result = await runBoundedCommand(process.execPath, [entry, join(workspace, compression), phase, compression], {
-      cwd: root, timeoutMs: 45000, env: { ...process.env, DSH_TELEMETRY_MODE: 'DISABLED', OTEL_SDK_DISABLED: 'true' },
+      cwd: root, timeoutMs: 45000, env: { ...process.env, DSH_TELEMETRY_MODE: 'DISABLED', OTEL_SDK_DISABLED: 'true',
+        DSH_SYNTHETIC_KEYRING: '1', DSH_SYNTHETIC_KEYRING_DIRECTORY: keyringDirectory,
+        NODE_OPTIONS: `--import ${JSON.stringify(pathToFileURL(join(root, 'scripts/synthetic-keyring.mjs')).href)}` },
     })
     assert.equal(result.error, undefined); assert.equal(result.cleanupError, undefined)
     assert.equal(result.status, 0, result.stderr.slice(-4000))
@@ -29,4 +33,7 @@ try {
   }
   assert.equal(new Set(reports.map(report => report.pid)).size, 4)
   console.log(JSON.stringify({ kind: 'adaptive-task-cold-process-lifecycle', passed: true, bundleSha256: digest, freshProcesses: 4, reports }))
-} finally { await rm(workspace, { recursive: true, force: true }) }
+} finally {
+  await rm(workspace, { recursive: true, force: true })
+  await rm(keyringDirectory, { recursive: true, force: true })
+}

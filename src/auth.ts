@@ -27,6 +27,7 @@ export async function loginOpenAICodex(
   interaction: AuthInteraction,
   store: OpenAICodexCredentialStore = new OpenAICodexCredentialStore(),
 ): Promise<void> {
+  await store.prepareSecureStorage()
   const models = createModels({ credentials: store })
   const provider = openaiCodexProvider()
   let login: ReturnType<typeof openaiCodexOAuth.login> | undefined

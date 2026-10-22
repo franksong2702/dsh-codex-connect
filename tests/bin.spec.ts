@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -48,6 +48,24 @@ afterEach(async () => {
 })
 
 describe('dsh-codex-connect CLI', () => {
+  it('requires explicit offline migration confirmation and does not expose synthetic token contents', async () => {
+    root = await mkdtemp(join(tmpdir(), 'codex-migration-cli-'))
+    vi.stubEnv('DSH_HOME', root)
+    const file = join(root, '.openai-codex-auth.json')
+    const text = JSON.stringify({ version: 1, credential: { type: 'oauth', access: 'synthetic-cli-secret', refresh: 'synthetic-cli-refresh', accountId: 'synthetic-cli-account', expires: 60000 } })
+    await writeFile(file, text, { mode: 0o600 })
+    let output = ''
+    vi.spyOn(process.stdout, 'write').mockImplementation(chunk => { output += String(chunk); return true })
+    vi.spyOn(process.stderr, 'write').mockImplementation(chunk => { output += String(chunk); return true })
+    expect(await run(['migrate-credentials'])).toBe(1)
+    expect(await run(['migrate-credentials', '--confirm-stopped', '--json'])).toBe(1)
+    expect(await readFile(file, 'utf8')).toBe(text)
+    expect(await run(['migrate-credentials', '--confirm-stopped'])).toBe(0)
+    expect(JSON.parse(await readFile(file, 'utf8'))).toMatchObject({ version: 3 })
+    expect(output).not.toContain('synthetic-cli-secret')
+    expect(output).not.toContain('synthetic-cli-refresh')
+    expect(mocked.login).not.toHaveBeenCalled()
+  })
   it('does not print opaque refresh response secrets', async () => {
     mocked.login.mockRejectedValue(new Error('Invalid response: {"refresh_token":"opaque-fixture-secret"}'))
     let output = ''

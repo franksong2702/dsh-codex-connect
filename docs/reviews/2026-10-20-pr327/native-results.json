@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-20",
+  "scope": "Explicitly authorized synthetic tokens and newly created, uniquely addressed native OS entries only.",
+  "records": [
+    {
+      "stage": "before-normalization",
+      "exitCode": 1,
+      "result": {
+        "schemaVersion": 1,
+        "platform": "darwin",
+        "architecture": "arm64",
+        "osRelease": "27.2.0",
+        "node": "v22.22.3",
+        "keyringVersion": "2.1.0",
+        "syntheticCredentials": true,
+        "nativeBindingUsed": true,
+        "realAccountsAccessed": false,
+        "networkRequests": 0,
+        "sourceSha256": {
+          "store.ts": "bb0960511e29d7a3d02a51e0e76bc670235f74c3786971700aa7303ce7dd50ea",
+          "secure-store.ts": "6dc660c3949a3fdb44bafaf15b95055896096eff20d9e061caaeadaa91a99479",
+          "secure-path.ts": "c6a0769e3864d50436608a585d6125a9154a7bf1ab99dec8092bddd337880bc0"
+        },
+        "steps": [],
+        "cleanup": {
+          "ownedEntries": 0,
+          "entriesAbsent": true,
+          "temporaryHomeRemoved": true
+        },
+        "failure": {
+          "phase": "create-owned-locators",
+          "errorKind": "AssertionError"
+        },
+        "passed": false
+      }
+    },
+    {
+      "stage": "absence-only-fix",
+      "exitCode": 1,
+      "result": {
+        "schemaVersion": 1,
+        "platform": "darwin",
+        "architecture": "arm64",
+        "osRelease": "27.2.0",
+        "node": "v22.22.3",
+        "keyringVersion": "2.1.0",
+        "syntheticCredentials": true,
+        "nativeBindingUsed": true,
+        "realAccountsAccessed": false,
+        "networkRequests": 0,
+        "sourceSha256": {
+          "store.ts": "bb0960511e29d7a3d02a51e0e76bc670235f74c3786971700aa7303ce7dd50ea",
+          "secure-store.ts": "806669bec2e3221fc021a57e40d518048c3968ad7e9f0f94992b0fa2f7050147",
+          "secure-path.ts": "c6a0769e3864d50436608a585d6125a9154a7bf1ab99dec8092bddd337880bc0"
+        },
+        "steps": [],
+        "cleanup": {
+          "ownedEntries": 2,
+          "entriesAbsent": true,
+          "temporaryHomeRemoved": true
+        },
+        "failure": {
+          "phase": "native-key-write-readback",
+          "errorKind": "CredentialStorageError"
+        },
+        "passed": false
+      }
+    },
+    {
+      "stage": "native-binding-shape-probe",
+      "exitCode": 0,
+      "result": {
+        "nativeBinding": true,
+        "ownedRandomLocator": true,
+        "realAccountsAccessed": false,
+        "absence": "null",
+        "shape": {
+          "type": "object",
+          "array": true,
+          "constructor": "Array",
+          "length": 32
+        },
+        "equal": true,
+        "passed": true,
+        "cleaned": true
+      }
+    },
+    {
+      "stage": "after-native-boundary-fix",
+      "exitCode": 0,
+      "result": {
+        "schemaVersion": 1,
+        "platform": "darwin",
+        "architecture": "arm64",
+        "osRelease": "27.2.0",
+        "node": "v22.22.3",
+        "keyringVersion": "2.1.0",
+        "syntheticCredentials": true,
+        "nativeBindingUsed": true,
+        "realAccountsAccessed": false,
+        "networkRequests": 0,
+        "sourceSha256": {
+          "store.ts": "bb0960511e29d7a3d02a51e0e76bc670235f74c3786971700aa7303ce7dd50ea",
+          "secure-store.ts": "c4ec3388b392c4af76637b56fc7d82bfc0b4c931b96029dc5ddfc2f43462cb5f",
+          "secure-path.ts": "c6a0769e3864d50436608a585d6125a9154a7bf1ab99dec8092bddd337880bc0"
+        },
+        "steps": [
+          "native-key-write-readback-and-isolation",
+          "encrypted-file-and-fresh-process-native-readback",
+          "pathname-binding-and-tamper-rejection",
+          "owned-synthetic-primary-and-backup-migration",
+          "final-account-removal-and-logout-delete-owned-keys"
+        ],
+        "cleanup": {
+          "ownedEntries": 2,
+          "entriesAbsent": true,
+          "temporaryHomeRemoved": true
+        },
+        "passed": true
+      }
+    }
+  ],
+  "limits": [
+    "Windows Credential Manager native validation not performed",
+    "Linux Secret Service native validation not performed",
+    "No real account or legacy credential migration",
+    "No live OAuth/model calls",
+    "No locked native store acceptance"
+  ]
+}

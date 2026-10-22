@@ -10,6 +10,7 @@ export default defineConfig({
     __CODEX_CONNECT_VERSION__: JSON.stringify(packageVersion),
   },
   test: {
+    setupFiles: ['tests/support/keyring-mock.ts'],
     include: ['tests/**/*.spec.{ts,tsx}'],
     exclude: ['tests/browser/**'],
     testTimeout: 30_000,

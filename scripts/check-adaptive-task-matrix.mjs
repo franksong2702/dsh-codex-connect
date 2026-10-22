@@ -66,7 +66,8 @@ async function main() {
   try {
     const bundle = join(root, 'bundle')
     const { build } = await import('tsdown')
-    await build({ config: false, entry: { 'adaptive-task-host.spec': join(ROOT, 'tests/adaptive-task-host.spec.ts') },
+    await build({ config: false, entry: { 'adaptive-task-host.spec': join(ROOT, 'tests/adaptive-task-host.spec.ts'),
+      'synthetic-keyring-setup': join(ROOT, 'tests/support/keyring-mock.ts') },
       outDir: bundle, platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true,
       report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
@@ -88,6 +89,7 @@ async function main() {
       // Match the installed plugin's dependency ownership instead of replacing its provider with the host's.
       metadata.dependencies['@earendil-works/pi-ai'] = pkg.dependencies['@earendil-works/pi-ai']
       metadata.dependencies.undici = pkg.dependencies.undici
+      metadata.dependencies['@napi-rs/keyring'] = pkg.dependencies['@napi-rs/keyring']
       metadata.type = 'module'
       await writeFile(join(host, 'package.json'), JSON.stringify(metadata))
       const env = { ...scrubCanaryEnvironment(process.env), HOME: join(host, 'home'), DSH_HOME: join(host, 'synthetic-home'),
@@ -109,7 +111,7 @@ async function main() {
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), identitySource)
       await copyFile(join(ROOT, 'scripts/adaptive-task-matrix-network-guard.mjs'), join(host, 'network-guard.mjs'))
       const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] },
-        test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
+        test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs'), join(host, 'tests/synthetic-keyring-setup.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
           isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       console.error(`Task ${version}: running identical task lifecycle cases`)

@@ -1,0 +1,58 @@
+
+> dsh-codex-connect@0.2.0-alpha.9 test:browser <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+> vitest run --config vitest.browser.config.ts
+
+
+ RUN  v4.1.11 <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: browserType.launch: Executable doesn't exist at <user-home>/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     pnpm exec playwright install                           ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+ ❯ node_modules/.pnpm/@vitest+browser-playwright@4.1.11_playwright@1.63.0_vite@8.2.1_@types+node@22.20.1_yaml@2.9.1__vitest@4.1.11/node_modules/@vitest/browser-playwright/dist/index.js:941:55
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { log: [] }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files   (14)
+      Tests  no tests
+     Errors  1 error
+   Start at  16:42:53
+   Duration  172ms (transform 0ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+
+error during close browserType.launch: Executable doesn't exist at <user-home>/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     pnpm exec playwright install                           ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at <user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6/node_modules/.pnpm/@vitest+browser-playwright@4.1.11_playwright@1.63.0_vite@8.2.1_@types+node@22.20.1_yaml@2.9.1__vitest@4.1.11/node_modules/@vitest/browser-playwright/dist/index.js:941:55 {
+  log: [],
+  name: 'Error',
+  type: 'Unhandled Error',
+  stacks: [
+    {
+      method: '',
+      file: '<user-home>/Developer/.webcodex-worktrees/dsh-codex-connect-34a7cec6/node_modules/.pnpm/@vitest+browser-playwright@4.1.11_playwright@1.63.0_vite@8.2.1_@types+node@22.20.1_yaml@2.9.1__vitest@4.1.11/node_modules/@vitest/browser-playwright/dist/index.js',
+      line: 941,
+      column: 55
+    }
+  ]
+}
+ ELIFECYCLE  Command failed with exit code 1.
