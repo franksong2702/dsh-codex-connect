@@ -20,6 +20,7 @@ const SPEED_ACTIVE_COLOR = '#f97316'
  * exactly as before; Fast and Standard remain selectable.
  */
 export function OpenAICodexSpeedControl({ sessionId, model, t, available = true }: { sessionId: string; model: string; t: Translate; available?: boolean }) {
+  const anchorRef = useRef<HTMLSpanElement>(null)
   const [selection, setSelection] = useState<ConversationSpeedState>()
   const [status, setStatus] = useState<'loading' | 'ready' | 'unconfirmed'>('loading')
   const [readAttempt, setReadAttempt] = useState(0)
@@ -123,9 +124,12 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
   // stay selectable while the shared account mutates or no account is signed
   // in.
   const disabled = busy
-  return <span style={{ display: 'inline-flex', position: 'relative' }}>
+  return <span ref={anchorRef} style={{ display: 'inline-flex', position: 'relative' }}>
     <Menu open={menuOpen && status === 'ready' && selection !== undefined} onClose={closeMenu}
       portal align="end" side="top" autoFocus
+      // A fresh reader makes Menu's layout effect place the intrinsic-height
+      // disclosure before paint, including its first expanded/collapsed frame.
+      getAnchorRect={() => anchorRef.current?.getBoundingClientRect() ?? null}
       anchor={<>
         <button type="button" ref={buttonRef}
           data-openai-codex-speed-menu={currentMode ?? status}
@@ -167,19 +171,18 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
           style={{ width: 6, height: 6, borderRadius: 3, background: SPEED_ACTIVE_COLOR, display: 'inline-block', margin: '0 0 0 3px', flex: '0 0 auto' }}
         />}
       </>}>
-    {/* Reveal above the rows so the upward card grows without moving the info
-        target. The paragraph stays in flow and animates max-height/opacity:
-        growth is continuous, so the portaled card's per-frame placement never
-        paints one stale taller frame at the old fixed position. The explicit
-        138px width bounds intrinsic sizing in both states. */}
+    {/* Reveal above the rows at intrinsic height so enlarged text cannot be
+        clipped by a fixed open-state cap. Keep the full description in flow
+        at zero height when collapsed for its aria-describedby association.
+        The explicit 138px width bounds intrinsic sizing in both states. */}
     <p id={disclosureId} style={{
       width: 138, maxWidth: '100%', boxSizing: 'border-box', margin: disclosureOpen ? '0 0 3px' : 0,
-      maxHeight: disclosureOpen ? 168 : 0, opacity: disclosureOpen ? 1 : 0, overflow: 'hidden',
+      maxHeight: disclosureOpen ? 'none' : 0, opacity: disclosureOpen ? 1 : 0, overflow: 'hidden',
       padding: disclosureOpen ? '8px 8px 10px' : 0,
       fontSize: 12, lineHeight: '18px', color: 'var(--dsw-alias-label-secondary)',
       whiteSpace: 'normal', overflowWrap: 'anywhere',
       borderBottom: `0.5px ${disclosureOpen ? 'solid var(--dsw-alias-border-l2)' : 'solid transparent'}`,
-      transition: 'max-height 140ms ease-out, opacity 140ms ease-out, padding 140ms ease-out, margin 140ms ease-out',
+      transition: 'opacity 140ms ease-out',
     }}>{t('ultrafastDisclosure')}</p>
     {selection !== undefined && SPEED_MODES.map(mode => {
       const checked = selection.mode === mode

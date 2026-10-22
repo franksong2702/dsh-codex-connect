@@ -345,8 +345,7 @@ it.each([
   expect(disclosure.textContent).toBe(strings.ultrafastDisclosure)
   expect(info.getAttribute('aria-controls')).toBe(disclosure.id)
   expect(info.getAttribute('aria-expanded')).toBe('false')
-  // Collapsed stays in flow at zero height so growth is continuous and the
-  // portaled card's per-frame placement never paints a stale taller frame.
+  // The zero-height description stays available to aria-describedby.
   expect(disclosure.style.position).not.toBe('absolute')
   expect(disclosure.style.maxHeight).toBe('0px')
   expect(disclosure.style.overflow).toBe('hidden')
@@ -371,11 +370,10 @@ it('reveals the full disclosure above the choices without selecting or posting',
   expect(disclosure.style.position).not.toBe('absolute')
   expect(disclosure.style.width).toBe('138px')
   expect(disclosure.style.whiteSpace).toBe('normal')
-  // Continuous growth: the reveal animates max-height/opacity so the card
-  // grows smoothly instead of jumping a frame at a stale fixed position.
-  expect(disclosure.style.maxHeight).not.toBe('0px')
+  // Intrinsic open height preserves the complete copy at enlarged text sizes.
+  expect(disclosure.style.maxHeight).toBe('none')
   expect(disclosure.style.opacity).toBe('1')
-  expect(disclosure.style.transition).toContain('max-height')
+  expect(disclosure.style.transition).not.toContain('max-height')
   expect(disclosure.style.transition).toContain('opacity')
   expect(disclosure.compareDocumentPosition(within(menu).getByRole('menuitemradio', { name: 'Standard' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' }).getAttribute('aria-checked')).toBe('true')
