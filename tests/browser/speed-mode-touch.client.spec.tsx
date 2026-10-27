@@ -2,7 +2,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, expect, it, vi } from 'vitest'
 import { commands, page } from 'vitest/browser'
 import { OpenAICodexSpeedControl } from '../../src/client/OpenAICodexSpeedControl.tsx'
-import { en } from '../../src/client/locales.ts'
+import { en, zh } from '../../src/client/locales.ts'
 
 let root: Root | undefined
 let host: HTMLDivElement | undefined
@@ -78,4 +78,35 @@ it('uses Playwright touchscreen input in a 390x844 touch-capable context without
   await touchCommands.tapTouch('[data-speed-mode="fast"]')
   await expect.element(page.getByRole('button', { name: en.speedMenuFastTitle, exact: true })).toHaveAttribute('aria-pressed', 'true')
   expect(posts).toEqual(['fast'])
+})
+
+it.each([
+  ['en', en, 'Ultrafast details'],
+  ['zh', zh, 'Ultrafast 说明'],
+] as const)('reveals the model-specific Ultrafast reason on a touchscreen tap (%s)', async (_language, strings, infoName) => {
+  await page.viewport(390, 844)
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+    generation: 'touch-luna', revision: 0, mode: 'standard', model: 'gpt-6-luna',
+    modelSupported: false, hasAccount: true, selectionAvailable: true, eligibility: 'unknown',
+  }), { headers: { 'content-type': 'application/json' } })))
+
+  host = document.createElement('div')
+  host.style.position = 'fixed'
+  host.style.right = '16px'
+  host.style.bottom = '12px'
+  document.body.append(host)
+
+  root = createRoot(host)
+  root.render(<OpenAICodexSpeedControl sessionId="touch-luna" model="gpt-6-luna" t={key => strings[key]} />)
+  const trigger = page.getByRole('button', { name: strings.speedMenuStandardTitle, exact: true })
+  await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+
+  await touchCommands.tapTouch('[data-openai-codex-speed-menu="standard"]')
+  await expect.element(page.getByRole('menu')).toBeVisible()
+  await expect.element(page.getByRole('menuitemradio', { name: 'Ultrafast', exact: true })).toBeDisabled()
+
+  // The disabled row's reason cannot be hovered on touch; one tap on the
+  // information action must reveal it together with the standing quota text.
+  await touchCommands.tapTouch(`[aria-label="${infoName}"]`)
+  await expect.element(page.getByText(`${strings.ultrafastUnsupported} ${strings.ultrafastDisclosure}`, { exact: true })).toBeVisible()
 })
