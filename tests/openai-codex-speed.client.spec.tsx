@@ -115,12 +115,24 @@ it.each(['gpt-6.1-sol', 'gpt-6-astra'])('starts %s in Standard and selects mutua
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' }).getAttribute('aria-checked')).toBe('false')
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['fast', 'ultrafast'])
 })
-it('disables unsupported models and hides the control on unrelated providers', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => json({ enabled: false })))
-  const view = render(<OpenAICodexFastModeToggle directory={directory('gpt-6-sol').store} sessionId="session" t={t} />)
-  expect(screen.getByRole('button', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
+it('renders the same compact speed menu for a model without Ultrafast support and explains the disabled row', async () => {
+  const fetch = await backend(), d = directory('gpt-6-luna')
+  const view = render(<OpenAICodexFastModeToggle directory={d.store} sessionId="session" t={t} />)
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  // One control for every Codex GPT model: no legacy one-tap bolt and no bare
+  // native disabled button pinned next to it.
+  expect(view.container.querySelector('[data-openai-codex-speed-menu]')).not.toBeNull()
+  expect(view.queryByRole('button', { name: 'Ultrafast' })).toBeNull()
+  const menu = openSpeedMenu(view, en.speedMenuStandardTitle)
+  expect(within(menu).getByRole('menuitemradio', { name: 'Fast' })).toHaveProperty('disabled', false)
+  const ultrafast = within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })
+  expect(ultrafast).toHaveProperty('disabled', true)
+  expect(ultrafast.getAttribute('title')).toBe(en.ultrafastUnsupported)
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
+  expect(fetch.registry.captureSpeed('session').mode).toBe('fast')
   view.rerender(<OpenAICodexFastModeToggle directory={directory('gpt-6.1-sol', 'other').store} sessionId="session" t={t} />)
-  expect(screen.queryByRole('button', { name: 'Ultrafast' })).toBeNull()
+  expect(view.container.querySelector('[data-openai-codex-speed-menu]')).toBeNull()
 })
 it('invalidates and reads a fresh Standard selection after switching away/back without a request', async () => {
   const fetch = await backend(), d = directory()
@@ -458,7 +470,7 @@ it('keeps a standing hint next to the button while Ultrafast is the active mode'
   expect(view.container.querySelector('[data-openai-codex-speed-ultrafast-hint]')).toBeNull()
 })
 
-it('keeps the actual legacy Fast route and its control usable after Ultrafast switches to an unsupported model', async () => {
+it('keeps the actual legacy Fast route consistent while Ultrafast is unavailable on an unsupported model', async () => {
   const fetch = await backend(), d = directory()
   const view = render(<OpenAICodexFastModeToggle directory={d.store} sessionId="session" t={t} />)
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
@@ -469,10 +481,13 @@ it('keeps the actual legacy Fast route and its control usable after Ultrafast sw
   const response = await fetch(OPENAI_CODEX_FAST_MODE_PATH + '?sessionId=session', { method: 'GET' })
   expect(response.status).toBe(200)
   expect(await response.json()).toEqual({ enabled: false })
-  await waitFor(() => { expect(view.getByRole('button', { name: en.fastModeDisabledTitle })).toHaveProperty('disabled', false) })
-  expect(view.getByRole('button', { name: 'Ultrafast' })).toHaveProperty('disabled', true)
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  let menu = openSpeedMenu(view, en.speedMenuStandardTitle)
+  const ultrafast = within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })
+  expect(ultrafast).toHaveProperty('disabled', true)
+  expect(ultrafast.getAttribute('title')).toBe(en.ultrafastUnsupported)
   expect(fetch.registry.captureSpeed('session').mode).toBe('standard')
-  fireEvent.click(view.getByRole('button', { name: en.fastModeDisabledTitle }))
-  await waitFor(() => { expect(view.getByRole('button', { name: en.fastModeEnabledTitle })).toBeTruthy() })
+  fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
   expect(fetch.registry.captureSpeed('session').mode).toBe('fast')
 })

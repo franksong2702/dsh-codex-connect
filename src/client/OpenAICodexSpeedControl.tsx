@@ -188,7 +188,11 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
       const checked = selection.mode === mode
       // Fast is deliberately not account-gated (main's contract); only Ultrafast is.
       const itemDisabled = mode === 'ultrafast' && !canUltra
-      const reason = mode === 'ultrafast' ? t(itemDisabled ? 'ultrafastUnavailable' : 'ultrafastDisclosure') : undefined
+      // Distinguish a model that cannot take Ultrafast from an account/selection
+      // that cannot authorize it; the disabled row must give the real reason.
+      const reason = mode === 'ultrafast'
+        ? t(itemDisabled ? (selection.modelSupported ? 'ultrafastUnavailable' : 'ultrafastUnsupported') : 'ultrafastDisclosure')
+        : undefined
       const row = <button key={mode} type="button" role="menuitemradio"
         data-speed-mode={mode}
         aria-checked={checked} disabled={itemDisabled}
