@@ -65,6 +65,17 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
   }
   const canUltra = available && selection?.modelSupported === true && selection.hasAccount && selection.selectionAvailable
 
+  // A disabled button cannot be focused and never sees hover on touch, so the
+  // blocked reason cannot live only in its title. Fold the applicable reason
+  // into the in-flow disclosure that the touch info action reveals and that
+  // aria-describedby links to, keeping the standing quota text after it.
+  const ultrafastReason = selection === undefined || canUltra
+    ? undefined
+    : t(selection.modelSupported ? 'ultrafastUnavailable' : 'ultrafastUnsupported')
+  const ultrafastCopy = ultrafastReason === undefined
+    ? t('ultrafastDisclosure')
+    : `${ultrafastReason} ${t('ultrafastDisclosure')}`
+
   const closeMenu = (): void => { setMenuOpen(false); setDisclosureOpen(false) }
   const openMenu = (): void => {
     if (status !== 'ready') return
@@ -183,15 +194,15 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
       whiteSpace: 'normal', overflowWrap: 'anywhere',
       borderBottom: `0.5px ${disclosureOpen ? 'solid var(--dsw-alias-border-l2)' : 'solid transparent'}`,
       transition: 'opacity 140ms ease-out',
-    }}>{t('ultrafastDisclosure')}</p>
+    }}>{ultrafastCopy}</p>
     {selection !== undefined && SPEED_MODES.map(mode => {
       const checked = selection.mode === mode
       // Fast is deliberately not account-gated (main's contract); only Ultrafast is.
       const itemDisabled = mode === 'ultrafast' && !canUltra
       // Distinguish a model that cannot take Ultrafast from an account/selection
-      // that cannot authorize it; the disabled row must give the real reason.
+      // that cannot authorize it; the disabled row gives the real reason.
       const reason = mode === 'ultrafast'
-        ? t(itemDisabled ? (selection.modelSupported ? 'ultrafastUnavailable' : 'ultrafastUnsupported') : 'ultrafastDisclosure')
+        ? (itemDisabled ? ultrafastReason : t('ultrafastDisclosure'))
         : undefined
       const row = <button key={mode} type="button" role="menuitemradio"
         data-speed-mode={mode}

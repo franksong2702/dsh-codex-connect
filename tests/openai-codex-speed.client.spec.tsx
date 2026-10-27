@@ -9,8 +9,9 @@ import type { OpenAICodexSettingsKey } from '../src/client/locales.ts'
 import type { AccountSnapshot } from '../src/client/account-store.ts'
 import { speedLifecycleFixture } from './support/speed-lifecycle-fixture.ts'
 import { OPENAI_CODEX_FAST_MODE_PATH } from '../src/fast-mode-paths.ts'
+import { BROWSER_REQUEST_TIMEOUT_MS } from '../src/client/request-json.ts'
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
 const t = (key: OpenAICodexSettingsKey) => en[key]
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } })
 function directory(model = 'gpt-6.1-sol', provider = 'openai-codex') {
@@ -134,6 +135,40 @@ it('renders the same compact speed menu for a model without Ultrafast support an
   view.rerender(<OpenAICodexFastModeToggle directory={directory('gpt-6.1-sol', 'other').store} sessionId="session" t={t} />)
   expect(view.container.querySelector('[data-openai-codex-speed-menu]')).toBeNull()
 })
+it.each([
+  ['en', en, 'Ultrafast details'],
+  ['zh', zh, 'Ultrafast 说明'],
+] as const)('reveals the model-specific Ultrafast reason through the touch disclosure (%s)', async (_language, strings, infoName) => {
+  await backend()
+  const state: AccountSnapshot = { status: { status: 'signed-in', usage: { rateLimits: [] } }, busy: false,
+    accounts: [{ accountKey: 'synthetic-a', active: true, displayName: 'offline', profileSource: 'generated' }], operation: { kind: 'idle' } }
+  const account = { getSnapshot: () => state, subscribe: () => () => {} }
+  const view = render(<OpenAICodexFastModeToggle directory={directory('gpt-6-luna').store} account={account} sessionId="session" t={key => strings[key]} />)
+  await waitFor(() => { expect(view.getByRole('button', { name: strings.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  const menu = openSpeedMenu(view, strings.speedMenuStandardTitle)
+  const ultrafast = within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })
+  const expected = `${strings.ultrafastUnsupported} ${strings.ultrafastDisclosure}`
+  const disclosure = document.getElementById(ultrafast.getAttribute('aria-describedby')!)!
+  // The honest reason must be reachable on touch, not only in a hover title on
+  // a disabled button.
+  expect(disclosure.textContent).toBe(expected)
+  const info = within(menu).getByRole('menuitem', { name: infoName })
+  fireEvent.click(info)
+  expect(info.getAttribute('aria-expanded')).toBe('true')
+  expect(disclosure.style.maxHeight).not.toBe('0px')
+  expect(disclosure.textContent).toBe(expected)
+})
+it('adds the account reason to the disclosure while the account is signed out', async () => {
+  await backend()
+  const state: AccountSnapshot = { status: { status: 'signed-out' }, busy: false, accounts: [], operation: { kind: 'idle' } }
+  const account = { getSnapshot: () => state, subscribe: () => () => {} }
+  const view = render(<OpenAICodexFastModeToggle directory={directory().store} account={account} sessionId="session" t={t} />)
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  const menu = openSpeedMenu(view, en.speedMenuStandardTitle)
+  const ultrafast = within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })
+  const disclosure = document.getElementById(ultrafast.getAttribute('aria-describedby')!)!
+  expect(disclosure.textContent).toBe(`${en.ultrafastUnavailable} ${en.ultrafastDisclosure}`)
+})
 it('invalidates and reads a fresh Standard selection after switching away/back without a request', async () => {
   const fetch = await backend(), d = directory()
   const view = render(<OpenAICodexFastModeToggle directory={d.store} sessionId="session" t={t} />)
@@ -159,6 +194,96 @@ it('recovers an uncertain POST by an explicit GET without replay or entitlement 
   fireEvent.click(view.getByRole('button', { name: en.speedRecover }))
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false') })
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(1)
+})
+
+// The shared control must keep the view-level request-lifecycle guarantees the
+// retired legacy toggle spec covered: bounded headers and bodies, no replay of
+// an uncertain mutation, explicit-read recovery, and cancellation when the
+// session is replaced or the view unmounts.
+const stalledState = { generation: 'stalled-generation', revision: 0, mode: 'standard', model: 'gpt-6-luna',
+  modelSupported: false, eligibility: 'unknown', hasAccount: true, selectionAvailable: true }
+const speedBody = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } })
+
+it.each([['GET', 'headers'], ['GET', 'body'], ['POST', 'headers'], ['POST', 'body']] as const)(
+  'bounds a stalled %s %s on an unsupported model and recovers only through an explicit read', async (method, kind) => {
+    vi.useFakeTimers()
+    const raw = await speedLifecycleFixture()
+    let armed = true
+    let signal: AbortSignal | undefined
+    let releaseLate!: () => void
+    const gate = new Promise<void>(done => { releaseLate = done })
+    const fetchMock = vi.fn((path: string, init: RequestInit) => {
+      const requestMethod = init.method ?? 'GET'
+      if (armed && requestMethod === method) {
+        armed = false
+        signal = init.signal ?? undefined
+        return kind === 'headers'
+          ? gate.then(() => speedBody(stalledState))
+          : Promise.resolve({ ok: true, json: () => gate.then(() => stalledState) } as unknown as Response)
+      }
+      return raw.request(path, init)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const view = render(<OpenAICodexFastModeToggle directory={directory('gpt-6-luna').store} sessionId="session" t={t} />)
+    await act(async () => {})
+    if (method === 'POST') fireEvent.click(within(openSpeedMenu(view, en.speedMenuStandardTitle)).getByRole('menuitemradio', { name: 'Fast' }))
+    await act(async () => {})
+    await act(async () => { await vi.advanceTimersByTimeAsync(BROWSER_REQUEST_TIMEOUT_MS) })
+    expect(signal?.aborted).toBe(true)
+    const recover = view.getByRole('button', { name: en.speedRecover })
+    expect(recover).toHaveProperty('disabled', false)
+    expect(vi.getTimerCount()).toBe(0)
+    fireEvent.click(recover)
+    await act(async () => {})
+    expect(fetchMock.mock.calls.filter(([, init]) => (init.method ?? 'GET') === 'POST')).toHaveLength(method === 'POST' ? 1 : 0)
+    // waitFor polls with real timers, which are faked here: flush microtasks instead.
+    for (let tick = 0; tick < 8 && view.queryByRole('button', { name: en.speedMenuStandardTitle }) === null; tick++) await act(async () => {})
+    expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false')
+    // A late completion of the stalled request never replaces the explicit read.
+    await act(async () => { releaseLate(); await gate })
+    expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+it.each(['GET', 'POST'] as const)('cancels a late %s completion when the view switches sessions', async method => {
+  const raw = await speedLifecycleFixture()
+  let armed = true
+  let signal: AbortSignal | undefined
+  let releaseLate!: () => void
+  const gate = new Promise<void>(done => { releaseLate = done })
+  const fetchMock = vi.fn((path: string, init: RequestInit) => {
+    if (armed && (init.method ?? 'GET') === method) {
+      armed = false
+      signal = init.signal ?? undefined
+      return Promise.resolve({ ok: true, json: () => gate.then(() => ({ ...stalledState, mode: 'ultrafast' as const })) } as unknown as Response)
+    }
+    return raw.request(path, init)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const view = render(<OpenAICodexFastModeToggle directory={directory('gpt-6-luna').store} sessionId="session" t={t} />)
+  await act(async () => {})
+  if (method === 'POST') fireEvent.click(within(openSpeedMenu(view, en.speedMenuStandardTitle)).getByRole('menuitemradio', { name: 'Fast' }))
+  await act(async () => {})
+  view.rerender(<OpenAICodexFastModeToggle directory={directory('gpt-6-luna').store} sessionId="session-b" t={t} />)
+  await waitFor(() => { expect(signal?.aborted).toBe(true) })
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  await act(async () => { releaseLate(); await gate })
+  expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false')
+})
+
+it('aborts an in-flight POST when the Composer control unmounts', async () => {
+  const raw = await speedLifecycleFixture()
+  let postSignal: AbortSignal | undefined
+  const fetchMock = vi.fn((path: string, init: RequestInit) => (init.method ?? 'GET') === 'POST'
+    ? ((postSignal = init.signal ?? undefined), new Promise<Response>(() => {}))
+    : raw.request(path, init))
+  vi.stubGlobal('fetch', fetchMock)
+  const view = render(<OpenAICodexFastModeToggle directory={directory('gpt-6-luna').store} sessionId="session" t={t} />)
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
+  fireEvent.click(within(openSpeedMenu(view, en.speedMenuStandardTitle)).getByRole('menuitemradio', { name: 'Fast' }))
+  await waitFor(() => { expect(postSignal).toBeDefined() })
+  await act(async () => { view.unmount() })
+  expect(postSignal?.aborted).toBe(true)
 })
 
 // Compact menu control (candidate B, #378): one legacy-style bolt button opens a
@@ -491,3 +616,4 @@ it('keeps the actual legacy Fast route consistent while Ultrafast is unavailable
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
   expect(fetch.registry.captureSpeed('session').mode).toBe('fast')
 })
+
