@@ -200,7 +200,9 @@ it('recovers an uncertain POST by an explicit GET without replay or entitlement 
 // retired legacy toggle spec covered: bounded headers and bodies, no replay of
 // an uncertain mutation, explicit-read recovery, and cancellation when the
 // session is replaced or the view unmounts.
-const stalledState = { generation: 'stalled-generation', revision: 0, mode: 'standard', model: 'gpt-6-luna',
+// The delayed answer deliberately conflicts with the recovered Standard state
+// so a stale completion cannot hide behind an identical assertion.
+const stalledState = { generation: 'stalled-generation', revision: 0, mode: 'fast' as const, model: 'gpt-6-luna',
   modelSupported: false, eligibility: 'unknown', hasAccount: true, selectionAvailable: true }
 const speedBody = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } })
 
@@ -239,9 +241,12 @@ it.each([['GET', 'headers'], ['GET', 'body'], ['POST', 'headers'], ['POST', 'bod
     // waitFor polls with real timers, which are faked here: flush microtasks instead.
     for (let tick = 0; tick < 8 && view.queryByRole('button', { name: en.speedMenuStandardTitle }) === null; tick++) await act(async () => {})
     expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false')
-    // A late completion of the stalled request never replaces the explicit read.
+    // A late completion of the stalled request never replaces the explicit read:
+    // it would have rendered Fast, and it must not trigger another mutation.
     await act(async () => { releaseLate(); await gate })
     expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false')
+    expect(view.queryByRole('button', { name: en.speedMenuFastTitle })).toBeNull()
+    expect(fetchMock.mock.calls.filter(([, init]) => (init.method ?? 'GET') === 'POST')).toHaveLength(method === 'POST' ? 1 : 0)
     expect(vi.getTimerCount()).toBe(0)
   })
 
