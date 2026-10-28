@@ -247,8 +247,8 @@ importers:
         specifier: 29.1.1
         version: 29.1.1
       katex:
-        specifier: ^0.19.1
-        version: 0.19.1
+        specifier: ^0.18.9
+        version: 0.18.9
       mdast-util-from-markdown:
         specifier: ^2.0.3
         version: 2.1.0
@@ -2526,10 +2526,6 @@ packages:
 
   katex@0.18.9:
     resolution: {integrity: sha512-8ad9RyoKsb/g8/yLFE+KAlP+DhbCTRUNi/V9XGsxn0R+trJJltNwzcDNo0q/DEkOy5fQUQTAQyCXCYSE+OakTQ==}
-    hasBin: true
-
-  katex@0.19.1:
-    resolution: {integrity: sha512-jG8uKntjSEcm2EpQOh0XturpPuuC9r3Sq5HLHdsFdWZT27E672SF19QEi+of0/YeOy15lDgRhKvr5614uRrEfA==}
     hasBin: true
 
   keyv@5.6.0:
@@ -5741,10 +5737,6 @@ snapshots:
       safe-buffer: 5.2.1
 
   katex@0.18.9:
-    dependencies:
-      commander: 15.0.0
-
-  katex@0.19.1:
     dependencies:
       commander: 15.0.0
 
