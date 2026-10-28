@@ -116,8 +116,8 @@ it.each(['gpt-6.1-sol', 'gpt-6-astra'])('starts %s in Standard and selects mutua
   expect(within(menu).getByRole('menuitemradio', { name: 'Standard' }).getAttribute('aria-checked')).toBe('false')
   expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['fast', 'ultrafast'])
 })
-it('renders the same compact speed menu for a model without Ultrafast support and explains the disabled row', async () => {
-  const fetch = await backend(), d = directory('gpt-6-luna')
+it.each(['gpt-6-luna', 'gpt-6.1-terra'])('keeps Standard/Fast selectable and explains the disabled Ultrafast row for %s', async model => {
+  const fetch = await backend(), d = directory(model)
   const view = render(<OpenAICodexFastModeToggle directory={d.store} sessionId="session" t={t} />)
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle })).toHaveProperty('disabled', false) })
   // One control for every Codex GPT model: no legacy one-tap bolt and no bare
@@ -129,9 +129,15 @@ it('renders the same compact speed menu for a model without Ultrafast support an
   const ultrafast = within(menu).getByRole('menuitemradio', { name: 'Ultrafast' })
   expect(ultrafast).toHaveProperty('disabled', true)
   expect(ultrafast.getAttribute('title')).toBe(en.ultrafastUnsupported)
+  fireEvent.click(ultrafast)
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST')).toHaveLength(0)
   fireEvent.click(within(menu).getByRole('menuitemradio', { name: 'Fast' }))
   await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuFastTitle }).getAttribute('aria-pressed')).toBe('true') })
   expect(fetch.registry.captureSpeed('session').mode).toBe('fast')
+  fireEvent.click(within(openSpeedMenu(view, en.speedMenuFastTitle)).getByRole('menuitemradio', { name: 'Standard' }))
+  await waitFor(() => { expect(view.getByRole('button', { name: en.speedMenuStandardTitle }).getAttribute('aria-pressed')).toBe('false') })
+  expect(fetch.registry.captureSpeed('session').mode).toBe('standard')
+  expect(fetch.mock.calls.filter(([, init]) => init.method === 'POST').map(([, init]) => JSON.parse(String(init.body)).mode)).toEqual(['fast', 'standard'])
   view.rerender(<OpenAICodexFastModeToggle directory={directory('gpt-6.1-sol', 'other').store} sessionId="session" t={t} />)
   expect(view.container.querySelector('[data-openai-codex-speed-menu]')).toBeNull()
 })

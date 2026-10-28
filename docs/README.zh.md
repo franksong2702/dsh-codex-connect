@@ -183,3 +183,5 @@ Codex Connect 的修改与新增工作 Copyright 2026 Frank Song。本项目包�
 Alpha 5 能力校准：[来源对照](agent-notes/gpt61-capability-calibration.md) 区分锁定目录的 272k 回退值／872k 本地上限、搜索结果收录的官方 Work/Codex 产品文字所宣称的 500k，以及另一 API 产品的限制。该历史变更仅更新 Sol61 的策略来源锁定；当时的默认值、原生提供方元数据优先级和 Fast／effort 行为不变。没有验证账户或端点的实际容量。
 
 尚未发布的 #338 源码后续修复：按官方 Work/Codex 产品默认策略，将 Sol61 缺失条目和已知旧内置静态元数据的基础默认值校准为 **500,000 token**。显式提供方元数据与用户覆盖值仍优先；其他模型、输出上限和 872,000 本地配置上限不变。[范围与证据](agent-notes/sol61-context-default.md) 区分校准默认值与真实路由容量。
+
+未发布的源码候选：手动模型目录与配置选择器新增 `gpt-6.1-terra`，保留文字/图片输入和既有 Responses 工具。官方 Codex 回退默认 500,000 tokens，本地可选上限 872,000、输出上限 128,000；上游原生元数据优先，但与 Sol61 一样仍套用 effort 遮罩。提供 Low、Medium、High、Xhigh、Max；Default 不发送 effort。锁定的 OAuth 目录未列出 API 的 `none`，Ultra 客户端编排不受支持。本轮不新增桌面 Computer Use 执行器、不扩大 Ultrafast 范围。[来源、范围及合成验证](agent-notes/gpt61-terra-support.md)；真实账户可用性尚未验证。

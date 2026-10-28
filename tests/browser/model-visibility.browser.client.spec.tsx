@@ -336,6 +336,7 @@ describe('Codex model visibility in Chromium', () => {
     const models = [
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },
       { id: 'gpt-6.1-sol', name: 'GPT-6.1-Sol' },
+      { id: 'gpt-6.1-terra', name: 'GPT-6.1 Terra' },
       { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' },
     ]
     const fetchMock = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
@@ -346,12 +347,12 @@ describe('Codex model visibility in Chromium', () => {
     vi.stubGlobal('fetch', fetchMock)
     root.render(createElement(OpenAICodexConfiguration, { scope, t }))
 
-    const sol = page.getByRole('checkbox', { name: /GPT-6\.1-Sol/u })
-    await vi.waitFor(() => { expect(sol.element()).toBeInstanceOf(HTMLInputElement) })
-    await sol.click()
+    const terra = page.getByRole('checkbox', { name: /GPT-6\.1 Terra/u })
+    await vi.waitFor(() => { expect(terra.element()).toBeInstanceOf(HTMLInputElement) })
+    await terra.click()
     await page.getByRole('button', { name: en.save }).click()
     await vi.waitFor(() => {
-      expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['models'], value: ['gpt-5.6-luna', 'gpt-5.6-terra'] }]), expect.any(Number))
+      expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['models'], value: ['gpt-5.6-luna', 'gpt-6.1-sol', 'gpt-5.6-terra'] }]), expect.any(Number))
     })
 
     await page.viewport(360, 800)

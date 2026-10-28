@@ -13,6 +13,9 @@ export const OPENAI_CODEX_ASTRA_MODEL_ID = 'gpt-6-astra'
 // https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex
 const SOL61_CONTEXT_WINDOW = 500_000
 
+// Official Codex client default for Terra; not the separate API product limit.
+const TERRA61_CONTEXT_WINDOW = 500_000
+
 const OPENAI_CODEX_ASTRA_MODEL: Model<'openai-codex-responses'> = {
   id: OPENAI_CODEX_ASTRA_MODEL_ID,
   name: 'GPT-6-Astra',
@@ -58,12 +61,14 @@ export function withOpenAICodexModels(
 ): Provider<'openai-codex-responses'> {
   const baseline = withOpenAICodexAstra(provider)
   const models = [...baseline.getModels()]
-  for (const [id, name] of [['gpt-6.1-sol', 'GPT-6.1-Sol'], ['gpt-6-sol', 'GPT-6-Sol'], ['gpt-6-luna', 'GPT-6-Luna']] as const) {
+  for (const [id, name] of [['gpt-6.1-sol', 'GPT-6.1-Sol'], ['gpt-6-sol', 'GPT-6-Sol'], ['gpt-6-luna', 'GPT-6-Luna'], ['gpt-6.1-terra', 'GPT-6.1 Terra']] as const) {
     const index = models.findIndex(model => model.id === id)
     // Ultra is Codex client orchestration, not a pi-ai thinking level.
     const thinkingLevelMap = { off: null, minimal: null, xhigh: 'xhigh', max: 'max' } as const
     if (index === -1) models.push({ ...OPENAI_CODEX_ASTRA_MODEL, id, name, thinkingLevelMap,
       ...(id === 'gpt-6.1-sol' ? { contextWindow: SOL61_CONTEXT_WINDOW } : {}),
+      // The Terra-specific model-contract source pins this Codex default.
+      ...(id === 'gpt-6.1-terra' ? { contextWindow: TERRA61_CONTEXT_WINDOW } : {}),
     })
     else {
       const model = models[index]!

@@ -31,7 +31,7 @@ afterEach(async () => {
   if (root !== undefined) await rm(root, { recursive: true, force: true })
 })
 
-const modelSelections = [OPENAI_CODEX_ASTRA_MODEL_ID, 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna'] as const
+const modelSelections = [OPENAI_CODEX_ASTRA_MODEL_ID, 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna', 'gpt-6.1-terra'] as const
 
 describe.each(modelSelections)('%s reasoning selections', model => {
   const selection = { provider: OPENAI_CODEX_PROVIDER, model }

@@ -41,7 +41,7 @@ function textItem(id: string, phase: string, text: string): Record<string, unkno
   return { type: 'message', id, role: 'assistant', phase, status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] }
 }
 
-it.each([OPENAI_CODEX_ASTRA_MODEL_ID, 'gpt-6.1-sol'].flatMap(model => ['', 'Inspect the fixture.'].map(summary => ({ model, summary }))))('preserves reasoning, phases, and parallel tool correlation ($model, summary=$summary)', async ({ model, summary }) => {
+it.each([OPENAI_CODEX_ASTRA_MODEL_ID, 'gpt-6.1-sol', 'gpt-6.1-terra'].flatMap(model => ['', 'Inspect the fixture.'].map(summary => ({ model, summary }))))('preserves reasoning, phases, and parallel tool correlation ($model, summary=$summary)', async ({ model, summary }) => {
   const selection = { provider: OPENAI_CODEX_PROVIDER, model }
   const reasoning = { type: 'reasoning', id: 'rs_fixture', encrypted_content: 'synthetic-encrypted-fixture', summary: summary === '' ? [] : [{ type: 'summary_text', text: summary }] }
   const calls = ['a', 'b'].map(key => ({ type: 'function_call', id: `fc_${key}`, call_id: `call_${key}`, name: 'lookup', arguments: JSON.stringify({ key }), status: 'completed' }))

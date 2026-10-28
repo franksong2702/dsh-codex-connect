@@ -81,12 +81,14 @@ it('uses Playwright touchscreen input in a 390x844 touch-capable context without
 })
 
 it.each([
-  ['en', en, 'Ultrafast details'],
-  ['zh', zh, 'Ultrafast 说明'],
-] as const)('reveals the model-specific Ultrafast reason on a touchscreen tap (%s)', async (_language, strings, infoName) => {
+  ['en/Luna', en, 'Ultrafast details', 'gpt-6-luna'],
+  ['zh/Luna', zh, 'Ultrafast 说明', 'gpt-6-luna'],
+  ['en/Terra', en, 'Ultrafast details', 'gpt-6.1-terra'],
+  ['zh/Terra', zh, 'Ultrafast 说明', 'gpt-6.1-terra'],
+] as const)('reveals the model-specific Ultrafast reason on a touchscreen tap (%s)', async (_language, strings, infoName, model) => {
   await page.viewport(390, 844)
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-    generation: 'touch-luna', revision: 0, mode: 'standard', model: 'gpt-6-luna',
+    generation: 'touch-unsupported', revision: 0, mode: 'standard', model,
     modelSupported: false, hasAccount: true, selectionAvailable: true, eligibility: 'unknown',
   }), { headers: { 'content-type': 'application/json' } })))
 
@@ -97,7 +99,7 @@ it.each([
   document.body.append(host)
 
   root = createRoot(host)
-  root.render(<OpenAICodexSpeedControl sessionId="touch-luna" model="gpt-6-luna" t={key => strings[key]} />)
+  root.render(<OpenAICodexSpeedControl sessionId="touch-unsupported" model={model} t={key => strings[key]} />)
   const trigger = page.getByRole('button', { name: strings.speedMenuStandardTitle, exact: true })
   await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
 

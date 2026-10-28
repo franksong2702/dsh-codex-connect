@@ -9,7 +9,7 @@ it.each(['gpt-6-astra', 'gpt-6.1-sol'])('accepts only the documented exact Codex
     .toEqual({ ...payload, service_tier: 'ultrafast' })
   expect(payload).not.toHaveProperty('service_tier')
 })
-it.each(['gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-sol', 'gpt-6.1-sol-preview', 'gpt-6-astra-extra', 'GPT-6-ASTRA'])('refuses Ultrafast for %s without fuzzy matching', model => {
+it.each(['gpt-6.1-terra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-sol', 'gpt-6.1-sol-preview', 'gpt-6-astra-extra', 'GPT-6-ASTRA'])('refuses Ultrafast for %s without fuzzy matching', model => {
   expect(supportsOpenAICodexUltrafast('openai-codex', model)).toBe(false)
   expect(() => projectOpenAICodexSpeedPayload({ model }, 'openai-codex', model, 'ultrafast')).toThrow('ULTRAFAST_MODEL_UNSUPPORTED')
   expect(projectOpenAICodexSpeedPayload({ model, service_tier: 'ultrafast' }, 'openai-codex', model, 'standard')).toEqual({ model })
