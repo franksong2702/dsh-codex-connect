@@ -48,7 +48,7 @@
     "@deepseek-ai/dsh-cua": {
       "baseIntegrity": "sha512-yceImk1O0NkKTdwe8IQYX9SPmsulcJD7LtmPm7oJXunY2+4HQkJNA3qOSk5zJyr1NpWffnRdUcJvTIDgIMGOSA==",
       "patch": "patches/dsh-cua.patch",
-      "patchSha256": "9e42691bacbf50abe37a9bf6d9108b9f32b2a829cfd91f4e0ab8f3cd98d14074",
+      "patchSha256": "6dec1d9ba34672b07ac5d10079d31fa4877bbaa94b7907a4b2e816caa1a56af4",
       "files": [
         {
           "path": "lib/bridge.js",
@@ -63,7 +63,7 @@
         {
           "path": "lib/index.js",
           "baseSha256": "e62f507fa5471f2797eb9d4f0d22f10f5edb3d49d05f2be2ea7ae6024485b2b2",
-          "patchedSha256": "598bff9603444f5d6a70d0022b08867d7fc9da07e1ddb5f1a0c48c68f67127dd"
+          "patchedSha256": "107584f34e71f8cdb22564b76d045ffc646991ab558dc022271a7119e45e2499"
         },
         {
           "path": "lib/protocol.js",

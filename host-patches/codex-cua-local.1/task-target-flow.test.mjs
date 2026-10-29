@@ -6,17 +6,18 @@ import { prepareTaskTarget } from './task-target-flow.mjs'
 test('unit-tested preparation is embedded verbatim in the exact Host patch', async () => {
   const module = (await readFile(new URL('./task-target-flow.mjs', import.meta.url), 'utf8'))
     .replace("import { randomUUID } from 'node:crypto'\n", '')
-    .replace('export function latestTaskRequest', 'function latestTaskRequest')
-    .replace('export async function prepareTaskTarget', 'async function prepareTaskTarget')
+    .replace(/^export /gmu, '')
   const patch = await readFile(new URL('./patches/dsh-cua.patch', import.meta.url), 'utf8')
   assert.ok(patch.includes(module.trimEnd().split('\n').map(line => `+${line}`).join('\n')))
 })
 
 function fixture({ apps, windows, answer, nativeError, closeError } = {}) {
   const messages = [{ id: 'real-input-1', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: '在Chrome里完成本次任务' }] }]
-  const parent = { id: 'root', session: { deriveMessages: () => messages } }
+  const parent = { id: 'root', inbox: { nextTurn: [], nextStep: [] }, session: { deriveMessages: () => messages } }
   const requests = [], questions = [], rows = new Map(), refusals = new WeakMap()
-  const ctx = { agents: { get: id => id === parent.id ? parent : undefined, roots: () => [parent] }, get: () => ({ async ask(request) {
+  const listeners = new Map()
+  const ctx = { on(name, listener) { const set = listeners.get(name) ?? new Set(); listeners.set(name, set); set.add(listener); return () => set.delete(listener) },
+    agents: { get: id => id === parent.id ? parent : undefined, roots: () => [parent] }, get: () => ({ async ask(request) {
     questions.push(request)
     return answer ? answer(request) : { answers: [{ id: request.questions[0].id, selected: [request.questions[0].options[0].label] }] }
   } }) }
@@ -43,7 +44,8 @@ function fixture({ apps, windows, answer, nativeError, closeError } = {}) {
   const input = () => ({ parent, goal: 'MODEL_GOAL_HAS_NO_DISCOVERY_AUTHORITY', expiresAt: Date.now() + 2000, signal: controller.signal })
   const run = () => prepareTaskTarget(targets, access, input())
   const cleanup = () => Promise.allSettled([...rows.values()].map(row => targets.close(row)))
-  return { parent, messages, targets, access, controller, input, requests, questions, run, cleanup }
+  const emit = (name, ...args) => { for (const listener of listeners.get(name) ?? []) listener(...args) }
+  return { parent, messages, targets, access, controller, input, requests, questions, run, cleanup, emit, listeners }
 }
 
 test('unique target prepares automatically; only related app is queried and no directory is returned', async () => {
@@ -135,4 +137,33 @@ test('expired task and untrusted model-only input fail before native creation', 
   f.messages[0].source.kind = 'agent'
   await assert.rejects(f.run(), /USER_REQUEST_REQUIRED/)
   assert.equal(f.requests.length, 0)
+})
+
+test('already queued human replacement blocks before metadata and goal/expiry remain frozen', async () => {
+  const f = fixture()
+  f.parent.inbox.nextStep.push({ ...f.messages[0], id: 'next-human-input' })
+  await assert.rejects(f.run(), /REQUEST_CHANGED/)
+  assert.equal(f.requests.length, 0)
+  f.parent.inbox.nextStep.length = 0
+  const input = f.input()
+  await prepareTaskTarget(f.targets, f.access, input)
+  const flow = f.targets.rows.get(f.parent).flow
+  assert.equal(Object.isFrozen(flow), true)
+  assert.equal(flow.userInput, 'real-input-1')
+  assert.equal(flow.goal, input.goal)
+  assert.equal(flow.expiresAt, input.expiresAt)
+  await f.cleanup()
+})
+
+test('input watch ignores lookalike session/agent identities and stops on the exact root', async () => {
+  const f = fixture()
+  await f.run()
+  const message = { ...f.messages[0], id: 'new-human-input' }
+  f.emit('session/event', { ...f.parent.session }, { type: 'user/message', data: message })
+  f.emit('agent/inbox/inserted', { agent: { ...f.parent }, message })
+  assert.equal(f.targets.rows.size, 1)
+  f.emit('agent/inbox/inserted', { agent: f.parent, message })
+  assert.equal(f.targets.rows.size, 0)
+  assert.equal(f.access.taskRefusals.get(f.parent), 'real-input-1')
+  assert.ok([...f.listeners.values()].every(set => set.size === 0))
 })

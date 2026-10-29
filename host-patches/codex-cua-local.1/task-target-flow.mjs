@@ -21,13 +21,35 @@ function mentions(text, name) {
 }
 
 /** Only real admitted human input supplies discovery authority; model goal text supplies none. */
+export function isTaskUserInput(message) {
+  return message?.role === 'user' && ['user', 'user-rpc'].includes(message.source?.kind)
+    && typeof message.id === 'string' && message.id.length > 0
+}
 export function latestTaskRequest(parent) {
-  const message = parent?.session?.deriveMessages().filter(message => message.role === 'user'
-    && ['user', 'user-rpc'].includes(message.source?.kind)).at(-1)
+  const message = parent?.session?.deriveMessages().filter(isTaskUserInput).at(-1)
   if (!message || typeof message.id !== 'string' || !message.id || !Array.isArray(message.content)) return undefined
   const text = message.content.filter(block => block.type === 'text' && typeof block.text === 'string')
     .map(block => block.text).join('\n').trim()
   return text ? Object.freeze({ id: message.id, text: text.slice(0, 16000) }) : undefined
+}
+
+/** Pending human input invalidates the old task before the loop admits it. */
+export function taskInputIsCurrent(parent, userInput) {
+  if ((latestTaskRequest(parent)?.id ?? parent.id) !== userInput) return false
+  return ![...(parent.inbox?.nextTurn ?? []), ...(parent.inbox?.nextStep ?? [])]
+    .some(message => isTaskUserInput(message) && message.id !== userInput)
+}
+
+/** Exact root/session filtering; returned disposer transfers with the task lifetime. */
+export function watchTaskInput(ctx, parent, userInput, changed) {
+  const different = message => isTaskUserInput(message) && message.id !== userInput
+  const stop = [ctx.on('session/event', (session, event) => {
+    if (session === parent.session && event.type === 'user/message' && different(event.data)) changed()
+  }), ctx.on('agent/inbox/inserted', ({ agent, message }) => {
+    if (agent === parent && different(message)) changed()
+  })]
+  let released = false
+  return () => { if (!released) { released = true; for (const dispose of stop) dispose() } }
 }
 
 /** Called by the Host capability, never by an owner RPC or a caller-supplied session identifier. */
@@ -46,28 +68,34 @@ export async function prepareTaskTarget(targets, access, input) {
   if (access.taskRefusals.get(parent) === request.id) fail('CUA_TARGET_RETRY_REQUIRES_USER_INPUT')
   const questions = targets.ctx.get('userQuestions')
   if (!questions || typeof questions.ask !== 'function') fail('CUA_TARGET_HUMAN_INTERFACE_UNAVAILABLE')
-  let row
+  let row, inputChanged = false
+  const preparation = new AbortController()
   const refuse = () => access.taskRefusals.set(parent, request.id)
   const current = () => {
     signal.throwIfAborted()
-    if (!live() || latestTaskRequest(parent)?.id !== request.id) fail('CUA_TARGET_REQUEST_CHANGED')
+    if (inputChanged || !live() || !taskInputIsCurrent(parent, request.id)) fail('CUA_TARGET_REQUEST_CHANGED')
     if (Date.now() >= expiresAt) fail('CUA_TARGET_EXPIRED')
     if (row) targets.assert(row)
   }
   current()
+  const stopInputWatch = watchTaskInput(targets.ctx, parent, request.id, () => {
+    inputChanged = true; refuse(); preparation.abort()
+    if (row) void targets.close(row).catch(() => {})
+  })
   return targets.inOrder(parent, async () => {
     try {
       current()
       row = await targets.start(parent)
-      row.flow = Object.freeze({ id: randomUUID(), userInput: request.id })
+      row.flow = Object.freeze({ id: randomUUID(), userInput: request.id, goal: input.goal, expiresAt })
+      row.stopInputWatch = stopInputWatch
       row.expiresAt = expiresAt
       clearTimeout(row.timer)
       const abort = () => { refuse(); void targets.close(row).catch(() => {}) }
       signal.addEventListener('abort', abort, { once: true })
       const release = row.release
-      row.release = () => { signal.removeEventListener('abort', abort); return release?.() }
+      row.release = () => { stopInputWatch(); signal.removeEventListener('abort', abort); return release?.() }
       row.timer = setTimeout(abort, Math.max(1, expiresAt - Date.now()))
-      const taskSignal = AbortSignal.any([signal, row.controller.signal])
+      const taskSignal = AbortSignal.any([signal, preparation.signal, row.controller.signal])
       current()
       const ask = async question => {
         current()
@@ -129,9 +157,9 @@ export async function prepareTaskTarget(targets, access, input) {
       refuse()
       if (row) {
         try { await targets.close(row) } catch { fail('CUA_TARGET_CLEANUP_UNCERTAIN') }
-      }
+      } else stopInputWatch()
       // Native errors may contain private app paths/titles; neither raw errors nor causes cross this boundary.
-      const code = typeof error?.code === 'string' && /^CUA_TARGET_[A-Z_]+$/u.test(error.code)
+      const code = inputChanged ? 'CUA_TARGET_REQUEST_CHANGED' : typeof error?.code === 'string' && /^CUA_TARGET_[A-Z_]+$/u.test(error.code)
         ? error.code : signal.aborted ? 'CUA_TARGET_CANCELLED' : 'CUA_TARGET_METADATA_UNAVAILABLE'
       fail(code)
     }

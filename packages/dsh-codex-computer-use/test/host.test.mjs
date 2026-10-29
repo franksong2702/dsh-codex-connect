@@ -1318,3 +1318,80 @@ test('Stop during ordinary root consent drains target metadata with no Terra or 
   assert.equal(f.nativeRequests.length, count)
   assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps, [])
 })
+
+const admittedHuman = (f, text = 'Use Synthetic Browser for this bounded task') => {
+  const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
+  f.parent.agent.session.append('user/message', message, { surfaceOp: 'append' })
+  return message
+}
+
+test('prepared target cannot be claimed by a different admitted human input', async t => {
+  const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
+  const approval = f.ctx.get('cuaTaskApproval')
+  if (approval?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  admittedHuman(f)
+  const input = { parent: f.parent.agent, goal: 'Intent-bound task', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
+  const selected = await approval.prepare(input)
+  admittedHuman(f, 'A different request must not inherit the old target')
+  let claimed
+  try {
+    assert.throws(() => { claimed = f.ctx.cuaTaskTargets.claim(f.parent.agent, selected.application, selected.windowId, selected.targetSelectionId) }, /CUA_TARGET_(?:CLOSED|REQUEST_CHANGED)/)
+  } finally { await claimed?.client.dispose(); await claimed?.release?.(); await f.ctx.cuaTaskTargets.clear(f.parent.agent.id) }
+  assert.equal(f.questions.length, 0)
+  assert.equal(f.seen.length, 0)
+})
+
+test('new input while the real child factory is awaiting publication cannot rebind the old goal', async t => {
+  const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative, humanAnswer: allowTask })
+  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  let enter, release
+  const entered = new Promise(resolve => { enter = resolve }), held = new Promise(resolve => { release = resolve })
+  f.ctx.on('agent/created', async ({ agent }) => { if (agent.session.header.parentSession === f.parent.agent.id) { enter(); await held } })
+  const run = f.conversation('Use Synthetic Browser for the original request')
+  await entered
+  f.parent.agent.steer(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Replace the original request' }] }))
+  release()
+  await run
+  assert.equal(f.questions.length, 0)
+  assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
+  assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
+  assert.equal(f.ctx.cuaTaskTargets.rows.size, 0)
+})
+
+test('new human input closes pending root consent and rejects its late old answer', async t => {
+  let enter, answer, received
+  const entered = new Promise(resolve => { enter = resolve })
+  const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
+    nativeResponse: conversationalNative, humanAnswer: request => { received = request; enter(); return new Promise(resolve => { answer = resolve }) } })
+  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  const run = f.conversation('Use Synthetic Browser for the original request')
+  await entered
+  f.parent.agent.steer(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Replace the original request while consent is pending' }] }))
+  await Promise.resolve()
+  const abortedBeforeAnswer = received.signal.aborted
+  answer(allowTask())
+  await run
+  assert.equal(abortedBeforeAnswer, true)
+  assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
+  assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
+  assert.equal(f.ctx.cuaTaskTargets.rows.size, 0)
+  assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps, [])
+})
+
+for (const changed of ['goal', 'expiresAt']) test(`prepared task refuses a changed ${changed} at the real begin boundary`, async t => {
+  const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
+  const approval = f.ctx.get('cuaTaskApproval')
+  if (approval?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  admittedHuman(f)
+  const input = { parent: f.parent.agent, goal: 'Intent-bound original goal', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
+  const selected = await approval.prepare(input)
+  const child = await f.ctx.agents.create({ sessionId: SessionId(crypto.randomUUID()), parentAgent: f.parent.agent,
+    meta: { origin: 'subagent', parentSession: f.parent.agent.id, agentPreset: PRESET },
+    agentOptions: ROUTE, async setup(childCtx) { await f.ctx.agentPresets.mount(childCtx, PRESET) } })
+  owned.push(() => child.dispose())
+  assert.throws(() => approval.begin({ ...input, ...selected, child: child.agent,
+    [changed]: changed === 'goal' ? 'Different goal' : input.expiresAt + 1 }), /CUA_TARGET_REQUEST_CHANGED/)
+  assert.equal(f.questions.length, 0)
+  assert.equal(f.seen.length, 0)
+  await f.ctx.cuaTaskTargets.clear(f.parent.agent.id)
+})

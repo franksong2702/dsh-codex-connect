@@ -5,7 +5,7 @@
   "published": false,
   "deployed": false,
   "sourceBase": "official npm 0.2.2-alpha.2 with published-lock.json SRI",
-  "currentPatchManifestSha256": "c2ffad069864fc919b380c685ff52713dfff7af0346fa021c2c3f3b01ea6f8d8",
+  "currentPatchManifestSha256": "5d1589be531e7fe31131e4d6c7e73457c04d3a4b26eb9bf6b6ccb334da3b6213",
   "native": {
     "fullSwiftCompile": true,
     "sourceFiles": 30,
@@ -138,18 +138,23 @@
     "note": "Compiled once before subsequent JavaScript-only preparation wiring correction; every Swift byte remains identical. No old local.5 binary was reused."
   },
   "verification": {
-    "unitAndProvenance": "17 passed",
+    "unitAndProvenance": "19 passed",
     "syntheticHostDebugFixture": "70 passed; fresh full-source reproduction pending",
     "fullCheckSandbox": "2366 passed, 27 failed, 2 skipped; synthetic loopback EPERM; retained as failed sandbox attempt",
     "liveModelRequests": 0,
     "desktopActions": 0,
     "performanceParity": "not assessed",
-    "syntheticHost": "70 passed on a fresh 321-package integrity-verified reproduction and isolated installed runtime; no native execution",
+    "syntheticHost": "75 passed on fresh integrity-verified isolated intent-binding candidate; no native execution",
     "routeRegression": "4 passed",
     "fullCheckFormalApproved": "passed, exit 0; 2393 passed and 2 skipped, lint/types/build/import/capability/metrics/pack checks passed",
     "browserFirstAttempt": "not run: exact Playwright test browser missing",
-    "browserTemporaryHeadless": "97 passed, 14 files, isolated temporary test browser; no personal profile or GUI",
-    "installedConnectRuntime": "passed, exit 0; fresh keyless local.6 profile, ordinary models, Reserve transitions, image generate/edit/PTC/original inheritance, cancellation/lifecycle; all scripted and no real provider requests"
+    "browserTemporaryHeadless": "97 passed at 913bf4d source checkpoint; browser source unchanged by intent-binding fix; exact-head CI reruns required",
+    "installedConnectRuntime": "passed at 913bf4d source checkpoint in fresh keyless local.6 profile; ordinary model/image/PTC paths unchanged by intent-binding fix; exact-head CI reruns required",
+    "intentBinding": {
+      "before": "three synthetic real-Host negative tests failed on 913bf4d; direct claim, awaited child creation and pending root answer",
+      "after": "all three pass, plus changed goal and changed expiry begin-boundary negatives; directory privacy/Stop/denial regressions remain passing",
+      "realDesktopTiming": "not tested"
+    }
   },
   "remaining": [
     "window-scoped keyboard/navigation implementation",
