@@ -7,11 +7,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { assertClosure, assertIntegrity, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled } from './provenance.mjs'
+import { assertClosure, assertIntegrity, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled, mayCopyPlatformSource } from './provenance.mjs'
 import { assertCuaFixturePackages } from '../../scripts/cua-fixture-packages.mjs'
 import { resolveExactDshOverrides } from '../../scripts/exact-dsh-fixture.mjs'
 
 const integrity = bytes => `sha512-${createHash('sha512').update(bytes).digest('base64')}`
+test('source-only fallback is limited to the known Darwin backend on a non-Darwin host', () => {
+  const native = '@deepseek-ai/dsh-experimental-cua-macos', input = { overrides: { [native]: '0.2.2-alpha.2', '@deepseek-ai/dsh-agent': '0.2.2-alpha.2' } }
+  assert.equal(mayCopyPlatformSource(native, input, 'linux'), true)
+  assert.equal(mayCopyPlatformSource(native, input, 'darwin'), false)
+  assert.equal(mayCopyPlatformSource('@deepseek-ai/dsh-agent', input, 'linux'), false)
+  assert.equal(mayCopyPlatformSource(native, {}, 'linux'), false)
+  assert.equal(mayCopyPlatformSource(native, { ...input, dependencies: { [native]: '0.2.2-alpha.2' } }, 'linux'), false)
+})
 test('verified package metadata keeps required paths required despite missing caller roots', async () => {
   const version = '0.2.2-alpha.2', root = '@deepseek-ai/dsh', required = '@deepseek-ai/dsh-agent', optional = '@deepseek-ai/dsh-experimental-cua-macos'
   const metadata = {

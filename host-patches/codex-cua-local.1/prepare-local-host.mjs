@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { assertClosure, publishedTarball, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled } from './provenance.mjs'
+import { assertClosure, publishedTarball, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled, mayCopyPlatformSource } from './provenance.mjs'
 import { resolveExactDshOverrides } from '../../scripts/exact-dsh-fixture.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -33,8 +33,11 @@ export async function prepareLocalHost(publishedFixture, output, { native = fals
     const archive = await publishedTarball(join(source, 'verified-tarballs'), name, lock.packages[name])
     const destination = join(packages, name.slice('@deepseek-ai/'.length))
     let original
-    try { original = require.resolve(`${name}/package.json`) } catch (error) {
-      if (error.code !== 'MODULE_NOT_FOUND' || Object.hasOwn(input.dependencies ?? {}, name) || !Object.hasOwn(input.optionalDependencies ?? {}, name) && !Object.hasOwn(input.overrides ?? {}, name)) throw error
+    // This optional backend can be installed only under its owning bundle.
+    const packageRequire = name === '@deepseek-ai/dsh-experimental-cua-macos'
+      ? createRequire(require.resolve('@deepseek-ai/dsh-cua-bundle/package.json')) : require
+    try { original = packageRequire.resolve(`${name}/package.json`) } catch (error) {
+      if (error.code !== 'MODULE_NOT_FOUND' || !mayCopyPlatformSource(name, input)) throw error
     }
     if (original) {
       await cp(dirname(original), destination, { recursive: true, dereference: false,
@@ -47,6 +50,7 @@ export async function prepareLocalHost(publishedFixture, output, { native = fals
     }
     const metadata = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'))
     if (metadata.name !== name || metadata.version !== spec.baseVersion) throw new Error(`Not the original exact package: ${name}`)
+    if (!original && (!Array.isArray(metadata.os) || metadata.os.length !== 1 || metadata.os[0] !== 'darwin')) throw new Error('Source-only backend is not exclusively Darwin')
     originalMetadata.set(name, structuredClone(metadata))
     const patch = spec.packages[name]
     if (patch) {
@@ -74,6 +78,7 @@ export async function prepareLocalHost(publishedFixture, output, { native = fals
   const publishedGraph = await resolveExactDshOverrides(spec.baseVersion, async name => originalMetadata.get(name))
   assertClosure(publishedGraph.overrides, lock, spec)
   assertRequiredInstalled(Object.keys(publishedGraph.dependencies), installed)
+  if (process.platform === 'darwin') assertRequiredInstalled(['@deepseek-ai/dsh-experimental-cua-macos'], installed)
   const nativeRoot = join(packages, 'dsh-experimental-cua-macos', 'native')
   let nativeSha256 = null
   if (native) {

@@ -36,6 +36,13 @@ export function assertRequiredInstalled(required, installed) {
   for (const name of required) if (!installed.has(name)) throw new Error(`Required published package is not installed: ${name}`)
 }
 
+/** The only source-only omission supported by this exact macOS candidate. */
+export function mayCopyPlatformSource(name, input, platform = process.platform) {
+  return platform !== 'darwin' && name === '@deepseek-ai/dsh-experimental-cua-macos'
+    && !Object.hasOwn(input.dependencies ?? {}, name)
+    && (Object.hasOwn(input.optionalDependencies ?? {}, name) || Object.hasOwn(input.overrides ?? {}, name))
+}
+
 export function assertIntegrity(bytes, integrity) {
   if (`sha512-${createHash('sha512').update(bytes).digest('base64')}` !== integrity) throw new Error('Published tarball integrity mismatch')
 }
