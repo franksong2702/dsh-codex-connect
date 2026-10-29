@@ -1,7 +1,7 @@
 /** Public DSH child identity + Native executor + standard tool pipeline. No PTC code transport. */
 import { randomUUID } from 'node:crypto'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import { createUserMessage, isAgentLoopRequest, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, isAgentLoopRequest, ReasoningEffortId, ToolCallId } from '@deepseek-ai/dsh-llm'
 import { NativeToolExecutor } from '@deepseek-ai/dsh-tool-executor-native'
 import { appendDelegatedPolicyOverrides } from '@deepseek-ai/dsh-subagent'
 import { acquireDesktopLease } from './lease.mjs'
@@ -55,24 +55,30 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
   }, 'codex-computer-use.drain')
   return {
     name: TOOL,
-    description: 'Experimental independent GPT-6.1 Terra worker for the user-authorized goal in one operator-configured application/window. Screenshots, click and scroll; AX observation, element click and form values require the locally patched Host strict-window contract. The Host asks the true root conversation for human consent for this task only; the model cannot approve. Synchronous and bounded; preserves this conversation model. A completed result is the worker report, not independent task acceptance. Does not authorize other applications, files, accounts, or background work.',
+    description: 'Independent GPT-6.1 Terra worker for this user task in one application/window. A capable Host privately locates the target from the real user request, asks this conversation if the target is ambiguous, and obtains human consent for this task before starting Terra. Screenshots, AX observation, click, form values and scroll require the Host window contract. The model cannot select a different authority or approve. Synchronous and bounded; preserves this conversation model. A completed result is the worker report, not independent acceptance. Does not authorize app launch, new windows, other applications, files, accounts or background work.',
     parameters: { type: 'object', additionalProperties: false, properties: { goal: { type: 'string', minLength: 1, maxLength: 8000 } }, required: ['goal'] },
     output: { schema: { type: 'object' }, render },
     isConcurrencySafe: () => false,
     async execute(args, execution) {
       const goal = inputGoal(args)
       const targets = ctx.get('cuaTaskTargets')
-      let selected
-      try { selected = targets?.target(execution.agent) } catch { return {status:'blocked',reason:'operator_target_required'} }
-      const config = { ...configured, ...selected }
       const parent = execution.agent
       if (unloading || !parent || ctx.agents.get(parent.id) !== parent) return { status: 'blocked', reason: 'live_parent_required' }
       if (ctx.agentPresets.composedPreset(parent.ctx) === PRESET) return { status: 'blocked', reason: 'recursive_worker_denied' }
-      if (!config.application || !Number.isSafeInteger(config.windowId) || config.windowId <= 0) return { status: 'blocked', reason: 'operator_target_required' }
+      if (!ctx.agents.roots().includes(parent)) return { status: 'blocked', reason: 'live_root_required' }
       const computerUse = ctx.get('computerUse')
       if (computerUse?.providerName !== 'dsh-cua') return { status: 'blocked', reason: 'official_provider_unavailable' }
       const taskApproval = ctx.get('cuaTaskApproval')
-      if (taskApproval?.version !== 1 || typeof taskApproval.begin !== 'function') return { status: 'blocked', reason: 'host_task_approval_unavailable' }
+      if (![1, 2].includes(taskApproval?.version) || typeof taskApproval.begin !== 'function') return { status: 'blocked', reason: 'host_task_approval_unavailable' }
+      let selected, preparing = false
+      try { selected = targets?.target(parent) } catch { return { status: 'blocked', reason: 'operator_target_required' } }
+      const automatic = !selected && taskApproval.version === 2 && typeof taskApproval.prepare === 'function'
+        && (!configured.application || !Number.isSafeInteger(configured.windowId) || configured.windowId <= 0)
+      const config = { ...configured }
+      if (!automatic) {
+        Object.assign(config, selected)
+        if (!config.application || !Number.isSafeInteger(config.windowId) || config.windowId <= 0) return { status: 'blocked', reason: 'operator_target_required' }
+      }
       let lease
       try { lease = await acquireLease() } catch { return { status: 'blocked', reason: 'desktop_lease_unavailable' } }
       const abort = new AbortController()
@@ -94,6 +100,14 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
         }
         try {
           check()
+          if (automatic) {
+            preparing = true
+            selected = await taskApproval.prepare({ parent, goal, expiresAt: started + config.maxDurationMs, signal })
+            check()
+            if (!selected || typeof selected.application !== 'string' || !Number.isSafeInteger(selected.windowId) || selected.windowId <= 0
+              || typeof selected.targetSelectionId !== 'string') throw new Error('CUA_TARGET_BINDING_INVALID')
+            Object.assign(config, selected)
+          }
           state.handle = await parent.ctx.agents.create({
             sessionId: SessionId(randomUUID()), parentAgent: parent,
             meta: { origin: 'subagent', parentSession: parent.id, delegationDepth: (parent.session.header.delegationDepth ?? 0) + 1, agentPreset: PRESET },
@@ -196,16 +210,30 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
           signal.addEventListener('abort', cancel, { once: true })
           try {
             check()
+            if (automatic) {
+              // Host-owned warmup uses this real child's standard pipeline. No
+              // Terra request or candidate-directory context precedes human consent.
+              const batch = await child.ctx.tools.execute({ agent: child, signal,
+                calls: [{ type: 'tool-call', id: ToolCallId(randomUUID()), name: 'cua',
+                  arguments: JSON.stringify({ method: 'getApp', params: { selector: config.application } }) }] })
+              if (batch.results.length !== 1 || batch.results[0].result.isError || !state.appHandle) {
+                state.blocked ??= 'task_authorization_required'
+                return
+              }
+              check()
+            }
             child.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: `Application selector: ${JSON.stringify(config.application)}\nOnly window ID: ${config.windowId}\nGoal: ${goal}` }] }))
             await child.whenIdle()
             state.effective = child.session.requestHeader()?.config
           } finally { signal.removeEventListener('abort', cancel) }
         } catch (error) {
           // Host error bodies can contain private state. Return finite reasons only.
-          if (!signal.aborted && !state.blocked) state.blocked = error?.code === 'CUA_TASK_RETRY_REQUIRES_USER_INPUT' ? 'task_retry_requires_new_user_input' : 'host_execution_failed'
+          if (!signal.aborted && !state.blocked) state.blocked = /^(?:CUA_TASK_RETRY|CUA_TARGET_RETRY)_REQUIRES_USER_INPUT$/u.test(error?.code ?? '') ? 'task_retry_requires_new_user_input'
+            : error?.code === 'CUA_TARGET_CLEANUP_UNCERTAIN' ? 'cleanup_uncertain'
+              : /^CUA_TARGET_/u.test(error?.code ?? '') ? 'target_preparation_blocked' : 'host_execution_failed'
         } finally {
           if (taskGrant && taskRevoked) taskGrant.signal.removeEventListener('abort', taskRevoked)
-          const cleanup = await Promise.allSettled([Promise.resolve().then(() => taskGrant?.dispose()), Promise.resolve().then(() => selected && !taskGrant ? targets.clear(parent.id) : undefined), Promise.resolve().then(() => state.handle?.dispose())])
+          const cleanup = await Promise.allSettled([Promise.resolve().then(() => taskGrant?.dispose()), Promise.resolve().then(() => (selected || preparing) && !taskGrant ? targets.clear(parent.id) : undefined), Promise.resolve().then(() => state.handle?.dispose())])
           quiescent = cleanup.every(result => result.status === 'fulfilled')
           if (!quiescent) state.blocked = 'cleanup_uncertain'
         }

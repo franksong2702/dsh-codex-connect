@@ -19,7 +19,7 @@ export async function apply(ctx, config) {
   if (process.platform !== 'darwin') throw new Error('Computer Use currently requires macOS')
   const require = createRequire(import.meta.url)
   const version = require('@deepseek-ai/dsh-agent/package.json').version
-  if (!['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5'].includes(version)) throw new Error('Computer Use requires an exact tested Host candidate')
+  if (!['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6'].includes(version)) throw new Error('Computer Use requires an exact tested Host candidate')
   for (const name of ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-preset-registry', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-cua', '@deepseek-ai/dsh-cua-bundle', '@deepseek-ai/dsh-tool-executor-native', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-subagent']) {
     if (require(`${name}/package.json`).version !== version) throw new Error('Computer Use requires one coherent exact Host package set')
   }

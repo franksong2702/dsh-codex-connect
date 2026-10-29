@@ -38,7 +38,147 @@
 +				}, props => react_jsx_runtime.jsxs(react.Fragment, {children:[react_jsx_runtime.jsx(TaskTargetPanel,{remote:ctx.remote.cuaAccess,useSessions:props.useSessions}),react_jsx_runtime.jsx(PermissionPanel,props)]})));
 --- a/lib/index.js
 +++ b/lib/index.js
-@@ -16,0 +17,146 @@
+@@ -1,0 +2,139 @@
++/** Trusted Host preparation only. Candidate metadata never becomes a tool result or model message. */
++
++const aliases = new Map([
++  ['com.google.Chrome', ['Chrome', 'Google Chrome', '谷歌浏览器']],
++  ['com.apple.Safari', ['Safari']],
++  ['org.mozilla.firefox', ['Firefox', '火狐浏览器']],
++  ['com.microsoft.edgemac', ['Microsoft Edge', 'Edge']],
++])
++const normalized = value => value.normalize('NFKC').toLocaleLowerCase('en-US')
++function mentions(text, name) {
++  if (typeof name !== 'string' || !name.trim()) return false
++  const needle = normalized(name.trim())
++  const haystack = normalized(text)
++  let position = -1
++  while ((position = haystack.indexOf(needle, position + 1)) !== -1) {
++    if (!/[a-z0-9]/u.test(needle) || !/[a-z0-9_]/u.test(haystack[position - 1] ?? '')
++      && !/[a-z0-9_]/u.test(haystack[position + needle.length] ?? '')) return true
++  }
++  return false
++}
++
++/** Only real admitted human input supplies discovery authority; model goal text supplies none. */
++function latestTaskRequest(parent) {
++  const message = parent?.session?.deriveMessages().filter(message => message.role === 'user'
++    && ['user', 'user-rpc'].includes(message.source?.kind)).at(-1)
++  if (!message || typeof message.id !== 'string' || !message.id || !Array.isArray(message.content)) return undefined
++  const text = message.content.filter(block => block.type === 'text' && typeof block.text === 'string')
++    .map(block => block.text).join('\n').trim()
++  return text ? Object.freeze({ id: message.id, text: text.slice(0, 16000) }) : undefined
++}
++
++/** Called by the Host capability, never by an owner RPC or a caller-supplied session identifier. */
++async function prepareTaskTarget(targets, access, input) {
++  const fail = code => { throw targets.error(code) }
++  if (!input || Object.keys(input).some(key => !['parent', 'goal', 'signal', 'expiresAt'].includes(key))
++    || typeof input.goal !== 'string' || !input.goal.trim() || input.goal.length > 8000
++    || !(input.signal instanceof AbortSignal) || !Number.isSafeInteger(input.expiresAt)
++    || input.expiresAt <= Date.now() || input.expiresAt > Date.now() + 180000) fail('CUA_TARGET_INVALID_TASK')
++  const { parent, signal, expiresAt } = input
++  const live = () => parent && targets.ctx.agents.get(parent.id) === parent
++    && targets.ctx.agents.roots().includes(parent) && targets.root(parent.id) === parent
++  if (!live()) fail('CUA_TARGET_LIVE_ROOT_REQUIRED')
++  const request = latestTaskRequest(parent)
++  if (!request) fail('CUA_TARGET_USER_REQUEST_REQUIRED')
++  if (access.taskRefusals.get(parent) === request.id) fail('CUA_TARGET_RETRY_REQUIRES_USER_INPUT')
++  const questions = targets.ctx.get('userQuestions')
++  if (!questions || typeof questions.ask !== 'function') fail('CUA_TARGET_HUMAN_INTERFACE_UNAVAILABLE')
++  let row
++  const refuse = () => access.taskRefusals.set(parent, request.id)
++  const current = () => {
++    signal.throwIfAborted()
++    if (!live() || latestTaskRequest(parent)?.id !== request.id) fail('CUA_TARGET_REQUEST_CHANGED')
++    if (Date.now() >= expiresAt) fail('CUA_TARGET_EXPIRED')
++    if (row) targets.assert(row)
++  }
++  current()
++  return targets.inOrder(parent, async () => {
++    try {
++      current()
++      row = await targets.start(parent)
++      row.flow = Object.freeze({ id: randomUUID(), userInput: request.id })
++      row.expiresAt = expiresAt
++      clearTimeout(row.timer)
++      const abort = () => { refuse(); void targets.close(row).catch(() => {}) }
++      signal.addEventListener('abort', abort, { once: true })
++      const release = row.release
++      row.release = () => { signal.removeEventListener('abort', abort); return release?.() }
++      row.timer = setTimeout(abort, Math.max(1, expiresAt - Date.now()))
++      const taskSignal = AbortSignal.any([signal, row.controller.signal])
++      current()
++      const ask = async question => {
++        current()
++        // Blocking service requests do not create ask_user_question tool events or late-answer user messages.
++        const reply = await questions.ask({ agent: parent, signal: taskSignal, questions: [question] })
++        current()
++        const answers = reply?.answers
++        if (!Array.isArray(answers) || answers.length !== 1 || answers[0]?.id !== question.id) fail('CUA_TARGET_SELECTION_DENIED')
++        return answers[0]
++      }
++      const catalog = await row.client.request('listApps', {}, taskSignal)
++      current()
++      if (!Array.isArray(catalog) || catalog.length > 1000) fail('CUA_TARGET_METADATA_INVALID')
++      const related = text => catalog.filter(app => mentions(text, app?.name)
++        || (aliases.get(app?.bundleId) ?? []).some(name => mentions(text, name)))
++      let applications = related(request.text)
++      if (applications.length === 0) {
++        const answer = await ask({ id: 'cua-task-application', question: 'Which already-open application should this task use?' })
++        if (!Array.isArray(answer.selected) || answer.selected.length !== 0 || typeof answer.custom !== 'string'
++          || !answer.custom.trim() || answer.custom.length > 1024) fail('CUA_TARGET_SELECTION_DENIED')
++        applications = related(answer.custom)
++      }
++      if (!applications.length) fail('CUA_TARGET_NO_RUNNING_APPLICATION')
++      if (applications.length > 16 || new Set(applications.map(app => app.pid)).size !== applications.length) fail('CUA_TARGET_METADATA_INVALID')
++      const candidates = []
++      for (const app of applications) {
++        current()
++        if (!Number.isSafeInteger(app.pid) || app.pid <= 0 || typeof app.name !== 'string' || !app.name || app.name.length > 1024) fail('CUA_TARGET_METADATA_INVALID')
++        row.app = targets.prepared(await row.client.request('getApp', { selector: String(app.pid) }, taskSignal), app.pid, app.bundleId)
++        current()
++        await targets.windows(row)
++        current()
++        for (const target of row.candidates) candidates.push({ target, app: row.app })
++        if (candidates.length > 32) fail('CUA_TARGET_TOO_MANY_WINDOWS')
++      }
++      if (!candidates.length) fail('CUA_TARGET_NO_WINDOW')
++      let selected = candidates[0]
++      if (candidates.length > 1) {
++        const labels = candidates.map(({ target }, i) => `${i + 1}. ${target.application} — ${target.title.slice(0, 160) || 'Untitled window'}`)
++        const cancel = 'Cancel this task'
++        const answer = await ask({ id: 'cua-task-window', question: 'Which window should this task use?',
++          detail: 'Selection only prepares this target. You will separately approve observation and control for this task.',
++          options: [...labels, cancel].map(label => ({ label })) })
++        if (answer.custom !== undefined && answer.custom !== '' || !Array.isArray(answer.selected) || answer.selected.length !== 1) fail('CUA_TARGET_SELECTION_DENIED')
++        const index = labels.indexOf(answer.selected[0])
++        if (index < 0) fail('CUA_TARGET_SELECTION_DENIED')
++        selected = candidates[index]
++      }
++      current()
++      row.app = selected.app
++      row.candidates = [selected.target]
++      await row.client.request('bindTaskWindow', { appHandle: row.app.appHandle,
++        windowId: selected.target.windowId, targetKey: selected.target.targetKey }, taskSignal)
++      current()
++      row.selected = selected.target
++      // Only the chosen opaque binding is returned inside the trusted Host; never the directory or labels.
++      return targets.target(parent)
++    } catch (error) {
++      refuse()
++      if (row) {
++        try { await targets.close(row) } catch { fail('CUA_TARGET_CLEANUP_UNCERTAIN') }
++      }
++      // Native errors may contain private app paths/titles; neither raw errors nor causes cross this boundary.
++      const code = typeof error?.code === 'string' && /^CUA_TARGET_[A-Z_]+$/u.test(error.code)
++        ? error.code : signal.aborted ? 'CUA_TARGET_CANCELLED' : 'CUA_TARGET_METADATA_UNAVAILABLE'
++      fail(code)
++    }
++  })
++}
++
+@@ -16,0 +156,146 @@
 +/** Operator RPC only. Candidate selection never authorizes native observations or input. */
 +class TaskTargets {
 +  version = 1;
@@ -185,11 +325,12 @@
 +  }
 +}
 +
-@@ -550,0 +697,3 @@
+@@ -550,0 +836,3 @@
 +	tasks = /* @__PURE__ */ new Map();
 +	taskOwners = /* @__PURE__ */ new WeakMap();
 +	taskRefusals = /* @__PURE__ */ new WeakMap();
-@@ -561,0 +711,138 @@
+@@ -560,0 +849,115 @@
++	}
 +	/** Register an owned task, without granting application access. */
 +	beginTask(input) {
 +		const keys = ["parent", "child", "application", "windowId", "goal", "expiresAt", "signal"];
@@ -304,7 +445,7 @@
 +			state.handles.set(handle, { identity: task.identity, scope: "task", taskId: task.id, sessionId: task.child.id, lifetime: new AbortController() });
 +			this.clients.set(client, state);
 +		});
-+	}
+@@ -561,0 +965,23 @@
 +	revocationGeneration(id, signal) {
 +		return this.options.store.withState(signal, ({ state }) => state.applications[id]?.revoked ?? 0);
 +	}
@@ -328,15 +469,15 @@
 +			// to ordinary saved application grants after its task has ended.
 +		});
 +	}
-@@ -569 +856 @@
+@@ -569 +995 @@
 -			await Promise.allSettled([this.options.store.drain(), ...[...this.active].map((operation) => operation.done.promise)]);
 +			await Promise.allSettled([...[...this.tasks.values()].map((task) => this.endTask(task)), this.options.store.drain(), ...[...this.active].map((operation) => operation.done.promise)]);
-@@ -647 +934,3 @@
+@@ -647 +1073,3 @@
 -	async select(agent, client, handle, identity, signal, icon) {
 +	async select(agent, client, handle, identity, signal, icon, prepared) {
 +		const task = this.taskFor(agent);
 +		if (task) return this.withOperation(agent, client, identity, AbortSignal.any([signal, task.signal]), (lifetime) => this.selectInOrder(agent, identity.id, () => this.selectTask(task, client, handle, identity, prepared, lifetime, icon)));
-@@ -774,0 +1064,12 @@
+@@ -774,0 +1203,12 @@
 +		if (selected.scope === "task") {
 +			const task = this.tasks.get(selected.taskId);
 +			this.assertTask(task);
@@ -349,71 +490,72 @@
 +				return this.withOperation(state.agent, client, selected.identity, lifetime, dispatch);
 +			});
 +		}
-@@ -833,0 +1135,2 @@
+@@ -833,0 +1274,2 @@
 +		const task = this.taskFor(agent);
 +		if (task) void this.endTask(task).catch(() => {});
-@@ -864,0 +1168,4 @@
+@@ -864,0 +1307,4 @@
 +		for (const task of this.tasks.values()) if (task.identity?.id === id && (agent === void 0 || task.child.id === agent.id)) {
 +			this.taskRefusals.set(task.parent, task.userInput);
 +			void this.endTask(task).catch(() => {});
 +		}
-@@ -1088 +1395,4 @@
+@@ -1088 +1534,4 @@
 -operation("launchApp", app), operation("permissionStatus", {}), operation("applicationIcons", { paths: z.array(z.string().min(1)) }), operation("requestPermission", { permission: z.enum(["accessibility", "screenRecording"]) }), operation("openPermissionSettings", { permission: z.enum(["accessibility", "screenRecording"]) });
 +operation("prepareTaskWindows", app),
 +    operation("bindTaskWindow", {...app, windowId:id, targetKey:z.string().min(1)}),
 +    operation("validateTaskWindow", {...app, windowId:id}),
 +    operation("launchApp", app), operation("permissionStatus", {}), operation("applicationIcons", { paths: z.array(z.string().min(1)) }), operation("requestPermission", { permission: z.enum(["accessibility", "screenRecording"]) }), operation("openPermissionSettings", { permission: z.enum(["accessibility", "screenRecording"]) });
-@@ -1120,0 +1431 @@
+@@ -1120,0 +1570 @@
 +	windowScope: z.enum(["strict-window", "application"]).optional(),
-@@ -1258,0 +1570 @@
+@@ -1258,0 +1709 @@
 +            for (const name of ["discoverTaskApplications", "selectTaskApplication", "discoverTaskTargets", "selectTaskTarget", "clearTaskTargets"]) __esDecorate(this, null, [Remote], { kind: "method", name, static: false, private: false, access: { has: obj => name in obj, get: obj => obj[name] }, metadata: _metadata }, null, _instanceExtraInitializers);
-@@ -1379,0 +1692,6 @@
+@@ -1379,0 +1831,6 @@
 +        assertTargetOperator() { if (this.ctx.invocation?.peer.principal.kind !== "owner") throw new NativeError("CUA_TARGET_OPERATOR_REQUIRED", "Target discovery is restricted to the authenticated local operator"); }
 +        discoverTaskApplications(sessionId, bundleId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.discoverApplications(sessionId, bundleId); }
 +        selectTaskApplication(sessionId, candidateId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.selectApplication(sessionId, candidateId); }
 +        discoverTaskTargets(sessionId, application) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.discover(sessionId, application); }
 +        selectTaskTarget(sessionId, candidateId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.select(sessionId, candidateId); }
 +        clearTaskTargets(sessionId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.clear(sessionId); }
-@@ -1486,0 +1805,4 @@
+@@ -1486,0 +1944,5 @@
++		prepareTaskTarget: (input) => prepareTaskTarget(ctx.cuaTaskTargets, policy, input),
 +		beginTask: policy.beginTask.bind(policy),
 +		taskFor: policy.taskFor.bind(policy),
 +		checkTaskRequest: policy.checkTaskRequest.bind(policy),
 +		observeTask: policy.observeTask.bind(policy),
-@@ -1577,0 +1900 @@
+@@ -1577,0 +2040 @@
 +	strictWindowScope: Schema.boolean().default(false),
-@@ -1645,0 +1969 @@
+@@ -1645,0 +2109 @@
 +	ctx.provide("cuaWindowScope", Object.freeze({ version: 1, strictWindowScope: config.strictWindowScope === true }));
-@@ -1668,0 +1993,2 @@
+@@ -1668,0 +2133,2 @@
 +    if (config.strictWindowScope === true) ctx.provide("cuaTaskTargets", new TaskTargets(ctx, () => new NativeClient(ctx, native, backend.createChannel), code => new NativeError(code, "Operator target selection is missing, stale or invalid")));
-+	if (config.strictWindowScope === true) ctx.provide("cuaTaskApproval", Object.freeze({ version: 1, begin: (input) => access.beginTask(input) }));
-@@ -1720,0 +2047 @@
++	if (config.strictWindowScope === true) ctx.provide("cuaTaskApproval", Object.freeze({ version: 2, prepare: (input) => access.prepareTaskTarget(input), begin: (input) => access.beginTask(input) }));
+@@ -1720,0 +2187 @@
 +			access.checkTaskRequest(execution.agent, request);
-@@ -1739 +2066,2 @@
+@@ -1739 +2206,2 @@
 -				maxDepth: config.maxDepth
 +				maxDepth: config.maxDepth,
 +				strictWindowScope: config.strictWindowScope
-@@ -1748,0 +2077 @@
+@@ -1748,0 +2217 @@
 +				access.observeTask(agent, request, screenshot);
-@@ -1781 +2110 @@
+@@ -1781 +2250 @@
 -				await access.select(agent, client, prepared.appHandle, authorization, signal, applicationIcon);
 +				await access.select(agent, client, prepared.appHandle, authorization, signal, applicationIcon, prepared);
-@@ -1793,0 +2123 @@
+@@ -1793,0 +2263 @@
 +				access.observeTask(agent, request, state);
-@@ -1813,0 +2144 @@
+@@ -1813,0 +2284 @@
 +				access.checkTaskRequest(agent, request);
-@@ -1820 +2151,2 @@
+@@ -1820 +2291,2 @@
 -					owner.signal
 +					owner.signal,
 +					...access.taskFor(agent) ? [access.taskFor(agent).signal] : []
-@@ -1827 +2159,2 @@
+@@ -1827 +2299,2 @@
 -					let client = clients.get(agent);
 +                    let client = clients.get(agent) ?? access.taskFor(agent)?.nativeClient;
 +                    if (client && !clients.has(agent)) { clients.set(agent, client); owner.coordinates = new CuaCoordinates(); }
-@@ -1828,0 +2162 @@
+@@ -1828,0 +2302 @@
 +					if (access.taskFor(agent)?.nativeClient?.disposed) throw new NativeError("CUA_TASK_CLOSED", "Selected native target connection expired");
-@@ -1836,0 +2171 @@
+@@ -1836,0 +2311 @@
 +					access.taskFor(agent)?.clients.add(nativeClient);
-@@ -1916,0 +2252,2 @@
+@@ -1916,0 +2392,2 @@
 +
 +export const STRICT_WINDOW_SCOPE_VERSION = 1;
 --- a/lib/protocol.js

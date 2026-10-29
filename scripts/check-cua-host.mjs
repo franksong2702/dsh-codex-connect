@@ -15,7 +15,7 @@ const supplied = process.env.DSH_CUA_FIXTURE
 const withLocalPatch = process.argv[2] === '--with-local-patch'
 if (process.argv.length > 2 && (!withLocalPatch || process.argv.length !== 3)) throw new Error('usage: check-cua-host.mjs [--with-local-patch]')
 const version = process.env.DSH_CUA_HOST_VERSION ?? '0.2.2-alpha.2'
-if (!['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5'].includes(version) || version !== '0.2.2-alpha.2' && !supplied) throw new Error('Local CUA checks require an explicit isolated candidate fixture')
+if (!['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6'].includes(version) || version !== '0.2.2-alpha.2' && !supplied) throw new Error('Local CUA checks require an explicit isolated candidate fixture')
 const fixture = supplied ? resolve(supplied) : await mkdtemp(join(tmpdir(), 'codex-cua-published-host-'))
 const configDir = await mkdtemp(join(fixture, 'empty-package-config-'))
 await writeFile(join(configDir, 'user.npmrc'), '')
@@ -63,7 +63,7 @@ try {
       await prepareLocalHost(fixture, local)
       await command('pnpm', ['--dir', join(local, 'runtime'), '--ignore-workspace', '--config.minimum-release-age=0', 'install', '--ignore-scripts'])
       for (const [script, variables] of [
-        [join(root, 'scripts/check-cua-host.mjs'), { DSH_CUA_FIXTURE: join(local, 'runtime'), DSH_CUA_HOST_VERSION: '0.2.2-alpha.2.codex-cua-local.5' }],
+        [join(root, 'scripts/check-cua-host.mjs'), { DSH_CUA_FIXTURE: join(local, 'runtime'), DSH_CUA_HOST_VERSION: '0.2.2-alpha.2.codex-cua-local.6' }],
         [join(root, 'host-patches/codex-cua-local.1/route.test.mjs'), { DSH_LOCAL_FIXTURE: join(local, 'runtime') }],
       ]) {
         const args = script.endsWith('.test.mjs') ? ['--test', script] : [script]

@@ -66,13 +66,22 @@ async function fixture({ script, cua, officialCua = false, strict = false, taskA
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.tools.setExecutor(new NativeToolExecutor(ctx))
   const seen = [], dispatched = []
-  let index = 0
+  let index = 0, parentIndex = 0
   class Scripted extends LlmAdapter {
     providerInfo(id) { return { id, name: 'In-memory fixture' } }
     async listModels(provider) { return [{ provider, id: ROUTE.model, name: 'Fixture' }] }
     async resolveModel(provider, id) { return { provider, id, name: 'Fixture', reasoning: { efforts: [{ id: ReasoningEffortId('high'), name: 'high' }] } } }
     async *stream(options) {
       seen.push(options)
+      if (options.model === 'flash') {
+        if (parentIndex++ === 0) yield *toolStream(call(TOOL, { goal: 'Complete this task in the requested browser' }))
+        else {
+          yield { type: 'block-start', index: 0, blockType: 'text' }
+          yield { type: 'block-end', index: 0, block: { type: 'text', text: 'Task result received' } }
+          yield { type: 'finish', reason: { kind: 'stop' } }
+        }
+        return
+      }
       if (options.model === 'fixture-unrelated') {
         yield { type: 'block-start', index: 0, blockType: 'text' }
         yield { type: 'block-end', index: 0, block: { type: 'text', text: 'unrelated request completed' } }
@@ -99,7 +108,7 @@ async function fixture({ script, cua, officialCua = false, strict = false, taskA
       }
     }
   }
-  ctx.llm.registerAdapter(['openai-codex'], new Scripted())
+  ctx.llm.registerAdapter(['openai-codex', 'deepseek'], new Scripted())
   ctx.tools.register({ name: 'host_shell', description: 'Forbidden capability', parameters: schema, output, async execute() { throw new Error('shell reached') } })
   // Match the official CUA provider's scoped registration lifecycle without launching its helper.
   if (officialCua) {
@@ -143,7 +152,11 @@ async function fixture({ script, cua, officialCua = false, strict = false, taskA
   ctx.tools.register(tool)
   const controller = new AbortController()
   const execute = () => ctx.tools.execute({ agent: parent.agent, calls: [call(TOOL, { goal: 'Complete the synthetic UI task' })], signal: controller.signal })
-  return { ctx, parent, seen, dispatched, execute, controller, directory, scopeFiber, providerFiber, questions, grants, nativeRequests }
+  const conversation = async text => {
+    parent.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }))
+    await parent.agent.whenIdle()
+  }
+  return { ctx, parent, seen, dispatched, execute, conversation, controller, directory, scopeFiber, providerFiber, questions, grants, nativeRequests }
 }
 
 test('missing or foreign providers block before child model, task grant or native dispatch', async () => {
@@ -773,6 +786,7 @@ test('lease loss aborts an in-flight native operation and returns blocked', { ti
   assert.equal(batch.results[0].result.value.reason, 'desktop_lease_lost')
 })
 
+const missingTargetReason = f => f.ctx.get('cuaTaskApproval')?.version === 2 ? 'target_preparation_blocked' : 'operator_target_required'
 const operatorFace = f => f.ctx.extend({invocation:{peer:{principal:{kind:'owner'}}}}).get('cuaAccess')
 
 // First-use operator route. Native metadata/results remain synthetic; this is not GUI acceptance.
@@ -802,7 +816,7 @@ test('first use without grant/window ID selects metadata then requires the true 
     return allowTask()
   }})
   if (!f.ctx.get('cuaTaskTargets')) {t.skip('requires local.3 operator target capability');return}
-  assert.equal((await f.execute()).results[0].result.value.reason,'operator_target_required')
+  assert.equal((await f.execute()).results[0].result.value.reason,missingTargetReason(f))
   assert.equal(f.seen.length,0)
   await selectOperatorTarget(f)
   assert.deepEqual(f.nativeRequests.map(r=>r.method),['getApp','prepareTaskWindows','bindTaskWindow'])
@@ -816,7 +830,7 @@ test('first use without grant/window ID selects metadata then requires the true 
   assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
   assert.deepEqual(f.parent.agent.model.current(),{provider:'deepseek',model:'flash'})
   assert.equal(f.ctx.cuaTaskTargets.target(f.parent.agent),undefined,'selection consumed exactly once')
-  assert.equal((await f.execute()).results[0].result.value.reason,'operator_target_required')
+  assert.equal((await f.execute()).results[0].result.value.reason,missingTargetReason(f))
 })
 
 test('operator discovery refuses missing/child roots and is absent from every model CUA schema', async t=>{
@@ -877,7 +891,7 @@ test('stale window before or after the human answer and human denial leave no re
     assert.equal(f.nativeRequests.some(r=>['getState','setValue','screenshot','click'].includes(r.method)),false)
     assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
     assert.equal(f.ctx.cuaTaskTargets.target(f.parent.agent),undefined)
-    assert.equal((await f.execute()).results[0].result.value.reason,'operator_target_required')
+    assert.equal((await f.execute()).results[0].result.value.reason,missingTargetReason(f))
   }
 })
 
@@ -1215,4 +1229,92 @@ test('packaged operator UI uses the current conversation and completes instance/
  assert.equal(f.nativeRequests.some(row=>['getState','screenshot','click','setValue'].includes(row.method)),false)
  await find(render(),'Clear selection').onClick()
  assert.equal(state[5],false);assert.equal(f.ctx.cuaTaskTargets.rows.size,0)
+})
+
+// Ordinary human message -> Flash tool call -> private Host preparation -> root
+// consent -> owned Terra. Every provider/native response below is synthetic.
+function conversationalNative(request) {
+  if (request.method === 'listApps') return [
+    { pid: 1234, name: target.application, bundleId: 'org.example.SyntheticBrowser' },
+    { pid: 9999, name: 'UNRELATED_PRIVATE_APPLICATION', bundleId: 'org.example.Private' },
+  ]
+  if (request.method === 'getApp') return { ...targetNative(request), bundleId: 'org.example.SyntheticBrowser' }
+  if (request.method === 'prepareTaskWindows') return targetNative(request).map(window => ({ ...window, title: 'PRIVATE_CANDIDATE_TITLE' }))
+  return targetNative(request)
+}
+
+test('ordinary Flash conversation privately locates a unique target and approves before the first Terra request', async t => {
+  let f
+  f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
+    script: selectedTaskScript(), nativeResponse: conversationalNative, humanAnswer: request => {
+      assert.equal(request.agent, f.parent.agent)
+      assert.equal(request.questions[0].id, 'cua-task-access')
+      assert.equal(f.seen.filter(call => call.model === ROUTE.model).length, 0)
+      assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
+      return allowTask()
+    } })
+  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  await f.conversation('Complete this synthetic task in Synthetic Browser')
+  assert.equal(f.questions.length, 1)
+  assert.ok(f.nativeRequests.some(call => call.method === 'setValue'), 'real Host pipeline dispatches the synthetic native input')
+  assert.deepEqual(f.seen.filter(call => call.model === 'flash').map(call => call.provider), ['deepseek', 'deepseek'])
+  assert.ok(f.seen.some(call => call.model === ROUTE.model && call.reasoningEffort === 'high'))
+  assert.deepEqual(f.parent.agent.model.current(), { provider: 'deepseek', model: 'flash' })
+  const events = JSON.stringify(f.parent.agent.session.snapshotEvents())
+  const toolResult = f.parent.agent.session.snapshotEvents().find(event => event.type === 'tool/result').data.message
+  assert.equal(JSON.parse(toolResult.content.find(block => block.type === 'text').text).status, 'completed')
+  assert.equal(events.includes('PRIVATE_CANDIDATE_TITLE'), false)
+  for (const call of f.seen) {
+    assert.equal(JSON.stringify(call).includes('UNRELATED_PRIVATE_APPLICATION'), false)
+    assert.equal(JSON.stringify(call).includes('PRIVATE_CANDIDATE_TITLE'), false)
+  }
+  assert.equal(f.ctx.cuaTaskTargets.rows.size, 0)
+  assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps, [])
+})
+
+test('ambiguous ordinary task selects in the same root and denies without Terra, observation or reusable consent', async t => {
+  let f
+  f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
+    nativeResponse: request => request.method === 'prepareTaskWindows'
+      ? [7, 8].map(windowId => ({ ...targetNative(request)[0], windowId, title: `PRIVATE_CANDIDATE_${windowId}`, targetKey: `anchor-${windowId}` }))
+      : conversationalNative(request), humanAnswer: request => {
+      assert.equal(request.agent, f.parent.agent)
+      const question = request.questions[0]
+      if (question.id === 'cua-task-window') return { answers: [{ id: question.id, selected: [question.options[0].label] }] }
+      return { answers: [{ id: 'cua-task-access', selected: ['Deny'] }] }
+    } })
+  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  await f.conversation('Use Synthetic Browser for this task')
+  assert.deepEqual(f.questions.map(request => request.questions[0].id), ['cua-task-window', 'cua-task-access'])
+  assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
+  assert.equal(f.nativeRequests.some(call => ['getState', 'click', 'screenshot', 'setValue'].includes(call.method)), false)
+  assert.equal(JSON.stringify(f.parent.agent.session.snapshotEvents()).includes('PRIVATE_CANDIDATE_'), false)
+  const nativeCount = f.nativeRequests.length
+  const retry = (await f.execute()).results[0].result.value
+  assert.equal(retry.reason, 'task_retry_requires_new_user_input')
+  assert.equal(f.nativeRequests.length, nativeCount)
+  assert.equal(f.ctx.cuaTaskTargets.rows.size, 0)
+  assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps, [])
+})
+
+test('Stop during ordinary root consent drains target metadata with no Terra or page operation', async t => {
+  let entered, f
+  const pending = new Promise(resolve => { entered = resolve })
+  f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
+    nativeResponse: conversationalNative, humanAnswer: request => {
+      entered()
+      return new Promise((_resolve, reject) => request.signal.addEventListener('abort', () => reject(Error('human interaction cancelled')), { once: true }))
+    } })
+  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  const run = f.conversation('Use Synthetic Browser for this task')
+  await pending
+  f.parent.agent.cancel({ kind: 'user' })
+  await run
+  assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
+  assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
+  assert.equal(f.ctx.cuaTaskTargets.rows.size, 0)
+  const count = f.nativeRequests.length
+  assert.equal((await f.execute()).results[0].result.value.reason, 'task_retry_requires_new_user_input')
+  assert.equal(f.nativeRequests.length, count)
+  assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps, [])
 })

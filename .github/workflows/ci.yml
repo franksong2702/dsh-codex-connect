@@ -43,7 +43,7 @@ jobs:
       - name: Install locked validation fixture dependencies
         run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
       - name: Verify complete-source provenance failure cases
-        run: node --test host-patches/codex-cua-local.1/provenance.test.mjs
+        run: node --test host-patches/codex-cua-local.1/provenance.test.mjs host-patches/codex-cua-local.1/task-target-flow.test.mjs
       - name: Verify published and local CUA Host composition with no live model or desktop
         run: node scripts/check-cua-host.mjs --with-local-patch
 

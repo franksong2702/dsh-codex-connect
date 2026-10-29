@@ -20,7 +20,7 @@ const compatiblePackages = {
 } as const
 
 describe('compatibility contract', () => {
-  it.each(['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5'])('admits exact local Host %s and rejects stock, mixed or future patched peers', (version) => {
+  it.each(['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6'])('admits exact local Host %s and rejects stock, mixed or future patched peers', (version) => {
     const names = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const
     const packages = { ...compatiblePackages, ...Object.fromEntries(names.map(name => [name, version])) }
     expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: packages }).status).toBe('compatible')
@@ -29,7 +29,7 @@ describe('compatibility contract', () => {
       const mixed = version.endsWith('.1') ? '0.2.2-alpha.2.codex-cua-local.2' : '0.2.2-alpha.2.codex-cua-local.1'
       expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: { ...packages, [name]: mixed } }).status).toBe('unverified')
     }
-    for (const value of ['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.6']) {
+    for (const value of ['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.7']) {
       expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, value])),
       } }).status).toBe('unverified')

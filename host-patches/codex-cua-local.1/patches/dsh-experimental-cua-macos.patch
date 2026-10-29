@@ -1,11 +1,11 @@
 --- a/native/Sources/CuaNative/AXAccess.swift
 +++ b/native/Sources/CuaNative/AXAccess.swift
-@@ -6,0 +7,5 @@
-+
+@@ -7,0 +8,5 @@
 +struct AXWindowConstraint {
 +    let owner: ProcessIdentity
 +    let windowID: UInt32
 +}
++
 @@ -21,0 +27 @@
 +    var taskWindow: NativeTaskWindow?
 @@ -171 +177 @@
@@ -90,7 +90,8 @@
 +    private var taskCandidates: [String: NativeTaskWindow] = [:]
 +    private var taskWindow: NativeTaskWindow?
 +    private var taskHandle: String?
-@@ -149,0 +154,8 @@
+@@ -148,0 +153,8 @@
++    }
 +    private func constraint(_ value: NativeSnapshot, handle: String) throws -> AXWindowConstraint? {
 +        guard value.strictWindowScope else { return nil }
 +        guard let window = value.scope.windowID else { throw NativeFailure(code: "WINDOW_SCOPE_REQUIRED", message: "Strict snapshot has no owning window") }
@@ -98,7 +99,6 @@
 +    }
 +    private func constraint(_ handle: String, _ params: RequestParameters) throws -> AXWindowConstraint? {
 +        try constraint(snapshot(handle, params.string("snapshotId")), handle: handle)
-+    }
 @@ -153,0 +166,4 @@
 +        if value.strictWindowScope {
 +            guard let expected = value.scope.windowID else { throw NativeFailure(code: "WINDOW_SCOPE_REQUIRED", message: "Strict snapshot has no owning window") }
@@ -106,11 +106,14 @@
 +        }
 @@ -236,0 +253 @@
 +            if let taskWindow { guard taskWindow.owner == identity else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Selected application process changed") }; try taskWindow.require() }
-@@ -254,0 +272,38 @@
+@@ -254,0 +272,41 @@
 +        if method == "prepareTaskWindows" {
 +            guard taskWindow == nil else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Target connection already bound") }
 +            try NativePlatform.requireAccessibility()
-+            taskCandidates.removeAll()
++            // One private discovery may compare several running instances. Re-querying
++            // one instance invalidates only its own anchors, never another instance's.
++            taskCandidates = taskCandidates.filter { $0.value.owner != identity }
++            guard taskCandidates.count <= 128 else { throw NativeFailure(code: "CUA_TARGET_METADATA_LIMIT", message: "Too many pending window candidates") }
 +            let windows = Array(NativePlatform.windows().filter { $0.pid == identity.pid && $0.isOnScreen }.prefix(100))
 +            let refs = try ax().children(AXUIElementCreateApplication(identity.pid), "AXWindows")
 +            var result: [JSONValue] = []
@@ -145,66 +148,64 @@
 +            guard taskWindow != nil else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Target was not selected by an operator") }
 +            return .result(.object(["validated": .bool(true)]))
 +        }
-@@ -289,0 +345 @@
+@@ -289,0 +348 @@
 +            let strict = try params.optionalBoolean("strictWindowScope") ?? false
-@@ -296 +352 @@
+@@ -296 +355 @@
 -                    includeMenus: params.optionalBoolean("includeMenus") ?? false, details: params.optionalBoolean("details") ?? false)
 +                    includeMenus: params.optionalBoolean("includeMenus") ?? false, details: params.optionalBoolean("details") ?? false, strictWindowScope: strict)
-@@ -305 +361,2 @@
+@@ -305 +364,2 @@
 -            let observedWindows = NativePlatform.windows().filter { $0.pid == identity.pid }
 +            try taskWindow?.require()
 +            let observedWindows = NativePlatform.windows().filter { $0.pid == identity.pid && (!strict || $0.windowID == window) }
-@@ -308 +365 @@
+@@ -308 +368 @@
 -            snapshots[scope] = NativeSnapshot(id: id, scope: scope, elements: projection.indexed)
 +            snapshots[scope] = NativeSnapshot(id: id, scope: scope, elements: projection.indexed, strictWindowScope: strict)
-@@ -314 +371,2 @@
+@@ -314 +374,2 @@
 -                "focusedWindowId": projection.focusedWindowID.map { .number(Double($0)) } ?? .null,
 +                "focusedWindowId": (!strict || projection.focusedWindowID == window) ? (projection.focusedWindowID.map { .number(Double($0)) } ?? .null) : .null,
 +                "windowScope": .string(strict ? "strict-window" : "application"),
-@@ -335 +393 @@
+@@ -335 +396 @@
 -        case "setValue": try ax().setValue(element(handle, params), params.string("value"))
 +        case "setValue": try ax().setValue(element(handle, params), params.string("value"), constraint: constraint(handle, params))
-@@ -338 +396 @@
+@@ -338 +399 @@
 -                                suffix: params.optionalString("suffix"), mode: params.optionalString("selectionType") ?? "text")
 +                                suffix: params.optionalString("suffix"), mode: params.optionalString("selectionType") ?? "text", constraint: constraint(handle, params))
-@@ -349 +407 @@
+@@ -349 +410 @@
 -            try ax().perform(selected, action)
 +            try ax().perform(selected, action, constraint: constraint(handle, params))
-@@ -358,0 +417 @@
+@@ -358,0 +420 @@
 +            var pointerConstraint: AXWindowConstraint?
-@@ -359,0 +419 @@
+@@ -359,0 +422 @@
 +                pointerConstraint = try constraint(handle, params)
-@@ -368 +428 @@
+@@ -368 +431 @@
 -                        try ax().perform(selected, action)
 +                        try ax().perform(selected, action, constraint: constraint(handle, params))
-@@ -374,0 +435,4 @@
+@@ -374,0 +438,4 @@
 +                if let pointerConstraint {
 +                    try ax().requireWindow(selected, expected: pointerConstraint.windowID, owner: pointerConstraint.owner)
 +                    try WindowScopePolicy.requireRoute(expected: pointerConstraint.windowID, actual: window.windowID)
 +                }
-@@ -382 +446 @@
+@@ -382 +449 @@
 -            let route = WindowRoute(owner: identity, windowID: window.windowID, bounds: window.bounds)
 +            let route = WindowRoute(owner: identity, windowID: window.windowID, bounds: window.bounds, strictWindowID: pointerConstraint?.windowID, taskWindow: taskWindow)
-@@ -401 +465 @@
+@@ -401 +468 @@
 -            let route = WindowRoute(owner: identity, windowID: id, bounds: window.bounds)
 +            let route = WindowRoute(owner: identity, windowID: id, bounds: window.bounds, taskWindow: taskWindow)
-@@ -469 +533 @@
+@@ -469 +536 @@
 -        guard let id = plan.snapshotID, let index = plan.index, let element = try snapshot(plan.appHandle, id).elements[index] else {
 +        guard let id = plan.snapshotID, let index = plan.index else {
-@@ -472 +536,3 @@
+@@ -472 +539,3 @@
 -        try ax().perform(element, "AXRaise")
 +        let value = try snapshot(plan.appHandle, id)
 +        guard let element = value.elements[index] else { throw NativeFailure(code: "STALE_SNAPSHOT", message: "Raise target is no longer available") }
 +        try ax().perform(element, "AXRaise", constraint: constraint(value, handle: plan.appHandle))
-@@ -474,0 +541 @@
+@@ -474,0 +544 @@
 +        try taskWindow?.require()
-@@ -486,0 +554 @@
+@@ -486,0 +557 @@
 +        try taskWindow?.require()
-@@ -497,2 +565,2 @@
+@@ -497 +568 @@
 -    func shutdown() { closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
--}
 +    func shutdown() { taskWindow = nil; taskCandidates.removeAll(); closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
-+}
 --- a/native/Sources/CuaNative/NativeProtocol.generated.swift
 +++ b/native/Sources/CuaNative/NativeProtocol.generated.swift
 @@ -4,0 +5,3 @@
@@ -303,7 +304,17 @@
 +}
 --- a/native/protocol.schema.json
 +++ b/native/protocol.schema.json
-@@ -1164,0 +1165,110 @@
+@@ -1154,0 +1155,73 @@
++          ],
++          "additionalProperties": false
++        }
++      },
++      "required": [
++        "id",
++        "method",
++        "params"
++      ],
++      "additionalProperties": false
 +    },
 +    {
 +      "type": "object",
@@ -367,16 +378,7 @@
 +            "appHandle",
 +            "windowId",
 +            "targetKey"
-+          ],
-+          "additionalProperties": false
-+        }
-+      },
-+      "required": [
-+        "id",
-+        "method",
-+        "params"
-+      ],
-+      "additionalProperties": false
+@@ -1164,0 +1238,37 @@
 +    },
 +    {
 +      "type": "object",
