@@ -30,6 +30,8 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
   let exhausted = false
   let usageReads = 0
   const wires = []
+  const agentErrors = []
+  ctx.on('agent/error', ({ error }) => { agentErrors.push(error) })
   try {
     const claims = { chatgpt_account_id: 'fixture-account', chatgpt_user_id: 'fixture-user' }
     const access = `e30.${Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': claims })).toString('base64url')}.fixture`
@@ -78,6 +80,7 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
       if (ordinary) now += 61_000
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture turn' }] }))
       await agent.whenIdle()
+      assert.equal(agentErrors.length, 0, `Reserve fixture agent failed: ${agentErrors[0]?.message}`)
       assert.deepEqual(agent.session.requestHeader()?.config, ordinary ? selection : { provider: 'openai-codex', model: 'gpt-reserve' })
       if (!ordinary) assert.equal(agent.session.snapshotEvents().filter(event => event.type === 'request/context').at(-1)?.data.contextWindow, 272_000)
     }

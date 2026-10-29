@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "fixtureBase": "cb6626ede1bd6b85620082f0123f74abdca4fe5e",
+  "host": {
+    "version": "0.2.2-alpha.2",
+    "patched": false
+  },
+  "scope": "images component only; not full stock compatibility or live-account acceptance",
+  "candidate": {
+    "metadataVersion": "0.2.0-alpha.11-stock403-image.0",
+    "compiledPluginVersion": "0.2.0-alpha.11",
+    "private": true,
+    "unverified": true,
+    "exactPeerAdmissionOnly": true,
+    "artifactSha256": "3145061d84184d1163cc7444092c5b312c2911ec73835df607c1fde5e75010a7",
+    "officialPluginAddExit": 0
+  },
+  "sourceFiles": {
+    "src/image-history.ts": "d4d15e8a0178444c8b71a29eba73cbde0586c335e0ffa169171aeee6021e10ad",
+    "tests/image-asset-routes.spec.ts": "10e29da337c393044561ee851d4f6e1c5c271129a408d1c8f9d786424f3d4897",
+    "lib/index.js": "65d13d46f0ac022183090cfddb04f4d625ea26bfe9f2b7511a143c1f924e18a4"
+  },
+  "images": {
+    "syntheticOnly": true,
+    "generated": 2,
+    "edited": 2,
+    "codeRuns": 2,
+    "dispatchEvent": "tool/ptc-dispatch",
+    "originalDownloadVerified": true,
+    "originalAuthenticationVerified": true,
+    "inheritedOriginalVerified": true,
+    "earlierForkDenied": true,
+    "unrelatedSessionDenied": true,
+    "editSourcesVerified": true,
+    "inheritedEditVerified": true,
+    "invalidEditRefused": true,
+    "selectionHandlesVerified": true,
+    "realProviderRequests": 0
+  },
+  "fixtureElapsedMs": 817,
+  "realProviderRequests": 0,
+  "guiActions": 0,
+  "serviceChanges": 0,
+  "reserve": "unchanged known failure; not reassessed",
+  "formalAlpha2Support": false,
+  "environment": {
+    "os": "darwin",
+    "arch": "arm64",
+    "node": "v24.13.0",
+    "pnpm": "10.30.3",
+    "tsdown": "0.23.2",
+    "frozenLockfile": true
+  },
+  "stockSource": {
+    "stockVersion": "0.2.2-alpha.2",
+    "packageCount": 321,
+    "regularFiles": 8277,
+    "unexpectedRegularFiles": 0,
+    "officialProvenanceSha256": "5ea94a37578e034612501459d1b0626fd2ed6671cec13c5b27a1279ce1314a18",
+    "archiveIntegrityAndInstalledFilesRechecked": true
+  },
+  "legacyImages": {
+    "scope": "legacy component only",
+    "host": "0.1.7-rc.1",
+    "images": {
+      "syntheticOnly": true,
+      "generated": 2,
+      "edited": 2,
+      "codeRuns": 2,
+      "dispatchEvent": "tool/ptc-dispatch",
+      "originalDownloadVerified": true,
+      "originalAuthenticationVerified": true,
+      "inheritedOriginalVerified": true,
+      "earlierForkDenied": true,
+      "unrelatedSessionDenied": true,
+      "editSourcesVerified": true,
+      "inheritedEditVerified": true,
+      "invalidEditRefused": true,
+      "selectionHandlesVerified": true,
+      "realProviderRequests": 0
+    }
+  },
+  "localValidation": {
+    "focused": {
+      "files": 3,
+      "passed": 41
+    },
+    "fullCheck": {
+      "exitCode": 0,
+      "passed": 2387,
+      "skipped": 2
+    },
+    "oldHostNodeMatrices": "pending new-head CI"
+  },
+  "merged": false,
+  "released": false,
+  "enabled": false,
+  "liveAccountAccepted": false
+}

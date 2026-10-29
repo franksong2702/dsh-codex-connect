@@ -12,6 +12,7 @@ const EDIT_PREFIX = 'codex-connect-image-result-v2:'
 export function imageRuntimeService(manifest, separateExecutor) {
   let dependencies = { ...manifest.dependencies, ...manifest.peerDependencies }
   if (separateExecutor !== undefined) {
+    assert.ok(typeof manifest.version === 'string' && manifest.version.length > 0, 'separated tools must have an exact Host version')
     assert.equal(separateExecutor.name, '@deepseek-ai/dsh-tool-executor-ptc', 'unexpected separated executor')
     assert.equal(separateExecutor.version, manifest.version, 'executor must belong to the exact same Host')
     dependencies = { ...dependencies, ...separateExecutor.dependencies, ...separateExecutor.peerDependencies }
