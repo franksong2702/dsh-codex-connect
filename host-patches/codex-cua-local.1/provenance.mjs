@@ -24,10 +24,16 @@ export function assertClosure(dependencies, lock, spec) {
 export function localDependencyLayout(input, names, thirdParty = {}) {
   const dependencies = { ...thirdParty }, optionalDependencies = {}, overrides = {}
   for (const name of names) {
-    const field = Object.hasOwn(input.dependencies ?? {}, name) ? dependencies : optionalDependencies
-    field[name] = overrides[name] = `file:../packages/${name.slice('@deepseek-ai/'.length)}`
+    const value = overrides[name] = `file:../packages/${name.slice('@deepseek-ai/'.length)}`
+    if (Object.hasOwn(input.dependencies ?? {}, name)) dependencies[name] = value
+    else if (Object.hasOwn(input.optionalDependencies ?? {}, name)) optionalDependencies[name] = value
   }
   return { dependencies, optionalDependencies, overrides, pnpm: { overrides } }
+}
+
+/** Required paths come from verified published metadata, never caller omission. */
+export function assertRequiredInstalled(required, installed) {
+  for (const name of required) if (!installed.has(name)) throw new Error(`Required published package is not installed: ${name}`)
 }
 
 export function assertIntegrity(bytes, integrity) {

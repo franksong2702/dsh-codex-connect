@@ -6,10 +6,23 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
-import { assertClosure, assertIntegrity, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout } from './provenance.mjs'
+import { assertClosure, assertIntegrity, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled } from './provenance.mjs'
 import { assertCuaFixturePackages } from '../../scripts/cua-fixture-packages.mjs'
+import { resolveExactDshOverrides } from '../../scripts/exact-dsh-fixture.mjs'
 
 const integrity = bytes => `sha512-${createHash('sha512').update(bytes).digest('base64')}`
+test('verified package metadata keeps required paths required despite missing caller roots', async () => {
+  const version = '0.2.2-alpha.2', root = '@deepseek-ai/dsh', required = '@deepseek-ai/dsh-agent', optional = '@deepseek-ai/dsh-experimental-cua-macos'
+  const metadata = {
+    [root]: { name: root, version, dependencies: { [required]: version }, optionalDependencies: { [optional]: version } },
+    [required]: { name: required, version }, [optional]: { name: optional, version, os: ['darwin'] },
+  }
+  const graph = await resolveExactDshOverrides(version, async name => metadata[name])
+  assert.deepEqual(Object.keys(graph.dependencies).sort(), [root, required].sort())
+  assert.throws(() => assertRequiredInstalled(Object.keys(graph.dependencies), new Set([root, optional])), /Required published package is not installed/)
+  assert.doesNotThrow(() => assertRequiredInstalled(Object.keys(graph.dependencies), new Set([root, required])))
+})
+
 test('closure cannot omit a patched or unpatched dependency or change patch provenance', () => {
   const names = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-agent']
   const packages = Object.fromEntries(names.map(name => [name, { version: '0.2.2-alpha.2', integrity: 'sha512-YQ==', tarball: `https://registry.npmjs.org/@deepseek-ai/${name.split('/')[1]}/-/${name.split('/')[1]}-0.2.2-alpha.2.tgz` }]))
@@ -29,6 +42,12 @@ test('closure cannot omit a patched or unpatched dependency or change patch prov
   const requiredWins = localDependencyLayout({ dependencies, optionalDependencies: optional }, names)
   assert.equal(requiredWins.dependencies['@deepseek-ai/dsh-agent'], 'file:../packages/dsh-agent')
   assert.equal(Object.hasOwn(requiredWins.optionalDependencies, '@deepseek-ai/dsh-agent'), false)
+  const overridesOnly = localDependencyLayout({ dependencies: required, overrides: dependencies }, names)
+  assert.equal(Object.hasOwn(overridesOnly.dependencies, '@deepseek-ai/dsh-agent'), false)
+  assert.equal(Object.hasOwn(overridesOnly.optionalDependencies, '@deepseek-ai/dsh-agent'), false)
+  assert.equal(overridesOnly.overrides['@deepseek-ai/dsh-agent'], 'file:../packages/dsh-agent')
+  assert.doesNotThrow(() => assertRequiredInstalled(['@deepseek-ai/dsh'], new Set(['@deepseek-ai/dsh'])))
+  assert.throws(() => assertRequiredInstalled(names, new Set(['@deepseek-ai/dsh'])), /Required published package is not installed/)
 })
 
 test('whole-package validation catches unpatched source tampering, extra files, missing files and archive corruption', async () => {
@@ -85,6 +104,8 @@ test('Host version admission permits only a declared platform-optional absence, 
   const require = path => path === `${name}/package.json` ? missing() : { version }
   const optional = { optionalDependencies: { [name]: version } }
   assert.equal(assertCuaFixturePackages(require, version, optional, 'linux').nativeBackend, 'omitted_platform_optional')
+  const overridesOnly = { overrides: { [name]: version } }
+  assert.equal(assertCuaFixturePackages(require, version, overridesOnly, 'linux').nativeBackend, 'omitted_platform_optional')
   assert.throws(() => assertCuaFixturePackages(require, version, optional, 'darwin'), /Cannot find module/)
   assert.throws(() => assertCuaFixturePackages(require, version, {}, 'linux'), /Cannot find module/)
   assert.throws(() => assertCuaFixturePackages(require, version, { ...optional, dependencies: { [name]: version } }, 'linux'), /Cannot find module/)

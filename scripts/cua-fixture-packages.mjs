@@ -6,7 +6,7 @@ export function assertCuaFixturePackages(require, version, manifest, platform = 
   const name = '@deepseek-ai/dsh-experimental-cua-macos'
   let metadata
   try { metadata = require(`${name}/package.json`) } catch (error) {
-    if (error.code !== 'MODULE_NOT_FOUND' || !error.message.includes(`'${name}/package.json'`) || platform === 'darwin' || Object.hasOwn(manifest.dependencies ?? {}, name) || !Object.hasOwn(manifest.optionalDependencies ?? {}, name)) throw error
+    if (error.code !== 'MODULE_NOT_FOUND' || !error.message.includes(`'${name}/package.json'`) || platform === 'darwin' || Object.hasOwn(manifest.dependencies ?? {}, name) || !Object.hasOwn(manifest.optionalDependencies ?? {}, name) && !Object.hasOwn(manifest.overrides ?? {}, name)) throw error
     return { nativeBackend: 'omitted_platform_optional', nativeExecuted: false }
   }
   if (metadata.version !== version) throw new Error('Wrong exact Host package: dsh-experimental-cua-macos')

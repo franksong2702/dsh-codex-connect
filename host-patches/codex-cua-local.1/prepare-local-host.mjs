@@ -5,7 +5,8 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
-import { assertClosure, publishedTarball, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout } from './provenance.mjs'
+import { assertClosure, publishedTarball, verifyPublishedPackage, copyVerifiedPublishedPackage, localDependencyLayout, assertRequiredInstalled } from './provenance.mjs'
+import { resolveExactDshOverrides } from '../../scripts/exact-dsh-fixture.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const spec = JSON.parse(await readFile(join(here, 'manifest.json'), 'utf8'))
@@ -23,27 +24,30 @@ export async function prepareLocalHost(publishedFixture, output, { native = fals
   await mkdir(target)
   const require = createRequire(join(source, 'package.json'))
   const input = JSON.parse(await readFile(join(source, 'package.json'), 'utf8'))
-  const names = assertClosure({ ...input.optionalDependencies, ...input.dependencies }, lock, spec)
+  const names = assertClosure({ ...input.overrides, ...input.optionalDependencies, ...input.dependencies }, lock, spec)
   const packages = join(target, 'packages')
   await mkdir(packages)
+  const originalMetadata = new Map(), installed = new Set()
   let verified = 0
   for (const name of names) {
     const archive = await publishedTarball(join(source, 'verified-tarballs'), name, lock.packages[name])
     const destination = join(packages, name.slice('@deepseek-ai/'.length))
     let original
     try { original = require.resolve(`${name}/package.json`) } catch (error) {
-      if (error.code !== 'MODULE_NOT_FOUND' || Object.hasOwn(input.dependencies ?? {}, name) || !Object.hasOwn(input.optionalDependencies ?? {}, name)) throw error
+      if (error.code !== 'MODULE_NOT_FOUND' || Object.hasOwn(input.dependencies ?? {}, name) || !Object.hasOwn(input.optionalDependencies ?? {}, name) && !Object.hasOwn(input.overrides ?? {}, name)) throw error
     }
     if (original) {
       await cp(dirname(original), destination, { recursive: true, dereference: false,
         filter: path => !relative(dirname(original), path).split(/[\\/]/u).some(part => part === 'node_modules' || part === '.build') })
       // Verify the copied bytes we will actually patch, not an earlier mutable input.
       await verifyPublishedPackage(destination, archive, lock.packages[name].integrity, target)
+      installed.add(name)
     } else {
       await copyVerifiedPublishedPackage(archive, lock.packages[name].integrity, destination, target)
     }
     const metadata = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'))
     if (metadata.name !== name || metadata.version !== spec.baseVersion) throw new Error(`Not the original exact package: ${name}`)
+    originalMetadata.set(name, structuredClone(metadata))
     const patch = spec.packages[name]
     if (patch) {
       const patchBytes = await readFile(join(here, patch.patch))
@@ -65,6 +69,11 @@ export async function prepareLocalHost(publishedFixture, output, { native = fals
     await writeFile(join(destination, 'package.json'), `${JSON.stringify(metadata, null, 2)}\n`)
     if (++verified % 50 === 0 || verified === names.length) process.stderr.write(`Verified and prepared ${verified}/${names.length} complete published packages\n`)
   }
+  // Recompute required paths from integrity-verified package metadata. An input
+  // cannot disguise a missing required package as an overrides-only optional.
+  const publishedGraph = await resolveExactDshOverrides(spec.baseVersion, async name => originalMetadata.get(name))
+  assertClosure(publishedGraph.overrides, lock, spec)
+  assertRequiredInstalled(Object.keys(publishedGraph.dependencies), installed)
   const nativeRoot = join(packages, 'dsh-experimental-cua-macos', 'native')
   let nativeSha256 = null
   if (native) {
