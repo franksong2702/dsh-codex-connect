@@ -165,7 +165,17 @@
     "desktopActions": 0,
     "actualHumanApprovalCards": 0,
     "effectiveBackendModel": "unknown; requested Terra/high in scripted Host fixture only",
-    "performanceParity": "not assessed"
+    "performanceParity": "not assessed",
+    "stockHost": "24 passed, 66 local-capability-only tests skipped; unsupported stock consent remains blocked",
+    "firstExactHeadCI": {
+      "head": "986bdcaa975c0693ffa3f20516435a003af4830c",
+      "run": 40928002049,
+      "passedChecks": 11,
+      "failed": "composition stock phase: undefined capability version incorrectly passed a <2 skip predicate, then a pending question fixture hit the 15-minute command bound; local phase not reached",
+      "codeQL": "check123638914373 No new alerts / annotations0 / []",
+      "fix": "test predicate explicitly recognizes only versions2/3; exact stock and local7 synthetic composition rerun passed; no production/native change",
+      "newExactHeadCI": "pending"
+    }
   },
   "remaining": [
     "independent exact-source review",

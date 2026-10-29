@@ -1254,7 +1254,7 @@ test('ordinary Flash conversation privately locates a unique target and approves
       assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
       return allowTask()
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
+  if (![2, 3].includes(f.ctx.get('cuaTaskApproval')?.version)) { t.skip('requires local.6 private preparation'); return }
   await f.conversation('Complete this synthetic task in Synthetic Browser')
   assert.equal(f.questions.length, 1)
   assert.ok(f.nativeRequests.some(call => call.method === 'setValue'), 'real Host pipeline dispatches the synthetic native input')
@@ -1284,7 +1284,7 @@ test('ambiguous ordinary task selects in the same root and denies without Terra,
       if (question.id === 'cua-task-window') return { answers: [{ id: question.id, selected: [question.options[0].label] }] }
       return { answers: [{ id: 'cua-task-access', selected: ['Deny'] }] }
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
+  if (![2, 3].includes(f.ctx.get('cuaTaskApproval')?.version)) { t.skip('requires local.6 private preparation'); return }
   await f.conversation('Use Synthetic Browser for this task')
   assert.deepEqual(f.questions.map(request => request.questions[0].id), ['cua-task-window', 'cua-task-access'])
   assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
@@ -1306,7 +1306,7 @@ test('Stop during ordinary root consent drains target metadata with no Terra or 
       entered()
       return new Promise((_resolve, reject) => request.signal.addEventListener('abort', () => reject(Error('human interaction cancelled')), { once: true }))
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
+  if (![2, 3].includes(f.ctx.get('cuaTaskApproval')?.version)) { t.skip('requires local.6 private preparation'); return }
   const run = f.conversation('Use Synthetic Browser for this task')
   await pending
   f.parent.agent.cancel({ kind: 'user' })
@@ -1329,7 +1329,7 @@ const admittedHuman = (f, text = 'Use Synthetic Browser for this bounded task') 
 test('prepared target cannot be claimed by a different admitted human input', async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
   const approval = f.ctx.get('cuaTaskApproval')
-  if (approval?.version < 2) { t.skip('requires local.6 preparation'); return }
+  if (![2, 3].includes(approval?.version)) { t.skip('requires local.6 preparation'); return }
   admittedHuman(f)
   const input = { parent: f.parent.agent, goal: 'Intent-bound task', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
   const selected = await approval.prepare(input)
@@ -1344,7 +1344,7 @@ test('prepared target cannot be claimed by a different admitted human input', as
 
 test('new input while the real child factory is awaiting publication cannot rebind the old goal', async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative, humanAnswer: allowTask })
-  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 preparation'); return }
+  if (![2, 3].includes(f.ctx.get('cuaTaskApproval')?.version)) { t.skip('requires local.6 preparation'); return }
   let enter, release
   const entered = new Promise(resolve => { enter = resolve }), held = new Promise(resolve => { release = resolve })
   f.ctx.on('agent/created', async ({ agent }) => { if (agent.session.header.parentSession === f.parent.agent.id) { enter(); await held } })
@@ -1364,7 +1364,7 @@ test('new human input closes pending root consent and rejects its late old answe
   const entered = new Promise(resolve => { enter = resolve })
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
     nativeResponse: conversationalNative, humanAnswer: request => { received = request; enter(); return new Promise(resolve => { answer = resolve }) } })
-  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 preparation'); return }
+  if (![2, 3].includes(f.ctx.get('cuaTaskApproval')?.version)) { t.skip('requires local.6 preparation'); return }
   const run = f.conversation('Use Synthetic Browser for the original request')
   await entered
   f.parent.agent.steer(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Replace the original request while consent is pending' }] }))
@@ -1382,7 +1382,7 @@ test('new human input closes pending root consent and rejects its late old answe
 for (const changed of ['goal', 'expiresAt']) test(`prepared task refuses a changed ${changed} at the real begin boundary`, async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
   const approval = f.ctx.get('cuaTaskApproval')
-  if (approval?.version < 2) { t.skip('requires local.6 preparation'); return }
+  if (![2, 3].includes(approval?.version)) { t.skip('requires local.6 preparation'); return }
   admittedHuman(f)
   const input = { parent: f.parent.agent, goal: 'Intent-bound original goal', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
   const selected = await approval.prepare(input)
