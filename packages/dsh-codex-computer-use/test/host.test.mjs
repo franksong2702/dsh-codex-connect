@@ -37,7 +37,7 @@ function *toolStream(block) {
   yield { type: 'finish', reason: { kind: 'tool-call' } }
 }
 
-async function fixture({ script, cua, officialCua = false, strict = false, taskApproval = true, providerName = 'dsh-cua', humanAnswer, nativeResponse, config = {} } = {}) {
+async function fixture({ script, cua, officialCua = false, strict = false, taskApproval = true, providerName = 'dsh-cua', humanAnswer, nativeResponse, onStream, config = {} } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'codex-cua-host-'))
   owned.push(() => rm(directory, { recursive: true, force: true }))
   const ctx = new Context()
@@ -73,6 +73,7 @@ async function fixture({ script, cua, officialCua = false, strict = false, taskA
     async resolveModel(provider, id) { return { provider, id, name: 'Fixture', reasoning: { efforts: [{ id: ReasoningEffortId('high'), name: 'high' }] } } }
     async *stream(options) {
       seen.push(options)
+      if (onStream) await onStream(options)
       if (options.model === 'flash') {
         if (parentIndex++ === 0) yield *toolStream(call(TOOL, { goal: 'Complete this task in the requested browser' }))
         else {
@@ -126,7 +127,7 @@ async function fixture({ script, cua, officialCua = false, strict = false, taskA
           Promise.resolve(nativeResponse ? nativeResponse(request) : request.method === 'getApp' ? { appHandle: 'app-fixture', pid: 1234, name: target.application,
             authorization: { id: 'a'.repeat(64), name: target.application, persistable: false } } : request.method === 'getState' ? {
               appHandle: 'app-fixture', pid: 1234, windowId: 7, snapshotId: 'strict-fixture', windowScope: 'strict-window', tree: 'Synthetic button', windows: [{ windowId: 7, pid: 1234, appName: target.application, title: 'Synthetic window', bounds: { x: 0, y: 0, width: 100, height: 100 }, isOnScreen: true, onCurrentSpace: true }], truncated: false,
-            } : { acted: true }).then(result => { if (!stdout.writableEnded) stdout.write(JSON.stringify({ id: request.id, result }) + '\n') }, error => stdout.destroy(error))
+            } : { acted: true }).then(result => { if (!stdout.writableEnded) stdout.write(JSON.stringify({ id: request.id, result }) + '\n') }, error => { if (typeof error?.code === 'string' && !stdout.writableEnded) stdout.write(JSON.stringify({id:request.id,error:{code:error.code,message:'Synthetic native refusal'}})+'\n'); else stdout.destroy(error) })
           callback()
         } })
         return { stdin, stdout, done: closed, close() { stdout.end(); stdin.end(); done() }, waitForClose: () => closed }
@@ -786,7 +787,7 @@ test('lease loss aborts an in-flight native operation and returns blocked', { ti
   assert.equal(batch.results[0].result.value.reason, 'desktop_lease_lost')
 })
 
-const missingTargetReason = f => f.ctx.get('cuaTaskApproval')?.version === 2 ? 'target_preparation_blocked' : 'operator_target_required'
+const missingTargetReason = f => f.ctx.get('cuaTaskApproval')?.version >= 2 ? 'target_preparation_blocked' : 'operator_target_required'
 const operatorFace = f => f.ctx.extend({invocation:{peer:{principal:{kind:'owner'}}}}).get('cuaAccess')
 
 // First-use operator route. Native metadata/results remain synthetic; this is not GUI acceptance.
@@ -1253,7 +1254,7 @@ test('ordinary Flash conversation privately locates a unique target and approves
       assert.equal(f.nativeRequests.some(call => ['getState', 'screenshot', 'setValue', 'click'].includes(call.method)), false)
       return allowTask()
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
   await f.conversation('Complete this synthetic task in Synthetic Browser')
   assert.equal(f.questions.length, 1)
   assert.ok(f.nativeRequests.some(call => call.method === 'setValue'), 'real Host pipeline dispatches the synthetic native input')
@@ -1283,7 +1284,7 @@ test('ambiguous ordinary task selects in the same root and denies without Terra,
       if (question.id === 'cua-task-window') return { answers: [{ id: question.id, selected: [question.options[0].label] }] }
       return { answers: [{ id: 'cua-task-access', selected: ['Deny'] }] }
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
   await f.conversation('Use Synthetic Browser for this task')
   assert.deepEqual(f.questions.map(request => request.questions[0].id), ['cua-task-window', 'cua-task-access'])
   assert.equal(f.seen.some(call => call.model === ROUTE.model), false)
@@ -1305,7 +1306,7 @@ test('Stop during ordinary root consent drains target metadata with no Terra or 
       entered()
       return new Promise((_resolve, reject) => request.signal.addEventListener('abort', () => reject(Error('human interaction cancelled')), { once: true }))
     } })
-  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 private preparation'); return }
+  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 private preparation'); return }
   const run = f.conversation('Use Synthetic Browser for this task')
   await pending
   f.parent.agent.cancel({ kind: 'user' })
@@ -1328,7 +1329,7 @@ const admittedHuman = (f, text = 'Use Synthetic Browser for this bounded task') 
 test('prepared target cannot be claimed by a different admitted human input', async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
   const approval = f.ctx.get('cuaTaskApproval')
-  if (approval?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  if (approval?.version < 2) { t.skip('requires local.6 preparation'); return }
   admittedHuman(f)
   const input = { parent: f.parent.agent, goal: 'Intent-bound task', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
   const selected = await approval.prepare(input)
@@ -1343,7 +1344,7 @@ test('prepared target cannot be claimed by a different admitted human input', as
 
 test('new input while the real child factory is awaiting publication cannot rebind the old goal', async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative, humanAnswer: allowTask })
-  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 preparation'); return }
   let enter, release
   const entered = new Promise(resolve => { enter = resolve }), held = new Promise(resolve => { release = resolve })
   f.ctx.on('agent/created', async ({ agent }) => { if (agent.session.header.parentSession === f.parent.agent.id) { enter(); await held } })
@@ -1363,7 +1364,7 @@ test('new human input closes pending root consent and rejects its late old answe
   const entered = new Promise(resolve => { enter = resolve })
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 },
     nativeResponse: conversationalNative, humanAnswer: request => { received = request; enter(); return new Promise(resolve => { answer = resolve }) } })
-  if (f.ctx.get('cuaTaskApproval')?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  if (f.ctx.get('cuaTaskApproval')?.version < 2) { t.skip('requires local.6 preparation'); return }
   const run = f.conversation('Use Synthetic Browser for the original request')
   await entered
   f.parent.agent.steer(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Replace the original request while consent is pending' }] }))
@@ -1381,7 +1382,7 @@ test('new human input closes pending root consent and rejects its late old answe
 for (const changed of ['goal', 'expiresAt']) test(`prepared task refuses a changed ${changed} at the real begin boundary`, async t => {
   const f = await fixture({ officialCua: true, strict: true, config: { application: '', windowId: 0 }, nativeResponse: conversationalNative })
   const approval = f.ctx.get('cuaTaskApproval')
-  if (approval?.version !== 2) { t.skip('requires local.6 preparation'); return }
+  if (approval?.version < 2) { t.skip('requires local.6 preparation'); return }
   admittedHuman(f)
   const input = { parent: f.parent.agent, goal: 'Intent-bound original goal', signal: f.controller.signal, expiresAt: Date.now() + 1500 }
   const selected = await approval.prepare(input)
@@ -1394,4 +1395,172 @@ for (const changed of ['goal', 'expiresAt']) test(`prepared task refuses a chang
   assert.equal(f.questions.length, 0)
   assert.equal(f.seen.length, 0)
   await f.ctx.cuaTaskTargets.clear(f.parent.agent.id)
+})
+
+function chromeTransport({ failArm = false, delayChecks = false } = {}) {
+  const state = { allowed: false, armed: false, focus: true, delayChecks, entered: undefined, release: undefined }
+  const respond = async request => {
+    if (request.method === 'listApps') return [{pid:1234,name:'Google Chrome',bundleId:'com.google.Chrome'}]
+    if (request.method === 'getApp') return {...targetNative(request),name:'Google Chrome',bundleId:'com.google.Chrome'}
+    if (request.method === 'prepareTaskWindows') return targetNative(request)
+    if (request.method === 'authorizeTaskInput') {
+      assert.equal(state.allowed,true,'arming/focus may happen only after the real root answer')
+      state.armed = true
+      return {inputScope:'chrome-instance',taskId:request.params.taskId,pid:failArm?9999:1234,windowId:7,focused:true}
+    }
+    if (request.method === 'checkTaskInput' || request.method === 'taskInput') {
+      assert.equal(state.armed,true)
+      if (!state.focus) throw Object.assign(new Error('synthetic takeover'),{code:'CUA_INPUT_USER_TAKEOVER'})
+      if (request.method === 'checkTaskInput' && state.delayChecks) {
+        state.entered?.()
+        await new Promise(resolve=>{state.release=resolve})
+      }
+      return {inputScope:'chrome-instance',windowId:7,dispatched:request.method==='taskInput',verified:false}
+    }
+    return targetNative(request)
+  }
+  return {state,respond}
+}
+const taskInputCall = (kind, fields) => call('cua',{method:'taskInput',params:{appHandle:'app-fixture',windowId:7,kind,...fields}})
+
+test('ordinary Chrome task obtains explicit instance consent before text/chords/navigation, preserves Flash and drains',async t=>{
+ const native=chromeTransport();let f
+ const script=[taskInputCall('navigate',{url:'https://example.test/path'}),call('cua',{method:'getState',params:{appHandle:'app-fixture',windowId:7,includeMenus:false}}),taskInputCall('text',{text:'Hello 世界'}),taskInputCall('key',{key:'a',modifiers:['command']}),call('cua',{method:'getState',params:{appHandle:'app-fixture',windowId:7,includeMenus:false}}),call('finish_computer_use',{status:'completed',summary:'Synthetic Chrome state observed'})]
+ f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},script,nativeResponse:native.respond,humanAnswer:request=>{
+   const q=request.questions[0];assert.equal(request.agent,f.parent.agent);assert.equal(f.seen.some(c=>c.model===ROUTE.model),false)
+   assert.match(q.detail,/另一个 Chrome 窗口/);assert.match(q.detail,/无法追回/);assert.match(q.detail,/永久/)
+   native.state.allowed=true;return {answers:[{id:q.id,selected:[q.options[0].label]}]}
+ }})
+ if(f.ctx.get('cuaTaskApproval')?.version!==3){t.skip('requires local.7 Chrome input');return}
+ await f.conversation('在 Chrome 里打开 https://example.test 并完成本次任务')
+ const result=JSON.parse(f.parent.agent.session.snapshotEvents().find(e=>e.type==='tool/result').data.message.content[0].text)
+ assert.equal(result.status,'completed',JSON.stringify(result));assert.equal(result.inputScope,'chrome-instance');assert.equal(result.cleanup,'drained')
+ assert.deepEqual(f.parent.agent.model.current(),{provider:'deepseek',model:'flash'})
+ assert.deepEqual(f.nativeRequests.filter(r=>r.method==='taskInput').map(r=>r.params.kind),['navigate','text','key'])
+ assert.equal(f.nativeRequests.filter(r=>r.method==='authorizeTaskInput').length,1)
+ assert.ok(f.nativeRequests.some(r=>r.method==='checkTaskInput'))
+ assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
+ assert.equal(f.ctx.cuaTaskTargets.rows.size,0)
+})
+
+for(const params of [{kind:'navigate',url:'javascript:alert(1)'},{kind:'navigate',url:'file:///synthetic'},{kind:'navigate',url:'mailto:synthetic@example.test'},{kind:'key',key:'t',modifiers:['command']},{kind:'key',key:'v',modifiers:['command']}])test(`Chrome ${params.kind} rejects denied entry before native input: ${params.key??params.url.split(':')[0]}`,async t=>{
+ const native=chromeTransport()
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},script:[taskInputCall(params.kind,params)],nativeResponse:native.respond,humanAnswer:request=>{native.state.allowed=true;return {answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}}})
+ if(f.ctx.get('cuaTaskApproval')?.version!==3){t.skip('requires local.7');return}
+ await f.conversation('Use Chrome for this task')
+ assert.equal(f.nativeRequests.some(r=>r.method==='taskInput'),false)
+ assert.equal(f.ctx.cuaTaskTargets.rows.size,0)
+ assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
+})
+
+test('Chrome denial creates no native input lease and no Terra request',async t=>{
+ const native=chromeTransport()
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},nativeResponse:native.respond,humanAnswer:request=>({answers:[{id:request.questions[0].id,selected:[request.questions[0].options[1].label]}]})})
+ if(f.ctx.get('cuaTaskApproval')?.version!==3){t.skip('requires local.7');return}
+ await f.conversation('Use Chrome for this task')
+ assert.equal(native.state.armed,false);assert.equal(f.seen.some(c=>c.model===ROUTE.model),false)
+ assert.equal(f.nativeRequests.some(r=>['authorizeTaskInput','taskInput'].includes(r.method)),false)
+ const count=f.nativeRequests.length
+ assert.equal((await f.execute()).results[0].result.value.reason,'task_retry_requires_new_user_input')
+ assert.equal(f.nativeRequests.length,count)
+})
+
+test('native arm identity mismatch blocks before the first Terra request',async t=>{
+ const native=chromeTransport({failArm:true})
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},nativeResponse:native.respond,humanAnswer:request=>{native.state.allowed=true;return {answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}}})
+ if(f.ctx.get('cuaTaskApproval')?.version!==3){t.skip('requires local.7');return}
+ await f.conversation('Use Chrome for this task')
+ assert.equal(f.seen.some(c=>c.model===ROUTE.model),false);assert.equal(f.nativeRequests.some(r=>r.method==='taskInput'),false)
+ assert.equal(f.ctx.cuaTaskTargets.rows.size,0)
+})
+
+test('task monitor detects takeover during an in-flight Terra stream and latches without input or a new approval',async t=>{
+ const native=chromeTransport();let entered
+ const ready=new Promise(resolve=>{entered=resolve})
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0,maxDurationMs:3000},nativeResponse:native.respond,
+   humanAnswer:request=>{native.state.allowed=true;return {answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}},
+   onStream:async request=>{if(request.model!==ROUTE.model)return;native.state.focus=false;entered();await new Promise((_resolve,reject)=>request.signal.addEventListener('abort',()=>reject(Error('synthetic stream stop')),{once:true}))}})
+ if(f.ctx.get('cuaTaskApproval')?.version!==3){t.skip('requires local.7');return}
+ const run=f.conversation('Use Chrome for this task');await ready;await run
+ const result=JSON.parse(f.parent.agent.session.snapshotEvents().find(e=>e.type==='tool/result').data.message.content[0].text)
+ assert.equal(result.status,'blocked');assert.equal(result.reason,'chrome_input_closed');assert.equal(result.cleanup,'drained')
+ assert.equal(f.nativeRequests.some(r=>r.method==='taskInput'),false)
+ const count=f.nativeRequests.length
+ assert.equal((await f.execute()).results[0].result.value.reason,'task_retry_requires_new_user_input')
+ assert.equal(f.nativeRequests.length,count)
+})
+
+async function directChromeTask(t,native,ttl=2500) {
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0,maxDurationMs:3000},nativeResponse:native.respond,
+   humanAnswer:request=>{native.state.allowed=true;return {answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}}})
+ const capability=f.ctx.get('cuaTaskApproval');if(capability?.version!==3){t.skip('requires local.7');return}
+ admittedHuman(f,'Use Chrome for this bounded task')
+ const input={parent:f.parent.agent,goal:'Synthetic Chrome input',expiresAt:Date.now()+ttl,signal:f.controller.signal}
+ const selected=await capability.prepare(input)
+ const child=await f.ctx.agents.create({sessionId:SessionId(crypto.randomUUID()),parentAgent:f.parent.agent,meta:{origin:'subagent',parentSession:f.parent.agent.id,agentPreset:PRESET},agentOptions:ROUTE,async setup(childCtx){await f.ctx.agentPresets.mount(childCtx,PRESET)}})
+ const grant=capability.begin({...input,...selected,child:child.agent})
+ owned.push(async()=>{await grant.dispose();await child.dispose()})
+ const invoke=async args=>(await f.ctx.tools.execute({agent:child.agent,calls:[call('cua',args)],signal:f.controller.signal})).results[0].result
+ assert.equal((await invoke({method:'getApp',params:{selector:selected.application}})).isError,false)
+ return {...f,child,grant,capability,invoke}
+}
+
+test('task check and a real model-facing getApp share the serialized native channel without NATIVE_BUSY',async t=>{
+ const native=chromeTransport();const f=await directChromeTask(t,native);if(!f)return
+ let entered;const ready=new Promise(resolve=>{entered=resolve})
+ native.state.delayChecks=true;native.state.entered=entered
+ const checking=f.capability.check(f.grant);await ready
+ const selecting=f.invoke({method:'getApp',params:{selector:'1234'}})
+ await Promise.resolve();native.state.delayChecks=false;native.state.release()
+ await checking
+ assert.equal((await selecting).isError,false)
+ assert.equal(f.questions.length,1,'repeat identity selection must not re-arm or ask again')
+ assert.equal(f.nativeRequests.filter(r=>r.method==='authorizeTaskInput').length,1)
+})
+
+test('Stop during an in-flight Chrome input drains, rejects its late reply, and prevents another dispatch',async t=>{
+ const native=chromeTransport();const original=native.respond;let entered,release
+ const ready=new Promise(resolve=>{entered=resolve})
+ native.respond=async request=>{if(request.method==='taskInput'){entered();await new Promise(resolve=>{release=resolve})}return original(request)}
+ const f=await directChromeTask(t,native);if(!f)return
+ const running=f.invoke({method:'taskInput',params:{appHandle:'app-fixture',windowId:7,kind:'text',text:'synthetic'}})
+ await ready;f.controller.abort();const outcome=await running;release()
+ assert.equal(outcome.isError,true)
+ await f.grant.dispose();const count=f.nativeRequests.length
+ await assert.rejects(f.capability.check(f.grant),/CUA_TASK_CLOSED/)
+ assert.equal(f.nativeRequests.length,count)
+ assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
+})
+
+test('Chrome native private arming/check methods cannot be submitted through the model CUA schema',async t=>{
+ const native=chromeTransport();const f=await directChromeTask(t,native);if(!f)return
+ const count=f.nativeRequests.length
+ for(const method of ['authorizeTaskInput','checkTaskInput'])assert.equal((await f.invoke({method,params:{appHandle:'app-fixture',windowId:7,taskId:f.grant.id,inputScope:'chrome-instance',expiresAt:Date.now()+1000}})).isError,true)
+ assert.equal(f.nativeRequests.length,count)
+ assert.equal((await f.invoke({method:'pressKey',params:{appHandle:'app-fixture',key:'Return'}})).isError,true)
+ assert.equal(f.nativeRequests.length,count)
+})
+
+for(const reason of ['revoke','expiry'])test(`Chrome ${reason} closes the armed task and refuses further input without another answer`,async t=>{
+ const native=chromeTransport();const f=await directChromeTask(t,native,reason==='expiry'?500:2500);if(!f)return
+ if(reason==='revoke')await f.grant.revoke()
+ else await new Promise(resolve=>{if(f.grant.signal.aborted)resolve();else f.grant.signal.addEventListener('abort',resolve,{once:true})})
+ await f.grant.dispose();const count=f.nativeRequests.length
+ const result=await f.invoke({method:'taskInput',params:{appHandle:'app-fixture',windowId:7,kind:'text',text:'must not dispatch'}})
+ assert.equal(result.isError,true);assert.equal(f.nativeRequests.length,count);assert.equal(f.questions.length,1)
+ assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
+})
+
+test('requesting Chrome keyboard for a non-Chrome retained target rejects before transfer and leaves confirmed cleanup possible',async t=>{
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},nativeResponse:conversationalNative})
+ const capability=f.ctx.get('cuaTaskApproval');if(capability?.version!==3){t.skip('requires local.7');return}
+ admittedHuman(f)
+ const input={parent:f.parent.agent,goal:'Synthetic task',expiresAt:Date.now()+1500,signal:f.controller.signal}
+ const selected=await capability.prepare(input)
+ const child=await f.ctx.agents.create({sessionId:SessionId(crypto.randomUUID()),parentAgent:f.parent.agent,meta:{origin:'subagent',parentSession:f.parent.agent.id,agentPreset:PRESET},agentOptions:ROUTE})
+ owned.push(()=>child.dispose())
+ assert.throws(()=>capability.begin({...input,...selected,child:child.agent,inputScope:'chrome-instance'}),/CUA_INPUT_SCOPE_DENIED/)
+ assert.equal(f.ctx.cuaTaskTargets.rows.size,1)
+ await f.ctx.cuaTaskTargets.clear(f.parent.agent.id)
+ assert.equal(f.ctx.cuaTaskTargets.rows.size,0);assert.equal(f.questions.length,0)
 })

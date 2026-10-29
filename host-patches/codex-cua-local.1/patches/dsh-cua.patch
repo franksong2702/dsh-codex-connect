@@ -1,6 +1,12 @@
 --- a/lib/bridge.js
 +++ b/lib/bridge.js
-@@ -229,0 +230 @@
+@@ -126,0 +127,5 @@
++	operation("taskInput", {
++        ...window, kind: z.enum(["text", "key", "navigate"]), text: z.string().max(512).optional(),
++        key: z.string().min(1).max(32).optional(), modifiers: z.array(z.enum(["command","control","option","shift"])).max(2).optional(),
++        url: z.string().max(2048).optional()
++    }),
+@@ -229,0 +235 @@
 +	windowScope: z.enum(["strict-window", "application"]).optional(),
 --- a/lib/client.js
 +++ b/lib/client.js
@@ -38,7 +44,41 @@
 +				}, props => react_jsx_runtime.jsxs(react.Fragment, {children:[react_jsx_runtime.jsx(TaskTargetPanel,{remote:ctx.remote.cuaAccess,useSessions:props.useSessions}),react_jsx_runtime.jsx(PermissionPanel,props)]})));
 --- a/lib/index.js
 +++ b/lib/index.js
-@@ -1,0 +2,167 @@
+@@ -1,0 +2,201 @@
++/** Chrome task input policy. This is application-instance input, not an atomic window sandbox. */
++const plain = new Set(['enter','return','tab','escape','space','backspace','delete','left','right','up','down','home','end','pageup','pagedown'])
++const movement = new Set(['left','right','up','down','home','end','pageup','pagedown','backspace','delete'])
++function navigationURL(value) {
++  if (typeof value !== 'string' || value.length > 2048 || /[\s\u0000-\u001f\u007f\\]/u.test(value)) return undefined
++  try {
++    const url = new URL(value)
++    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.href.length > 512) return undefined
++    return url.href
++  } catch { return undefined }
++}
++function chromeInputDenial(params) {
++  if (!params || typeof params !== 'object' || Array.isArray(params)) return 'CUA_CHROME_INPUT_INVALID'
++  const fields = params.kind === 'text' ? ['appHandle','windowId','kind','text']
++    : params.kind === 'key' ? ['appHandle','windowId','kind','key','modifiers']
++      : params.kind === 'navigate' ? ['appHandle','windowId','kind','url'] : []
++  if (!fields.length || Object.keys(params).some(key => !fields.includes(key))
++    || typeof params.appHandle !== 'string' || !params.appHandle || !Number.isSafeInteger(params.windowId) || params.windowId <= 0) return 'CUA_CHROME_INPUT_INVALID'
++  if (params.kind === 'navigate') return navigationURL(params.url) ? undefined : 'CUA_CHROME_NAVIGATION_DENIED'
++  if (params.kind === 'text') return typeof params.text === 'string' && Array.from(params.text).length > 0 && Array.from(params.text).length <= 256
++    && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(params.text) ? undefined : 'CUA_CHROME_TEXT_DENIED'
++  const key = typeof params.key === 'string' ? params.key.toLowerCase() : ''
++  const modifiers = params.modifiers ?? []
++  if (!Array.isArray(modifiers) || modifiers.length > 2 || new Set(modifiers).size !== modifiers.length
++    || modifiers.some(modifier => !['command','control','option','shift'].includes(modifier))) return 'CUA_CHROME_KEY_DENIED'
++  const sorted = [...modifiers].sort().join(',')
++  if (!sorted && plain.has(key) || sorted === 'shift' && (plain.has(key) || /^[a-z]$/u.test(key))
++    || ['option','option,shift'].includes(sorted) && movement.has(key)
++    || sorted === 'command' && ['a','f','r','z'].includes(key)
++    || sorted === 'command,shift' && key === 'z'
++    || sorted === 'control' && ['a','b','d','e','f','h','k'].includes(key)) return undefined
++  return 'CUA_CHROME_KEY_DENIED'
++}
++
 +/** Trusted Host preparation only. Candidate metadata never becomes a tool result or model message. */
 +
 +const aliases = new Map([
@@ -206,7 +246,7 @@
 +  })
 +}
 +
-@@ -16,0 +184,152 @@
+@@ -16,0 +218,154 @@
 +/** Operator RPC only. Candidate selection never authorizes native observations or input. */
 +class TaskTargets {
 +  version = 1;
@@ -242,6 +282,7 @@
 +    const previous = this.rows.get(root); if (previous) await this.close(previous);
 +    if ([...this.rows.values()].some(row => row.closed)) throw this.error('CUA_TARGET_CLEANUP_UNCERTAIN');
 +    const row = {root, client: this.createClient(), controller: new AbortController(), expiresAt: Date.now() + 120000, selected: undefined, candidates: [], applications: [], claimed: false};
++    row.client.enableTaskQueue();
 +    this.rows.set(root, row);
 +    row.timer = setTimeout(() => { void this.close(row).catch(() => {}); }, 120000);
 +    row.release = root.ctx.effect(() => () => this.close(row), 'cua-task-targets.root');
@@ -335,7 +376,7 @@
 +  target(root) {
 +    const row = this.rows.get(root); if (!row) return undefined; this.assert(row);
 +    if (!row.selected) throw this.error('CUA_TARGET_SELECTION_REQUIRED');
-+    return Object.freeze({application: String(row.selected.pid), windowId: row.selected.windowId, targetSelectionId: row.selected.id});
++    return Object.freeze({application: String(row.selected.pid), windowId: row.selected.windowId, targetSelectionId: row.selected.id, ...(row.app.bundleId === "com.google.Chrome" ? {inputScope: "chrome-instance"} : {})});
 +  }
 +  claim(root, application, windowId, selectionId, intent) {
 +    if (selectionId === undefined) return undefined;
@@ -343,6 +384,7 @@
 +    const target = this.target(root);
 +    if (target.application !== application || target.windowId !== windowId || target.targetSelectionId !== selectionId || this.serial.has(root)) throw this.error('CUA_TARGET_MISMATCH');
 +    if (row.flow && (!intent || row.flow.userInput !== intent.userInput || row.flow.goal !== intent.goal || row.flow.expiresAt !== intent.expiresAt)) throw this.error('CUA_TARGET_REQUEST_CHANGED');
++    if (intent?.inputScope === 'chrome-instance' && row.app.bundleId !== 'com.google.Chrome') throw this.error('CUA_INPUT_SCOPE_DENIED');
 +    row.stopInputWatch?.();
 +    row.claimed = true; clearTimeout(row.timer); this.rows.delete(root);
 +    return {client: row.client, app: row.app, selected: row.selected, expiresAt: row.expiresAt, flow: row.flow, release: row.release};
@@ -359,16 +401,28 @@
 +  }
 +}
 +
-@@ -550,0 +870,3 @@
+@@ -103 +458,8 @@
+-	async request(method, params, signal, callId) {
++    enableTaskQueue() { this.taskTail ??= Promise.resolve(); }
++    request(method, params, signal, callId) {
++        if (!this.taskTail) return this.requestNow(method, params, signal, callId);
++        const queued = this.taskTail.then(() => this.requestNow(method, params, signal, callId));
++        this.taskTail = queued.catch(() => {});
++        return queued;
++    }
++	async requestNow(method, params, signal, callId) {
+@@ -550,0 +913,4 @@
 +	tasks = /* @__PURE__ */ new Map();
 +	taskOwners = /* @__PURE__ */ new WeakMap();
 +	taskRefusals = /* @__PURE__ */ new WeakMap();
-@@ -560,0 +883,122 @@
++    taskHandles = new WeakMap();
+@@ -560,0 +927,176 @@
 +	}
 +	/** Register an owned task, without granting application access. */
 +	beginTask(input) {
 +		const keys = ["parent", "child", "application", "windowId", "goal", "expiresAt", "signal"];
-+		if (!input || keys.some(key => !Object.hasOwn(input, key)) || Object.keys(input).some((key) => !keys.includes(key) && key !== "targetSelectionId") || input.targetSelectionId !== undefined && (typeof input.targetSelectionId !== "string" || input.targetSelectionId.length > 100) || typeof input.application !== "string" || !input.application.trim() || input.application.length > 1024 || !Number.isSafeInteger(input.windowId) || input.windowId <= 0 || typeof input.goal !== "string" || !input.goal.trim() || input.goal.length > 8000 || !Number.isSafeInteger(input.expiresAt) || input.expiresAt <= Date.now() || input.expiresAt > Date.now() + 180000 || !(input.signal instanceof AbortSignal)) throw new NativeError("CUA_TASK_INVALID", "Invalid bounded delegated task");
++		if (!input || keys.some(key => !Object.hasOwn(input, key)) || Object.keys(input).some((key) => !keys.includes(key) && key !== "targetSelectionId" && key !== "inputScope") || input.targetSelectionId !== undefined && (typeof input.targetSelectionId !== "string" || input.targetSelectionId.length > 100) || typeof input.application !== "string" || !input.application.trim() || input.application.length > 1024 || !Number.isSafeInteger(input.windowId) || input.windowId <= 0 || typeof input.goal !== "string" || !input.goal.trim() || input.goal.length > 8000 || !Number.isSafeInteger(input.expiresAt) || input.expiresAt <= Date.now() || input.expiresAt > Date.now() + 180000 || !(input.signal instanceof AbortSignal)) throw new NativeError("CUA_TASK_INVALID", "Invalid bounded delegated task");
++		if (input.inputScope !== undefined && input.inputScope !== "chrome-instance") throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Unsupported task input scope");
 +		const { parent, child } = input;
 +		this.assertTaskAgents(parent, child);
 +		const userInput = latestTaskRequest(parent)?.id ?? parent.id;
@@ -379,9 +433,10 @@
 +		this.lifetime.signal.throwIfAborted();
 +		const controller = new AbortController();
 +		const signal = AbortSignal.any([input.signal, this.lifetime.signal, controller.signal]);
-+		const selectedTarget = this.ctx.get("cuaTaskTargets")?.claim(parent, input.application, input.windowId, input.targetSelectionId, {userInput, goal: input.goal, expiresAt: input.expiresAt});
++		if (input.inputScope === "chrome-instance" && !input.targetSelectionId) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Chrome keyboard needs a retained target selection");
++        const selectedTarget = this.ctx.get("cuaTaskTargets")?.claim(parent, input.application, input.windowId, input.targetSelectionId, {userInput, goal: input.goal, expiresAt: input.expiresAt, inputScope: input.inputScope});
 +        const intent = selectedTarget?.flow ?? Object.freeze({userInput, goal: input.goal, expiresAt: input.expiresAt});
-+		const task = { id: randomUUID(), parent, child, userInput, intent, controller, signal, scope: Object.freeze({ application: input.application, windowId: input.windowId, goal: input.goal, expiresAt: input.expiresAt }), clients: new Set(), releases: [], approved: false, closed: false, snapshotId: void 0 };
++		const task = { id: randomUUID(), parent, child, userInput, intent, controller, signal, scope: Object.freeze({ application: input.application, windowId: input.windowId, goal: input.goal, expiresAt: input.expiresAt, inputScope: input.inputScope }), clients: new Set(), releases: [], approved: false, closed: false, snapshotId: void 0 };
 +        if (selectedTarget) {
 +            task.nativeClient = selectedTarget.client;
 +            task.expectedApp = selectedTarget.app;
@@ -395,7 +450,9 @@
 +		signal.addEventListener("abort", close, { once: true });
 +		task.releases.push(watchTaskInput(this.ctx, parent, intent.userInput, close), parent.ctx.effect(() => close, "cua-task.parent"), child.ctx.effect(() => close, "cua-task.child"));
 +		const dispose = () => this.endTask(task);
-+		return Object.freeze({ id: task.id, signal, revoke: () => { this.taskRefusals.set(parent, userInput); return dispose(); }, dispose });
++		const grant = Object.freeze({ id: task.id, signal, revoke: () => { this.taskRefusals.set(parent, userInput); return dispose(); }, dispose });
++        this.taskHandles.set(grant, task);
++        return grant;
 +	}
 +	assertTaskAgents(parent, child) {
 +		const agents = this.ctx.get("agents");
@@ -415,9 +472,15 @@
 +	/** Boundaries are enforced before helper creation and again inside the native dispatch. */
 +	checkTaskRequest(agent, request) {
 +		const task = this.taskFor(agent);
-+		if (!task) return;
-+		this.assertTask(task);
-+		const { method, params: p } = request;
++		if (!task) { if (request.method === "taskInput") throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Task input requires its owned approved task"); return; }
++        this.assertTask(task);
++        const { method, params: p } = request;
++        if (method === "taskInput") {
++            if (!task.approved || !task.inputAuthorized || task.scope.inputScope !== "chrome-instance" || p.appHandle !== task.appHandle || p.windowId !== task.scope.windowId) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Task input is outside Chrome instance consent");
++            const denial = chromeInputDenial(p); if (denial) throw new NativeError(denial, "Chrome input parameters are denied");
++            task.snapshotId = undefined;
++            return;
++        }
 +		if (method === "getApp") {
 +			if (p.selector !== task.scope.application) throw new NativeError("CUA_TASK_TARGET_DENIED", "Task application selector changed");
 +			return;
@@ -455,9 +518,12 @@
 +			const questions = this.ctx.get("userQuestions");
 +			if (!questions) throw new NativeError("APP_APPROVAL_UNAVAILABLE", "No human answerer is available for task consent");
 +			const detail = `Application: ${identity.name}\nProcess: ${prepared.pid}\nWindow: ${task.scope.windowId}\nTask: ${task.scope.goal}\nExpires: ${new Date(task.scope.expiresAt).toISOString()}\nOnly this child and task may observe and control that window. No application menus, global keyboard/text, clipboard, other windows, or permanent permission. Use Stop in this root conversation to cancel and revoke this task. Completion, cancellation, revocation or expiration removes this grant.`;
-+			let answer;
-+			try {
-+				answer = await questions.ask({ agent: task.parent, signal: AbortSignal.any([signal, task.signal]), questions: [{ id: "cua-task-access", question: `Allow this Computer Use task in ${identity.name}, window ${task.scope.windowId}?`, detail, options: [{ label: "Allow this task" }, { label: "Deny" }], intent: { kind: "approval", approve: "Allow this task", reject: "Deny", subject: { name: identity.name, ...icon === void 0 ? {} : { icon } } } }] });
++            const chrome = task.scope.inputScope === "chrome-instance";
++            const approve = chrome ? "允许这一次" : "Allow this task", deny = chrome ? "拒绝" : "Deny";
++            const taskDetail = chrome ? `应用：${identity.name}（本次选中的 Chrome 实例）\nProcess: ${prepared.pid}\nWindow: ${task.scope.windowId}\n任务：${task.scope.goal}\n有效至：${new Date(task.scope.expiresAt).toISOString()}\n观察、点击和表单值只限选中窗口。键盘按本次 Chrome 实例发送；窗口切换时，已发出的字、按键或释放事件可能落到另一个 Chrome 窗口，无法追回。\n开始后动鼠标、打字或切换焦点会停止后续操作；不能保证采样之间的变化都能捕获。Stop 可随时撤销。只批这次任务，不给永久许可、不启动应用、不跨应用，也不授权剪贴板或新窗口。` : detail;
++            let answer;
++            try {
++                answer = await questions.ask({ agent: task.parent, signal: AbortSignal.any([signal, task.signal]), questions: [{ id: "cua-task-access", question: chrome ? "允许本次操作这个 Chrome？" : `Allow this Computer Use task in ${identity.name}, window ${task.scope.windowId}?`, detail: taskDetail, options: [{ label: approve }, { label: deny }], intent: { kind: "approval", approve, reject: deny, subject: { name: identity.name, ...icon === void 0 ? {} : { icon } } } }] });
 +			} catch (error) {
 +				this.taskRefusals.set(task.parent, task.userInput);
 +				void this.endTask(task).catch(() => {});
@@ -466,7 +532,7 @@
 +			this.assertTask(task);
 +			const answers = Array.isArray(answer?.answers) ? answer.answers : [];
 +			const chosen = answers.find((row) => row?.id === "cua-task-access");
-+			if (answers.length !== 1 || chosen?.custom !== void 0 && chosen.custom !== "" || !Array.isArray(chosen?.selected) || chosen.selected.length !== 1 || chosen.selected[0] !== "Allow this task") {
++			if (answers.length !== 1 || chosen?.custom !== void 0 && chosen.custom !== "" || !Array.isArray(chosen?.selected) || chosen.selected.length !== 1 || chosen.selected[0] !== approve) {
 +				this.taskRefusals.set(task.parent, task.userInput);
 +				void this.endTask(task).catch(() => {});
 +				throw new NativeError("CUA_TASK_DENIED", "The human did not approve this task. Stop; do not retry or switch tools.");
@@ -479,28 +545,67 @@
 +			task.generation = generation;
 +            if (task.nativeClient) await task.nativeClient.request("validateTaskWindow", {appHandle: handle, windowId: task.scope.windowId}, signal);
 +            this.assertTask(task);
-+			task.approved = true;
++			if (task.scope.inputScope === "chrome-instance" && !task.inputAuthorized) {
++                const armed = await client.request("authorizeTaskInput", {appHandle: handle, windowId: task.scope.windowId, taskId: task.id, expiresAt: task.scope.expiresAt, inputScope: "chrome-instance"}, signal);
++                this.assertTask(task);
++                if (armed?.inputScope !== "chrome-instance" || armed.taskId !== task.id || armed.pid !== prepared.pid || armed.windowId !== task.scope.windowId || armed.focused !== true) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Native Chrome input attestation changed");
++                task.inputAuthorized = true;
++            }
++            task.approved = true;
 +			task.appHandle = handle;
 +			task.snapshotId = void 0;
 +			const state = this.clients.get(client) ?? { agent: task.child, handles: new Map() };
 +			state.handles.set(handle, { identity: task.identity, scope: "task", taskId: task.id, sessionId: task.child.id, lifetime: new AbortController() });
 +			this.clients.set(client, state);
 +		});
-@@ -561,0 +1006,23 @@
++        if (task.inputAuthorized && !task.inputMonitor) {
++            const tick = () => {
++                if (task.closed || task.inputPending) return;
++                task.inputPending = this.checkChromeInput(task).catch(error => { this.taskRefusals.set(task.parent, task.userInput); void this.endTask(task, error).catch(() => {}); }).finally(() => { task.inputPending = undefined; });
++            };
++            task.inputMonitor = setInterval(tick, 200);
++            task.releases.push(() => task.inputPending);
++        }
++    }
++    async checkTaskInputGrant(grant) {
++        const task = this.taskHandles.get(grant);
++        if (!task) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Unknown task receipt");
++        try {
++            if (task.scope.inputScope === "chrome-instance") await this.checkChromeInput(task);
++            else this.assertTask(task);
++        } catch (error) { this.taskRefusals.set(task.parent, task.userInput); void this.endTask(task, error).catch(() => {}); throw error; }
++    }
++    failTaskInput(agent, error) {
++        const task = this.taskFor(agent); if (!task) return;
++        this.taskRefusals.set(task.parent, task.userInput);
++        void this.endTask(task, error).catch(() => {});
++    }
++    async checkChromeInput(task) {
++        this.assertTask(task);
++        if (!task.inputAuthorized || !task.nativeClient || !task.identity) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Chrome input is not approved");
++        await this.options.store.withApplication(task.identity.id, task.signal, async () => {
++            this.assertTask(task);
++            if (await this.revocationGeneration(task.identity.id, task.signal) !== task.generation) this.taskRevoked(task);
++            const value = await task.nativeClient.request("checkTaskInput", {appHandle: task.appHandle, windowId: task.scope.windowId, taskId: task.id}, task.signal);
++            this.assertTask(task);
++            if (value?.inputScope !== "chrome-instance" || value.windowId !== task.scope.windowId) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Native Chrome input check changed");
++        });
++    }
 +	revocationGeneration(id, signal) {
 +		return this.options.store.withState(signal, ({ state }) => state.applications[id]?.revoked ?? 0);
-+	}
+@@ -561,0 +1104,21 @@
 +	taskRevoked(task) {
 +		this.taskRefusals.set(task.parent, task.userInput);
 +		void this.endTask(task).catch(() => {});
 +		throw new NativeError("CUA_TASK_REVOKED", "Application access was revoked; this task cannot continue");
 +	}
-+	endTask(task) {
++	endTask(task, reason) {
 +		if (task.closing) return task.closing;
 +		task.closed = true;
++        clearInterval(task.inputMonitor);
 +		clearTimeout(task.timer);
 +		return task.closing = Promise.resolve().then(async () => {
-+			task.controller.abort(new NativeError("CUA_TASK_CLOSED", "Task permission was revoked, cancelled, expired or completed"));
++			task.controller.abort(reason ?? new NativeError("CUA_TASK_CLOSED", "Task permission was revoked, cancelled, expired or completed"));
 +			for (const client of task.clients) client.invalidate();
 +			await Promise.all([...task.clients].map((client) => client.dispose()).concat([...this.active].filter((op) => op.agent === task.child).map((op) => op.done.promise)));
 +			for (const client of task.clients) this.clients.delete(client);
@@ -510,15 +615,15 @@
 +			// to ordinary saved application grants after its task has ended.
 +		});
 +	}
-@@ -569 +1036 @@
+@@ -569 +1132 @@
 -			await Promise.allSettled([this.options.store.drain(), ...[...this.active].map((operation) => operation.done.promise)]);
 +			await Promise.allSettled([...[...this.tasks.values()].map((task) => this.endTask(task)), this.options.store.drain(), ...[...this.active].map((operation) => operation.done.promise)]);
-@@ -647 +1114,3 @@
+@@ -647 +1210,3 @@
 -	async select(agent, client, handle, identity, signal, icon) {
 +	async select(agent, client, handle, identity, signal, icon, prepared) {
 +		const task = this.taskFor(agent);
 +		if (task) return this.withOperation(agent, client, identity, AbortSignal.any([signal, task.signal]), (lifetime) => this.selectInOrder(agent, identity.id, () => this.selectTask(task, client, handle, identity, prepared, lifetime, icon)));
-@@ -774,0 +1244,12 @@
+@@ -774,0 +1340,12 @@
 +		if (selected.scope === "task") {
 +			const task = this.tasks.get(selected.taskId);
 +			this.assertTask(task);
@@ -531,87 +636,113 @@
 +				return this.withOperation(state.agent, client, selected.identity, lifetime, dispatch);
 +			});
 +		}
-@@ -833,0 +1315,2 @@
+@@ -833,0 +1411,2 @@
 +		const task = this.taskFor(agent);
 +		if (task) void this.endTask(task).catch(() => {});
-@@ -864,0 +1348,4 @@
+@@ -864,0 +1444,4 @@
 +		for (const task of this.tasks.values()) if (task.identity?.id === id && (agent === void 0 || task.child.id === agent.id)) {
 +			this.taskRefusals.set(task.parent, task.userInput);
 +			void this.endTask(task).catch(() => {});
 +		}
-@@ -1088 +1575,4 @@
+@@ -1019,0 +1603,5 @@
++	operation("taskInput", {
++        ...window, kind: z.enum(["text", "key", "navigate"]), text: z.string().max(512).optional(),
++        key: z.string().min(1).max(32).optional(), modifiers: z.array(z.enum(["command","control","option","shift"])).max(2).optional(),
++        url: z.string().max(2048).optional()
++    }),
+@@ -1088 +1676,4 @@
 -operation("launchApp", app), operation("permissionStatus", {}), operation("applicationIcons", { paths: z.array(z.string().min(1)) }), operation("requestPermission", { permission: z.enum(["accessibility", "screenRecording"]) }), operation("openPermissionSettings", { permission: z.enum(["accessibility", "screenRecording"]) });
 +operation("prepareTaskWindows", app),
 +    operation("bindTaskWindow", {...app, windowId:id, targetKey:z.string().min(1)}),
 +    operation("validateTaskWindow", {...app, windowId:id}),
 +    operation("launchApp", app), operation("permissionStatus", {}), operation("applicationIcons", { paths: z.array(z.string().min(1)) }), operation("requestPermission", { permission: z.enum(["accessibility", "screenRecording"]) }), operation("openPermissionSettings", { permission: z.enum(["accessibility", "screenRecording"]) });
-@@ -1120,0 +1611 @@
+@@ -1120,0 +1712 @@
 +	windowScope: z.enum(["strict-window", "application"]).optional(),
-@@ -1258,0 +1750 @@
+@@ -1258,0 +1851 @@
 +            for (const name of ["discoverTaskApplications", "selectTaskApplication", "discoverTaskTargets", "selectTaskTarget", "clearTaskTargets"]) __esDecorate(this, null, [Remote], { kind: "method", name, static: false, private: false, access: { has: obj => name in obj, get: obj => obj[name] }, metadata: _metadata }, null, _instanceExtraInitializers);
-@@ -1379,0 +1872,6 @@
+@@ -1379,0 +1973,6 @@
 +        assertTargetOperator() { if (this.ctx.invocation?.peer.principal.kind !== "owner") throw new NativeError("CUA_TARGET_OPERATOR_REQUIRED", "Target discovery is restricted to the authenticated local operator"); }
 +        discoverTaskApplications(sessionId, bundleId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.discoverApplications(sessionId, bundleId); }
 +        selectTaskApplication(sessionId, candidateId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.selectApplication(sessionId, candidateId); }
 +        discoverTaskTargets(sessionId, application) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.discover(sessionId, application); }
 +        selectTaskTarget(sessionId, candidateId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.select(sessionId, candidateId); }
 +        clearTaskTargets(sessionId) { this.assertTargetOperator(); return this.ctx.cuaTaskTargets.clear(sessionId); }
-@@ -1486,0 +1985,5 @@
+@@ -1486,0 +2086,7 @@
 +		prepareTaskTarget: (input) => prepareTaskTarget(ctx.cuaTaskTargets, policy, input),
 +		beginTask: policy.beginTask.bind(policy),
++        checkTaskInputGrant: policy.checkTaskInputGrant.bind(policy),
++        failTaskInput: policy.failTaskInput.bind(policy),
 +		taskFor: policy.taskFor.bind(policy),
 +		checkTaskRequest: policy.checkTaskRequest.bind(policy),
 +		observeTask: policy.observeTask.bind(policy),
-@@ -1577,0 +2081 @@
+@@ -1577,0 +2184 @@
 +	strictWindowScope: Schema.boolean().default(false),
-@@ -1645,0 +2150 @@
+@@ -1645,0 +2253 @@
 +	ctx.provide("cuaWindowScope", Object.freeze({ version: 1, strictWindowScope: config.strictWindowScope === true }));
-@@ -1668,0 +2174,2 @@
+@@ -1668,0 +2277,2 @@
 +    if (config.strictWindowScope === true) ctx.provide("cuaTaskTargets", new TaskTargets(ctx, () => new NativeClient(ctx, native, backend.createChannel), code => new NativeError(code, "Operator target selection is missing, stale or invalid")));
-+	if (config.strictWindowScope === true) ctx.provide("cuaTaskApproval", Object.freeze({ version: 2, prepare: (input) => access.prepareTaskTarget(input), begin: (input) => access.beginTask(input) }));
-@@ -1720,0 +2228 @@
++	if (config.strictWindowScope === true) ctx.provide("cuaTaskApproval", Object.freeze({ version: 3, chromeInstanceInput: true, prepare: (input) => access.prepareTaskTarget(input), begin: (input) => access.beginTask(input), check: (grant) => access.checkTaskInputGrant(grant) }));
+@@ -1720,0 +2331 @@
 +			access.checkTaskRequest(execution.agent, request);
-@@ -1739 +2247,2 @@
+@@ -1739,2 +2350,3 @@
 -				maxDepth: config.maxDepth
+-			} : method === "drag" ? {
 +				maxDepth: config.maxDepth,
 +				strictWindowScope: config.strictWindowScope
-@@ -1748,0 +2258 @@
++			} : method === "taskInput" ? { ...params, ...(params.kind === "navigate" ? {url: navigationURL(params.url)} : {}), taskId: access.taskFor(agent).id } : method === "drag" ? {
+@@ -1748,0 +2361 @@
 +				access.observeTask(agent, request, screenshot);
-@@ -1781 +2291 @@
+@@ -1771,4 +2384,5 @@
+-			const result = method === "paste" ? await withFileLock(join(tmpdir(), "dsh-cua-system-clipboard"), requestNative, {
+-				waitMs: config.timeoutMs,
+-				signal
+-			}) : await requestNative();
++            let result;
++            try {
++                result = method === "paste" ? await withFileLock(join(tmpdir(), "dsh-cua-system-clipboard"), requestNative, {waitMs: config.timeoutMs, signal}) : await requestNative();
++                if (method === "taskInput" && (result?.inputScope !== "chrome-instance" || result.windowId !== params.windowId)) throw new NativeError("CUA_INPUT_SCOPE_DENIED", "Native task input result changed");
++            } catch (error) { if (method === "taskInput") access.failTaskInput(agent, error); throw error; }
+@@ -1781 +2395 @@
 -				await access.select(agent, client, prepared.appHandle, authorization, signal, applicationIcon);
 +				await access.select(agent, client, prepared.appHandle, authorization, signal, applicationIcon, prepared);
-@@ -1793,0 +2304 @@
+@@ -1793,0 +2408 @@
 +				access.observeTask(agent, request, state);
-@@ -1813,0 +2325 @@
+@@ -1813,0 +2429 @@
 +				access.checkTaskRequest(agent, request);
-@@ -1820 +2332,2 @@
+@@ -1820 +2436,2 @@
 -					owner.signal
 +					owner.signal,
 +					...access.taskFor(agent) ? [access.taskFor(agent).signal] : []
-@@ -1827 +2340,2 @@
+@@ -1827 +2444,2 @@
 -					let client = clients.get(agent);
 +                    let client = clients.get(agent) ?? access.taskFor(agent)?.nativeClient;
 +                    if (client && !clients.has(agent)) { clients.set(agent, client); owner.coordinates = new CuaCoordinates(); }
-@@ -1828,0 +2343 @@
+@@ -1828,0 +2447 @@
 +					if (access.taskFor(agent)?.nativeClient?.disposed) throw new NativeError("CUA_TASK_CLOSED", "Selected native target connection expired");
-@@ -1836,0 +2352 @@
+@@ -1836,0 +2456 @@
 +					access.taskFor(agent)?.clients.add(nativeClient);
-@@ -1916,0 +2433,2 @@
+@@ -1916,0 +2537,2 @@
 +
 +export const STRICT_WINDOW_SCOPE_VERSION = 1;
 --- a/lib/protocol.js
 +++ b/lib/protocol.js
-@@ -187 +187,2 @@
+@@ -126,0 +127,5 @@
++	operation("taskInput", {
++        ...window, kind: z.enum(["text", "key", "navigate"]), text: z.string().max(512).optional(),
++        key: z.string().min(1).max(32).optional(), modifiers: z.array(z.enum(["command","control","option","shift"])).max(2).optional(),
++        url: z.string().max(2048).optional()
++    }),
+@@ -187 +192,2 @@
 -		maxDepth: z.number().int().min(1).max(100)
 +		maxDepth: z.number().int().min(1).max(100),
 +		strictWindowScope: z.boolean().optional()
-@@ -203 +204,4 @@
+@@ -203 +209,4 @@
 -	operation("launchApp", app),
 +	operation("prepareTaskWindows", app),
 +    operation("bindTaskWindow", {...app, windowId:id, targetKey:z.string().min(1)}),
 +    operation("validateTaskWindow", {...app, windowId:id}),
 +    operation("launchApp", app),
-@@ -242,0 +247 @@
+@@ -242,0 +252 @@
 +	windowScope: z.enum(["strict-window", "application"]).optional(),
 --- a/lib/typert.host.js
 +++ b/lib/typert.host.js
@@ -695,10 +826,37 @@
 +declare module "@deepseek-ai/cordis" { interface Context { cuaWindowScope: Readonly<{version: 1; strictWindowScope: boolean}>; } }
 --- a/lib/types/protocol.d.ts
 +++ b/lib/types/protocol.d.ts
-@@ -265,0 +266 @@
+@@ -4,0 +5,6 @@
++    method: z.ZodLiteral<"taskInput">;
++    params: z.ZodObject<{
++        appHandle: z.ZodString; windowId: z.ZodNumber; kind: z.ZodEnum<{text:"text";key:"key";navigate:"navigate"}>;
++        text: z.ZodOptional<z.ZodString>; key: z.ZodOptional<z.ZodString>; modifiers: z.ZodOptional<z.ZodArray<z.ZodEnum<{command:"command";control:"control";option:"option";shift:"shift"}>>>; url: z.ZodOptional<z.ZodString>;
++    }, z.core.$strict>;
++}, z.core.$strict>, z.ZodObject<{
+@@ -265,0 +272 @@
 +        strictWindowScope: z.ZodOptional<z.ZodBoolean>;
-@@ -282 +283 @@
+@@ -282 +289 @@
 -export declare const NativeOnlyOperations: readonly [z.ZodObject<{
 +export declare const NativeOnlyOperations: readonly [z.ZodObject<{method:z.ZodLiteral<"prepareTaskWindows">;params:z.ZodObject<{appHandle:z.ZodString;},z.core.$strict>;},z.core.$strict>,z.ZodObject<{method:z.ZodLiteral<"bindTaskWindow">;params:z.ZodObject<{appHandle:z.ZodString;windowId: z.ZodNumber; targetKey: z.ZodString;},z.core.$strict>;},z.core.$strict>,z.ZodObject<{method:z.ZodLiteral<"validateTaskWindow">;params:z.ZodObject<{appHandle:z.ZodString;windowId: z.ZodNumber;},z.core.$strict>;},z.core.$strict>,z.ZodObject<{
-@@ -352,0 +354 @@
+@@ -352,0 +360 @@
 +    windowScope: z.ZodOptional<z.ZodEnum<{ "strict-window": "strict-window"; application: "application" }>>;
+--- a/lib/api.js
++++ b/lib/api.js
+@@ -126,0 +127,5 @@
++	operation("taskInput", {
++        ...window, kind: z.enum(["text", "key", "navigate"]), text: z.string().max(512).optional(),
++        key: z.string().min(1).max(32).optional(), modifiers: z.array(z.enum(["command","control","option","shift"])).max(2).optional(),
++        url: z.string().max(2048).optional()
++    }),
+--- a/lib/native-client.js
++++ b/lib/native-client.js
+@@ -90 +90,8 @@
+-	async request(method, params, signal, callId) {
++    enableTaskQueue() { this.taskTail ??= Promise.resolve(); }
++    request(method, params, signal, callId) {
++        if (!this.taskTail) return this.requestNow(method, params, signal, callId);
++        const queued = this.taskTail.then(() => this.requestNow(method, params, signal, callId));
++        this.taskTail = queued.catch(() => {});
++        return queued;
++    }
++	async requestNow(method, params, signal, callId) {

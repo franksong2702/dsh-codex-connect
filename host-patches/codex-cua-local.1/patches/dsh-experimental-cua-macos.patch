@@ -86,11 +86,20 @@
 +++ b/native/Sources/CuaNative/AXWorker.swift
 @@ -20,0 +21 @@
 +    var strictWindowScope: Bool = false
-@@ -87,0 +89,3 @@
+@@ -36 +37,2 @@
+-    var isRaise: Bool { index != nil }
++    var taskInputFocus: Bool = false
++    var isRaise: Bool { index != nil || taskInputFocus }
+@@ -87,0 +90,4 @@
 +    private var taskCandidates: [String: NativeTaskWindow] = [:]
 +    private var taskWindow: NativeTaskWindow?
 +    private var taskHandle: String?
-@@ -148,0 +153,8 @@
++    private var chromeInput: ChromeTaskInput?
+@@ -113 +119,2 @@
+-        let mouse = WindowPointerInput(poster: poster, checkCancellation: { try latch.check() })
++        let input = chromeInput
++        let mouse = WindowPointerInput(poster: poster, checkCancellation: { try latch.check(); try input?.check() }, sourceState: input == nil ? .hidSystemState : .privateState)
+@@ -148,0 +156,8 @@
 +    }
 +    private func constraint(_ value: NativeSnapshot, handle: String) throws -> AXWindowConstraint? {
 +        guard value.strictWindowScope else { return nil }
@@ -99,14 +108,14 @@
 +    }
 +    private func constraint(_ handle: String, _ params: RequestParameters) throws -> AXWindowConstraint? {
 +        try constraint(snapshot(handle, params.string("snapshotId")), handle: handle)
-@@ -153,0 +166,4 @@
+@@ -153,0 +169,4 @@
 +        if value.strictWindowScope {
 +            guard let expected = value.scope.windowID else { throw NativeFailure(code: "WINDOW_SCOPE_REQUIRED", message: "Strict snapshot has no owning window") }
 +            try ax().requireWindow(element, expected: expected, owner: validateIdentity(handle))
 +        }
-@@ -236,0 +253 @@
+@@ -236,0 +256 @@
 +            if let taskWindow { guard taskWindow.owner == identity else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Selected application process changed") }; try taskWindow.require() }
-@@ -254,0 +272,41 @@
+@@ -254,0 +275,66 @@
 +        if method == "prepareTaskWindows" {
 +            guard taskWindow == nil else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Target connection already bound") }
 +            try NativePlatform.requireAccessibility()
@@ -144,80 +153,130 @@
 +            try taskWindow.require()
 +            if params.contains("windowId"), try params.windowID() != taskWindow.windowID { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Selected window changed") }
 +        }
++        if method == "authorizeTaskInput" {
++            guard chromeInput == nil, let window = taskWindow, params.contains("windowId"),
++                  try params.windowID() == window.windowID, try params.string("inputScope") == "chrome-instance",
++                  let application = catalog.application(identity.pid) else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Chrome input requires a retained task target") }
++            let expiresAt = try params.integer("expiresAt", in: 1...Int.max)
++            guard Int64(expiresAt) > ChromeTaskInput.now(), Int64(expiresAt) <= ChromeTaskInput.now() + 180000 else {
++                throw NativeFailure(code: "CUA_INPUT_EXPIRED", message: "Invalid Chrome input task deadline")
++            }
++            chromeInput = try ChromeTaskInput(owner: identity, window: window, taskID: params.string("taskId"), expiresAt: Int64(expiresAt),
++                application: application, cancellation: cancellation, interval: textEventInterval)
++            keyboard = nil; pointer = nil
++            var plan = ForegroundPlan(appHandle: handle, identity: identity, snapshotID: nil, index: nil,
++                targetWindowID: window.windowID, role: "AXWindow", main: nil, minimized: nil)
++            plan.taskInputFocus = true
++            return .foreground(plan)
++        }
++        if method == "checkTaskInput" || method == "taskInput" {
++            guard let input = chromeInput, try params.string("taskId") == input.taskID,
++                  try params.windowID() == input.window.windowID else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task input binding does not match") }
++            try input.check()
++            if method == "taskInput" { try input.execute(params) }
++            return .result(.object(["dispatched": .bool(method == "taskInput"), "verified": .bool(false),
++                "windowId": .number(Double(input.window.windowID)), "inputScope": .string("chrome-instance")]))
++        }
++        try chromeInput?.check()
 +        if method == "validateTaskWindow" {
 +            guard taskWindow != nil else { throw NativeFailure(code: "CUA_TARGET_STALE", message: "Target was not selected by an operator") }
 +            return .result(.object(["validated": .bool(true)]))
 +        }
-@@ -289,0 +348 @@
+@@ -289,0 +376 @@
 +            let strict = try params.optionalBoolean("strictWindowScope") ?? false
-@@ -296 +355 @@
+@@ -296 +383 @@
 -                    includeMenus: params.optionalBoolean("includeMenus") ?? false, details: params.optionalBoolean("details") ?? false)
 +                    includeMenus: params.optionalBoolean("includeMenus") ?? false, details: params.optionalBoolean("details") ?? false, strictWindowScope: strict)
-@@ -305 +364,2 @@
+@@ -305 +392,2 @@
 -            let observedWindows = NativePlatform.windows().filter { $0.pid == identity.pid }
 +            try taskWindow?.require()
 +            let observedWindows = NativePlatform.windows().filter { $0.pid == identity.pid && (!strict || $0.windowID == window) }
-@@ -308 +368 @@
+@@ -308 +396 @@
 -            snapshots[scope] = NativeSnapshot(id: id, scope: scope, elements: projection.indexed)
 +            snapshots[scope] = NativeSnapshot(id: id, scope: scope, elements: projection.indexed, strictWindowScope: strict)
-@@ -314 +374,2 @@
+@@ -314 +402,2 @@
 -                "focusedWindowId": projection.focusedWindowID.map { .number(Double($0)) } ?? .null,
 +                "focusedWindowId": (!strict || projection.focusedWindowID == window) ? (projection.focusedWindowID.map { .number(Double($0)) } ?? .null) : .null,
 +                "windowScope": .string(strict ? "strict-window" : "application"),
-@@ -335 +396 @@
+@@ -330,0 +420 @@
++            guard taskWindow == nil else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task keyboards must use the guarded task input path") }
+@@ -335 +425 @@
 -        case "setValue": try ax().setValue(element(handle, params), params.string("value"))
 +        case "setValue": try ax().setValue(element(handle, params), params.string("value"), constraint: constraint(handle, params))
-@@ -338 +399 @@
+@@ -338 +428 @@
 -                                suffix: params.optionalString("suffix"), mode: params.optionalString("selectionType") ?? "text")
 +                                suffix: params.optionalString("suffix"), mode: params.optionalString("selectionType") ?? "text", constraint: constraint(handle, params))
-@@ -349 +410 @@
+@@ -349 +439 @@
 -            try ax().perform(selected, action)
 +            try ax().perform(selected, action, constraint: constraint(handle, params))
-@@ -358,0 +420 @@
+@@ -358,0 +449 @@
 +            var pointerConstraint: AXWindowConstraint?
-@@ -359,0 +422 @@
+@@ -359,0 +451 @@
 +                pointerConstraint = try constraint(handle, params)
-@@ -368 +431 @@
+@@ -368 +460 @@
 -                        try ax().perform(selected, action)
 +                        try ax().perform(selected, action, constraint: constraint(handle, params))
-@@ -374,0 +438,4 @@
+@@ -374,0 +467,4 @@
 +                if let pointerConstraint {
 +                    try ax().requireWindow(selected, expected: pointerConstraint.windowID, owner: pointerConstraint.owner)
 +                    try WindowScopePolicy.requireRoute(expected: pointerConstraint.windowID, actual: window.windowID)
 +                }
-@@ -382 +449 @@
+@@ -382 +478 @@
 -            let route = WindowRoute(owner: identity, windowID: window.windowID, bounds: window.bounds)
 +            let route = WindowRoute(owner: identity, windowID: window.windowID, bounds: window.bounds, strictWindowID: pointerConstraint?.windowID, taskWindow: taskWindow)
-@@ -401 +468 @@
+@@ -401 +497 @@
 -            let route = WindowRoute(owner: identity, windowID: id, bounds: window.bounds)
 +            let route = WindowRoute(owner: identity, windowID: id, bounds: window.bounds, taskWindow: taskWindow)
-@@ -469 +536 @@
+@@ -453,0 +550 @@
++        if plan.taskInputFocus { try chromeInput?.checkPreparing() }
+@@ -469 +566,8 @@
 -        guard let id = plan.snapshotID, let index = plan.index, let element = try snapshot(plan.appHandle, id).elements[index] else {
++        if plan.taskInputFocus {
++            try chromeInput?.checkPreparing()
++            guard let window = taskWindow, let input = chromeInput, input.owner == plan.identity,
++                  window.windowID == plan.targetWindowID else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task focus identity changed") }
++            try window.raise(using: ax())
++            return
++        }
 +        guard let id = plan.snapshotID, let index = plan.index else {
-@@ -472 +539,3 @@
+@@ -472 +576,3 @@
 -        try ax().perform(element, "AXRaise")
 +        let value = try snapshot(plan.appHandle, id)
 +        guard let element = value.elements[index] else { throw NativeFailure(code: "STALE_SNAPSHOT", message: "Raise target is no longer available") }
 +        try ax().perform(element, "AXRaise", constraint: constraint(value, handle: plan.appHandle))
-@@ -474,0 +544 @@
+@@ -473,0 +580,7 @@
++    func finishTaskInputFocus(_ plan: ForegroundPlan) throws -> JSONValue {
++        guard plan.taskInputFocus, let input = chromeInput, input.owner == plan.identity,
++              taskHandle == plan.appHandle else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task focus identity changed") }
++        try input.arm()
++        return .object(["inputScope": .string("chrome-instance"), "taskId": .string(input.taskID),
++            "pid": .number(Double(input.owner.pid)), "windowId": .number(Double(input.window.windowID)), "focused": .bool(true)])
++    }
+@@ -474,0 +588 @@
 +        try taskWindow?.require()
-@@ -486,0 +557 @@
+@@ -486,0 +601 @@
 +        try taskWindow?.require()
-@@ -497 +568 @@
+@@ -497 +612 @@
 -    func shutdown() { closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
-+    func shutdown() { taskWindow = nil; taskCandidates.removeAll(); closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
++    func shutdown() { chromeInput?.close(); chromeInput = nil; taskWindow = nil; taskCandidates.removeAll(); closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
 --- a/native/Sources/CuaNative/NativeProtocol.generated.swift
 +++ b/native/Sources/CuaNative/NativeProtocol.generated.swift
-@@ -4,0 +5,3 @@
+@@ -3 +3 @@
+-    static let modelMethods: [String] = ["activate", "click", "drag", "findApps", "getApp", "getCapabilities", "getState", "hover", "listApps", "listWindows", "paste", "performSecondaryAction", "pressKey", "screenshot", "scroll", "selectText", "setValue", "show", "typeText"]
++    static let modelMethods: [String] = ["activate", "click", "drag", "findApps", "getApp", "getCapabilities", "getState", "hover", "listApps", "listWindows", "paste", "performSecondaryAction", "pressKey", "screenshot", "scroll", "selectText", "setValue", "show", "taskInput", "typeText"]
+@@ -4,0 +5,6 @@
++        "authorizeTaskInput": ["appHandle", "windowId", "taskId", "expiresAt", "inputScope"],
++        "checkTaskInput": ["appHandle", "windowId", "taskId"],
++        "taskInput": ["appHandle", "windowId", "taskId", "kind", "text", "key", "modifiers", "url"],
 +        "prepareTaskWindows": ["appHandle"],
 +        "bindTaskWindow": ["appHandle", "windowId", "targetKey"],
 +        "validateTaskWindow": ["appHandle", "windowId"],
-@@ -12 +15 @@
+@@ -12 +18 @@
 -        "getState": ["appHandle", "details", "includeMenus", "maxDepth", "maxElements", "windowId"],
 +        "getState": ["appHandle", "details", "includeMenus", "maxDepth", "maxElements", "strictWindowScope", "windowId"],
 --- /dev/null
 +++ b/native/Sources/CuaNative/NativeTaskWindow.swift
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,40 @@
 +// A retained window identity, not an application/input authorization. No AX tree or values.
 +import Foundation
 +import ApplicationServices
@@ -231,6 +290,21 @@
 +    init(owner: ProcessIdentity, windowID: UInt32, element: AXUIElement, timeout: Float, cancellation: CancellationLatch) {
 +        self.owner = owner; self.windowID = windowID; self.element = element
 +        self.timeout = timeout; self.cancellation = cancellation
++    }
++    func requireFocused() throws {
++        try cancellation.check(); try NativePlatform.verify(owner)
++        _ = try NativePlatform.ownedWindow(owner.pid, windowID)
++        let access = AXAccess(timeout: timeout, cancellation: cancellation)
++        guard let current = try access.element(AXUIElementCreateApplication(owner.pid), "AXFocusedWindow"),
++              CFEqual(current, element), try access.windowID(current) == windowID else {
++            throw NativeFailure(code: "CUA_INPUT_FOCUS_LOST", message: "Selected Chrome window lost focus or identity")
++        }
++        try cancellation.check(); try NativePlatform.verify(owner)
++    }
++    func raise(using access: AXAccess) throws {
++        try require()
++        try access.perform(element, "AXRaise", constraint: AXWindowConstraint(owner: owner, windowID: windowID))
++        try require()
 +    }
 +    func require() throws {
 +        try cancellation.check()
@@ -258,25 +332,46 @@
 +    }
 --- a/native/Sources/CuaNative/WindowPointerInput.swift
 +++ b/native/Sources/CuaNative/WindowPointerInput.swift
-@@ -86,0 +87 @@
+@@ -19,0 +20 @@
++    private let sourceState: CGEventSourceStateID
+@@ -21 +22 @@
+-    init(poster: PIDEventPoster, checkCancellation: @escaping @Sendable () throws -> Void = {}) {
++    init(poster: PIDEventPoster, checkCancellation: @escaping @Sendable () throws -> Void = {}, sourceState: CGEventSourceStateID = .hidSystemState) {
+@@ -23,0 +25 @@
++        self.sourceState = sourceState
+@@ -68 +70 @@
+-        let source = try Self.source()
++        let source = try Self.source(sourceState)
+@@ -86,0 +89 @@
 +            try route.taskWindow?.require()
-@@ -90 +91 @@
+@@ -90 +93 @@
 -                try await Self.postPair(downInterval: .milliseconds(holdMs ?? 1), checkCancellation: checkCancellation,
 +                try await Self.postPair(downInterval: .milliseconds(holdMs ?? 1), checkCancellation: { try checkCancellation(); try route.taskWindow?.require() },
-@@ -99,0 +101 @@
+@@ -99,0 +103 @@
 +            try route.taskWindow?.require()
-@@ -102 +104 @@
+@@ -102 +106 @@
 -            try await Self.postPair(downInterval: .milliseconds(holdMs ?? 28), checkCancellation: checkCancellation,
 +            try await Self.postPair(downInterval: .milliseconds(holdMs ?? 28), checkCancellation: { try checkCancellation(); try route.taskWindow?.require() },
-@@ -134 +136,2 @@
+@@ -118 +122 @@
+-        let source = try Self.source()
++        let source = try Self.source(sourceState)
+@@ -134 +138,2 @@
 -        poster.post(move, to: route.owner.pid)
 +        try route.taskWindow?.require()
 +            poster.post(move, to: route.owner.pid)
-@@ -136,0 +140 @@
+@@ -136,0 +142 @@
 +        try route.taskWindow?.require()
-@@ -277,0 +282,2 @@
+@@ -153 +159 @@
+-        let source = try Self.source()
++        let source = try Self.source(sourceState)
+@@ -277,0 +284,2 @@
 +        try route.taskWindow?.require()
 +        try WindowScopePolicy.requireRoute(expected: route.strictWindowID, actual: route.windowID)
+@@ -289,2 +297,2 @@
+-    private static func source() throws -> CGEventSource {
+-        guard let source = CGEventSource(stateID: .hidSystemState) else {
++    private static func source(_ state: CGEventSourceStateID) throws -> CGEventSource {
++        guard let source = CGEventSource(stateID: state) else {
 --- /dev/null
 +++ b/native/Sources/CuaNative/WindowScopePolicy.swift
 @@ -0,0 +1,22 @@
@@ -304,7 +399,7 @@
 +}
 --- a/native/protocol.schema.json
 +++ b/native/protocol.schema.json
-@@ -1154,0 +1155,73 @@
+@@ -1154,0 +1155,156 @@
 +          ],
 +          "additionalProperties": false
 +        }
@@ -378,7 +473,16 @@
 +            "appHandle",
 +            "windowId",
 +            "targetKey"
-@@ -1164,0 +1238,37 @@
++          ],
++          "additionalProperties": false
++        }
++      },
++      "required": [
++        "id",
++        "method",
++        "params"
++      ],
++      "additionalProperties": false
 +    },
 +    {
 +      "type": "object",
@@ -406,6 +510,147 @@
 +          "required": [
 +            "appHandle",
 +            "windowId"
++          ],
++          "additionalProperties": false
++        }
++      },
++      "required": [
++        "id",
++        "method",
++        "params"
++      ],
++      "additionalProperties": false
++    },
++    {
++      "type": "object",
++      "properties": {
++        "id": {
++          "type": "string"
++        },
++        "method": {
++          "const": "authorizeTaskInput"
++        },
++        "params": {
++          "type": "object",
++          "properties": {
++            "appHandle": {
++              "type": "string"
++            },
++            "windowId": {
++              "type": "integer",
++              "minimum": 1
++            },
++            "taskId": {
++              "type": "string"
++            },
++            "expiresAt": {
++              "type": "integer"
++            },
++            "inputScope": {
++              "const": "chrome-instance"
++            }
++          },
++          "required": [
++            "appHandle",
++            "windowId",
++            "taskId",
++            "expiresAt",
++            "inputScope"
+@@ -1164,0 +1321,104 @@
++    },
++    {
++      "type": "object",
++      "properties": {
++        "id": {
++          "type": "string"
++        },
++        "method": {
++          "const": "checkTaskInput"
++        },
++        "params": {
++          "type": "object",
++          "properties": {
++            "appHandle": {
++              "type": "string"
++            },
++            "windowId": {
++              "type": "integer",
++              "minimum": 1
++            },
++            "taskId": {
++              "type": "string"
++            }
++          },
++          "required": [
++            "appHandle",
++            "windowId",
++            "taskId"
++          ],
++          "additionalProperties": false
++        }
++      },
++      "required": [
++        "id",
++        "method",
++        "params"
++      ],
++      "additionalProperties": false
++    },
++    {
++      "type": "object",
++      "properties": {
++        "id": {
++          "type": "string"
++        },
++        "method": {
++          "const": "taskInput"
++        },
++        "params": {
++          "type": "object",
++          "properties": {
++            "appHandle": {
++              "type": "string"
++            },
++            "windowId": {
++              "type": "integer",
++              "minimum": 1
++            },
++            "taskId": {
++              "type": "string"
++            },
++            "kind": {
++              "enum": [
++                "text",
++                "key",
++                "navigate"
++              ]
++            },
++            "text": {
++              "type": "string"
++            },
++            "key": {
++              "type": "string"
++            },
++            "modifiers": {
++              "type": "array",
++              "items": {
++                "enum": [
++                  "command",
++                  "control",
++                  "option",
++                  "shift"
++                ]
++              }
++            },
++            "url": {
++              "type": "string"
++            }
++          },
++          "required": [
++            "appHandle",
++            "windowId",
++            "taskId",
++            "kind"
 +          ],
 +          "additionalProperties": false
 +        }
@@ -457,7 +702,7 @@
 -        return try record(bundleID: bundleID, name: name, executablePath: path)
 --- /dev/null
 +++ b/native/Sources/CuaNative/ExecutableIdentity.swift
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,106 @@
 +// File identity, not path spelling, binds aliases of the same executable.
 +// No application launch, Accessibility, permissions, or executable contents.
 +import Foundation
@@ -499,6 +744,29 @@
 +}
 +
 +enum ExecutableIdentity {
++    // Retains the executable objects for the complete input lease, not just selection.
++    final class Lease: @unchecked Sendable {
++        private let actualPath: String
++        private let expectedPath: String
++        private let actual: PinnedExecutable
++        private let expected: PinnedExecutable
++        init(actualPath: String, expectedPath: String, verifyProcess: () throws -> Void) throws {
++            try verifyProcess()
++            self.actualPath = actualPath; self.expectedPath = expectedPath
++            actual = try PinnedExecutable(ExecutableIdentity.canonical(actualPath))
++            expected = try PinnedExecutable(ExecutableIdentity.canonical(expectedPath))
++            guard actual.id == expected.id else { throw ExecutableIdentityFailure.changed }
++            try verifyProcess()
++        }
++        func require(verifyProcess: () throws -> Void, currentActualPath: () throws -> String) throws {
++            try verifyProcess()
++            let current = try PinnedExecutable(ExecutableIdentity.canonical(currentActualPath()))
++            let selected = try PinnedExecutable(ExecutableIdentity.canonical(actualPath))
++            let declaration = try PinnedExecutable(ExecutableIdentity.canonical(expectedPath))
++            guard current.id == actual.id, selected.id == actual.id, declaration.id == expected.id else { throw ExecutableIdentityFailure.changed }
++            try verifyProcess()
++        }
++    }
 +    private static func canonical(_ path: String) throws -> String {
 +        guard !path.isEmpty, path.hasPrefix("/"), !path.utf8.contains(0) else {
 +            throw ExecutableIdentityFailure.missingPath
@@ -539,5 +807,285 @@
 +            try revalidate()
 +            return result
 +        }
++    }
++}
+--- a/native/Sources/CuaNative/KeyboardInput.swift
++++ b/native/Sources/CuaNative/KeyboardInput.swift
+@@ -19,0 +20,2 @@
++    private let canRelease: @Sendable () -> Bool
++    private let sourceState: CGEventSourceStateID
+@@ -21 +23,2 @@
+-    init(poster: PIDEventPoster, textEventInterval: Double, checkCancellation: @escaping @Sendable () throws -> Void = {}) {
++    init(poster: PIDEventPoster, textEventInterval: Double, checkCancellation: @escaping @Sendable () throws -> Void = {},
++         canRelease: @escaping @Sendable () -> Bool = { true }, sourceState: CGEventSourceStateID = .hidSystemState) {
+@@ -24,0 +28 @@
++        self.canRelease = canRelease; self.sourceState = sourceState
+@@ -41 +45 @@
+-        let source = try Self.source()
++        let source = try Self.source(sourceState)
+@@ -54,25 +58,3 @@
+-        var heldModifiers = 0
+-        var keyHeld = false
+-        do {
+-            defer {
+-                if keyHeld { poster.post(up, to: pid) }
+-                for index in (0..<heldModifiers).reversed() {
+-                    poster.post(modifierEvents[index].up, to: pid)
+-                    Thread.sleep(forTimeInterval: 0.008)
+-                }
+-            }
+-            for events in modifierEvents {
+-                try checkCancellation()
+-                poster.post(events.down, to: pid)
+-                heldModifiers += 1
+-                Thread.sleep(forTimeInterval: 0.008)
+-            }
+-            try checkCancellation()
+-            poster.post(down, to: pid)
+-            keyHeld = true
+-            Thread.sleep(forTimeInterval: 0.008)
+-            try checkCancellation()
+-            poster.post(up, to: pid)
+-            keyHeld = false
+-        }
+-        try checkCancellation()
++        try BalancedInputSequence.chord(modifierCount: modifierEvents.count, check: checkCancellation, canRelease: canRelease,
++            modifierDown: { poster.post(modifierEvents[$0].down, to: pid) }, modifierUp: { poster.post(modifierEvents[$0].up, to: pid) },
++            keyDown: { poster.post(down, to: pid) }, keyUp: { poster.post(up, to: pid) }, pause: { Thread.sleep(forTimeInterval: 0.008) })
+@@ -84 +66 @@
+-        let source = try Self.source()
++        let source = try Self.source(sourceState)
+@@ -103,17 +85,3 @@
+-            var keyHeld = false
+-            do {
+-                defer {
+-                    if keyHeld {
+-                        poster.post(up, to: pid)
+-                        Thread.sleep(forTimeInterval: textEventInterval)
+-                    }
+-                }
+-                try checkCancellation()
+-                poster.post(down, to: pid)
+-                keyHeld = true
+-                Thread.sleep(forTimeInterval: textEventInterval)
+-                try checkCancellation()
+-                poster.post(up, to: pid)
+-                keyHeld = false
+-                Thread.sleep(forTimeInterval: textEventInterval)
+-            }
++            try BalancedInputSequence.chord(modifierCount: 0, check: checkCancellation, canRelease: canRelease,
++                modifierDown: { _ in }, modifierUp: { _ in }, keyDown: { poster.post(down, to: pid) }, keyUp: { poster.post(up, to: pid) },
++                pause: { Thread.sleep(forTimeInterval: textEventInterval) }, afterKeyUp: { Thread.sleep(forTimeInterval: textEventInterval) })
+@@ -124,2 +92,2 @@
+-    private static func source() throws -> CGEventSource {
+-        guard let source = CGEventSource(stateID: .hidSystemState) else {
++    private static func source(_ state: CGEventSourceStateID) throws -> CGEventSource {
++        guard let source = CGEventSource(stateID: state) else {
+--- /dev/null
++++ b/native/Sources/CuaNative/ChromeInputPolicy.swift
+@@ -0,0 +1,96 @@
++// Pure, task-bounded Chrome input policy. No OS input or application access.
++import Foundation
++
++enum ChromeInputRules {
++    static func navigation(_ value: String) throws -> String {
++        guard value.count <= 2048, !value.unicodeScalars.contains(where: { $0.value <= 32 || $0.value == 127 || $0 == "\\" }),
++              let parts = URLComponents(string: value), let scheme = parts.scheme?.lowercased(), ["http", "https"].contains(scheme),
++              let host = parts.host, !host.isEmpty, parts.user == nil, parts.password == nil,
++              let url = parts.url?.absoluteString, url.count <= 512 else {
++            throw NativeFailure(code: "CUA_CHROME_NAVIGATION_DENIED", message: "Navigation accepts bounded HTTP/HTTPS addresses only")
++        }
++        return url
++    }
++    static func key(_ value: String, modifiers: [String]) throws {
++        let key = value.lowercased(), selected = Set(modifiers), sorted = modifiers.sorted().joined(separator: ",")
++        let plain: Set<String> = ["enter","return","tab","escape","space","backspace","delete","left","right","up","down","home","end","pageup","pagedown"]
++        let movement: Set<String> = ["left","right","up","down","home","end","pageup","pagedown","backspace","delete"]
++        let letter = key.utf8.count == 1 && key.utf8.allSatisfy { (97...122).contains($0) }
++        guard modifiers.count <= 2, selected.count == modifiers.count, selected.isSubset(of: ["command","control","option","shift"]),
++              (sorted.isEmpty && plain.contains(key)) || (sorted == "shift" && (plain.contains(key) || letter))
++                || (["option", "option,shift"].contains(sorted) && movement.contains(key))
++                || (sorted == "command" && ["a","f","r","z"].contains(key))
++                || (sorted == "command,shift" && key == "z")
++                || (sorted == "control" && ["a","b","d","e","f","h","k"].contains(key)) else {
++            throw NativeFailure(code: "CUA_CHROME_KEY_DENIED", message: "Key chord is outside bounded Chrome editing/navigation input")
++        }
++    }
++    static func validate(_ values: [String: JSONValue]) throws {
++        let kind = values["kind"]?.string
++        let expected: Set<String>
++        switch kind {
++        case "text": expected = ["appHandle","windowId","taskId","kind","text"]
++        case "key": expected = ["appHandle","windowId","taskId","kind","key","modifiers"]
++        case "navigate": expected = ["appHandle","windowId","taskId","kind","url"]
++        default: throw NativeFailure(code: "CUA_CHROME_INPUT_INVALID", message: "Unknown Chrome task input kind")
++        }
++        guard Set(values.keys).isSubset(of: expected) else { throw NativeFailure(code: "CUA_CHROME_INPUT_INVALID", message: "Unexpected Chrome task input field") }
++        if kind == "text" {
++            guard let text = values["text"]?.string, !text.isEmpty, text.unicodeScalars.count <= 256,
++                  !text.unicodeScalars.contains(where: { (0...8).contains($0.value) || [11,12,127].contains($0.value) || (14...31).contains($0.value) }) else {
++                throw NativeFailure(code: "CUA_CHROME_TEXT_DENIED", message: "Text must contain 1...256 Unicode scalars without unsupported controls")
++            }
++        } else if kind == "navigate" {
++            guard let text = values["url"]?.string else { throw NativeFailure(code: "CUA_CHROME_NAVIGATION_DENIED", message: "Address is missing") }
++            _ = try navigation(text)
++        } else {
++            guard let key = values["key"]?.string else { throw NativeFailure(code: "CUA_CHROME_KEY_DENIED", message: "Key is missing") }
++            let modifiers: [String]
++            if let raw = values["modifiers"] {
++                guard case .array(let items) = raw, items.allSatisfy({ $0.string != nil }) else { throw NativeFailure(code: "CUA_CHROME_KEY_DENIED", message: "Invalid modifiers") }
++                modifiers = items.compactMap(\.string)
++            } else { modifiers = [] }
++            try self.key(key, modifiers: modifiers)
++        }
++    }
++}
++
++// A serial-worker latch: a detected takeover/identity loss can never be re-armed.
++final class ChromeInputPolicy {
++    private(set) var active = false
++    private(set) var closed = false
++    let pid: Int32
++    let expiresAt: Int64
++    private var hardware: [UInt32] = []
++    private let preparingHardware: [UInt32]?
++    init(pid: Int32, expiresAt: Int64, hardware: [UInt32]? = nil) { self.pid = pid; self.expiresAt = expiresAt; self.preparingHardware = hardware }
++    func close() { active = false; closed = true }
++    func checkPreparing(now: Int64, hardware: [UInt32], identity: () throws -> Void, window: () throws -> Void) throws {
++        guard !active && !closed else { throw NativeFailure(code: "CUA_INPUT_CLOSED", message: "Chrome input preparation is closed") }
++        do {
++            guard now < expiresAt else { throw NativeFailure(code: "CUA_INPUT_EXPIRED", message: "Chrome input expired during focus preparation") }
++            try identity(); try window()
++            if let expected = preparingHardware, hardware != expected { throw NativeFailure(code: "CUA_INPUT_USER_TAKEOVER", message: "Hardware input changed during task focus preparation") }
++        } catch { close(); throw error }
++    }
++    func arm(now: Int64, frontPID: Int32?, hardware: [UInt32], identity: () throws -> Void, window: () throws -> Void) throws {
++        guard !active && !closed else { throw NativeFailure(code: "CUA_INPUT_CLOSED", message: "Chrome input cannot be re-armed") }
++        do {
++            try checkPreparing(now: now, hardware: hardware, identity: identity, window: window)
++            try requireCommon(now: now, frontPID: frontPID, identity: identity, window: window)
++            self.hardware = hardware; active = true
++        } catch { close(); throw error }
++    }
++    func check(now: Int64, frontPID: Int32?, hardware: [UInt32], identity: () throws -> Void, window: () throws -> Void) throws {
++        guard active && !closed else { throw NativeFailure(code: "CUA_INPUT_CLOSED", message: "Chrome input is not active") }
++        do {
++            try requireCommon(now: now, frontPID: frontPID, identity: identity, window: window)
++            guard hardware == self.hardware else { throw NativeFailure(code: "CUA_INPUT_USER_TAKEOVER", message: "Hardware input changed; user takeover stops this task") }
++        } catch { close(); throw error }
++    }
++    private func requireCommon(now: Int64, frontPID: Int32?, identity: () throws -> Void, window: () throws -> Void) throws {
++        guard now < expiresAt else { throw NativeFailure(code: "CUA_INPUT_EXPIRED", message: "Chrome input task expired") }
++        try identity(); try window()
++        guard frontPID == pid else { throw NativeFailure(code: "CUA_INPUT_FOCUS_LOST", message: "Foreground changed; Chrome input stops") }
++    }
++}
+--- /dev/null
++++ b/native/Sources/CuaNative/ChromeTaskInput.swift
+@@ -0,0 +1,74 @@
++// One task's Chrome-instance input. Focus checks detect takeover, not atomic window isolation.
++import Foundation
++import CoreGraphics
++
++final class ChromeTaskInput: @unchecked Sendable {
++    let owner: ProcessIdentity
++    let window: NativeTaskWindow
++    let taskID: String
++    private let cancellation: CancellationLatch
++    private let executable: ExecutableIdentity.Lease
++    private let policy: ChromeInputPolicy
++    private let interval: Double
++    init(owner: ProcessIdentity, window: NativeTaskWindow, taskID: String, expiresAt: Int64,
++         application: ApplicationInfo, cancellation: CancellationLatch, interval: Double) throws {
++        guard application.pid == owner.pid, application.bundleID == "com.google.Chrome", let expected = application.executablePath,
++              !taskID.isEmpty, taskID.count <= 100 else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task input requires the selected running Chrome instance") }
++        self.owner = owner; self.window = window; self.taskID = taskID; self.cancellation = cancellation; self.interval = interval
++        self.policy = ChromeInputPolicy(pid: owner.pid, expiresAt: expiresAt, hardware: Self.hardware())
++        self.executable = try ExecutableIdentity.Lease(actualPath: NativePlatform.executablePathResult(owner.pid).get(),
++            expectedPath: expected, verifyProcess: { try NativePlatform.verify(owner) })
++    }
++    static func now() -> Int64 { Int64(Date().timeIntervalSince1970 * 1000) }
++    // Counts only; never records keys, pointer positions, app content or an event tap.
++    private static func hardware() -> [UInt32] {
++        [CGEventType.keyDown, .keyUp, .flagsChanged, .leftMouseDown, .rightMouseDown, .otherMouseDown,
++         .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .scrollWheel].map {
++            CGEventSource.counterForEventType(.hidSystemState, eventType: $0)
++        }
++    }
++    private func identity() throws {
++        try executable.require(verifyProcess: { try NativePlatform.verify(owner) }, currentActualPath: { try NativePlatform.executablePathResult(self.owner.pid).get() })
++        guard ApplicationAuthorization.runningBundle(owner.pid).identifier == "com.google.Chrome" else {
++            throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Chrome application identity changed")
++        }
++    }
++    func checkPreparing() throws {
++        try cancellation.check()
++        try policy.checkPreparing(now: Self.now(), hardware: Self.hardware(), identity: { try self.identity() }, window: { try self.window.require() })
++    }
++    func arm() throws {
++        try cancellation.check()
++        try policy.arm(now: Self.now(), frontPID: NativePlatform.frontPID(), hardware: Self.hardware(),
++                       identity: { try self.identity() }, window: { try self.window.requireFocused() })
++    }
++    func check() throws {
++        do {
++            try cancellation.check()
++            try NativePlatform.requireUnlocked(NativePlatform.sessionLocked())
++            try policy.check(now: Self.now(), frontPID: NativePlatform.frontPID(), hardware: Self.hardware(),
++                             identity: { try self.identity() }, window: { try self.window.requireFocused() })
++        } catch { policy.close(); throw error }
++    }
++    private func canRelease() -> Bool { (try? identity()) != nil }
++    func execute(_ params: RequestParameters) throws {
++        do {
++            try ChromeInputRules.validate(params.values)
++            try check()
++            let keyboard = KeyboardInput(poster: PIDEventPoster(), textEventInterval: interval,
++                checkCancellation: { try self.check() }, canRelease: { self.canRelease() }, sourceState: .privateState)
++            switch try params.string("kind") {
++            case "text": try keyboard.typeText(params.string("text"), to: owner.pid)
++            case "key": try keyboard.pressKey(params.string("key"), modifiers: params.modifiers(), to: owner.pid)
++            case "navigate":
++                let url = try ChromeInputRules.navigation(params.string("url"))
++                try keyboard.pressKey("l", modifiers: ["command"], to: owner.pid)
++                try keyboard.typeText(url, to: owner.pid)
++                try keyboard.pressKey("Return", modifiers: [], to: owner.pid)
++            default: throw NativeFailure(code: "CUA_CHROME_INPUT_INVALID", message: "Unknown Chrome input")
++            }
++            try check()
++        } catch { policy.close(); throw error }
++    }
++    func close() { policy.close() }
++}
+--- a/native/Sources/CuaNative/RequestCoordinator.swift
++++ b/native/Sources/CuaNative/RequestCoordinator.swift
+@@ -237,0 +238 @@
++        if plan.taskInputFocus { return try await worker.finishTaskInputFocus(plan) }
+--- /dev/null
++++ b/native/Sources/CuaNative/BalancedInputSequence.swift
+@@ -0,0 +1,25 @@
++// Actual balanced emitter shared by production keyboard input and pure fixtures.
++// Cleanup is release-only and refuses a replacement process; focus loss can still
++// route a release to another window of the same approved application instance.
++enum BalancedInputSequence {
++    static func chord(modifierCount: Int, check: () throws -> Void, canRelease: () -> Bool,
++                      modifierDown: (Int) -> Void, modifierUp: (Int) -> Void,
++                      keyDown: () -> Void, keyUp: () -> Void, pause: () -> Void,
++                      afterKeyUp: () -> Void = {}) throws {
++        var heldModifiers = 0
++        var keyHeld = false
++        defer {
++            if keyHeld && canRelease() { keyUp() }
++            for index in (0..<heldModifiers).reversed() where canRelease() { modifierUp(index); pause() }
++        }
++        for index in 0..<modifierCount {
++            try check(); modifierDown(index); heldModifiers += 1; pause()
++        }
++        try check(); keyDown(); keyHeld = true; pause()
++        try check(); keyUp(); keyHeld = false; afterKeyUp()
++        for index in (0..<heldModifiers).reversed() {
++            try check(); modifierUp(index); heldModifiers = index; pause()
++        }
++        try check()
 +    }
 +}
