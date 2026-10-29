@@ -229,6 +229,32 @@ describe('OpenAI Codex original image download route', () => {
     expect((await download(capture(store, sessions), 'child', original.assetId)).status).toBe(404)
   })
 
+  it.each(['tool/result', 'tool/code-dispatch', 'tool/ptc-dispatch'])('confines seeded-only %s originals to their inherited prefix', async type => {
+    root = await mkdtemp(join(tmpdir(), 'codex-image-seeded-'))
+    const store = new OpenAICodexImageAssetStore(root)
+    const [original] = await store.saveImages('owner', [{ data: PNG_1X1, mediaType: 'image/png', width: 1, height: 1, name: 'original.png' }])
+    if (original === undefined) throw new Error('missing fixture original')
+    const preview = { attachmentId: 'seeded-preview', mediaType: 'image/png', width: 1, height: 1, bytes: PNG_1X1.byteLength }
+    const data = type === 'tool/result' ? {
+      message: { isError: false, content: [] },
+      meta: { kind: 'codex-connect-images', schemaVersion: 1, prompt: 'fixture', images: [{ original, preview }] },
+    } : { name: 'codex_connect_image_generate', isError: false, arguments: { prompt: 'fixture' },
+      content: [{ type: 'text', text: IMAGE_RESULT_PREFIX + JSON.stringify([{ original, preview }]) }, { type: 'image', attachment: preview }] }
+    for (const [isSeeded, boundary, seq, expected] of [
+      [true, 1, 0, 200],
+      [false, 1, 0, 404], [undefined, 1, 0, 404], ['true', 1, 0, 404],
+      [true, 0, 0, 404], [true, -1, 0, 404], [true, 1.5, 0, 404],
+      [true, NaN, 0, 404], [true, Infinity, 0, 404], [true, Number.MAX_SAFE_INTEGER + 1, 0, 404],
+      [true, 1, 1, 404], [true, 1, 2, 404],
+    ] as const) {
+      const sessions = { get: () => ({ header: { isSeeded }, inheritedEventCount: boundary,
+        snapshotEvents: () => [{ type, seq, data }] }) } as unknown as SessionStore
+      const res = await download(capture(store, sessions), 'seeded-child', original.assetId)
+      expect(res.status, `isSeeded=${String(isSeeded)} boundary=${boundary} seq=${seq}`).toBe(expected)
+      if (expected === 200) expect(Buffer.from(res.body as Uint8Array)).toEqual(Buffer.from(PNG_1X1))
+    }
+  })
+
   it('downloads inherited originals through nested forks and restored sessions without loading ancestors', async () => {
     root = await mkdtemp(join(tmpdir(), 'codex-image-fork-'))
     const ctx = await sessionContext()
