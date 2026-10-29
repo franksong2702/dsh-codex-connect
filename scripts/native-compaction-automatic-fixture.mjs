@@ -1,4 +1,5 @@
 import { selectPersistencePlugin } from './persistence-plugin-fixture.mjs'
+import { ensureNativeToolExecution } from './installed-host-context.mjs'
 /** Offline acceptance through actual AgentLoop pre-step and request-error events. */
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
@@ -69,6 +70,7 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
     await store.modify(PROVIDER, async () => ({ type: 'oauth', access: `${encode({ alg: 'none' })}.${encode({ 'https://api.openai.com/auth': { chatgpt_account_id: 'synthetic-automatic' } })}.synthetic`, refresh: 'synthetic-only', accountId: 'synthetic-automatic', expires: Date.now() + 3600000 }))
     ctx = new Context()
     for (const module of [llm, sessions, projections, system, tools, agents]) await ctx.plugin(module.default)
+    await ensureNativeToolExecution(ctx, importHost)
     await ctx.plugin(loop.default, { agents: [] })
     await ctx.plugin(meter.default)
     await ctx.plugin(selectPersistencePlugin(persistence), { root: join(root, scenario, 'sessions'), compression, packChunks: true })

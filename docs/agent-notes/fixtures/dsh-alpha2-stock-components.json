@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "scope": "component-only; stock compatibility remains failed; no live-account acceptance",
+  "baseline": "f9d738eb1e042cfce96e8a2b43e52159bee30192",
+  "reusedFixtureSource": "6fc368b31a4d81040f09cfcb53c861e2273fa3ec",
+  "sourceFiles": {
+    "scripts/check-installed-images.mjs": "5aecb6a870222ea66c7af0f51835a534b7566213d60346ce36895e4ff8634ed7",
+    "scripts/installed-host-context.mjs": "d4b2f9b3068ff5012c945481eb4a72f9edc54e3eeaae7e09d150f86e344eeffc",
+    "scripts/check-installed-runtime.mjs": "e2e28389fb0578a077913436d1830e8560eaa5f37f623f32300f7630f1544aa9",
+    "scripts/check-installed-reserve.mjs": "8d8155fac378278fba6af3919b6ad2e2233a3dae5c1cedfe1e832ee1ed01aff5",
+    "scripts/native-compaction-automatic-fixture.mjs": "6e3729a9e0b5ef3592a1536f787214cc1389124b212169df8bdba0a478608ede",
+    "scripts/native-compaction-lifecycle-fixture.mjs": "3ea2177f9b2c6e3b7949994c4cc3b9b16c58a8272b955ef512e82f9785b8a5b1",
+    "scripts/check-canary-workflow.mjs": "c1972e9b3b5c5b9cb70bd2e00113473b0e51cedc7e1719e3c61d092f33bc4d4b"
+  },
+  "environment": {
+    "os": "darwin",
+    "arch": "arm64",
+    "node": "v24.13.0",
+    "pnpm": "10.30.3"
+  },
+  "stock": {
+    "version": "0.2.2-alpha.2",
+    "hostPatched": false,
+    "officialSriVerifiedPackageCount": 321,
+    "identicalRegularFiles": 8277,
+    "fullProvenanceSha256": "5ea94a37578e034612501459d1b0626fd2ed6671cec13c5b27a1279ce1314a18",
+    "selectedPackages": [
+      {
+        "name": "@deepseek-ai/dsh-agent-loop",
+        "version": "0.2.2-alpha.2",
+        "integrity": "sha512-lPQG7SpHdmbfWR5CRlNIMqtCR7ojJ3i1IZmnk1GzvdaHFzYTcAfxruib6a0ecTt7HQli06sLr7v1GAZi/d6M7w==",
+        "tarballSha256": "434f0ed93d339c6c06f74929c9fa8f3971df97f82214845e4c6405319a9a39ca"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tool-executor-native",
+        "version": "0.2.2-alpha.2",
+        "integrity": "sha512-ccF/27NjJFVZ/NRY1gm0m2mtC+T2WgRP21qDVMjXt5rUKXfoCww3oM9RDtucev23ThTUHGb7sF1/s/JsGZMzVw==",
+        "tarballSha256": "44b9f07507becbfe5cbeeb069197564936ecf08d8b9fdab81115123eb4181f98"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tool-executor-ptc",
+        "version": "0.2.2-alpha.2",
+        "integrity": "sha512-8cQ2Isw3GlfNwnxHKOHo7q/KdkW4ynuUcDe9ARO6kpyqSY/KkqUn3iW3I6hYPsguThsG8Huk2GBDb0baunNFEw==",
+        "tarballSha256": "d355389e98b754c0fd8551b6970ffac9dd6d1859c7276aa7e10e8aadba901c03"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tools",
+        "version": "0.2.2-alpha.2",
+        "integrity": "sha512-2KXvznBB1R8rUpfdOmmmufeo65t3hqXDBjq7qSLCfM4RHibQz8WL692WBcTWznGnoMVWifIPXDfUas3SjJdNSw==",
+        "tarballSha256": "89e3c360101b5fbe2ac79a95db804cf4047bbc21cbdcf9277486f2c78185726c"
+      }
+    ]
+  },
+  "candidate": {
+    "metadataVersion": "0.2.0-alpha.11-stock403.0",
+    "compiledPluginVersion": "0.2.0-alpha.11",
+    "private": true,
+    "unverified": true,
+    "exactPeerAdmissionOnly": true,
+    "officialPluginAddExit": 0,
+    "artifactSha256": "3ad30eb4560b0b03d9e4f68c381dcb77eb5471b8308e2c55a090dd5fad970523",
+    "formalInputArtifactSha256": "7083a110cdf0274f0388228f2e9d7a0498a4d91cebb5de013500118607465f29",
+    "formalSupportFilesChanged": false
+  },
+  "results": {
+    "legacyImages": {
+      "scope": "legacy component only",
+      "host": "0.1.7-rc.1",
+      "images": {
+        "syntheticOnly": true,
+        "generated": 2,
+        "edited": 2,
+        "codeRuns": 2,
+        "dispatchEvent": "tool/ptc-dispatch",
+        "originalDownloadVerified": true,
+        "originalAuthenticationVerified": true,
+        "inheritedOriginalVerified": true,
+        "earlierForkDenied": true,
+        "unrelatedSessionDenied": true,
+        "editSourcesVerified": true,
+        "inheritedEditVerified": true,
+        "invalidEditRefused": true,
+        "selectionHandlesVerified": true,
+        "realProviderRequests": 0
+      }
+    },
+    "legacyReserve": {
+      "scope": "legacy Reserve component only",
+      "host": "0.1.7-rc.1",
+      "reserveTransitionsVerified": true,
+      "realProviderRequests": 0
+    },
+    "stockImages": {
+      "status": "fail",
+      "failedAssertion": "inherited original download: actual404 expected200",
+      "laterEditAndHandleAssertions": "not reached"
+    },
+    "stockReserve": {
+      "status": "fail",
+      "error": "AssertionError [ERR_ASSERTION]: Reserve fixture agent failed: agent \"installed-reserve-fixture\": agent/request proposed \"openai-codex/gpt-reserve\" after step preparation fixed \"openai-codex/gpt-6-astra\"; use agent.model.select() before step preparation\n\n1 !== 0\n"
+    }
+  },
+  "realProviderRequests": 0,
+  "guiActions": 0,
+  "serviceChanges": 0,
+  "linuxExecution": "not run"
+}

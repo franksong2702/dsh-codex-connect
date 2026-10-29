@@ -1,4 +1,5 @@
 import { selectPersistencePlugin } from './persistence-plugin-fixture.mjs'
+import { ensureNativeToolExecution } from './installed-host-context.mjs'
 /** Offline lifecycle fixture shared by source tests and fresh-process installed-host checks. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -132,6 +133,7 @@ export async function runNativeLifecyclePhase(phase, { root, importHost, plugin,
     }))
     ctx = new Context()
     for (const module of [llm, sessions, projections, system, tools, agents]) await ctx.plugin(module.default)
+    await ensureNativeToolExecution(ctx, importHost)
     await ctx.plugin(loop.default, { agents: [] })
     await ctx.plugin(meter.default)
     await ctx.plugin(selectPersistencePlugin(persistence), { root: join(root, 'sessions'), compression, packChunks: true })

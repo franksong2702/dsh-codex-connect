@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
+import { ensureNativeToolExecution } from './installed-host-context.mjs'
 
 /** Exercise the packed plugin's logged Reserve transitions with an exact installed host and synthetic HTTP. */
 export async function checkInstalledReserve(importHost, CodexConnect) {
@@ -29,6 +30,8 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
   let exhausted = false
   let usageReads = 0
   const wires = []
+  const agentErrors = []
+  ctx.on('agent/error', ({ error }) => { agentErrors.push(error) })
   try {
     const claims = { chatgpt_account_id: 'fixture-account', chatgpt_user_id: 'fixture-user' }
     const access = `e30.${Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': claims })).toString('base64url')}.fixture`
@@ -66,6 +69,7 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
       return new Response(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
     }
     for (const plugin of [Llm, Sessions, Projections, Prompt, Tools, Agents]) await ctx.plugin(plugin)
+    await ensureNativeToolExecution(ctx, importHost)
     await ctx.plugin(Loop, { agents: [] })
     let plugin = await ctx.plugin(CodexConnect, { enableReserveFallback: true })
     assert.equal((await ctx.llm.listModels('openai-codex')).some(model => model.id === 'gpt-reserve'), false)
@@ -76,6 +80,7 @@ export async function checkInstalledReserve(importHost, CodexConnect) {
       if (ordinary) now += 61_000
       agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Fixture turn' }] }))
       await agent.whenIdle()
+      assert.equal(agentErrors.length, 0, `Reserve fixture agent failed: ${agentErrors[0]?.message}`)
       assert.deepEqual(agent.session.requestHeader()?.config, ordinary ? selection : { provider: 'openai-codex', model: 'gpt-reserve' })
       if (!ordinary) assert.equal(agent.session.snapshotEvents().filter(event => event.type === 'request/context').at(-1)?.data.contextWindow, 272_000)
     }

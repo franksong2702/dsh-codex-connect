@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { buildCanaryTrackingIssue } from './canary-tracking.mjs'
 import { validateDshMatrix } from './check-dsh-matrix.mjs'
 import { imageRuntimeService } from './check-installed-images.mjs'
+import { ensureNativeToolExecution } from './installed-host-context.mjs'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/upstream-dsh-canary.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))
@@ -31,6 +32,40 @@ function assertContract(name, condition) {
 
 assertContract('image fixture selects legacy runtime by declared dependency', imageRuntimeService({ peerDependencies: { '@deepseek-ai/dsh-code-runtime': 'fixture' } }) === 'codeRuntime')
 assertContract('image fixture selects current runtime without a version-prefix assumption', imageRuntimeService({ version: '1.0.0', dependencies: { '@deepseek-ai/dsh-ptc-runtime': 'fixture' } }) === 'ptcRuntime')
+const executorManifest = { name: '@deepseek-ai/dsh-tool-executor-ptc', version: 'fixture', peerDependencies: { '@deepseek-ai/dsh-ptc-runtime': 'fixture' } }
+assertContract('image fixture resolves the separated executor from the same Host', imageRuntimeService({ version: 'fixture' }, executorManifest) === 'ptcRuntime')
+for (const [label, manifest, executor] of [
+  ['mixed executor version', { version: 'fixture' }, { ...executorManifest, version: 'other' }],
+  ['missing tools version', {}, { ...executorManifest, version: undefined }],
+  ['wrong executor identity', { version: 'fixture' }, { ...executorManifest, name: '@deepseek-ai/dsh-tool-executor-native' }],
+  ['missing separated runtime', { version: 'fixture' }, { ...executorManifest, peerDependencies: {} }],
+  ['conflicting runtimes across tools/executor', { version: 'fixture', dependencies: { '@deepseek-ai/dsh-code-runtime': 'fixture' } }, executorManifest],
+]) {
+  let rejected = false
+  try { imageRuntimeService(manifest, executor) } catch { rejected = true }
+  assertContract(`image fixture rejects ${label}`, rejected)
+}
+let executorImports = 0
+let executorPlugins = 0
+const nativeExecutor = { default: function NativeExecutor() {} }
+const importExecutor = async specifier => {
+  assertContract('native executor uses the official package', specifier === '@deepseek-ai/dsh-tool-executor-native')
+  executorImports++
+  return nativeExecutor
+}
+assertContract('legacy tools retain their internal executor', await ensureNativeToolExecution({ tools: {} }, importExecutor) === false && executorImports === 0)
+assertContract('separated tools install their official native executor', await ensureNativeToolExecution({
+  tools: { setExecutor() {} }, async plugin(plugin) { executorPlugins++; assertContract('native executor plugin identity is retained', plugin === nativeExecutor) },
+}, importExecutor) === true && executorImports === 1 && executorPlugins === 1)
+for (const phase of ['import', 'registration']) {
+  const failure = new Error(`fixture ${phase} failure`)
+  let rejected = false
+  try {
+    await ensureNativeToolExecution({ tools: { setExecutor() {} }, async plugin() { throw failure } },
+      phase === 'import' ? async () => { throw failure } : importExecutor)
+  } catch (error) { rejected = error === failure }
+  assertContract(`native executor ${phase} failure is not treated as legacy success`, rejected)
+}
 for (const dependencies of [{}, { '@deepseek-ai/dsh-code-runtime': 'fixture', '@deepseek-ai/dsh-ptc-runtime': 'fixture' }]) {
   let rejected = false
   try { imageRuntimeService({ dependencies }) } catch { rejected = true }
