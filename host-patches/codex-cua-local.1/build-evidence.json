@@ -85,12 +85,31 @@
       "sourceProvenance": "6 tests passed",
       "compatibility": "47 tests passed",
       "readOnlyTargetMetadata": "Observed alias pair accepted with fresh kernel file and process-start verification; read-only policy component regression, not CUA driver or live desktop acceptance. Private device paths excluded.",
-      "fullNativeCompilation": "Candidate25 initial source compiled/not executed; superseded by final alias-switch policy, candidate26 pending",
+      "fullNativeCompilation": "passed: complete candidate26 production helper, all30Swift sources; binary and source inventory hashes recorded in native",
       "fullSourceCheck": "Local default sandbox:2363 passed,27 failed,2skipped,7loopback EPERM errors; no permission bypass/retry; full CI required. Build/package validation run separately.",
       "exactHeadCiAndIndependentReview": "pending",
-      "build": "pnpm build passed; complete source check retained as sandbox-blocked, not passed"
+      "build": "pnpm build and72-file package validation passed; complete local source check remains sandbox-blocked as recorded",
+      "installedProfile": "passed five-step freshly packed isolated profile regression;67actualHost/companion cases and4route cases also passed, all model/native/human scripted"
     },
     "nativeDriverExecuted": false,
-    "newDesktopAcceptance": "not run; no new model or approval request"
-  }
+    "newDesktopAcceptance": "not run; no new model or approval request",
+    "native": {
+      "built": true,
+      "buildCandidate": 26,
+      "supersededBuildCandidate": 25,
+      "sourceContentCommit": "31e71cdeb4fc1f3bd3ddf2d0d1541865c2e1bea2",
+      "sourcePatchManifestSha256": "39efe90564a0a5e67948fe088fcc829fc83d40271c31a942fa32e90f75f4ef66",
+      "swiftSourceFiles": 30,
+      "swiftSourceInventorySha256": "246884cfbbdc3de163b16cf989b96cb7e97584bddfc8a909534e6bf95c862789",
+      "compiler": "Apple Swift6.4, Swift6 language mode",
+      "target": "arm64-apple-macos14.0",
+      "wholeModuleOptimization": true,
+      "sha256": "3dca692773721c7da23f3aed02a26b895c43773ebf58dc8478cf83c68feeaadb",
+      "processExitStatus": 0,
+      "executed": false,
+      "scope": "Complete native helper compiled from all30 production Swift sources, including final alias-switch policy. Not the pure fixture, candidate25 or reused local4 binary."
+    }
+  },
+  "currentCandidateVersion": "0.2.2-alpha.2.codex-cua-local.5",
+  "currentCandidateSection": "local5"
 }
