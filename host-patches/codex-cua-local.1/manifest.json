@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "codex-cua-local.4",
+  "id": "codex-cua-local.5",
   "baseVersion": "0.2.2-alpha.2",
-  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.4",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.5",
   "published": false,
   "nativeArchitecture": "arm64",
   "packages": {
@@ -105,7 +105,7 @@
     "@deepseek-ai/dsh-experimental-cua-macos": {
       "baseIntegrity": "sha512-rHYMMIYahSn1qxntUDYYsVd5jjf5Z7svdKjHgRyaJ2JoQWgNJc26Zzgr5uTQ9IL3BkOXoj7llTOBdZMR/uKH+w==",
       "patch": "patches/dsh-experimental-cua-macos.patch",
-      "patchSha256": "99d1e5b6df9018841d4cca2e32807fd50ba2ed9e53337bcedd27ea710a5ef396",
+      "patchSha256": "32965f2eb46cec4baeba424f1747916e0670ee4d65311a2c4a827a60c1daeb58",
       "files": [
         {
           "path": "native/Sources/CuaNative/AXAccess.swift",
@@ -151,6 +151,16 @@
           "path": "native/protocol.schema.json",
           "baseSha256": "2ace99988f1325ed5699928ca3cc9a297313e569f7b759f97eab36a91875eb3d",
           "patchedSha256": "8571be0021f6f3ed245ce10ff5811ac8bb656b8903edab71951c2ef297cf3ea4"
+        },
+        {
+          "path": "native/Sources/CuaNative/ApplicationAuthorization.swift",
+          "baseSha256": "a83ca20b01bf333bfbbf11dea3b4a99391bf6d1b6aedff79eff2560b593b7b12",
+          "patchedSha256": "bd95c08547ae6c2fd1c6dd7623200d2e237b01d452b5cefda94f795e1c61585f"
+        },
+        {
+          "path": "native/Sources/CuaNative/ExecutableIdentity.swift",
+          "baseSha256": null,
+          "patchedSha256": "48a1d6f94501e2b30fffd26c7e653e9a217141f042e3d7d7ffd4798c9cf7c92d"
         }
       ]
     }

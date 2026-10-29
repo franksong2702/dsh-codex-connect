@@ -75,5 +75,22 @@
       "desktopAndModels": "not executed for this candidate; no acceptance/parity claim"
     },
     "status": "predeployment; exact-head independent review and complete CI/CodeQL readback required"
+  },
+  "local5": {
+    "candidateVersion": "0.2.2-alpha.2.codex-cua-local.5",
+    "published": false,
+    "scope": "Executable identity alias correction; no consent/window scope changes",
+    "validation": {
+      "productionPolicySyntheticFiles": "17 checks passed from integrity-verified patched official source: same-file alias switching allowed; different files, missing/unreadable paths, process changes and path replacement rejected",
+      "sourceProvenance": "6 tests passed",
+      "compatibility": "47 tests passed",
+      "readOnlyTargetMetadata": "Observed alias pair accepted with fresh kernel file and process-start verification; read-only policy component regression, not CUA driver or live desktop acceptance. Private device paths excluded.",
+      "fullNativeCompilation": "Candidate25 initial source compiled/not executed; superseded by final alias-switch policy, candidate26 pending",
+      "fullSourceCheck": "Local default sandbox:2363 passed,27 failed,2skipped,7loopback EPERM errors; no permission bypass/retry; full CI required. Build/package validation run separately.",
+      "exactHeadCiAndIndependentReview": "pending",
+      "build": "pnpm build passed; complete source check retained as sandbox-blocked, not passed"
+    },
+    "nativeDriverExecuted": false,
+    "newDesktopAcceptance": "not run; no new model or approval request"
   }
 }

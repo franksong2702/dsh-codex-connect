@@ -214,7 +214,7 @@
 @@ -12 +15 @@
 -        "getState": ["appHandle", "details", "includeMenus", "maxDepth", "maxElements", "windowId"],
 +        "getState": ["appHandle", "details", "includeMenus", "maxDepth", "maxElements", "strictWindowScope", "windowId"],
---- a/native/Sources/CuaNative/NativeTaskWindow.swift
+--- /dev/null
 +++ b/native/Sources/CuaNative/NativeTaskWindow.swift
 @@ -0,0 +1,25 @@
 +// A retained window identity, not an application/input authorization. No AX tree or values.
@@ -276,7 +276,7 @@
 @@ -277,0 +282,2 @@
 +        try route.taskWindow?.require()
 +        try WindowScopePolicy.requireRoute(expected: route.strictWindowID, actual: route.windowID)
---- a/native/Sources/CuaNative/WindowScopePolicy.swift
+--- /dev/null
 +++ b/native/Sources/CuaNative/WindowScopePolicy.swift
 @@ -0,0 +1,22 @@
 +// Local candidate: pure identity policy shared by AX observation and dispatch.
@@ -414,3 +414,128 @@
 +        "params"
 +      ],
 +      "additionalProperties": false
+--- a/native/Sources/CuaNative/ApplicationAuthorization.swift
++++ b/native/Sources/CuaNative/ApplicationAuthorization.swift
+@@ -13,4 +13,19 @@
+-        var bundleID = bundle.identifier.flatMap { $0.isEmpty ? nil : $0 }
+-        let pathResult = readPath(identity.pid)
+-        let path = (try? pathResult.get()).map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+-        if let path, let expectedExecutablePath, path != URL(fileURLWithPath: expectedExecutablePath).resolvingSymlinksInPath().path {
++        guard let expectedExecutablePath else {
++            throw NativeFailure(code: "APP_PATH_UNAVAILABLE", message: "The selected application has no executable path")
++        }
++        let actual = try readPath(identity.pid).get()
++        do {
++            return try ExecutableIdentity.withVerifiedPaths(
++                actualPath: actual, expectedPath: expectedExecutablePath,
++                verifyProcess: { try NativePlatform.verify(identity) },
++                currentActualPath: { try readPath(identity.pid).get() }
++            ) { path in
++                var bundleID = bundle.identifier.flatMap { $0.isEmpty ? nil : $0 }
++                if bundleID == nil, let url = bundle.url,
++                   let installed = InstalledApplication.read(url), installed.executablePath == path {
++                    bundleID = installed.bundleID
++                }
++                try NativePlatform.verify(identity)
++                return try record(bundleID: bundleID, name: name, executablePath: path)
++            }
++        } catch ExecutableIdentityFailure.changed {
+@@ -17,0 +33,4 @@
++        } catch ExecutableIdentityFailure.missingPath {
++            throw NativeFailure(code: "APP_PATH_UNAVAILABLE", message: "The selected application has an invalid executable path")
++        } catch ExecutableIdentityFailure.unavailable(let code) {
++            throw NativeFailure(code: "APP_PATH_UNAVAILABLE", message: "Cannot verify the selected executable file identity (errno \(code)); check application installation and system access")
+@@ -19,7 +37,0 @@
+-        if bundleID == nil, let path, let url = bundle.url,
+-           let installed = InstalledApplication.read(url), installed.executablePath == path {
+-            bundleID = installed.bundleID
+-        }
+-        try NativePlatform.verify(identity)
+-        if bundleID?.isEmpty != false, case .failure(let error) = pathResult { throw error }
+-        return try record(bundleID: bundleID, name: name, executablePath: path)
+--- /dev/null
++++ b/native/Sources/CuaNative/ExecutableIdentity.swift
+@@ -0,0 +1,83 @@
++// File identity, not path spelling, binds aliases of the same executable.
++// No application launch, Accessibility, permissions, or executable contents.
++import Foundation
++import Darwin
++
++enum ExecutableIdentityFailure: Error {
++    case missingPath
++    case unavailable(Int32)
++    case changed
++}
++
++private struct ExecutableFileID: Equatable {
++    let device: dev_t
++    let inode: ino_t
++}
++
++private final class PinnedExecutable {
++    let descriptor: Int32
++    let id: ExecutableFileID
++
++    init(_ path: String) throws {
++        let fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK)
++        guard fd >= 0 else { throw ExecutableIdentityFailure.unavailable(errno) }
++        var value = stat()
++        guard fstat(fd, &value) == 0 else {
++            let code = errno
++            close(fd)
++            throw ExecutableIdentityFailure.unavailable(code)
++        }
++        guard value.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else {
++            close(fd)
++            throw ExecutableIdentityFailure.unavailable(EINVAL)
++        }
++        descriptor = fd
++        id = ExecutableFileID(device: value.st_dev, inode: value.st_ino)
++    }
++
++    deinit { close(descriptor) }
++}
++
++enum ExecutableIdentity {
++    private static func canonical(_ path: String) throws -> String {
++        guard !path.isEmpty, path.hasPrefix("/"), !path.utf8.contains(0) else {
++            throw ExecutableIdentityFailure.missingPath
++        }
++        return URL(fileURLWithPath: path).resolvingSymlinksInPath().path
++    }
++
++    static func withVerifiedPaths<T>(actualPath: String, expectedPath: String,
++                                     verifyProcess: () throws -> Void,
++                                     currentActualPath: () throws -> String,
++                                     use: (String) throws -> T) throws -> T {
++        try verifyProcess()
++        let actual = try canonical(actualPath)
++        let expected = try canonical(expectedPath)
++        // Pin both objects through all metadata use and final checks. This also
++        // prevents inode recycling from making a replaced path look unchanged.
++        let actualFile = try PinnedExecutable(actual)
++        let expectedFile = try PinnedExecutable(expected)
++        guard actualFile.id == expectedFile.id else { throw ExecutableIdentityFailure.changed }
++
++        func revalidate() throws {
++            try verifyProcess()
++            // The kernel may report another hard-link spelling for the same
++            // vnode. Revalidate that object and both originally selected paths.
++            let currentActual = try PinnedExecutable(canonical(currentActualPath()))
++            let originalActual = try PinnedExecutable(canonical(actualPath))
++            let currentExpected = try PinnedExecutable(canonical(expectedPath))
++            guard currentActual.id == actualFile.id, originalActual.id == actualFile.id,
++                  currentExpected.id == expectedFile.id else {
++                throw ExecutableIdentityFailure.changed
++            }
++            try verifyProcess()
++        }
++
++        return try withExtendedLifetime((actualFile, expectedFile)) {
++            try revalidate()
++            let result = try use(actual)
++            try revalidate()
++            return result
++        }
++    }
++}
