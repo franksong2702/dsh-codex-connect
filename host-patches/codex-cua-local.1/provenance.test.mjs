@@ -1,5 +1,6 @@
 /** Pure filesystem/tar fixtures: no credentials, network, model or native driver. */
 import { test } from 'node:test'
+import { createRequire } from 'node:module'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -98,20 +99,40 @@ test('a platform-skipped optional archive is copied as verified source without c
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
-test('Host version admission permits only a declared platform-optional absence, never a missing required or wrong native package', () => {
-  const name = '@deepseek-ai/dsh-experimental-cua-macos', version = '0.2.2-alpha.2'
-  const missing = () => { const error = new Error(`Cannot find module '${name}/package.json'`); error.code = 'MODULE_NOT_FOUND'; throw error }
-  const require = path => path === `${name}/package.json` ? missing() : { version }
-  const optional = { optionalDependencies: { [name]: version } }
-  assert.equal(assertCuaFixturePackages(require, version, optional, 'linux').nativeBackend, 'omitted_platform_optional')
-  const overridesOnly = { overrides: { [name]: version } }
-  assert.equal(assertCuaFixturePackages(require, version, overridesOnly, 'linux').nativeBackend, 'omitted_platform_optional')
-  assert.throws(() => assertCuaFixturePackages(require, version, optional, 'darwin'), /Cannot find module/)
-  assert.throws(() => assertCuaFixturePackages(require, version, {}, 'linux'), /Cannot find module/)
-  assert.throws(() => assertCuaFixturePackages(require, version, { ...optional, dependencies: { [name]: version } }, 'linux'), /Cannot find module/)
-  assert.throws(() => assertCuaFixturePackages(() => ({ version: 'wrong' }), version, optional, 'linux'), /Wrong exact Host/)
-  const wrongNative = path => ({ version: path === `${name}/package.json` ? 'wrong' : version })
-  assert.throws(() => assertCuaFixturePackages(wrongNative, version, optional, 'linux'), /Wrong exact Host/)
-  const wrongError = path => { if (path === `${name}/package.json`) { const error = new Error('Cannot find another module'); error.code = 'MODULE_NOT_FOUND'; throw error }; return { version } }
-  assert.throws(() => assertCuaFixturePackages(wrongError, version, optional, 'linux'), /another module/)
+test('Host version admission resolves the real bundle-owned optional and rejects missing required or wrong versions', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'cua-package-layout-'))
+  const native = '@deepseek-ai/dsh-experimental-cua-macos', version = '0.2.2-alpha.2'
+  const overrides = { overrides: { [native]: version } }, optional = { optionalDependencies: { [native]: version } }
+  const cases = [
+    { platform: 'darwin', manifest: overrides, installed: true, expected: 'installed_exact' },
+    { platform: 'darwin', manifest: overrides, installed: true, atRoot: true, expected: 'installed_exact' },
+    { platform: 'linux', manifest: optional, expected: 'omitted_platform_optional' },
+    { platform: 'linux', manifest: overrides, expected: 'omitted_platform_optional' },
+    { platform: 'darwin', manifest: overrides, error: /Cannot find module/ },
+    { platform: 'linux', manifest: {}, error: /Cannot find module/ },
+    { platform: 'linux', manifest: { ...overrides, dependencies: { [native]: version } }, error: /Cannot find module/ },
+    { platform: 'linux', manifest: overrides, installed: true, nativeVersion: 'wrong', error: /Wrong exact Host/ },
+    { platform: 'linux', manifest: overrides, commonVersion: 'wrong', error: /Wrong exact Host/ },
+    { platform: 'linux', manifest: overrides, installed: true, invalidNativeJson: true, error: /JSON|Unexpected|property name|Invalid package config/ },
+  ]
+  try {
+    for (const [index, scenario] of cases.entries()) {
+      const base = join(root, String(index)), modules = join(base, 'node_modules')
+      await mkdir(base); await writeFile(join(base, 'package.json'), '{"private":true}')
+      for (const name of ['dsh', 'dsh-agent', 'dsh-tools', 'dsh-agent-preset-registry', 'dsh-cua', 'dsh-tool-executor-native', 'dsh-cua-bundle']) {
+        const folder = join(modules, '@deepseek-ai', name); await mkdir(folder, { recursive: true })
+        await writeFile(join(folder, 'package.json'), JSON.stringify({ name: '@deepseek-ai/' + name, version: scenario.commonVersion ?? version }))
+      }
+      if (scenario.installed) {
+        const folder = join(scenario.atRoot ? modules : join(modules, '@deepseek-ai/dsh-cua-bundle/node_modules'), native)
+        await mkdir(folder, { recursive: true })
+        await writeFile(join(folder, 'package.json'), scenario.invalidNativeJson ? '{invalid' : JSON.stringify({ name: native, version: scenario.nativeVersion ?? version, os: ['darwin'] }))
+      }
+      const require = createRequire(join(base, 'package.json'))
+      if (scenario.installed && !scenario.atRoot) assert.throws(() => require(native + '/package.json'), { code: 'MODULE_NOT_FOUND' })
+      const verify = () => assertCuaFixturePackages(require, version, scenario.manifest, scenario.platform)
+      if (scenario.error) assert.throws(verify, scenario.error)
+      else assert.equal(verify().nativeBackend, scenario.expected)
+    }
+  } finally { await rm(root, { recursive: true, force: true }) }
 })
