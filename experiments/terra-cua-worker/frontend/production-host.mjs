@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict';
 import { createRequire, syncBuiltinESMExports } from 'node:module';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { mkdir, writeFile, readFile, cp as copy } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, cp as copy, symlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import net from 'node:net';
 import cp from 'node:child_process';
 import { createHash } from 'node:crypto';
 const [rootArg, candidateArg] = process.argv.slice(2);
+const displayDiagnostic = process.argv.includes('--display-diagnostic');
 const root = resolve(rootArg), candidate = resolve(candidateArg);
 assert.equal(JSON.parse(await readFile(join(root, 'owner.json'))).kind, 'cua-frontend-production-synthetic');
 assert.equal(process.env.HOME, join(root, 'home'));
@@ -52,6 +53,12 @@ for (const [label, source] of [['connect', repository], ['cua', join(candidate, 
     await writeFile(join(destination, 'fixture-host.mjs'), 'export function apply() {}\n');
     await writeFile(join(destination, 'package.json'), JSON.stringify({ ...manifest, main: './fixture-host.mjs', exports: { ...manifest.exports, '.': './fixture-host.mjs' } }));
     optional.push({ id: 'fixture-' + label, name: join(destination, 'fixture-host.mjs') });
+}
+if (displayDiagnostic) {
+    const destination = join(root, 'plugins', 'display-diagnostic');
+    await copy(join(repository, 'packages/dsh-codex-display-diagnostic'), destination, { recursive: true });
+    await symlink(join(candidate, 'runtime/node_modules'), join(destination, 'node_modules'), 'dir');
+    optional.push({ id: 'fixture-display-diagnostic', name: join(destination, 'index.mjs'), config: { enabled: true, sessionId: 'synthetic-root' } });
 }
 // No UI roster replacement, synthetic loader, manual resolver or readiness latch.
 // Unrelated Host activity is removed instead of permitting any subprocess/LLM call.
@@ -130,7 +137,8 @@ try {
     process.send?.({ type: 'ready', url: ctx.connection.authenticatedUrl(ctx.webServer.getOrigin()), graph: ctx.clientModules.graph().entries.map(({ id, rev }) => ({ id, rev })), plugins, hashes });
 } catch (error) {
     // No paths, request strings, credentials, page content or raw stacks leave the child.
-    process.send?.({ type: 'failure', stage: 'host-bootstrap', name: error.name === 'AssertionError' ? 'AssertionError' : 'Error' });
+    process.send?.({ type: 'failure', stage: 'host-bootstrap', name: error.name === 'AssertionError' ? 'AssertionError' : 'Error',
+        code: ['EPERM', 'EACCES', 'ERR_MODULE_NOT_FOUND', 'MODULE_NOT_FOUND'].find(code => error.code === code || error.message.includes(code)) ?? 'unknown' });
     process.exitCode = 1;
     await stop();
 }

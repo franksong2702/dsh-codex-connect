@@ -48,6 +48,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify bounded content-free frontend probes
         run: node --test experiments/terra-cua-worker/frontend/diagnostics.test.mjs experiments/terra-cua-worker/frontend/browser-probe.test.mjs
+      - name: Verify default-off display diagnostic and generated client
+        run: |
+          node scripts/build-display-diagnostic.mjs --check
+          node --test packages/dsh-codex-display-diagnostic/test/*.test.mjs
       - name: Verify published and local CUA Host and frontend composition with no live model or desktop
         run: node scripts/check-cua-host.mjs --with-local-patch --with-frontend
 

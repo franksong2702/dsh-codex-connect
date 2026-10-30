@@ -73,7 +73,7 @@ try {
         process.stdout.write(result.stdout)
       }
       if (withFrontend) {
-        for (const script of ['check-cua-frontend.mjs', 'check-cua-frontend-boot.mjs']) {
+        for (const script of ['check-cua-frontend.mjs', 'check-cua-frontend-boot.mjs', 'check-display-diagnostic.mjs']) {
           const frontend = await command(process.execPath, [join(root, 'scripts', script), local])
           process.stdout.write(frontend.stdout)
         }
