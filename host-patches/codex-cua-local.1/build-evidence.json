@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.1",
+  "published": false,
+  "baseRegistryVersion": "0.2.2-alpha.2",
+  "native": {
+    "built": true,
+    "architecture": "arm64",
+    "compiler": "Apple Swift 6.4",
+    "languageMode": 6,
+    "sha256": "7fa8c12ebd5c7106b33c79fed342517593559641963a902a8b178a926ae6bea0",
+    "executed": false,
+    "buildScope": "current strict-pointer and AX source, candidate 5; compiled only"
+  },
+  "validation": {
+    "pureWindowScopeFixture": "passed including strict pointer route mismatch; synthetic integer owners only",
+    "routeBehaviorFixtures": "4 passed on exact candidate 5; actual live-service marker included",
+    "oldHostReserveAndCompatibility": "64 passed",
+    "currentInstalledConnectRuntime": "candidate 5: passed full installed-runtime suite with synthetic responses; no real models/native helper",
+    "priorInstalledConnectRuntime": "failed at Reserve before expected request/header",
+    "desktopOrLiveModels": "not executed",
+    "sourceCheck": "pnpm check: 2382 passed, 2 skipped; build, typecheck and packaging passed",
+    "browser": "97 passed in 14 files using isolated Playwright",
+    "companion": "local candidate: 19 passed including actual plugin entry/single provider; stock: 18 passed, 1 async-route-specific skip",
+    "provenance": "2 deterministic tests passed; all 321 copied original packages matched verified locked npm tarballs; final builder completed",
+    "wholeCiComposition": "published + local build/install/scripted worker + routing flow passed before final entry-smoke addition; latest entry smoke and worker tests passed separately"
+  },
+  "deployment": "not attempted; original target retained",
+  "nativeBuildPatchManifestSha256": "47eef459f42d59d897a97ef73709e8e7bb7dec8b25932b1924de802fd35597ca",
+  "currentPatchManifestSha256": "47eef459f42d59d897a97ef73709e8e7bb7dec8b25932b1924de802fd35597ca",
+  "nativeBuildSourceContentMatchesCurrentManifest": true,
+  "sourceLockSha256": "f0e6d92a962de7e6a0504276567dd6bd7815eb2d9aae4414ac96e353f7148344",
+  "wholePublishedPackagesVerified": 321,
+  "local3": {
+    "candidateVersion": "0.2.2-alpha.2.codex-cua-local.3",
+    "sourceManifestSha256": "dc44343260cf9fa89dde7168d392df4a1c873916cb9e47cc518ba9ef2388d9bd",
+    "wholePublishedPackagesVerified": 321,
+    "native": {
+      "built": true,
+      "architecture": "arm64",
+      "compiler": "Apple Swift 6.4",
+      "languageMode": 6,
+      "sha256": "837341c98065282f3c4183f43df9d5cd74561ee43f015da50d9cc8156d5f2ccf",
+      "executed": false,
+      "scope": "final local.3 source compiled directly; anchor checks precede final per-element membership at mutation sinks; helper not executed"
+    },
+    "validation": {
+      "sourceCheck": "reviewed cleanup/sink tree: complete check passed; 2384 tests passed,2skipped; lint/typecheck/build/72-file package checks passed",
+      "hostComposition": "50 actual-Host tests passed using scripted model/native/human fixtures; includes repeated failed clear+real backend/UI integration and actual strict Gateway owner/non-owner admission",
+      "compatibility": "45 passed; exact local.3 added without admitting mixed or future peers",
+      "sourceProvenance": "2 pure tests passed; final candidate builder compared all 321 complete original packages to verified locked tarballs",
+      "browser": "reviewed tree:97passed in14files with isolated Playwright; initial missing-browser failure preserved",
+      "installedCandidate": "231bcd5 candidate17 full isolated installed-profile regression passed; final reviewed candidate20 exact-runtime recheck pending; no live acceptance",
+      "remoteCiAndIndependentFinalReview": "pending exact commit",
+      "pureWindowScopeFixture": "production policy fixture passed including reparenting during anchor metadata reads; no AX objects or native helper"
+    },
+    "desktopAndLiveHumanConsent": "not executed; no application/OS grant, model request, GUI observation/input, service change or parity claim"
+  },
+  "local4": {
+    "candidateVersion": "0.2.2-alpha.2.codex-cua-local.4",
+    "sourceManifestSha256": "4d72482481128253247c85a1cc381763109dfa80bb78c9e17a49d0b04579da80",
+    "wholePublishedPackagesVerified": 321,
+    "native": {
+      "sha256": "837341c98065282f3c4183f43df9d5cd74561ee43f015da50d9cc8156d5f2ccf",
+      "buildMode": "reuse only after all Swift sources, Package.swift and native protocol compared byte-identical to final local.3",
+      "newCandidateExecuted": false
+    },
+    "validation": {
+      "hostComposition": "67 passed on the actual coherent local.4 packages; real Gateway/registry and official provider, scripted native/model/human only",
+      "sourceCheck": "complete pnpm check passed:2389 tests passed,2skipped; lint/types/build and72-file package checks passed",
+      "route": "4 passed on actual local.4 packages",
+      "provenance": "2 corruption/closure tests passed;321 complete original packages verified",
+      "browser": "pending isolated matching-browser installation; first attempt executed zero tests because binary absent",
+      "installedProfile": "pending freshly packed isolated full-runtime regression",
+      "desktopAndModels": "not executed for this candidate; no acceptance/parity claim"
+    },
+    "status": "predeployment; exact-head independent review and complete CI/CodeQL readback required"
+  },
+  "local5": {
+    "candidateVersion": "0.2.2-alpha.2.codex-cua-local.5",
+    "published": false,
+    "scope": "Executable identity alias correction; no consent/window scope changes",
+    "validation": {
+      "productionPolicySyntheticFiles": "17 checks passed from integrity-verified patched official source: same-file alias switching allowed; different files, missing/unreadable paths, process changes and path replacement rejected",
+      "sourceProvenance": "6 tests passed",
+      "compatibility": "47 tests passed",
+      "readOnlyTargetMetadata": "Observed alias pair accepted with fresh kernel file and process-start verification; read-only policy component regression, not CUA driver or live desktop acceptance. Private device paths excluded.",
+      "fullNativeCompilation": "passed: complete candidate26 production helper, all30Swift sources; binary and source inventory hashes recorded in native",
+      "fullSourceCheck": "Local default sandbox:2363 passed,27 failed,2skipped,7loopback EPERM errors; no permission bypass/retry; full CI required. Build/package validation run separately.",
+      "exactHeadCiAndIndependentReview": "pending",
+      "build": "pnpm build and72-file package validation passed; complete local source check remains sandbox-blocked as recorded",
+      "installedProfile": "passed five-step freshly packed isolated profile regression;67actualHost/companion cases and4route cases also passed, all model/native/human scripted"
+    },
+    "nativeDriverExecuted": false,
+    "newDesktopAcceptance": "not run; no new model or approval request",
+    "native": {
+      "built": true,
+      "buildCandidate": 26,
+      "supersededBuildCandidate": 25,
+      "sourceContentCommit": "31e71cdeb4fc1f3bd3ddf2d0d1541865c2e1bea2",
+      "sourcePatchManifestSha256": "39efe90564a0a5e67948fe088fcc829fc83d40271c31a942fa32e90f75f4ef66",
+      "swiftSourceFiles": 30,
+      "swiftSourceInventorySha256": "246884cfbbdc3de163b16cf989b96cb7e97584bddfc8a909534e6bf95c862789",
+      "compiler": "Apple Swift6.4, Swift6 language mode",
+      "target": "arm64-apple-macos14.0",
+      "wholeModuleOptimization": true,
+      "sha256": "3dca692773721c7da23f3aed02a26b895c43773ebf58dc8478cf83c68feeaadb",
+      "processExitStatus": 0,
+      "executed": false,
+      "scope": "Complete native helper compiled from all30 production Swift sources, including final alias-switch policy. Not the pure fixture, candidate25 or reused local4 binary."
+    }
+  },
+  "currentCandidateVersion": "0.2.2-alpha.2.codex-cua-local.5",
+  "currentCandidateSection": "local5"
+}

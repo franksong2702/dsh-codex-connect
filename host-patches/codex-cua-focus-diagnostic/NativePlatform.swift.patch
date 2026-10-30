@@ -1,0 +1,16 @@
+--- a/native/Sources/CuaNative/NativePlatform.swift
++++ b/native/Sources/CuaNative/NativePlatform.swift
+@@ -134,8 +134,11 @@
+     static func requireScreenRecording() throws {
+         guard CGPreflightScreenCaptureAccess() else { throw NativeFailure(code: "PERMISSION_DENIED", message: "Screen Recording permission is required for the responsible host/helper") }
+     }
+-    static func windows(allLayers: Bool = false) -> [WindowInfo] {
+-        guard let rows = CGWindowListCopyWindowInfo(.excludeDesktopElements, kCGNullWindowID) as? [[String: Any]] else { return [] }
++    static func windows(allLayers: Bool = false, onScreenOrdered: Bool = false) -> [WindowInfo] {
++        // Only onScreenOnly explicitly guarantees front-to-back order. Other
++        // callers retain the full directory and its previous semantics.
++        let options: CGWindowListOption = onScreenOrdered ? [.optionOnScreenOnly, .excludeDesktopElements] : .excludeDesktopElements
++        guard let rows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [] }
+         let memberships = allLayers ? [:] : WindowSpaces().memberships(windowIDs: rows.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+         return rows.compactMap { row in
+             let layer = (row[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0

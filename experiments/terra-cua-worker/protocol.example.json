@@ -1,0 +1,6 @@
+{
+  "id": "replace-with-pre-registered-protocol-id",
+  "routes": {
+    "desktop-only": { "native_desktop": null, "customized_live": null }
+  }
+}

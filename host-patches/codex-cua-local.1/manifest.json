@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "id": "codex-cua-local.10",
+  "baseVersion": "0.2.2-alpha.2",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.10",
+  "published": false,
+  "nativeArchitecture": "arm64",
+  "packages": {
+    "@deepseek-ai/dsh-agent": {
+      "baseIntegrity": "sha512-e1seyUG26WYUAFX7tJJzhtg1aBwqIR7sFijt8S9DujS9alXwEdOZAYpJG531qqRGZSlM+XNT6z5AeH5KSjqdsA==",
+      "patch": "patches/dsh-agent.patch",
+      "patchSha256": "da03f723efcf1144a780882311aaed6a09a7347e504b4abc688f3c944637dd59",
+      "files": [
+        {
+          "path": "lib/index.js",
+          "baseSha256": "8673b5cfadfbb6e6ce0bcb341d0ea2877adc2986eab1c2b6c8baf32726534c92",
+          "patchedSha256": "d0eb597c1a054bc558deea5faea03a7fdca58503d864d1b4728ab136383d4672"
+        },
+        {
+          "path": "lib/types/index.d.ts",
+          "baseSha256": "2029b9ca3fabb5527210842d7a747d5847fa08bd7ec9b86a2513a85513335904",
+          "patchedSha256": "59feee930a4a92d07a8346642c7da8e43f17df137f31931798c3681630424b03"
+        },
+        {
+          "path": "lib/types/runtime-types.d.ts",
+          "baseSha256": "225971d216a0f6cede3e988cc779cf0ff91187cfe0977417d17ebcea293ee514",
+          "patchedSha256": "dd306c59b7394870668a42e8e94e7c93c9cf88677acd6d4fd2603c1cf5155f80"
+        }
+      ]
+    },
+    "@deepseek-ai/dsh-agent-loop": {
+      "baseIntegrity": "sha512-lPQG7SpHdmbfWR5CRlNIMqtCR7ojJ3i1IZmnk1GzvdaHFzYTcAfxruib6a0ecTt7HQli06sLr7v1GAZi/d6M7w==",
+      "patch": "patches/dsh-agent-loop.patch",
+      "patchSha256": "16356ec9f1e25f882f1d702573a5e791792ac7da143c887fb98c678e9bc0bcf1",
+      "files": [
+        {
+          "path": "lib/index.js",
+          "baseSha256": "a6fa8e0c7c90191caf5f4a3bb5c624a86e9845cf3c79d020b71420d0e20ae4c1",
+          "patchedSha256": "39377f8fa9d50079c8c8422f68af513749e279c8c410c230a9bd8d0a10738123"
+        },
+        {
+          "path": "lib/types/agent.d.ts",
+          "baseSha256": "c0f4589a4977014c16e2cf9ff9f1f19bdf2ebe72ff3a9234f1ed904b9a1ecd77",
+          "patchedSha256": "116fa962f9f8d72cceddfb2f892c0489148a45a1770eeee5b00994d0a9c5a39d"
+        }
+      ]
+    },
+    "@deepseek-ai/dsh-cua": {
+      "baseIntegrity": "sha512-yceImk1O0NkKTdwe8IQYX9SPmsulcJD7LtmPm7oJXunY2+4HQkJNA3qOSk5zJyr1NpWffnRdUcJvTIDgIMGOSA==",
+      "patch": "patches/dsh-cua.patch",
+      "patchSha256": "0788448724a75f28a3a35fb5301e05e14a9760e78475458a65f568dd01bf3f21",
+      "files": [
+        {
+          "path": "lib/bridge.js",
+          "baseSha256": "6e37bb96f73fd4d188ba1bce82afbe3d9d65618acd70c1c87e1d1f16449c5c81",
+          "patchedSha256": "77ac93159bcdc5cf8e32afeaa6df8431bfdc31acd900047fb56cdeb97ce135a1"
+        },
+        {
+          "path": "lib/client.js",
+          "baseSha256": "23be963e0971528fadab59ac3e4bc8540b35df7a5d30f8c118b1c2bd8c548d99",
+          "patchedSha256": "b28912e25e48db1fdf49d35acdf3779f74da9c1656e621fcb5570efd120b1948"
+        },
+        {
+          "path": "lib/index.js",
+          "baseSha256": "e62f507fa5471f2797eb9d4f0d22f10f5edb3d49d05f2be2ea7ae6024485b2b2",
+          "patchedSha256": "9c0b74cabfb2575f278420d37a2c305e7f7d6b4598cee73e3bcca52eb6e623e2"
+        },
+        {
+          "path": "lib/protocol.js",
+          "baseSha256": "ae494308a7808720e587cc2ca55041aa998131bada52d00cad9cd2fcdd3bb16e",
+          "patchedSha256": "75d57d23463ad6afaa7026fdcf9cb67372bf78ebd640993d238a9ea1756bf668"
+        },
+        {
+          "path": "lib/typert.host.js",
+          "baseSha256": "93dda92f7987aebdfa2afdc89a313c359bc308407df44434ede3ca9aa2e65895",
+          "patchedSha256": "a27cef8415d85b6bc9cd46727c3b692d55e3c5d80d67201f0e63aad03073e540"
+        },
+        {
+          "path": "lib/typert.remote-client.d.ts",
+          "baseSha256": "c48ad251fe2dbe70510f4a6578fd87535a4cd39945c0e0d216594b86b6b57a91",
+          "patchedSha256": "2320088b9cef51af0daa3bcb231908ae0237721a752b8e1663f4e978570791e5"
+        },
+        {
+          "path": "lib/typert.remote-client.js",
+          "baseSha256": "39d4e473bd7a8f2e5703bf71c21c336be4c457c8a04ecedb863ee4e2312bf0ac",
+          "patchedSha256": "a9363ebe5d4abe248c206fc4f754aedb3cf840ec6bf6372d9a208656fdab8cf9"
+        },
+        {
+          "path": "lib/types/access.d.ts",
+          "baseSha256": "876badce38357b010e24d85e0163e681dcf12b13a645085fa12b1d2583b3934b",
+          "patchedSha256": "55c7faff0338805901e274f42eebbf368d233cf1c9bccb6dc0e4f6c1e51665aa"
+        },
+        {
+          "path": "lib/types/index.d.ts",
+          "baseSha256": "3ca4d834dde9fb52133df32ab33abe0413f7cebb6793d74c7c59c6aa95f7ac8e",
+          "patchedSha256": "1ddf7ec71b01f48183c622d2565a9ab62581c9d160e951682f3b650de2f68456"
+        },
+        {
+          "path": "lib/types/protocol.d.ts",
+          "baseSha256": "3d16df6fb1f26447b5f8d937489757a32cc8ff5417a37cdc557424ca1aa11bde",
+          "patchedSha256": "f8954e265b7be2b11f71faf8950368af759931a59898d7012eb7c526878fed93"
+        },
+        {
+          "path": "lib/api.js",
+          "baseSha256": "0534612bbd03d23aa15f4426d7bd53b85aa3ce769402b2406fe418eb4865145c",
+          "patchedSha256": "4353654b07276a22e7fa35291cd3e92f2806f9ab1b43b3ef74a3bfb357b2d2bc"
+        },
+        {
+          "path": "lib/native-client.js",
+          "baseSha256": "961efc5802499dbc2dc2c2a461b133911d6261b1a438009fbe8527413325ad9d",
+          "patchedSha256": "a82b19ef88ab109ad5c8cabccae832b72d288a3e5c611e6216353c7e13e924ae"
+        }
+      ]
+    },
+    "@deepseek-ai/dsh-experimental-cua-macos": {
+      "baseIntegrity": "sha512-rHYMMIYahSn1qxntUDYYsVd5jjf5Z7svdKjHgRyaJ2JoQWgNJc26Zzgr5uTQ9IL3BkOXoj7llTOBdZMR/uKH+w==",
+      "patch": "patches/dsh-experimental-cua-macos.patch",
+      "patchSha256": "440fd3fee88b8ce59f47a7885b3c598a0b93f2960ede51b99321042f25b54f66",
+      "files": [
+        {
+          "path": "native/Sources/CuaNative/AXAccess.swift",
+          "baseSha256": "92036dfea0676d4c8c5ef4957ddda0bd936739b01554613f7e9fd1ee19c0aba6",
+          "patchedSha256": "26c9a8b15ce54f9497a64a1588da5f7933e45950aa1c02f195d6c30cf7261774"
+        },
+        {
+          "path": "native/Sources/CuaNative/AXHover.swift",
+          "baseSha256": "cbf76712463bba47be2951f94d10f4a44bd9be38953ba11fafc65e701cc830b5",
+          "patchedSha256": "ca85e70edd0ed7934d47738880c525c8ec0658c0e3219a128c98b94be3503d5d"
+        },
+        {
+          "path": "native/Sources/CuaNative/AXWorker.swift",
+          "baseSha256": "e06f40f7b365e56469618d2451ade877ed7df5c01a69d933430f2ae2b9d664f1",
+          "patchedSha256": "0f02271fe04533ebea5361313f6c0cc559d8cff48b6a82abb25e59c14629e8e7"
+        },
+        {
+          "path": "native/Sources/CuaNative/NativeProtocol.generated.swift",
+          "baseSha256": "89c33f579d613ef76aa21cf4e8aa994a05eeb721f51907e66dca35963a82f073",
+          "patchedSha256": "3de54e91a77f1723e8bf406f734830029a13f7c77dfaeb44d14c7741e90b5203"
+        },
+        {
+          "path": "native/Sources/CuaNative/NativeTaskWindow.swift",
+          "baseSha256": null,
+          "patchedSha256": "892c7b8fbaa4005f8279708f2f6e937bb6608a804024eddfdc7b43e7c6804042"
+        },
+        {
+          "path": "native/Sources/CuaNative/Protocol.swift",
+          "baseSha256": "d762f075c359f3f46aaee356c1310baa2bf12d798ef5d0a677f664d00501bbfa",
+          "patchedSha256": "8b91119fbc36f2fb9034915f94dcf38ff8d1f4a4eb409071a9e9827509bf4d3e"
+        },
+        {
+          "path": "native/Sources/CuaNative/WindowPointerInput.swift",
+          "baseSha256": "e70a1350d01878920db45e1ef5065dddff92f59c21d015e90fe1306e7b84ba89",
+          "patchedSha256": "e79a903062cd27467c87287beb588f23b8c77b89d59db9822b5b3b889c6b21e2"
+        },
+        {
+          "path": "native/Sources/CuaNative/WindowScopePolicy.swift",
+          "baseSha256": null,
+          "patchedSha256": "33379b381ba1d94b19b8ca82e5482b68385fffc48ef7a0f1c3026f79d3d8fe09"
+        },
+        {
+          "path": "native/protocol.schema.json",
+          "baseSha256": "2ace99988f1325ed5699928ca3cc9a297313e569f7b759f97eab36a91875eb3d",
+          "patchedSha256": "db3c3d2384213f4f0dfe1df56ccae0287331425585ada4716c9630c780c55d9b"
+        },
+        {
+          "path": "native/Sources/CuaNative/ApplicationAuthorization.swift",
+          "baseSha256": "a83ca20b01bf333bfbbf11dea3b4a99391bf6d1b6aedff79eff2560b593b7b12",
+          "patchedSha256": "bd95c08547ae6c2fd1c6dd7623200d2e237b01d452b5cefda94f795e1c61585f"
+        },
+        {
+          "path": "native/Sources/CuaNative/ExecutableIdentity.swift",
+          "baseSha256": null,
+          "patchedSha256": "bbd0b2b759da0de1cc8eed8512d4999d2ae851597683daa833547b7f5e0cdf26"
+        },
+        {
+          "path": "native/Sources/CuaNative/KeyboardInput.swift",
+          "baseSha256": "38e2565e0d8d7d5ee955c55eaded30e6732871e8b75626996c5ed46b2f8b2282",
+          "patchedSha256": "a698a57e535178dd21c329d9ac80a050985fff4c082f7e81195dc5064928da10"
+        },
+        {
+          "path": "native/Sources/CuaNative/ChromeInputPolicy.swift",
+          "baseSha256": null,
+          "patchedSha256": "d999440c65cf344f0e81da764f26f2da3d0e131666c90a451dd2d0acdba856cd"
+        },
+        {
+          "path": "native/Sources/CuaNative/ChromeTaskInput.swift",
+          "baseSha256": null,
+          "patchedSha256": "f65f2308a8bcd8fd6d77be2426f2493553a37bb43324bc1ed0c0f449ac99d9f4"
+        },
+        {
+          "path": "native/Sources/CuaNative/RequestCoordinator.swift",
+          "baseSha256": "bf47dd6e1e720f809fe335c7da52930dffc48ca0e4568910dae30140e96626fa",
+          "patchedSha256": "5cee0c9cd781426af5ce2ddae47161d871570cfca2cd84a775ff435cbdb89b4e"
+        },
+        {
+          "path": "native/Sources/CuaNative/BalancedInputSequence.swift",
+          "baseSha256": null,
+          "patchedSha256": "c133fd5ec65fe542ecdfe8427be0f6dce0b885998f4eb27835ac9592e3133c45"
+        },
+        {
+          "path": "native/Sources/CuaNative/NativePlatform.swift",
+          "baseSha256": "4d819e3a5f356e40fc755daab5e2cf230587352f7ff040f7b0c39ab57ad7d8d0",
+          "patchedSha256": "4bf9a8876e9aa16410f6c933dfbb18842d179f688336d7274a57a8a58991ae7f"
+        }
+      ]
+    }
+  }
+}

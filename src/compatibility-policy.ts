@@ -3,7 +3,9 @@ export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-rc.1'
 export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION, '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4'] as const
-export const SUPPORTED_DSH_PLUGIN_API_RANGE = SUPPORTED_DSH_PLUGIN_API_VERSIONS.join(' || ')
+/** Local-only candidate, never a claim that the stock 0.2.2-alpha.2 release is supported. */
+export const LOCAL_DSH_PLUGIN_API_VERSIONS = ['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6', '0.2.2-alpha.2.codex-cua-local.7', '0.2.2-alpha.2.codex-cua-local.8', '0.2.2-alpha.2.codex-cua-local.9', '0.2.2-alpha.2.codex-cua-local.10'] as const
+export const SUPPORTED_DSH_PLUGIN_API_RANGE = [...SUPPORTED_DSH_PLUGIN_API_VERSIONS, ...LOCAL_DSH_PLUGIN_API_VERSIONS].join(' || ')
 export const SUPPORTED_PI_AI_RANGE = '0.85.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 
@@ -76,6 +78,7 @@ export const COMPATIBILITY_CONTRACT = {
   dshPluginApi: {
     version: SUPPORTED_DSH_PLUGIN_API_VERSION,
     versions: SUPPORTED_DSH_PLUGIN_API_VERSIONS,
+    localVersions: LOCAL_DSH_PLUGIN_API_VERSIONS,
     packages: DSH_PLUGIN_API_PACKAGES,
   },
   piAi: { package: PI_AI_PACKAGE, version: SUPPORTED_PI_AI_RANGE },
@@ -83,7 +86,7 @@ export const COMPATIBILITY_CONTRACT = {
 
 /** Whether the API version is one of the explicitly targeted host versions. */
 export function isSupportedDshPluginApiVersion(value: string): boolean {
-  return SUPPORTED_DSH_PLUGIN_API_VERSIONS.some(version => version === value)
+  return [...SUPPORTED_DSH_PLUGIN_API_VERSIONS, ...LOCAL_DSH_PLUGIN_API_VERSIONS].some(version => version === value)
 }
 
 function piAiVersionStatus(value: string): CompatibilityStatus {

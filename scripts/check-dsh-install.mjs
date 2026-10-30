@@ -21,7 +21,7 @@ const DECLARED_RUNTIME_PACKAGES = new Set([
   ...Object.keys(PACKAGE_MANIFEST.peerDependencies ?? {}),
 ])
 const DECLARED_DSH_VERSIONS = COMPATIBILITY.dshPluginApi.versions
-const DECLARED_DSH_RANGE = DECLARED_DSH_VERSIONS.join(' || ')
+const DECLARED_DSH_RANGE = [...DECLARED_DSH_VERSIONS, ...(COMPATIBILITY.dshPluginApi.localVersions ?? [])].join(' || ')
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
 const COMMAND_TIMEOUT_MS = 20 * 60 * 1000
 

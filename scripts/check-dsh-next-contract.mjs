@@ -227,7 +227,7 @@ const candidateDoctor = {
     status: 'unverified',
     node: { status: 'compatible' },
     packages: Object.fromEntries(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction', '@earendil-works/pi-ai'].map(name => [name, {
-      supported: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4 || 0.2.1-alpha.5 || 0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4',
+      supported: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4 || 0.2.1-alpha.5 || 0.2.1-rc.1 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.2-alpha.2.codex-cua-local.1 || 0.2.2-alpha.2.codex-cua-local.2 || 0.2.2-alpha.2.codex-cua-local.3 || 0.2.2-alpha.2.codex-cua-local.4 || 0.2.2-alpha.2.codex-cua-local.5 || 0.2.2-alpha.2.codex-cua-local.6 || 0.2.2-alpha.2.codex-cua-local.7 || 0.2.2-alpha.2.codex-cua-local.8 || 0.2.2-alpha.2.codex-cua-local.9 || 0.2.2-alpha.2.codex-cua-local.10',
       installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.1.7-rc.3',
       status: 'unverified',
     }])),

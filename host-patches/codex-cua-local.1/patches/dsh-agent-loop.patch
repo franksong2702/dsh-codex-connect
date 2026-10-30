@@ -1,0 +1,57 @@
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -671,2 +671,12 @@
+-		const selection = this.model.current();
+-		if (selection === void 0) throw new Error(`agent "${this.id}" has no provider/model: set AgentOptions.provider and AgentOptions.model or record a model selection`);
++		return this.prepareStepWorld(claimed, position, signal);
++	}
++	/** Local candidate: one route admission before every fresh tool/prompt world. */
++	async prepareStepWorld(claimed, position, signal) {
++		const selected = this.model.current();
++		if (selected === void 0) throw new Error(`agent "${this.id}" has no provider/model: set AgentOptions.provider and AgentOptions.model or record a model selection`);
++		const routeConfig = deepFreeze(structuredClone(await this.dispatch.waterfall("agent/route-request", {
++			...position, signal
++		}, () => Promise.resolve(this.requestSeed(selected)))));
++		signal.throwIfAborted();
++		const selection = { provider: routeConfig.provider, model: routeConfig.model,
++			...(routeConfig.reasoningEffort === void 0 ? {} : { reasoningEffort: routeConfig.reasoningEffort }) };
+@@ -706,0 +717 @@
++				routeConfig,
+@@ -838,2 +849,2 @@
+-		const { assembly } = decision;
+-		const renderedPrompt = renderPrompt(assembly);
++		let { assembly } = decision;
++		let renderedPrompt = renderPrompt(assembly);
+@@ -842 +853 @@
+-			const { config, preparedCall } = await this.prepareRequest(turn, step, decision.selection, signal);
++			const { config, preparedCall } = await this.prepareRequest(turn, step, decision.selection, signal, decision.routeConfig);
+@@ -938,0 +950,8 @@
++					if (action.reprepare === true) {
++						const prepared = await this.prepareStepWorld([], { turn, step }, signal);
++						if (prepared.kind === "reject") throw new Error("Request recovery was denied during route preparation");
++						decision.toolSet.dispose();
++						Object.assign(decision, prepared);
++						assembly = decision.assembly;
++						renderedPrompt = renderPrompt(assembly);
++					}
+@@ -986,2 +1005 @@
+-	async prepareRequest(turn, step, selection, signal) {
+-		const { session } = this;
++	requestSeed(selection) {
+@@ -989,5 +1007,5 @@
+-		const { provider: _provider, model: _model, reasoningEffort: _effort, ...controls } = this.requestHeaderLogged ? requestProposal(session.requestHeader()) : maxTokens === void 0 ? {} : { maxTokens };
+-		const seedConfig = deepFreeze(structuredClone({
+-			...controls,
+-			...selection
+-		}));
++		const { provider: _provider, model: _model, reasoningEffort: _effort, ...controls } = this.requestHeaderLogged ? requestProposal(this.session.requestHeader()) : maxTokens === void 0 ? {} : { maxTokens };
++		return deepFreeze(structuredClone({ ...controls, ...selection }));
++	}
++	async prepareRequest(turn, step, selection, signal, admittedRoute) {
++		const seedConfig = admittedRoute ?? this.requestSeed(selection);
+--- a/lib/types/agent.d.ts
++++ b/lib/types/agent.d.ts
+@@ -68,0 +69 @@
++    private prepareStepWorld;
+@@ -74,0 +76 @@
++    private requestSeed;

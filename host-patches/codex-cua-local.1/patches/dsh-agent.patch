@@ -1,0 +1,31 @@
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -438,0 +439 @@
++	requestRoutingVersion = 1;
+@@ -831,0 +833,3 @@
++
++// Explicit local Host capability; not present in the published release.
++export const REQUEST_ROUTE_VERSION = 1;
+--- a/lib/types/index.d.ts
++++ b/lib/types/index.d.ts
+@@ -203,0 +204,2 @@
++    /** Local candidate: authoritative live-service capability, independent of plugin SDK copies. */
++    readonly requestRoutingVersion: 1;
+@@ -393 +395,3 @@
+-//# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=index.d.ts.map
++/** Local candidate: route configuration before preparing tools and prompts. */
++export declare const REQUEST_ROUTE_VERSION: 1;
+--- a/lib/types/runtime-types.d.ts
++++ b/lib/types/runtime-types.d.ts
+@@ -127,0 +128,2 @@
++    /** Re-admit route/tools/prompt after a failed attempt, preserving already committed input. */
++    reprepare?: true;
+@@ -361,0 +364,6 @@
++        /** Local candidate: asynchronous route selection before tool and prompt preparation.
++         * Returned controls are captured with this attempt; caller must observe signal.
++         * Does not mutate the user's durable next-model selection. */
++        'agent/route-request'(this: Scoped<Agent>, payload: {
++            agent: Agent; turn: number; step: number; signal: AbortSignal;
++        }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>;

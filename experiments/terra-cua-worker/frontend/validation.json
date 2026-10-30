@@ -1,0 +1,125 @@
+{
+  "sourceBase": "fffcd317e7a501a2a23ef17a8bacaba4f916b2ba",
+  "candidateRuntimeSource": "9d1c0a2f3ee1e53e58e04c3981908aa5a1c289f4",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.9",
+  "observedAt": "2026-10-30T06:40:06.845735+00:00",
+  "component": {
+    "pass": true,
+    "platform": "darwin",
+    "nodeVersion": "v24.13.0",
+    "browserVersion": "156.0.8078.4",
+    "cases": [
+      "fresh-consent",
+      "independent-controller-peer",
+      "cross-peer-answer-rejected",
+      "nonanswering-controller-rejected",
+      "selection-then-consent",
+      "reconnect-pending",
+      "session-switch",
+      "remount-pending",
+      "second-client-selection-then-consent",
+      "frozen-resumed",
+      "detector-mount-absent",
+      "detector-listener-absent",
+      "detector-no-client-then-replay"
+    ],
+    "hiddenObserved": false,
+    "hashes": {
+      "dsh-api-gateway/lib/index.js": "91abae7edfaa2bf3154680829e77b1f341aa01ba9094795aa70b96ff3e15f52b",
+      "dsh-api-remotes/lib/index.js": "719d9ad01bb3066ab84ecd824f30d630871ed0edcf1ff32df4d6931a553fc3f5",
+      "dsh-user-questions/lib/index.js": "69fee77aa57cc43de583d53a4877394c4cf3b5d58b8d7579fd8095c0a015bfbd",
+      "dsh-client-connection/lib/index.js": "0ebcca7583e082716f79b0b55bc1749d48269cc8db2989b043b321b57abd3684",
+      "dsh-web-frontend/dist/assets/index--TtJvO-i.js": "d6b21e79b7e2f41b418fab2c045bcf8f1aba21ae7e6a1520768f533bd0524fcd",
+      "dsh-web-frontend/dist/assets/index-Jtzf36XE.css": "5e33d07ff22bffec1892574bada3023c62edd3c5cc84a98f3df06c2912ab91cf",
+      "dsh-web-frontend/dist/assets/vendor-7utBqO4o.js": "637551841c109efe0125e583ccd93c804d42e93793044793b70e0d5cc147bb6b",
+      "dsh-web-frontend/dist/assets/vendor-DV2921Zo.css": "4cea59483551208ce61ff27251da83d5f7a0893ef34cfe4b808d61be6e13ebc7",
+      "dsh-client-connection/lib/client.browser.js": "dfc3544eb894c74b340a4c4c63a8c125fd2e983df9efed5885712574af994e62",
+      "dsh-api-gateway/lib/client.browser.js": "3043de82334846a3a5654b7317830c5403f90e9aeca692d3c15e30e01d16505d",
+      "dsh-api-session-controller/lib/client.js": "ef204525ce6fd46e62cfcf0fcc7076121b20422ba50296b02631c04ceb03908f",
+      "dsh-client-ui-renderer/lib/client.js": "dbdb3f26bfbc1d143bc8a0eed5982a2507c4f0cf8027e7c170f3bed3604be356",
+      "dsh-client-ui-session/lib/client.js": "082ffb6d98a7bcc6dacbd75e6818c36d4f0f83ebad26e7986bf3ab490b301485",
+      "dsh-client-ui-conversation/lib/client.js": "b43d3e2a95017c48c8629f4bf3531f0aba281c84731d64e5174c47561b6a595f",
+      "dsh-client-ui-user-questions/lib/client.js": "c9e5e7869f3fdd1ef6242d547f8a6120fd43e284fac41e93ac8312099855ffd8"
+    },
+    "limits": [
+      "Actual UserQuestions.ask, ApiRemotes source and Connection admission with independent Peers; synthetic authentication/root/session catalog",
+      "Production Gateway mux, dispatcher, controller scopes, UiSession, ConversationContent overlay, question plugin, React and slot renderer",
+      "Hand-composed frontend with custom resolver, retained root and boot latch; use check-cua-frontend-boot for real bootstrap",
+      "No grant/model/Native implementation or approval answer",
+      "Headless lifecycle freeze/resume is covered; hidden-tab state is only covered if hiddenObserved is true"
+    ]
+  },
+  "productionBoot": {
+    "pass": true,
+    "platform": "darwin",
+    "nodeVersion": "v24.13.0",
+    "browserVersion": "156.0.8078.4",
+    "cases": [
+      "production-bootstrap-pending-replay",
+      "production-controller-selection-then-consent",
+      "production-generation-drain-replay",
+      "production-navigation-retains-question"
+    ],
+    "hashes": {
+      "dsh-api-gateway/lib/index.js": "91abae7edfaa2bf3154680829e77b1f341aa01ba9094795aa70b96ff3e15f52b",
+      "dsh-api-remotes/lib/index.js": "719d9ad01bb3066ab84ecd824f30d630871ed0edcf1ff32df4d6931a553fc3f5",
+      "dsh-user-questions/lib/index.js": "69fee77aa57cc43de583d53a4877394c4cf3b5d58b8d7579fd8095c0a015bfbd",
+      "dsh-client-connection/lib/index.js": "0ebcca7583e082716f79b0b55bc1749d48269cc8db2989b043b321b57abd3684",
+      "dsh-api-session-controller/lib/index.js": "986704f240f4d65231d9f8ab9a8ca57eb1b1b2ffcad332e1c85d9edded61d7f5",
+      "dsh-codex-connect/lib/client.js": "fb47811861b8111bfaf2fbfa692b14036884ca748918e72335b983e36a670a00",
+      "@deepseek-ai/dsh-cua/lib/client.js": "b28912e25e48db1fdf49d35acdf3779f74da9c1656e621fcb5570efd120b1948",
+      "plugin-batch:d059820a4c47a8e473d63e4a6811e9baeb4e1453e357aa992a27bc24fea6e6cd": "d059820a4c47a8e473d63e4a6811e9baeb4e1453e357aa992a27bc24fea6e6cd",
+      "/assets/vendor-7utBqO4o.js": "637551841c109efe0125e583ccd93c804d42e93793044793b70e0d5cc147bb6b",
+      "/assets/index--TtJvO-i.js": "d6b21e79b7e2f41b418fab2c045bcf8f1aba21ae7e6a1520768f533bd0524fcd",
+      "plugin-batch:5f9cfa42efc5a0ee36771bb4b7e2224281f767b7856fbb9652f78c904632b9fa": "5f9cfa42efc5a0ee36771bb4b7e2224281f767b7856fbb9652f78c904632b9fa",
+      "plugin-batch:98ddd297aab249699e7d9b95641337157cf498ad389707b725203b7708f9e7db": "98ddd297aab249699e7d9b95641337157cf498ad389707b725203b7708f9e7db"
+    },
+    "counts": {
+      "subprocess": 0,
+      "outbound": 0,
+      "fetch": 0,
+      "model": 0,
+      "consentAnswers": 0
+    },
+    "limits": [
+      "Production Web/base profile and real loader graph, including unchanged Connect/CUA browser bundles with inert Host halves",
+      "Empty synthetic HOME/DSH_HOME, two real authentication Peers; no real account/session/page",
+      "Production UserQuestions.ask and live-root registry; synthetic root is never driven",
+      "No Native/grant/model implementation or approval answer; not live acceptance",
+      "Unrelated title model, native opener, workspace Git capture and HMR disabled only in fixture",
+      "Session opening uses the production UiWorkspace navigation API; New session uses the real button"
+    ],
+    "activeFrontendPlugins": 73,
+    "optionalFrontendNames": [
+      "dsh-codex-connect",
+      "@deepseek-ai/dsh-cua"
+    ],
+    "cleanup": "Confirmed child exit 0, no signal, stopped receipt pending 0; owned temporary directory removed"
+  },
+  "diagnosticUnitTests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "realApplicationGrants": 0,
+  "nativeOperations": 0,
+  "productionDeploymentChanged": false,
+  "historicalMissingCardCause": "not_reproduced_or_identified",
+  "testFiles": {
+    ".github/workflows/ci.yml": "c8cd38efecffb4416c0b9a42a72d30681d7aec2968aaa4cfd4b760fb9e5dac2c",
+    "experiments/terra-cua-worker/frontend/browser-fixture.mjs": "2aff7fc606eae62d78f4d8f2ad9fc9da7fb130cfce03b0d6cf63ded0a125f1dd",
+    "experiments/terra-cua-worker/frontend/browser-probe.mjs": "9a84ba5af83690a107d4652047cd862ffe484a4e27c19049bd715636bf88f683",
+    "experiments/terra-cua-worker/frontend/browser-probe.test.mjs": "9fee0195bf968053874a1428535b83fdbc28f9bc2a26fab6b778488846b5faa0",
+    "experiments/terra-cua-worker/frontend/diagnostics.mjs": "daf9f475caf20d7930ae354777f1d19a36d01e7b41a70549902d0d9ea9b79054",
+    "experiments/terra-cua-worker/frontend/diagnostics.test.mjs": "c5e4444921b914ae59ddb170051413463f9bfa92a643a377320275dbae3fa1bd",
+    "experiments/terra-cua-worker/frontend/production-host.mjs": "11a4f9b0a8b7b7bfca74a8dfc02298f275039134a45c388645dcd28838b4ee78",
+    "scripts/check-cua-frontend-boot.mjs": "41fe64a14aea278bd6e4968661ecb59eaa0334c3f899482394a08588e9c2d22c",
+    "scripts/check-cua-frontend.mjs": "b859f5492e746f16baf072ba469b86628da05f1e0609a2d1afc1a416a4746208",
+    "scripts/check-cua-host.mjs": "32b699875f7bc6ddb1344454e6dd29945321a30a82523eb3dcd3f2fd77f207c4"
+  },
+  "probeNegativeBaseline": {
+    "source": "fffcd317e7a501a2a23ef17a8bacaba4f916b2ba",
+    "result": "non-question frame throws TypeError before original answer",
+    "originalAnswerCalls": 0,
+    "newRegression": "unknown and incomplete frames preserve original invocation and promise; no trace"
+  }
+}

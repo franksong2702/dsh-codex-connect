@@ -1,0 +1,37 @@
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -12,11 +12,24 @@
+ })
+ const taskDiagnosticStages = new Set(['preflight','consent','arm','arm_receipt','receipt','monitor','operation','before_model','cleanup'])
+ const taskDiagnosticSources = new Set(['host','native','worker','tool','lifecycle'])
++function focusDiagnostic(message) {
++  const phase = message === 'Initial Chrome focus did not settle within the bounded preparation window' ? 'settle_timeout'
++    : message === 'Selected Chrome window lost focus or identity' ? 'final_ax'
++    : message === 'Foreground changed; Chrome input stops' ? 'final_foreground' : undefined
++  return phase === undefined ? undefined : Object.freeze({phase})
++}
++function taskProjectedRow(row) {
++  const code=row?.code, stage=row?.stage, source=row?.source
++  const projected=taskErrorProjection({code},stage,source)[0]
++  if(projected.code!=='CUA_INPUT_FOCUS_LOST'||projected.stage!=='arm'||projected.source!=='native')return projected
++  let phase;try { const details=row?.focus; phase=details?.phase } catch {}
++  return ['settle_timeout','final_ax','final_foreground'].includes(phase) ? Object.freeze({...projected,focus:Object.freeze({phase})}) : projected
++}
+ function taskErrorProjection(error,stage,source) {
+   stage=taskDiagnosticStages.has(stage)?stage:'preflight';source=taskDiagnosticSources.has(source)?source:'worker'
+   const queue=[error],seen=new Set(),result=[]
+   while(queue.length&&seen.size<16&&result.length<8){const value=queue.shift();if(!value||typeof value!=='object'||seen.has(value))continue;seen.add(value)
+-    if(typeof value.code==='string'&&Object.hasOwn(taskDiagnosticReasons,value.code))result.push(Object.freeze({code:value.code,reason:taskDiagnosticReasons[value.code],stage,source}))
++    const code=value.code;if(typeof code==='string'&&Object.hasOwn(taskDiagnosticReasons,code)){let message;if(code==='CUA_INPUT_FOCUS_LOST'&&stage==='arm'&&source==='native'){try{message=value.message}catch{}}const focus=focusDiagnostic(message);result.push(Object.freeze({code,reason:taskDiagnosticReasons[code],stage,source,...focus?{focus}:{}}))}
+     for(const key of ['cause','error'])if(value[key]&&typeof value[key]==='object')queue.push(value[key])
+   }
+   return result.length?result:[Object.freeze({code:'UNKNOWN',reason:'unknown',stage,source})]
+@@ -24,7 +37,7 @@
+ function taskDiagnosticProjection(value) {
+   if(!value||typeof value!=='object')return null
+   const stage=taskDiagnosticStages.has(value.stage)?value.stage:'preflight'
+-  const chain=Array.isArray(value.chain)?value.chain.slice(0,8).map(row=>taskErrorProjection({code:row?.code},row?.stage,row?.source)[0]):[]
++  const chain=Array.isArray(value.chain)?value.chain.slice(0,8).map(row=>taskProjectedRow(row)):[]
+   const progress=Array.isArray(value.progress)?value.progress.slice(0,16).filter(row=>taskDiagnosticStages.has(row?.stage)&&Number.isSafeInteger(row.atMs)&&row.atMs>=0).map(row=>Object.freeze({stage:row.stage,atMs:row.atMs})):[]
+   return Object.freeze({stage,primary:chain.find(row=>row.code===value.primary?.code&&row.stage===value.primary?.stage&&row.source===value.primary?.source)??chain[0]??null,chain:Object.freeze(chain),progress:Object.freeze(progress)})
+ }

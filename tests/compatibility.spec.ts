@@ -6,6 +6,7 @@ import {
   detectCompatibility,
   evaluateCompatibility,
   SUPPORTED_DSH_PLUGIN_API_VERSION,
+  LOCAL_DSH_PLUGIN_API_VERSIONS,
   SUPPORTED_DSH_PLUGIN_API_RANGE,
   COMPATIBILITY_CONTRACT,
   SUPPORTED_NODE_RANGE,
@@ -20,6 +21,21 @@ const compatiblePackages = {
 } as const
 
 describe('compatibility contract', () => {
+  it.each(LOCAL_DSH_PLUGIN_API_VERSIONS)('admits exact local Host %s and rejects stock, mixed or future patched peers', (version) => {
+    const names = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const
+    const packages = { ...compatiblePackages, ...Object.fromEntries(names.map(name => [name, version])) }
+    expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: packages }).status).toBe('compatible')
+    for (const name of names) {
+      expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: { ...packages, [name]: '0.2.2-alpha.2' } }).status).toBe('unverified')
+      const mixed = version.endsWith('.1') ? '0.2.2-alpha.2.codex-cua-local.2' : '0.2.2-alpha.2.codex-cua-local.1'
+      expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: { ...packages, [name]: mixed } }).status).toBe('unverified')
+    }
+    for (const value of ['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.11']) {
+      expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: {
+        ...packages, ...Object.fromEntries(names.map(name => [name, value])),
+      } }).status).toBe('unverified')
+    }
+  })
   it('evaluates the declared Node, DSH API, and pi-ai versions as compatible', () => {
     const report = evaluateCompatibility({ nodeVersion: 'v22.19.0', packageVersions: compatiblePackages })
     expect(report).toEqual({

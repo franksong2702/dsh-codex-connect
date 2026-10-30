@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Operator-recorded synthetic or local Computer Use trial",
+  "type": "object",
+  "required": ["schemaVersion", "evidence", "arm", "taskId", "pairId", "repeat", "status", "success", "wrongActions", "elapsedMs", "timeoutMs", "usage", "humanInterventions", "environment"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "evidence": { "enum": ["synthetic", "live"] },
+    "arm": { "enum": ["mock", "native_desktop", "customized_live", "api_demo"] },
+    "taskId": { "type": "string", "minLength": 1 },
+    "pairId": { "type": "string", "minLength": 1 },
+    "repeat": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["completed", "blocked", "cancelled", "timed_out", "failed", "uncertain"] },
+    "success": { "type": "boolean" },
+    "code": { "type": ["string", "null"] },
+    "wrongActions": { "type": "integer", "minimum": 0 },
+    "elapsedMs": { "type": "number", "minimum": 0 },
+    "timeoutMs": { "type": "integer", "minimum": 1 },
+    "humanInterventions": { "type": "integer", "minimum": 0 },
+    "usage": {
+      "type": "object", "required": ["modelCalls", "inputTokens", "outputTokens", "visibleCost"],
+      "properties": {
+        "modelCalls": { "type": ["integer", "null"], "minimum": 0 },
+        "inputTokens": { "type": ["integer", "null"], "minimum": 0 },
+        "outputTokens": { "type": ["integer", "null"], "minimum": 0 },
+        "visibleCost": { "oneOf": [{ "type": "null" }, { "type": "object", "required": ["amount", "currency", "scope", "source"], "properties": {
+          "amount": { "type": "number", "minimum": 0 }, "currency": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "minLength": 1 }, "source": { "type": "string", "minLength": 1 }
+        } }] }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["hardware", "os", "applicationVersion", "toolRuntimeVersion", "model", "effort", "serviceTier", "requestedModel", "requestedEffort", "requestedServiceTier", "toolRoute", "measurementStratum", "promptHash", "fixtureHash", "initialStateHash", "screen"],
+      "properties": {
+        "hardware": { "$ref": "#/$defs/knownOrNull" }, "os": { "$ref": "#/$defs/knownOrNull" },
+        "applicationVersion": { "$ref": "#/$defs/knownOrNull" }, "toolRuntimeVersion": { "$ref": "#/$defs/knownOrNull" },
+        "model": { "$ref": "#/$defs/knownOrNull" }, "effort": { "$ref": "#/$defs/knownOrNull" },
+        "serviceTier": { "$ref": "#/$defs/knownOrNull" }, "fixtureHash": { "$ref": "#/$defs/knownOrNull" },
+        "requestedModel": { "$ref": "#/$defs/knownOrNull" }, "requestedEffort": { "$ref": "#/$defs/knownOrNull" },
+        "requestedServiceTier": { "$ref": "#/$defs/knownOrNull" }, "toolRoute": { "$ref": "#/$defs/knownOrNull" },
+        "measurementStratum": { "$ref": "#/$defs/knownOrNull" }, "promptHash": { "$ref": "#/$defs/knownOrNull" },
+        "initialStateHash": { "$ref": "#/$defs/knownOrNull" },
+        "screen": { "type": "object", "required": ["width", "height", "dpr", "zoom"], "properties": {
+          "width": { "$ref": "#/$defs/scale" }, "height": { "$ref": "#/$defs/scale" },
+          "dpr": { "$ref": "#/$defs/scale" }, "zoom": { "$ref": "#/$defs/scale" }
+        } }
+      }
+    }
+  },
+  "$defs": {
+    "knownOrNull": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+    "scale": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+  },
+  "allOf": [{ "if": { "properties": { "success": { "const": true } } }, "then": { "properties": { "status": { "const": "completed" } } } }]
+}

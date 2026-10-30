@@ -12,7 +12,8 @@ const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 const REQUIRED_DSH_VERSION = '0.1.7-rc.1'
 const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4']
-const REQUIRED_DSH_RANGE = REQUIRED_DSH_VERSIONS.join(' || ')
+const LOCAL_DSH_VERSIONS = ['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6', '0.2.2-alpha.2.codex-cua-local.7', '0.2.2-alpha.2.codex-cua-local.8', '0.2.2-alpha.2.codex-cua-local.9', '0.2.2-alpha.2.codex-cua-local.10']
+const REQUIRED_DSH_RANGE = [...REQUIRED_DSH_VERSIONS, ...LOCAL_DSH_VERSIONS].join(' || ')
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 const SCHEMASTERY_PACKAGE = '@deepseek-ai/schemastery'
@@ -94,6 +95,7 @@ async function main() {
   if (compatibility.engines?.node !== REQUIRED_NODE_RANGE) fail('compatibility.json Node engine mismatch')
   if (compatibility.dshPluginApi?.version !== REQUIRED_DSH_VERSION) fail('compatibility.json DSH plugin API version mismatch')
   if (JSON.stringify(compatibility.dshPluginApi?.versions) !== JSON.stringify(REQUIRED_DSH_VERSIONS)) fail('compatibility.json DSH plugin API versions mismatch')
+  if (JSON.stringify(compatibility.dshPluginApi?.localVersions) !== JSON.stringify(LOCAL_DSH_VERSIONS)) fail('compatibility.json local Host candidate versions mismatch')
   if (!Array.isArray(compatibility.dshPluginApi?.packages) || compatibility.dshPluginApi.packages.length === 0) {
     fail('compatibility.json must list DSH plugin API packages')
   }

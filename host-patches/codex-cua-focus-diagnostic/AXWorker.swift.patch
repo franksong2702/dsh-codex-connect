@@ -1,0 +1,11 @@
+--- a/native/Sources/CuaNative/AXWorker.swift
++++ b/native/Sources/CuaNative/AXWorker.swift
+@@ -550,7 +550,7 @@
+         if plan.taskInputFocus { try chromeInput?.checkPreparing() }
+         _ = try validateIdentity(plan.appHandle)
+         try NativePlatform.requireUnlocked(observeSession())
+-        let top = NativePlatform.windows().first { $0.isOnScreen }
++        let top = NativePlatform.windows(onScreenOrdered: true).first { $0.isOnScreen }
+         return ForegroundObservation(frontPID: NativePlatform.frontPID(), focusedWindowID: try ax().focusedWindowID(plan.identity.pid),
+                                      frontWindowID: top?.windowID, frontWindowPID: top?.pid)
+     }
