@@ -1,0 +1,57 @@
+{
+  "pass": true,
+  "platform": "darwin",
+  "nodeVersion": "v24.13.0",
+  "browserVersion": "156.0.8078.4",
+  "cases": [
+    "fresh-consent",
+    "selection-then-consent",
+    "reconnect-pending",
+    "session-switch",
+    "remount-pending",
+    "second-client-selection-then-consent",
+    "frozen-resumed",
+    "detector-mount-absent",
+    "detector-listener-absent",
+    "detector-no-client-then-replay"
+  ],
+  "hiddenObserved": false,
+  "hashes": {
+    "dsh-api-gateway/lib/index.js": "91abae7edfaa2bf3154680829e77b1f341aa01ba9094795aa70b96ff3e15f52b",
+    "dsh-web-frontend/dist/assets/index--TtJvO-i.js": "d6b21e79b7e2f41b418fab2c045bcf8f1aba21ae7e6a1520768f533bd0524fcd",
+    "dsh-web-frontend/dist/assets/index-Jtzf36XE.css": "5e33d07ff22bffec1892574bada3023c62edd3c5cc84a98f3df06c2912ab91cf",
+    "dsh-web-frontend/dist/assets/vendor-7utBqO4o.js": "637551841c109efe0125e583ccd93c804d42e93793044793b70e0d5cc147bb6b",
+    "dsh-web-frontend/dist/assets/vendor-DV2921Zo.css": "4cea59483551208ce61ff27251da83d5f7a0893ef34cfe4b808d61be6e13ebc7",
+    "dsh-client-connection/lib/client.browser.js": "dfc3544eb894c74b340a4c4c63a8c125fd2e983df9efed5885712574af994e62",
+    "dsh-api-gateway/lib/client.browser.js": "3043de82334846a3a5654b7317830c5403f90e9aeca692d3c15e30e01d16505d",
+    "dsh-api-session-controller/lib/client.js": "ef204525ce6fd46e62cfcf0fcc7076121b20422ba50296b02631c04ceb03908f",
+    "dsh-client-ui-renderer/lib/client.js": "dbdb3f26bfbc1d143bc8a0eed5982a2507c4f0cf8027e7c170f3bed3604be356",
+    "dsh-client-ui-session/lib/client.js": "082ffb6d98a7bcc6dacbd75e6818c36d4f0f83ebad26e7986bf3ab490b301485",
+    "dsh-client-ui-conversation/lib/client.js": "b43d3e2a95017c48c8629f4bf3531f0aba281c84731d64e5174c47561b6a595f",
+    "dsh-client-ui-user-questions/lib/client.js": "c9e5e7869f3fdd1ef6242d547f8a6120fd43e284fac41e93ac8312099855ffd8"
+  },
+  "limits": [
+    "Synthetic Host source/admission/session catalog; no grant implementation",
+    "Production Gateway WebSocket mux, browser dispatcher, controller scopes, UiSession, ConversationContent overlay, question plugin, React and slot renderer",
+    "Production shell/bootstrap, account and Native operations are not exercised",
+    "Headless lifecycle freeze/resume is covered; hidden-tab state is only covered if hiddenObserved is true"
+  ],
+  "sourceBase": "9d1c0a2f3ee1e53e58e04c3981908aa5a1c289f4",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.9",
+  "observedAt": "2026-10-30T05:37:26.663574+00:00",
+  "diagnosticUnitTests": {
+    "passed": 2,
+    "failed": 0
+  },
+  "realModelRequests": 0,
+  "realApplicationGrants": 0,
+  "nativeOperations": 0,
+  "productionDeploymentChanged": false,
+  "historicalMissingCardCause": "not_reproduced_or_identified",
+  "testFiles": {
+    "scripts/check-cua-frontend.mjs": "d8fa4d8efe9321a9222516a14385f92df3c29dd08329eee8c70f26b2c9e04501",
+    "experiments/terra-cua-worker/frontend/browser-fixture.mjs": "8153a0ecba0792558ab91f52aa94b56967c6d958feecf2d3d6fe8c3e148e137b",
+    "experiments/terra-cua-worker/frontend/diagnostics.mjs": "338a83c557e2a6fa848a312e70b73e4d02cd199fe3b0748cfd4d812f061762a0",
+    "experiments/terra-cua-worker/frontend/diagnostics.test.mjs": "81d978fc519a1ab584f71bbc8997466c5dda4476f55cf09655acc40997e456ae"
+  }
+}

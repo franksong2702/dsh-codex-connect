@@ -44,8 +44,12 @@ jobs:
         run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
       - name: Verify complete-source provenance failure cases
         run: node --test host-patches/codex-cua-local.1/provenance.test.mjs host-patches/codex-cua-local.1/task-target-flow.test.mjs packages/dsh-codex-computer-use/test/input-policy.test.mjs packages/dsh-codex-computer-use/test/diagnostics.test.mjs
-      - name: Verify published and local CUA Host composition with no live model or desktop
-        run: node scripts/check-cua-host.mjs --with-local-patch
+      - name: Install isolated frontend test browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify bounded content-free frontend probes
+        run: node --test experiments/terra-cua-worker/frontend/diagnostics.test.mjs
+      - name: Verify published and local CUA Host and frontend composition with no live model or desktop
+        run: node scripts/check-cua-host.mjs --with-local-patch --with-frontend
 
   validate:
     strategy:

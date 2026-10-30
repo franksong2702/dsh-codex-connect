@@ -12,8 +12,9 @@ import { assertCuaFixturePackages } from './cua-fixture-packages.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const supplied = process.env.DSH_CUA_FIXTURE
-const withLocalPatch = process.argv[2] === '--with-local-patch'
-if (process.argv.length > 2 && (!withLocalPatch || process.argv.length !== 3)) throw new Error('usage: check-cua-host.mjs [--with-local-patch]')
+const withLocalPatch = process.argv.includes('--with-local-patch')
+const withFrontend = process.argv.includes('--with-frontend')
+if (process.argv.slice(2).some(arg => !['--with-local-patch', '--with-frontend'].includes(arg)) || new Set(process.argv.slice(2)).size !== process.argv.length - 2 || withFrontend && !withLocalPatch) throw new Error('usage: check-cua-host.mjs [--with-local-patch [--with-frontend]]')
 const version = process.env.DSH_CUA_HOST_VERSION ?? '0.2.2-alpha.2'
 if (!['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6', '0.2.2-alpha.2.codex-cua-local.7', '0.2.2-alpha.2.codex-cua-local.8', '0.2.2-alpha.2.codex-cua-local.9'].includes(version) || version !== '0.2.2-alpha.2' && !supplied) throw new Error('Local CUA checks require an explicit isolated candidate fixture')
 const fixture = supplied ? resolve(supplied) : await mkdtemp(join(tmpdir(), 'codex-cua-published-host-'))
@@ -70,6 +71,10 @@ try {
         const result = await runBoundedCommand(process.execPath, args, { cwd: fixture, env: { ...env, ...variables }, timeoutMs: 60_000 })
         if (result.status !== 0 || result.error) throw new Error(`Local Host composition failed: ${result.stderr.slice(-4000)}\n${result.stdout.slice(-4000)}`)
         process.stdout.write(result.stdout)
+      }
+      if (withFrontend) {
+        const frontend = await command(process.execPath, [join(root, 'scripts/check-cua-frontend.mjs'), local])
+        process.stdout.write(frontend.stdout)
       }
       // The local permission candidate also has to preserve ordinary installed
       // Connect behavior. This is a scripted, keyless profile, never a live service.
