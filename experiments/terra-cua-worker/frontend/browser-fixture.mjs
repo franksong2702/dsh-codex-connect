@@ -37,13 +37,30 @@ connection.generation.subscribe(() => {
 const adapters = new Map();
 ctx.provide('typert', { contexts: { getClient: key => adapters.get(key) } });
 const remote = new gateway.ClientRemoteService(ctx);
+// Only wrap existing handlers. No observer registers another waterfall answerer.
+const eventOrdinals = new Map();
+const questionMeta = new WeakMap();
+let generation = 0;
+const originalPump = remote.events.pumpEvents.bind(remote.events);
+remote.events.pumpEvents = (...args) => { generation++; return originalPump(...args); };
 const originalAnswer = remote.events.answer.bind(remote.events);
-remote.events.answer = (frame, ...args) => { mark('receive'); return originalAnswer(frame, ...args); };
+remote.events.answer = (frame, clientId, signal) => {
+    if (!eventOrdinals.has(frame.eventId)) eventOrdinals.set(frame.eventId, eventOrdinals.size + 1);
+    const meta = { event: eventOrdinals.get(frame.eventId), generation };
+    questionMeta.set(frame.request.questions, meta);
+    mark('receive', meta);
+    const aborted = () => mark('delivery-abort', meta);
+    signal.addEventListener('abort', aborted, { once: true });
+    const result = originalAnswer(frame, clientId, signal);
+    const drained = () => { signal.removeEventListener('abort', aborted); mark('delivery-drained', meta); };
+    result.then(drained, drained);
+    return result;
+};
 const originalDispatch = remote.events.dispatchWaterfall.bind(remote.events);
-remote.events.dispatchWaterfall = (...args) => { mark('dispatch'); return originalDispatch(...args); };
+remote.events.dispatchWaterfall = (target, frame, signal) => { mark('dispatch', questionMeta.get(frame.request.questions)); return originalDispatch(target, frame, signal); };
 const originalOn = remote.$on;
 remote.$on = function (event, listener) {
-    return originalOn.call(this, event, event === 'user-questions/request' ? function (...args) { mark('listener'); return listener.apply(this, args); } : listener);
+    return originalOn.call(this, event, event === 'user-questions/request' ? function (request, ...args) { mark('listener', questionMeta.get(request.questions)); return listener.call(this, request, ...args); } : listener);
 };
 const sessions = new controller.ClientSessions(ctx, {});
 // Synthetic session catalog, no real session history, persistence or account.
@@ -87,14 +104,21 @@ mark('before-questions');
 await mountQuestions();
 mark('after-questions');
 let unmount = ctx.uiRenderer.mount(document.getElementById('app'));
-const observer = new MutationObserver(() => {
-    const count = document.querySelectorAll('[data-question-key]').length;
-    mark('mount', { count, visible: document.visibilityState === 'visible' });
-});
+const observeMount = () => {
+    const nodes = [...document.querySelectorAll('[data-question-key]')];
+    if (!nodes.length) mark('mount', { count: 0, visible: document.visibilityState === 'visible', inViewport: false });
+    for (const pending of ctx.uiSession.pendingSnapshot.values()) {
+        const node = nodes.find(node => node.getAttribute('data-question-key') === pending.key);
+        if (!node) continue;
+        const box = node.getBoundingClientRect();
+        mark('mount', { ...questionMeta.get(pending.questions), count: nodes.length, visible: document.visibilityState === 'visible', inViewport: box.width > 0 && box.height > 0 && box.x < innerWidth && box.y < innerHeight && box.right > 0 && box.bottom > 0 });
+    }
+};
+const observer = new MutationObserver(observeMount);
 observer.observe(document.getElementById('app'), { subtree: true, childList: true });
 releaseBoot();
 window.fixture = { get trace() { return diagnostic.snapshot(); },
-    state() { return { received: diagnostic.snapshot().filter(x => x.stage === 'receive').length, listened: diagnostic.snapshot().filter(x => x.stage === 'listener').length, pending: ctx.uiSession.pendingSnapshot.size, visibility: document.visibilityState }; },
+    state() { return { generation, received: diagnostic.snapshot().filter(x => x.stage === 'receive').length, listened: diagnostic.snapshot().filter(x => x.stage === 'listener').length, pending: ctx.uiSession.pendingSnapshot.size, visibility: document.visibilityState }; },
     async reconnect() {
         const before = connection.generation.getSnapshot()?.id;
         connection.reconnect();

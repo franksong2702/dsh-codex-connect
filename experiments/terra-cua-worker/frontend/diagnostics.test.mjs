@@ -18,3 +18,12 @@ test('bounded snapshots are detached and invalid metrics are excluded', () => {
   rows[0].stage = 'changed'; assert.equal(trace.snapshot()[0].stage, 'mount')
   for (const limit of [0, 257, Infinity, '128']) assert.throws(() => createFrontendTrace({ limit }), RangeError)
 })
+test('correlation accepts only bounded local ordinals and distinguishes viewport from visibility', () => {
+  const trace = createFrontendTrace()
+  trace.record('receive', { event: 'PRIVATE_WIRE_ID', generation: -1 })
+  trace.record('mount', { event: 3, generation: 2, count: 1, visible: true, inViewport: false })
+  assert.deepEqual(trace.snapshot(), [
+    { sequence: 1, stage: 'receive' },
+    { sequence: 2, stage: 'mount', count: 1, event: 3, generation: 2, visible: true, inViewport: false },
+  ])
+})

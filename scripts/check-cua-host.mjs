@@ -73,8 +73,10 @@ try {
         process.stdout.write(result.stdout)
       }
       if (withFrontend) {
-        const frontend = await command(process.execPath, [join(root, 'scripts/check-cua-frontend.mjs'), local])
-        process.stdout.write(frontend.stdout)
+        for (const script of ['check-cua-frontend.mjs', 'check-cua-frontend-boot.mjs']) {
+          const frontend = await command(process.execPath, [join(root, 'scripts', script), local])
+          process.stdout.write(frontend.stdout)
+        }
       }
       // The local permission candidate also has to preserve ordinary installed
       // Connect behavior. This is a scripted, keyless profile, never a live service.
