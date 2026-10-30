@@ -475,7 +475,7 @@ export declare const COMPATIBILITY_CONTRACT: {
   readonly dshPluginApi: {
     readonly version: "0.1.7-rc.1";
     readonly versions: readonly ["0.1.7-rc.1", "0.1.7-rc.2", "0.2.0-rc.1", "0.2.0-rc.2", "0.2.1-alpha.1", "0.2.1-alpha.2", "0.2.1-alpha.3", "0.2.1-alpha.4", "0.2.1-alpha.5", "0.2.1-rc.1", "0.2.1-rc.2", "0.2.1-rc.3", "0.2.1-rc.4"];
-    readonly localVersions: readonly ["0.2.2-alpha.2.codex-cua-local.1", "0.2.2-alpha.2.codex-cua-local.2", "0.2.2-alpha.2.codex-cua-local.3", "0.2.2-alpha.2.codex-cua-local.4", "0.2.2-alpha.2.codex-cua-local.5", "0.2.2-alpha.2.codex-cua-local.6", "0.2.2-alpha.2.codex-cua-local.7", "0.2.2-alpha.2.codex-cua-local.8", "0.2.2-alpha.2.codex-cua-local.9"];
+    readonly localVersions: readonly ["0.2.2-alpha.2.codex-cua-local.1", "0.2.2-alpha.2.codex-cua-local.2", "0.2.2-alpha.2.codex-cua-local.3", "0.2.2-alpha.2.codex-cua-local.4", "0.2.2-alpha.2.codex-cua-local.5", "0.2.2-alpha.2.codex-cua-local.6", "0.2.2-alpha.2.codex-cua-local.7", "0.2.2-alpha.2.codex-cua-local.8", "0.2.2-alpha.2.codex-cua-local.9", "0.2.2-alpha.2.codex-cua-local.10"];
     readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-client-ui-chat", "@deepseek-ai/dsh-client-ui-layout", "@deepseek-ai/dsh-client-ui-primitives", "@deepseek-ai/dsh-client-ui-tool", "@deepseek-ai/dsh-compaction", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-timeout", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
   };
   readonly piAi: {
