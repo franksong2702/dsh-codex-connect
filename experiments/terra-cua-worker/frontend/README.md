@@ -44,7 +44,7 @@ Only normal synthetic **window-selection** answers are clicked. Consent question
 
 ## Passive diagnostics and source identity
 
-`diagnostics.mjs` retains at most 256 memory-only records with enumerated stages, bounded counts, local numeric event/generation ordinals, and visibility booleans. Wire identifiers remain only transient Map keys; they are not exported. `browser-probe.mjs` wraps existing pump, answer, dispatch and listener methods without registering a new answerer. Tests verify original promise identity, receiver, return values, cancellation and errors. A mount receipt is never consent.
+`diagnostics.mjs` retains at most 256 memory-only records with enumerated stages, bounded counts, local numeric event/generation ordinals, and visibility booleans. Wire identifiers remain only transient Map keys; they are not exported. `browser-probe.mjs` wraps existing pump, answer, dispatch and listener methods without registering a new answerer. Known question frames alone are correlated; non-question and incomplete frames are forwarded unchanged. Tests verify original promise identity, receiver, return values, cancellation, synchronous errors, missing fields and abort-listener cleanup. Both checkers share this same probe. A mount receipt is never consent.
 
 For the full boot, the HTTP-served bundle is changed only in memory to expose the real WebBoot instance and install this passive probe immediately after creation of the real ClientRemoteService. No method bodies or dependency order are replaced. Input SHA-256 values are recorded before instrumentation. Host source files are compared against the prepared candidate. Temporary Connect/CUA Host entry points are explicitly inert, while browser bundle bytes are unchanged. No third-party bundle is committed.
 
@@ -52,7 +52,7 @@ Neither runner logs raw browser console/error messages, request URLs, stack trac
 
 ## Results and remaining evidence
 
-The macOS source-verified run passes thirteen component cases, four production-boot cases with 73 active browser plugins, and four probe unit tests. `validation.json` binds the test source and candidate inputs. Linux execution belongs to the new exact-head CI, not this macOS result. The earlier 0603e CI success cannot substitute for the new head.
+The macOS source-verified run passes thirteen component cases, four production-boot cases with 73 active browser plugins, and six probe unit tests. `validation.json` binds the test source and candidate inputs. Linux execution belongs to the new exact-head CI, not this macOS result. The earlier 0603e CI success cannot substitute for the new head.
 
 The historical missing card remains **not reproduced or identified**. In particular, these results do not prove the user's historical browser received the event, retained the intended session, mounted the card or displayed it. Headless freeze/resume did not establish a real hidden-tab state (`hiddenObserved: false`). No real permission, Terra call, startup/GUI action or native performance is accepted by these tests.
 

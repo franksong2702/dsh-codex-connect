@@ -56,6 +56,7 @@ for (const [name, pkg, file, expose] of [
     add(`/bundle/${name}`, text);
 }
 add('/diagnostics.mjs', await readFile(new URL('../experiments/terra-cua-worker/frontend/diagnostics.mjs', import.meta.url)));
+add('/browser-probe.mjs', await readFile(new URL('../experiments/terra-cua-worker/frontend/browser-probe.mjs', import.meta.url)));
 add('/fixture.mjs', await readFile(new URL('../experiments/terra-cua-worker/frontend/browser-fixture.mjs', import.meta.url)));
 add('/', `<!doctype html><html><head>${assetNames.filter(n => n.endsWith('.css')).map(n => `<link rel="stylesheet" href="/${n}">`).join('')}<style>html,body,#app{width:100%;height:100%;margin:0}</style></head><body><div id="app"></div><script type="module" src="/fixture.mjs"></script></body></html>`, 'text/html');
 const ctx = new Context();

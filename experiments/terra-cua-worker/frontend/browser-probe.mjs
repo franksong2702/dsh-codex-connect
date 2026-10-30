@@ -3,34 +3,44 @@ export function installFrontendProbe(ctx, trace) {
     const mark = (stage, data) => trace.record(stage, data);
     const events = new Map(), questions = new WeakMap();
     const remote = ctx.remote;
+    // The Gateway also carries non-question waterfalls. Never interpret or change them.
+    const questionList = frame => frame?.event === 'user-questions/request' &&
+        typeof frame.eventId === 'string' && Array.isArray(frame.request?.questions)
+        ? frame.request.questions : undefined;
     let generation = 0, sequence = 0;
     const originalPump = remote.events.pumpEvents.bind(remote.events);
     remote.events.pumpEvents = (...args) => { generation++; return originalPump(...args); };
     const originalAnswer = remote.events.answer.bind(remote.events);
     remote.events.answer = (frame, clientId, signal) => {
+        const list = questionList(frame);
+        if (!list || typeof signal?.addEventListener !== 'function' || typeof signal?.removeEventListener !== 'function') return originalAnswer(frame, clientId, signal);
         if (!events.has(frame.eventId)) {
             if (events.size === 256) events.delete(events.keys().next().value);
             events.set(frame.eventId, ++sequence);
         }
         const meta = { event: events.get(frame.eventId), generation };
-        questions.set(frame.request.questions, meta);
+        questions.set(list, meta);
         mark('receive', meta);
         const abort = () => mark('delivery-abort', meta);
         signal.addEventListener('abort', abort, { once: true });
-        const result = originalAnswer(frame, clientId, signal);
         const drained = () => { signal.removeEventListener('abort', abort); mark('delivery-drained', meta); };
-        result.then(drained, drained);
+        let result;
+        try { result = originalAnswer(frame, clientId, signal); }
+        catch (error) { signal.removeEventListener('abort', abort); throw error; }
+        if (typeof result?.then === 'function') result.then(drained, drained);
+        else drained();
         return result;
     };
     const originalDispatch = remote.events.dispatchWaterfall.bind(remote.events);
     remote.events.dispatchWaterfall = (target, frame, signal) => {
-        mark('dispatch', questions.get(frame.request.questions));
+        const list = questionList(frame);
+        if (list) mark('dispatch', questions.get(list));
         return originalDispatch(target, frame, signal);
     };
     const originalOn = remote.$on;
     remote.$on = function (event, listener) {
         return originalOn.call(this, event, event === 'user-questions/request' ? function (request, ...args) {
-            mark('listener', questions.get(request.questions));
+            if (Array.isArray(request?.questions)) mark('listener', questions.get(request.questions));
             return listener.call(this, request, ...args);
         } : listener);
     };

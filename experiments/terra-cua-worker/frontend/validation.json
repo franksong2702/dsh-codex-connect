@@ -1,8 +1,8 @@
 {
-  "sourceBase": "0603e128cab5248e091541fd6d164b0aab1d6239",
+  "sourceBase": "fffcd317e7a501a2a23ef17a8bacaba4f916b2ba",
   "candidateRuntimeSource": "9d1c0a2f3ee1e53e58e04c3981908aa5a1c289f4",
   "candidateVersion": "0.2.2-alpha.2.codex-cua-local.9",
-  "observedAt": "2026-10-30T06:19:34.902082+00:00",
+  "observedAt": "2026-10-30T06:40:06.845735+00:00",
   "component": {
     "pass": true,
     "platform": "darwin",
@@ -71,7 +71,7 @@
       "plugin-batch:d059820a4c47a8e473d63e4a6811e9baeb4e1453e357aa992a27bc24fea6e6cd": "d059820a4c47a8e473d63e4a6811e9baeb4e1453e357aa992a27bc24fea6e6cd",
       "/assets/vendor-7utBqO4o.js": "637551841c109efe0125e583ccd93c804d42e93793044793b70e0d5cc147bb6b",
       "/assets/index--TtJvO-i.js": "d6b21e79b7e2f41b418fab2c045bcf8f1aba21ae7e6a1520768f533bd0524fcd",
-      "plugin-batch:efed010197a9cd5ee69c30428e8007620fe55d4849969241f1a2dc3f370f5e63": "efed010197a9cd5ee69c30428e8007620fe55d4849969241f1a2dc3f370f5e63",
+      "plugin-batch:5f9cfa42efc5a0ee36771bb4b7e2224281f767b7856fbb9652f78c904632b9fa": "5f9cfa42efc5a0ee36771bb4b7e2224281f767b7856fbb9652f78c904632b9fa",
       "plugin-batch:98ddd297aab249699e7d9b95641337157cf498ad389707b725203b7708f9e7db": "98ddd297aab249699e7d9b95641337157cf498ad389707b725203b7708f9e7db"
     },
     "counts": {
@@ -97,7 +97,7 @@
     "cleanup": "Confirmed child exit 0, no signal, stopped receipt pending 0; owned temporary directory removed"
   },
   "diagnosticUnitTests": {
-    "passed": 4,
+    "passed": 6,
     "failed": 0
   },
   "realApplicationGrants": 0,
@@ -106,14 +106,20 @@
   "historicalMissingCardCause": "not_reproduced_or_identified",
   "testFiles": {
     ".github/workflows/ci.yml": "c8cd38efecffb4416c0b9a42a72d30681d7aec2968aaa4cfd4b760fb9e5dac2c",
-    "experiments/terra-cua-worker/frontend/browser-fixture.mjs": "65492d77bf6467a646c126f767794ca520329c86f14984db3b1ccd391a836b4e",
-    "experiments/terra-cua-worker/frontend/browser-probe.mjs": "2d9eb9bc300df69dd5f7f20cdb5f069e47f9eab246ba7bb4d07f79cc69e6f8c2",
-    "experiments/terra-cua-worker/frontend/browser-probe.test.mjs": "6a837905135c90a0b97c1ea948cf8b05b087a8a9d4f8421675e2385ca447ec88",
+    "experiments/terra-cua-worker/frontend/browser-fixture.mjs": "2aff7fc606eae62d78f4d8f2ad9fc9da7fb130cfce03b0d6cf63ded0a125f1dd",
+    "experiments/terra-cua-worker/frontend/browser-probe.mjs": "9a84ba5af83690a107d4652047cd862ffe484a4e27c19049bd715636bf88f683",
+    "experiments/terra-cua-worker/frontend/browser-probe.test.mjs": "9fee0195bf968053874a1428535b83fdbc28f9bc2a26fab6b778488846b5faa0",
     "experiments/terra-cua-worker/frontend/diagnostics.mjs": "daf9f475caf20d7930ae354777f1d19a36d01e7b41a70549902d0d9ea9b79054",
     "experiments/terra-cua-worker/frontend/diagnostics.test.mjs": "c5e4444921b914ae59ddb170051413463f9bfa92a643a377320275dbae3fa1bd",
     "experiments/terra-cua-worker/frontend/production-host.mjs": "11a4f9b0a8b7b7bfca74a8dfc02298f275039134a45c388645dcd28838b4ee78",
     "scripts/check-cua-frontend-boot.mjs": "41fe64a14aea278bd6e4968661ecb59eaa0334c3f899482394a08588e9c2d22c",
-    "scripts/check-cua-frontend.mjs": "e9aaa09e9ed656e92fbada132596ef17bb8d90a51028ec3acba2f71446ca3da4",
+    "scripts/check-cua-frontend.mjs": "b859f5492e746f16baf072ba469b86628da05f1e0609a2d1afc1a416a4746208",
     "scripts/check-cua-host.mjs": "32b699875f7bc6ddb1344454e6dd29945321a30a82523eb3dcd3f2fd77f207c4"
+  },
+  "probeNegativeBaseline": {
+    "source": "fffcd317e7a501a2a23ef17a8bacaba4f916b2ba",
+    "result": "non-question frame throws TypeError before original answer",
+    "originalAnswerCalls": 0,
+    "newRegression": "unknown and incomplete frames preserve original invocation and promise; no trace"
   }
 }
