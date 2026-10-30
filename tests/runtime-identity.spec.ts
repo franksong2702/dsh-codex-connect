@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateCompatibility, SUPPORTED_DSH_PLUGIN_API_VERSIONS } from '../src/compatibility-policy.ts'
+import { evaluateCompatibility, LOCAL_DSH_PLUGIN_API_VERSIONS, SUPPORTED_DSH_PLUGIN_API_VERSIONS } from '../src/compatibility-policy.ts'
 import { inconsistentRuntimeReports } from './runtime-identity-fixtures.ts'
 import {
   isRuntimeMetadataVersion,
@@ -74,6 +74,7 @@ describe('node-free runtime receipt decoder', () => {
     (report: Record<string, any>) => { delete report.identity.installedPluginVersion },
     (report: Record<string, any>) => { report.compatibility.schemaVersion = 2 },
     (report: Record<string, any>) => { report.compatibility.node.installed = '/private/node' },
+    (report: Record<string, any>) => { report.compatibility.packages['@deepseek-ai/dsh-llm'].supported += 'X'.repeat(1024) },
     (report: Record<string, any>) => { report.compatibility.packages['@deepseek-ai/dsh-llm'].installed = null },
     (report: Record<string, any>) => { delete report.compatibility.packages['@deepseek-ai/dsh-compaction'] },
     (report: Record<string, any>) => { report.currentDshVersion = '0.2.1-alpha.3' },
@@ -88,7 +89,7 @@ describe('node-free runtime receipt decoder', () => {
     expect(parseOpenAICodexRuntimeReport(report)).toBeUndefined()
   })
 
-  it.each(SUPPORTED_DSH_PLUGIN_API_VERSIONS)('preserves the exact coherent %s policy', version => {
+  it.each([...SUPPORTED_DSH_PLUGIN_API_VERSIONS, ...LOCAL_DSH_PLUGIN_API_VERSIONS])('preserves the exact coherent %s policy', version => {
     const report = receipt()
     report.currentDshVersion = version
     for (const name of ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const) {

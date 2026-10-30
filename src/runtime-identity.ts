@@ -1,5 +1,5 @@
 /** Secret-free runtime receipt shared by Host and browser; no Node imports. */
-import { evaluateCompatibility } from './compatibility-policy.ts'
+import { evaluateCompatibility, SUPPORTED_DSH_PLUGIN_API_RANGE, SUPPORTED_NODE_RANGE, SUPPORTED_PI_AI_RANGE } from './compatibility-policy.ts'
 import type { CompatibilityEntry, CompatibilityReport, CompatibilityStatus } from './compatibility-policy.ts'
 
 /** The observation surface, not proof that another process is running. */
@@ -52,10 +52,12 @@ function status(value: unknown): value is CompatibilityStatus {
   return value === 'compatible' || value === 'unknown' || value === 'unverified' || value === 'incompatible'
 }
 
+const maximumSupportedRangeLength = Math.max(512, SUPPORTED_DSH_PLUGIN_API_RANGE.length, SUPPORTED_NODE_RANGE.length, SUPPORTED_PI_AI_RANGE.length)
+
 function entry(value: unknown, node = false): CompatibilityEntry | undefined {
   const item = record(value)
   if (item === undefined || typeof item.supported !== 'string'
-    || item.supported.length === 0 || item.supported.length > 512
+    || item.supported.length === 0 || item.supported.length > maximumSupportedRangeLength
     || !/^[0-9A-Za-z.*+^~<>=| -]+$/u.test(item.supported) || !status(item.status)) return undefined
   const installed = item.installed
   if (installed !== null) {
