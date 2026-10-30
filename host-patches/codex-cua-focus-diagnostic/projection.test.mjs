@@ -26,3 +26,30 @@ test('untrusted messages and objects cannot leak content or spoof invalid stages
     const forged=taskDiagnosticProjection({stage:'arm',chain:[{code:'CUA_INPUT_FOCUS_LOST',stage:'arm',source:'native',focus:{phase:'settle',frontProcess:'secret'}}]});
     assert.equal(forged.chain[0].focus,undefined); assert(!JSON.stringify(forged).includes('secret'));
 });
+test('raw errors require an exact message, regardless of a forged projected focus', () => {
+    let reads=0;
+    const value={code:'CUA_INPUT_FOCUS_LOST',message:'not a native focus message',get focus(){reads++;return {phase:'final_ax'}}};
+    const projected=taskErrorProjection(value,'arm','native')[0];
+    assert.equal(projected.focus,undefined);assert.equal(reads,0);
+});
+test('projected phase getter is read once and its untrusted later value cannot leak', () => {
+    let reads=0;
+    const focus={get phase(){reads++;return reads===1?'final_ax':'PRIVATE_SENTINEL'}};
+    const row={code:'CUA_INPUT_FOCUS_LOST',stage:'arm',source:'native',focus};
+    const result=taskDiagnosticProjection({stage:'arm',chain:[row]});
+    assert.equal(reads,1);assert.deepEqual(result.chain[0].focus,{phase:'final_ax'});
+    assert(!JSON.stringify(result).includes('PRIVATE_SENTINEL'));
+});
+test('native message getter is sampled only once', () => {
+    let reads=0;
+    const error={code:'CUA_INPUT_FOCUS_LOST',get message(){reads++;return reads===1?'unknown':'Selected Chrome window lost focus or identity'}};
+    assert.equal(taskErrorProjection(error,'arm','native')[0].focus,undefined);assert.equal(reads,1);
+});
+test('throwing diagnostic getters cannot replace the original error projection', () => {
+    const error={code:'CUA_INPUT_FOCUS_LOST',get message(){throw Error('PRIVATE_SENTINEL')}};
+    const projected=taskErrorProjection(error,'arm','native')[0];
+    assert.equal(projected.code,'CUA_INPUT_FOCUS_LOST');assert.equal(projected.focus,undefined);
+    const row={code:'CUA_INPUT_FOCUS_LOST',stage:'arm',source:'native',get focus(){throw Error('PRIVATE_SENTINEL')}};
+    const snapshot=taskDiagnosticProjection({stage:'arm',chain:[row]});
+    assert.equal(snapshot.chain[0].focus,undefined);assert(!JSON.stringify(snapshot).includes('PRIVATE_SENTINEL'));
+});

@@ -15,8 +15,8 @@ const files = [
  ['NativePlatform.swift','dsh-experimental-cua-macos/native/Sources/CuaNative/NativePlatform.swift','4d819e3a5f356e40fc755daab5e2cf230587352f7ff040f7b0c39ab57ad7d8d0','4bf9a8876e9aa16410f6c933dfbb18842d179f688336d7274a57a8a58991ae7f'],
  ['AXWorker.swift','dsh-experimental-cua-macos/native/Sources/CuaNative/AXWorker.swift','8d7ca01c6646adae9bc8b5f8e3606e5444f8a66c641e22736ccf8d99748c4a55','0f02271fe04533ebea5361313f6c0cc559d8cff48b6a82abb25e59c14629e8e7'],
  ['RequestCoordinator.swift','dsh-experimental-cua-macos/native/Sources/CuaNative/RequestCoordinator.swift','07f6641dca3cf5344e3e603f650b2480300601a9213124764a3cbbefd64e42f8','5cee0c9cd781426af5ce2ddae47161d871570cfca2cd84a775ff435cbdb89b4e'],
- ['host-index.js','dsh-cua/lib/index.js','36c3528326636981c3d640f64f5d4514a332836410efae494d99d4437361592a','99eb5673544eb578de05e14d967781074fdd940c01db9c0db066f699e6e6b300'],
- ['diagnostics.mjs',null,'f460d7390cb65d8bc7645d5d028ea2d80c837ccc44162bedccf30c805ef93989','f0b881e5ad4652d94cb811132cb901ce36297750d0b79e15e6e26edaaaeb1443'],
+ ['host-index.js','dsh-cua/lib/index.js','36c3528326636981c3d640f64f5d4514a332836410efae494d99d4437361592a','9c0b74cabfb2575f278420d37a2c305e7f7d6b4598cee73e3bcca52eb6e623e2'],
+ ['diagnostics.mjs',null,'f460d7390cb65d8bc7645d5d028ea2d80c837ccc44162bedccf30c805ef93989','eaf6457292cbf6f1de9ffcd9efbdf0d04572e080b2eb75af9d7474d6eb54edc4'],
 ];
 const run = (cmd,args,options={}) => execFileSync(cmd,args,{stdio:'pipe',encoding:'utf8',...options});
 try {
@@ -48,10 +48,10 @@ try {
  const before='let top = NativePlatform.windows().first { $0.isOnScreen }', after='let top = NativePlatform.windows(onScreenOrdered: true).first { $0.isOnScreen }';
  if(!originalWorker.includes(before)||!candidateWorker.includes(after)||!candidatePlatform.includes('[.optionOnScreenOnly, .excludeDesktopElements]'))throw Error('Front-window API contract mismatch');
  if(candidateWorker.replace(after,before)!==originalWorker)throw Error('Unexpected window guard or worker change');
- if(process.platform==='darwin') {
+ if(process.platform==='darwin' && !process.argv.includes('--js-only')) {
    const patched=join(temporary,'native-candidate');await mkdir(patched);
    for(const name of ['NativePlatform.swift','AXWorker.swift','RequestCoordinator.swift']) await cp(join(temporary,name+'.root/native/Sources/CuaNative',name),join(patched,name));
    process.stdout.write(run(process.execPath,[join(base,'scripts/check-focus-native-fixtures.mjs'),native,patched]));
  }
- process.stdout.write(JSON.stringify({verifiedSource:'local.9',nativeDriverExecuted:false,modelRequests:0,desktopActions:0,macWindowOrderingFixture:process.platform==='darwin'})+'\n');
+ process.stdout.write(JSON.stringify({verifiedSource:'local.9',nativeDriverExecuted:false,modelRequests:0,desktopActions:0,macWindowOrderingFixture:process.platform==='darwin' && !process.argv.includes('--js-only')})+'\n');
 } finally { await rm(temporary,{recursive:true,force:true}); }
