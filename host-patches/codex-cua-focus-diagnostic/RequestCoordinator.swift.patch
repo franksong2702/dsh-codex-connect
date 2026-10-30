@@ -1,0 +1,37 @@
+--- a/native/Sources/CuaNative/RequestCoordinator.swift
++++ b/native/Sources/CuaNative/RequestCoordinator.swift
+@@ -226,18 +226,31 @@
+         let before = try await worker.foregroundObservation(plan)
+         let raiseRequested = plan.isRaise && AXWorker.shouldRaise(plan, before: before)
+         var activationRequested = false
++        // One shared preparation budget: activation, a single raise, and the
++        // final four-way observation. Never re-activate or re-raise.
++        let settleDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
+         if !plan.isRaise || raiseRequested {
+             if before.frontPID != plan.identity.pid {
+                 try cancellation.check()
+                 try ApplicationCatalog.activate(plan.identity)
+                 activationRequested = true
++                if plan.taskInputFocus {
++                    // Activation is asynchronous. Raising first can be undone
++                    // when the application later restores its previous window.
++                    while true {
++                        try cancellation.check()
++                        let observed = try await worker.foregroundObservation(plan)
++                        if observed.frontPID == plan.identity.pid { break }
++                        if DispatchTime.now().uptimeNanoseconds >= settleDeadline { return try await worker.rejectTaskInputFocus(plan) }
++                        try await Task.sleep(nanoseconds: 20_000_000)
++                    }
++                }
+             }
+         }
+         if raiseRequested { try await worker.raise(plan) }
+         if plan.taskInputFocus {
+-            // Activation/AXRaise dispatch can precede observed focus. Issue those
+-            // commands only once; never refocus or re-arm after a takeover.
+-            let settleDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
++            // Do not retry activation/raise or accept a changed identity,
++            // hardware counter, target window, or foreground process.
+             while true {
+                 try cancellation.check()
+                 let observed = try await worker.foregroundObservation(plan)

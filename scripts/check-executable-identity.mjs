@@ -20,8 +20,8 @@ if (entry.version !== spec.baseVersion || entry.integrity !== patch.baseIntegrit
 const temporary = await mkdtemp(join(tmpdir(), 'codex-executable-identity-'))
 const source = join(temporary, 'source')
 const env = scrubCanaryEnvironment(process.env)
-async function command(binary, args, cwd = temporary) {
-  const result = await runBoundedCommand(binary, args, { cwd, env, timeoutMs: 180_000 })
+async function command(binary, args, cwd = temporary, timeoutMs = 180_000) {
+  const result = await runBoundedCommand(binary, args, { cwd, env, timeoutMs })
   if (result.status !== 0 || result.error) throw new Error(`Native identity fixture failed: ${result.stderr}\n${result.stdout}`)
   return result.stdout
 }
@@ -77,6 +77,7 @@ try {
     await writeFile(catalogSource, catalogFixture)
     await command('xcrun', ['swiftc', '-swift-version', '6', '-parse-as-library', '-module-cache-path', join(temporary, 'module-cache'), catalogSource, '-o', catalogBinary])
     process.stdout.write(await command(catalogBinary, []))
+    process.stdout.write(await command(process.execPath, [join(root, 'scripts/check-focus-native-build.mjs'), '--package', source], temporary, 300_000))
   }
   process.stdout.write(`${JSON.stringify({ candidate: spec.candidateVersion, nativeDriverExecuted: false, desktopActions: 0, realModels: 0, sourceIntegrityVerified: true })}\n`)
 } finally { await rm(temporary, { recursive: true, force: true }) }

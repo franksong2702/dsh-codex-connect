@@ -1,0 +1,33 @@
+--- a/diagnostics.mjs
++++ b/diagnostics.mjs
+@@ -11,11 +11,20 @@
+ })
+ const taskDiagnosticStages = new Set(['preflight','consent','arm','arm_receipt','receipt','monitor','operation','before_model','cleanup'])
+ const taskDiagnosticSources = new Set(['host','native','worker','tool','lifecycle'])
++function focusDiagnostic(value, stage, source) {
++  if (value?.code !== 'CUA_INPUT_FOCUS_LOST' || stage !== 'arm' || source !== 'native') return undefined
++  const allowed = ['settle_timeout','final_ax','final_foreground']
++  if (allowed.includes(value.focus?.phase)) return Object.freeze({phase:value.focus.phase})
++  const phase = value.message === 'Initial Chrome focus did not settle within the bounded preparation window' ? 'settle_timeout'
++    : value.message === 'Selected Chrome window lost focus or identity' ? 'final_ax'
++    : value.message === 'Foreground changed; Chrome input stops' ? 'final_foreground' : undefined
++  return phase === undefined ? undefined : Object.freeze({phase})
++}
+ export function taskErrorProjection(error,stage,source) {
+   stage=taskDiagnosticStages.has(stage)?stage:'preflight';source=taskDiagnosticSources.has(source)?source:'worker'
+   const queue=[error],seen=new Set(),result=[]
+   while(queue.length&&seen.size<16&&result.length<8){const value=queue.shift();if(!value||typeof value!=='object'||seen.has(value))continue;seen.add(value)
+-    if(typeof value.code==='string'&&Object.hasOwn(taskDiagnosticReasons,value.code))result.push(Object.freeze({code:value.code,reason:taskDiagnosticReasons[value.code],stage,source}))
++    if(typeof value.code==='string'&&Object.hasOwn(taskDiagnosticReasons,value.code)){const focus=focusDiagnostic(value,stage,source);result.push(Object.freeze({code:value.code,reason:taskDiagnosticReasons[value.code],stage,source,...focus?{focus}:{}}))}
+     for(const key of ['cause','error'])if(value[key]&&typeof value[key]==='object')queue.push(value[key])
+   }
+   return result.length?result:[Object.freeze({code:'UNKNOWN',reason:'unknown',stage,source})]
+@@ -23,7 +32,7 @@
+ export function taskDiagnosticProjection(value) {
+   if(!value||typeof value!=='object')return null
+   const stage=taskDiagnosticStages.has(value.stage)?value.stage:'preflight'
+-  const chain=Array.isArray(value.chain)?value.chain.slice(0,8).map(row=>taskErrorProjection({code:row?.code},row?.stage,row?.source)[0]):[]
++  const chain=Array.isArray(value.chain)?value.chain.slice(0,8).map(row=>taskErrorProjection({code:row?.code,focus:row?.focus},row?.stage,row?.source)[0]):[]
+   const progress=Array.isArray(value.progress)?value.progress.slice(0,16).filter(row=>taskDiagnosticStages.has(row?.stage)&&Number.isSafeInteger(row.atMs)&&row.atMs>=0).map(row=>Object.freeze({stage:row.stage,atMs:row.atMs})):[]
+   return Object.freeze({stage,primary:chain.find(row=>row.code===value.primary?.code&&row.stage===value.primary?.stage&&row.source===value.primary?.source)??chain[0]??null,chain:Object.freeze(chain),progress:Object.freeze(progress)})
+ }
