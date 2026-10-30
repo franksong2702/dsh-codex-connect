@@ -1,4 +1,4 @@
-/** Apply diagnostic-only overlay to verified local.9 source in a disposable directory. */
+/** Verify the local.9 baseline and local.10 overlay in disposable storage. */
 import { mkdtemp, mkdir, readFile, writeFile, cp, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -22,9 +22,13 @@ const run = (cmd,args,options={}) => execFileSync(cmd,args,{stdio:'pipe',encodin
 try {
  for (const [name, path, before, after] of files) {
    const input = path ? join(candidate,'packages',path) : join(base,'packages/dsh-codex-computer-use/diagnostics.mjs');
-   const contents=await readFile(input); if(hash(contents)!==before)throw Error('Unverified local.9 source: '+name);
+   const contents=await readFile(input); if(![before,after].includes(hash(contents)))throw Error('Unverified focus source: '+name);
    const root=join(temporary,name+'.root'); const target=path ? (name==='host-index.js'?'lib/index.js':'native/Sources/CuaNative/'+name) : 'diagnostics.mjs';
    const targetPath=join(root,target); await mkdir(resolve(targetPath,'..'),{recursive:true}); await writeFile(targetPath,contents);
+   if(hash(contents)===after)run('patch',['--batch','--fuzz=0','-R','-p1','-i',join(overlay,name+'.patch')],{cwd:root});
+   if(hash(await readFile(targetPath))!==before)throw Error('Baseline digest mismatch: '+name);
+   await cp(targetPath,join(temporary,name+'.baseline'));
+   if(name==='diagnostics.mjs')await cp(targetPath,join(temporary,'diagnostics-baseline.mjs'));
    run('patch',['--batch','--fuzz=0','-p1','-i',join(overlay,name+'.patch')],{cwd:root});
    if(hash(await readFile(targetPath))!==after)throw Error('Overlay result mismatch: '+name);
  }
@@ -32,26 +36,26 @@ try {
  const diag=await readFile(join(temporary,'diagnostics.mjs.root/diagnostics.mjs'),'utf8');
  const start=host.indexOf('/** Finite task-failure projection.'),end=host.indexOf('/** Chrome task input policy.',start);
  if(start<0||end<0||host.slice(start,end).trim()!==diag.replace(/^export /gm,'').trim())throw Error('Host/companion diagnostic mismatch');
- process.stdout.write(run(process.execPath,['--test',join(overlay,'projection.test.mjs')],{env:{...process.env,FOCUS_DIAGNOSTIC_MODULE:join(temporary,'diagnostics.mjs.root/diagnostics.mjs')}}));
+ process.stdout.write(run(process.execPath,['--test',join(overlay,'projection.test.mjs')],{env:{...process.env,FOCUS_DIAGNOSTIC_MODULE:join(temporary,'diagnostics.mjs.root/diagnostics.mjs'),FOCUS_DIAGNOSTIC_BASELINE:join(temporary,'diagnostics-baseline.mjs')}}));
  const native=join(candidate,'packages/dsh-experimental-cua-macos/native/Sources/CuaNative');
  const sources=[
   ['AXWorker.swift','8d7ca01c6646adae9bc8b5f8e3606e5444f8a66c641e22736ccf8d99748c4a55','Initial Chrome focus did not settle within the bounded preparation window'],
   ['NativeTaskWindow.swift','892c7b8fbaa4005f8279708f2f6e937bb6608a804024eddfdc7b43e7c6804042','Selected Chrome window lost focus or identity'],
   ['ChromeInputPolicy.swift','d999440c65cf344f0e81da764f26f2da3d0e131666c90a451dd2d0acdba856cd','Foreground changed; Chrome input stops'],
  ];
- for(const [name,expected,message] of sources){const bytes=await readFile(join(native,name));if(hash(bytes)!==expected||!bytes.toString().includes(message))throw Error('Native source mismatch: '+name)}
+ for(const [name,expected,message] of sources){const bytes=name==='AXWorker.swift'?await readFile(join(temporary,name+'.baseline')):await readFile(join(native,name));if(hash(bytes)!==expected||!bytes.toString().includes(message))throw Error('Native source mismatch: '+name)}
  const client=await readFile(join(candidate,'packages/dsh-cua/lib/native-client.js'));
  if(hash(client)!=='a82b19ef88ab109ad5c8cabccae832b72d288a3e5c611e6216353c7e13e924ae'||!client.toString().includes('new NativeError(reply.error.code, reply.error.message)'))throw Error('Native error transport mismatch');
- const originalPlatform=await readFile(join(native,'NativePlatform.swift'),'utf8'), originalWorker=await readFile(join(native,'AXWorker.swift'),'utf8');
+ const originalPlatform=await readFile(join(temporary,'NativePlatform.swift.baseline'),'utf8'), originalWorker=await readFile(join(temporary,'AXWorker.swift.baseline'),'utf8');
  const candidatePlatform=await readFile(join(temporary,'NativePlatform.swift.root/native/Sources/CuaNative/NativePlatform.swift'),'utf8');
  const candidateWorker=await readFile(join(temporary,'AXWorker.swift.root/native/Sources/CuaNative/AXWorker.swift'),'utf8');
  const before='let top = NativePlatform.windows().first { $0.isOnScreen }', after='let top = NativePlatform.windows(onScreenOrdered: true).first { $0.isOnScreen }';
  if(!originalWorker.includes(before)||!candidateWorker.includes(after)||!candidatePlatform.includes('[.optionOnScreenOnly, .excludeDesktopElements]'))throw Error('Front-window API contract mismatch');
  if(candidateWorker.replace(after,before)!==originalWorker)throw Error('Unexpected window guard or worker change');
  if(process.platform==='darwin' && !process.argv.includes('--js-only')) {
-   const patched=join(temporary,'native-candidate');await mkdir(patched);
-   for(const name of ['NativePlatform.swift','AXWorker.swift','RequestCoordinator.swift']) await cp(join(temporary,name+'.root/native/Sources/CuaNative',name),join(patched,name));
-   process.stdout.write(run(process.execPath,[join(base,'scripts/check-focus-native-fixtures.mjs'),native,patched]));
+   const patched=join(temporary,'native-candidate'), baseline=join(temporary,'native-baseline');await mkdir(patched);await cp(native,baseline,{recursive:true});
+   for(const name of ['NativePlatform.swift','AXWorker.swift','RequestCoordinator.swift']) {await cp(join(temporary,name+'.root/native/Sources/CuaNative',name),join(patched,name));await cp(join(temporary,name+'.baseline'),join(baseline,name));}
+   process.stdout.write(run(process.execPath,[join(base,'scripts/check-focus-native-fixtures.mjs'),baseline,patched]));
  }
  process.stdout.write(JSON.stringify({verifiedSource:'local.9',nativeDriverExecuted:false,modelRequests:0,desktopActions:0,macWindowOrderingFixture:process.platform==='darwin' && !process.argv.includes('--js-only')})+'\n');
 } finally { await rm(temporary,{recursive:true,force:true}); }

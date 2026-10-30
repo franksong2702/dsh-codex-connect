@@ -17,17 +17,18 @@ const names=(await readdir(original)).filter(name=>name.endsWith('.swift')).sort
 if(JSON.stringify(names)!==JSON.stringify(Object.keys(expected).sort()))throw Error('Native source set mismatch');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const temporary=await mkdtemp(join(tmpdir(),'focus-native-build-'));
-const root=join(temporary,'package'),source=join(root,'native/Sources/CuaNative');
+const root=join(temporary,'package'),source=join(root,'native/Sources/CuaNative'),baseline=join(temporary,'baseline');
+const afterHashes={'NativePlatform.swift':'4bf9a8876e9aa16410f6c933dfbb18842d179f688336d7274a57a8a58991ae7f','AXWorker.swift':'0f02271fe04533ebea5361313f6c0cc559d8cff48b6a82abb25e59c14629e8e7','RequestCoordinator.swift':'5cee0c9cd781426af5ce2ddae47161d871570cfca2cd84a775ff435cbdb89b4e'};
 const run=(cmd,args,options={})=>execFileSync(cmd,args,{stdio:'pipe',encoding:'utf8',...options});
 try {
- await mkdir(source,{recursive:true});
- for(const name of names){const bytes=await readFile(join(original,name));if(hash(bytes)!==expected[name])throw Error('Native source digest mismatch: '+name);await writeFile(join(source,name),bytes)}
+ await mkdir(source,{recursive:true});await mkdir(baseline,{recursive:true});
+ for(const name of names){const bytes=await readFile(join(original,name));const digest=hash(bytes);if(digest!==expected[name]&&digest!==afterHashes[name])throw Error('Native source digest mismatch: '+name);await writeFile(join(source,name),bytes);if(digest===afterHashes[name])run('patch',['--batch','--fuzz=0','-R','-p1','-i',join(overlay,name+'.patch')],{cwd:root});const originalBytes=await readFile(join(source,name));if(hash(originalBytes)!==expected[name])throw Error('Baseline digest mismatch: '+name);await writeFile(join(baseline,name),originalBytes)}
  for(const [name,after] of [
   ['NativePlatform.swift','4bf9a8876e9aa16410f6c933dfbb18842d179f688336d7274a57a8a58991ae7f'],
   ['AXWorker.swift','0f02271fe04533ebea5361313f6c0cc559d8cff48b6a82abb25e59c14629e8e7'],
   ['RequestCoordinator.swift','5cee0c9cd781426af5ce2ddae47161d871570cfca2cd84a775ff435cbdb89b4e'],
  ]) { run('patch',['--batch','--fuzz=0','-p1','-i',join(overlay,name+'.patch')],{cwd:root});if(hash(await readFile(join(source,name)))!==after)throw Error('Native overlay digest mismatch: '+name); }
- process.stdout.write(run(process.execPath,[join(base,'scripts/check-focus-native-fixtures.mjs'),original,source]));
+ process.stdout.write(run(process.execPath,[join(base,'scripts/check-focus-native-fixtures.mjs'),baseline,source]));
  const binary=join(temporary,'UNEXECUTED-native');
  run('xcrun',['swiftc','-O','-whole-module-optimization','-swift-version','6','-parse-as-library','-module-name','CuaNative','-target','arm64-apple-macos14.0','-module-cache-path',join(temporary,'cache'),...names.map(name=>join(source,name)),'-o',binary]);
  const binarySha256=hash(await readFile(binary));

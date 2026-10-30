@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 const { taskErrorProjection, taskDiagnosticProjection, createTaskDiagnostics } = await import(pathToFileURL(process.env.FOCUS_DIAGNOSTIC_MODULE));
-const old = await import('../../packages/dsh-codex-computer-use/diagnostics.mjs');
+const old = await import(pathToFileURL(process.env.FOCUS_DIAGNOSTIC_BASELINE));
 test('baseline collapsed settle reason; overlay preserves stage through both projections', () => {
     const error = Object.assign(new Error('Initial Chrome focus did not settle within the bounded preparation window'), { code: 'CUA_INPUT_FOCUS_LOST' });
     assert.equal(old.taskErrorProjection(error, 'arm', 'native')[0].focus, undefined);

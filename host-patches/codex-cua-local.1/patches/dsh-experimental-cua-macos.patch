@@ -1117,3 +1117,70 @@
 +        try check()
 +    }
 +}
+
+--- a/native/Sources/CuaNative/NativePlatform.swift
++++ b/native/Sources/CuaNative/NativePlatform.swift
+@@ -134,8 +134,11 @@
+     static func requireScreenRecording() throws {
+         guard CGPreflightScreenCaptureAccess() else { throw NativeFailure(code: "PERMISSION_DENIED", message: "Screen Recording permission is required for the responsible host/helper") }
+     }
+-    static func windows(allLayers: Bool = false) -> [WindowInfo] {
+-        guard let rows = CGWindowListCopyWindowInfo(.excludeDesktopElements, kCGNullWindowID) as? [[String: Any]] else { return [] }
++    static func windows(allLayers: Bool = false, onScreenOrdered: Bool = false) -> [WindowInfo] {
++        // Only onScreenOnly explicitly guarantees front-to-back order. Other
++        // callers retain the full directory and its previous semantics.
++        let options: CGWindowListOption = onScreenOrdered ? [.optionOnScreenOnly, .excludeDesktopElements] : .excludeDesktopElements
++        guard let rows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [] }
+         let memberships = allLayers ? [:] : WindowSpaces().memberships(windowIDs: rows.compactMap { ($0[kCGWindowNumber as String] as? NSNumber)?.uint32Value })
+         return rows.compactMap { row in
+             let layer = (row[kCGWindowLayer as String] as? NSNumber)?.intValue ?? 0
+
+--- a/native/Sources/CuaNative/AXWorker.swift
++++ b/native/Sources/CuaNative/AXWorker.swift
+@@ -550,7 +550,7 @@
+         if plan.taskInputFocus { try chromeInput?.checkPreparing() }
+         _ = try validateIdentity(plan.appHandle)
+         try NativePlatform.requireUnlocked(observeSession())
+-        let top = NativePlatform.windows().first { $0.isOnScreen }
++        let top = NativePlatform.windows(onScreenOrdered: true).first { $0.isOnScreen }
+         return ForegroundObservation(frontPID: NativePlatform.frontPID(), focusedWindowID: try ax().focusedWindowID(plan.identity.pid),
+                                      frontWindowID: top?.windowID, frontWindowPID: top?.pid)
+     }
+
+--- a/native/Sources/CuaNative/RequestCoordinator.swift
++++ b/native/Sources/CuaNative/RequestCoordinator.swift
+@@ -226,18 +226,31 @@
+         let before = try await worker.foregroundObservation(plan)
+         let raiseRequested = plan.isRaise && AXWorker.shouldRaise(plan, before: before)
+         var activationRequested = false
++        // One shared preparation budget: activation, a single raise, and the
++        // final four-way observation. Never re-activate or re-raise.
++        let settleDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
+         if !plan.isRaise || raiseRequested {
+             if before.frontPID != plan.identity.pid {
+                 try cancellation.check()
+                 try ApplicationCatalog.activate(plan.identity)
+                 activationRequested = true
++                if plan.taskInputFocus {
++                    // Activation is asynchronous. Raising first can be undone
++                    // when the application later restores its previous window.
++                    while true {
++                        try cancellation.check()
++                        let observed = try await worker.foregroundObservation(plan)
++                        if observed.frontPID == plan.identity.pid { break }
++                        if DispatchTime.now().uptimeNanoseconds >= settleDeadline { return try await worker.rejectTaskInputFocus(plan) }
++                        try await Task.sleep(nanoseconds: 20_000_000)
++                    }
++                }
+             }
+         }
+         if raiseRequested { try await worker.raise(plan) }
+         if plan.taskInputFocus {
+-            // Activation/AXRaise dispatch can precede observed focus. Issue those
+-            // commands only once; never refocus or re-arm after a takeover.
+-            let settleDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
++            // Do not retry activation/raise or accept a changed identity,
++            // hardware counter, target window, or foreground process.
+             while true {
+                 try cancellation.check()
+                 let observed = try await worker.foregroundObservation(plan)
