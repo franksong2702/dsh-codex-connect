@@ -6,6 +6,7 @@
   "main": "index.mjs",
   "files": [
     "index.mjs",
+    "host-contract.mjs",
     "session.mjs",
     "lib/client.js",
     "README.md"
@@ -23,10 +24,10 @@
   },
   "peerDependencies": {
     "@deepseek-ai/schemastery": "~3.18.6-alpha.1",
-    "@deepseek-ai/dsh-agent": "0.2.2-alpha.2.codex-cua-local.9",
-    "@deepseek-ai/dsh-user-questions": "0.2.2-alpha.2.codex-cua-local.9",
-    "@deepseek-ai/dsh-api-gateway": "0.2.2-alpha.2.codex-cua-local.9",
-    "@deepseek-ai/dsh-client-connection": "0.2.2-alpha.2.codex-cua-local.9"
+    "@deepseek-ai/dsh-agent": "0.2.2-alpha.2.codex-cua-local.9 || 0.2.2-alpha.2.codex-cua-local.10",
+    "@deepseek-ai/dsh-user-questions": "0.2.2-alpha.2.codex-cua-local.9 || 0.2.2-alpha.2.codex-cua-local.10",
+    "@deepseek-ai/dsh-api-gateway": "0.2.2-alpha.2.codex-cua-local.9 || 0.2.2-alpha.2.codex-cua-local.10",
+    "@deepseek-ai/dsh-client-connection": "0.2.2-alpha.2.codex-cua-local.9 || 0.2.2-alpha.2.codex-cua-local.10"
   },
   "exports": {
     ".": "./index.mjs",

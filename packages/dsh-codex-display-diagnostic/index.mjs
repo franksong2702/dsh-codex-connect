@@ -1,6 +1,7 @@
 import Schema from '@deepseek-ai/schemastery';
 import { createRequire } from 'node:module';
 import { PATH, createDiagnosticSession, admittedOperator } from './session.mjs';
+import { verifyDiagnosticHost } from './host-contract.mjs';
 
 export const name = 'codex-display-diagnostic';
 export const inject = ['connection', 'webServer', 'agents', 'userQuestions', 'typertGateway'];
@@ -10,9 +11,7 @@ export function apply(ctx, config) {
     if (config.enabled !== true) return;
     if (!/^[a-zA-Z0-9-]{1,80}$/.test(config.sessionId)) throw new Error('DISPLAY_DIAGNOSTIC_SESSION_REQUIRED');
     const require = createRequire(import.meta.url);
-    for (const name of ['dsh-agent', 'dsh-user-questions', 'dsh-api-gateway', 'dsh-client-connection']) {
-        if (require('@deepseek-ai/' + name + '/package.json').version !== '0.2.2-alpha.2.codex-cua-local.9') throw new Error('DISPLAY_DIAGNOSTIC_HOST_UNVERIFIED');
-    }
+    verifyDiagnosticHost(require);
     const browserPeer = ctx.connection.browserPeer;
     const diagnostic = createDiagnosticSession({ sessionId: config.sessionId, peer: browserPeer,
         lookup: id => ctx.agents.get(id), roots: () => ctx.agents.roots(),
