@@ -67,6 +67,16 @@ try {
     await writeFile(focusSource, fixture)
     await command('xcrun', ['swiftc', '-swift-version', '6', '-module-cache-path', join(temporary, 'module-cache'), types, policy, focusSource, '-o', focusBinary])
     process.stdout.write(await command(focusBinary, []))
+    const catalogStart = coordinator.indexOf('        let requiresCatalog ='), catalogEnd = coordinator.indexOf('        let result:', catalogStart)
+    const armStart = worker.indexOf('        if method == "authorizeTaskInput" {'), armEnd = worker.indexOf('        if method == "checkTaskInput"', armStart)
+    if ([catalogStart,catalogEnd,armStart,armEnd].some(value => value < 0)) throw new Error('Production catalog/arm fixture boundary missing')
+    const catalogFixture = (await readFile(join(lineage, 'CatalogArmFixture.swift'), 'utf8'))
+      .replace('/* PRODUCTION_CATALOG_SELECTION */', coordinator.slice(catalogStart, catalogEnd))
+      .replace('/* PRODUCTION_AUTHORIZE_TASK_INPUT */', worker.slice(armStart, armEnd))
+    const catalogSource = join(temporary, 'catalog-arm.swift'), catalogBinary = join(temporary, 'catalog-arm-fixture')
+    await writeFile(catalogSource, catalogFixture)
+    await command('xcrun', ['swiftc', '-swift-version', '6', '-parse-as-library', '-module-cache-path', join(temporary, 'module-cache'), catalogSource, '-o', catalogBinary])
+    process.stdout.write(await command(catalogBinary, []))
   }
   process.stdout.write(`${JSON.stringify({ candidate: spec.candidateVersion, nativeDriverExecuted: false, desktopActions: 0, realModels: 0, sourceIntegrityVerified: true })}\n`)
 } finally { await rm(temporary, { recursive: true, force: true }) }

@@ -33,3 +33,5 @@ Local.6 is the historical ordinary-chat preparation checkpoint. See [the flow an
 Local.7 adds the separately approved task-only Chrome-instance keyboard/navigation contract. See [the input design and residual risk](chrome-input-design.md) and [exact source/build evidence](build-evidence-local.7.json). The strict-window AX/observation contract remains separate. Local.7 has not been deployed or live accepted.
 
 Local.8 is the isolated startup-diagnostic/focus-convergence repair. See [its contract](startup-diagnostics.md) and [separate build evidence](build-evidence-local.8.json). It does not replace local.7 or reopen permissions/live testing.
+
+Local.9 fixes the missing Native catalog-to-arm preparation input without weakening binding or approval. See [cause and production-extracted regression](catalog-arm-fix.md) and [exact build evidence](build-evidence-local.9.json). It is an unpublished candidate; live acceptance and a new deployment remain separate.

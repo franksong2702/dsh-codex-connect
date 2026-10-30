@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "codex-cua-local.8",
+  "id": "codex-cua-local.9",
   "baseVersion": "0.2.2-alpha.2",
-  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.8",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.9",
   "published": false,
   "nativeArchitecture": "arm64",
   "packages": {
@@ -115,7 +115,7 @@
     "@deepseek-ai/dsh-experimental-cua-macos": {
       "baseIntegrity": "sha512-rHYMMIYahSn1qxntUDYYsVd5jjf5Z7svdKjHgRyaJ2JoQWgNJc26Zzgr5uTQ9IL3BkOXoj7llTOBdZMR/uKH+w==",
       "patch": "patches/dsh-experimental-cua-macos.patch",
-      "patchSha256": "a302f830db0ced41aba9444ebdaa4bdce74852652203cacc3f2336d5da57493f",
+      "patchSha256": "97c86b919cd487f3b6a9013dfc3bcccc3713399869dac72609718064fd98ede7",
       "files": [
         {
           "path": "native/Sources/CuaNative/AXAccess.swift",
@@ -190,7 +190,7 @@
         {
           "path": "native/Sources/CuaNative/RequestCoordinator.swift",
           "baseSha256": "bf47dd6e1e720f809fe335c7da52930dffc48ca0e4568910dae30140e96626fa",
-          "patchedSha256": "5ae59b90f199e5173bfa6cf9a7ea4c86bd11a81922f0126998b82f790afcc2a0"
+          "patchedSha256": "07f6641dca3cf5344e3e603f650b2480300601a9213124764a3cbbefd64e42f8"
         },
         {
           "path": "native/Sources/CuaNative/BalancedInputSequence.swift",

@@ -1070,6 +1070,9 @@
 +}
 --- a/native/Sources/CuaNative/RequestCoordinator.swift
 +++ b/native/Sources/CuaNative/RequestCoordinator.swift
+@@ -166 +166 @@
+-        let requiresCatalog = ["getApp", "listApps", "findApps", "typeText", "pressKey"].contains(request.method)
++        let requiresCatalog = ["getApp", "listApps", "findApps", "typeText", "pressKey", "authorizeTaskInput"].contains(request.method)
 @@ -236,0 +237,15 @@
 +        if plan.taskInputFocus {
 +            // Activation/AXRaise dispatch can precede observed focus. Issue those

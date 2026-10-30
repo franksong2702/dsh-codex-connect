@@ -29,7 +29,7 @@ describe('compatibility contract', () => {
       const mixed = version.endsWith('.1') ? '0.2.2-alpha.2.codex-cua-local.2' : '0.2.2-alpha.2.codex-cua-local.1'
       expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: { ...packages, [name]: mixed } }).status).toBe('unverified')
     }
-    for (const value of ['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.9']) {
+    for (const value of ['0.2.2-alpha.2', '0.2.2-alpha.2.codex-cua-local.10']) {
       expect(evaluateCompatibility({ nodeVersion: 'v24.13.0', packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, value])),
       } }).status).toBe('unverified')

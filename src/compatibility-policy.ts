@@ -4,7 +4,7 @@ export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 export const SUPPORTED_DSH_PLUGIN_API_VERSION = '0.1.7-rc.1'
 export const SUPPORTED_DSH_PLUGIN_API_VERSIONS = [SUPPORTED_DSH_PLUGIN_API_VERSION, '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4'] as const
 /** Local-only candidate, never a claim that the stock 0.2.2-alpha.2 release is supported. */
-export const LOCAL_DSH_PLUGIN_API_VERSIONS = ['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6', '0.2.2-alpha.2.codex-cua-local.7', '0.2.2-alpha.2.codex-cua-local.8'] as const
+export const LOCAL_DSH_PLUGIN_API_VERSIONS = ['0.2.2-alpha.2.codex-cua-local.1', '0.2.2-alpha.2.codex-cua-local.2', '0.2.2-alpha.2.codex-cua-local.3', '0.2.2-alpha.2.codex-cua-local.4', '0.2.2-alpha.2.codex-cua-local.5', '0.2.2-alpha.2.codex-cua-local.6', '0.2.2-alpha.2.codex-cua-local.7', '0.2.2-alpha.2.codex-cua-local.8', '0.2.2-alpha.2.codex-cua-local.9'] as const
 export const SUPPORTED_DSH_PLUGIN_API_RANGE = [...SUPPORTED_DSH_PLUGIN_API_VERSIONS, ...LOCAL_DSH_PLUGIN_API_VERSIONS].join(' || ')
 export const SUPPORTED_PI_AI_RANGE = '0.85.1'
 export const PI_AI_PACKAGE = '@earendil-works/pi-ai'
