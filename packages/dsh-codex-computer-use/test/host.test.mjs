@@ -1564,3 +1564,51 @@ test('requesting Chrome keyboard for a non-Chrome retained target rejects before
  await f.ctx.cuaTaskTargets.clear(f.parent.agent.id)
  assert.equal(f.ctx.cuaTaskTargets.rows.size,0);assert.equal(f.questions.length,0)
 })
+
+const diagnosticOutcome = f => JSON.parse(f.parent.agent.session.snapshotEvents().filter(e=>e.type==='tool/result').at(-1).data.message.content[0].text)
+for(const scenario of [
+ {name:'preflight',method:'validateTaskWindow',code:'CUA_TARGET_STALE',stage:'preflight',source:'host'},
+ {name:'arm-focus',method:'authorizeTaskInput',code:'CUA_INPUT_FOCUS_LOST',stage:'arm',source:'native'},
+ {name:'arm-HID',method:'authorizeTaskInput',code:'CUA_INPUT_USER_TAKEOVER',stage:'arm',source:'native'},
+ {name:'arm-already-closed',method:'authorizeTaskInput',code:'CUA_INPUT_CLOSED',stage:'arm',source:'native'},
+ {name:'arm-receipt',failArm:true,code:'CUA_INPUT_SCOPE_DENIED',stage:'arm_receipt',source:'host'},
+ {name:'receipt-check',badReceipt:true,code:'CUA_INPUT_SCOPE_DENIED',stage:'receipt',source:'host'},
+])test(`original native failure survives the generic terminal reason: ${scenario.name}`,async t=>{
+ const native=chromeTransport({failArm:scenario.failArm}),respond=native.respond
+ native.respond=async request=>{if(request.method===scenario.method)throw Object.assign(Error('PRIVATE_PAGE_INPUT_CREDENTIAL'),{code:scenario.code});if(scenario.badReceipt&&request.method==='checkTaskInput')return{inputScope:'chrome-instance',windowId:999};return respond(request)}
+ const f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0,maxDurationMs:3000},nativeResponse:native.respond,humanAnswer:request=>{native.state.allowed=true;return{answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}}})
+ if(typeof f.ctx.get('cuaTaskApproval')?.diagnostics!=='function'){t.skip('requires local.8 finite task diagnostic contract');return}
+ await f.conversation('Use Chrome for this synthetic diagnostic task')
+ const result=diagnosticOutcome(f);assert.equal(result.status,'blocked');assert.equal(result.modelSteps,0)
+ assert.equal(result.diagnostics.host.primary.code,scenario.code,JSON.stringify(result.diagnostics))
+ assert.equal(result.diagnostics.host.primary.stage,scenario.stage)
+ assert.equal(result.diagnostics.host.primary.source,scenario.source)
+ assert.equal(f.seen.some(request=>request.model===ROUTE.model),false)
+ assert.doesNotMatch(JSON.stringify(result.diagnostics),/PRIVATE_PAGE_INPUT_CREDENTIAL|Synthetic native refusal|appHandle|windowId|executablePath/)
+ assert.deepEqual((await f.ctx.cuaAccess.applications()).allowedApps,[])
+})
+
+test('diagnostic receipt is exact-object-bound, remains read-only after closure and cannot authorize input',async t=>{
+ const native=chromeTransport(),f=await directChromeTask(t,native);if(!f)return
+ if(typeof f.capability.diagnostics!=='function'){t.skip('requires local.8');return}
+ const count=f.nativeRequests.length
+ assert.equal(f.capability.diagnostics(f.grant).primary,null)
+ assert.throws(()=>f.capability.diagnostics({...f.grant}),/CUA_INPUT_SCOPE_DENIED/)
+ assert.equal(f.nativeRequests.length,count)
+ await f.grant.revoke()
+ const value=f.capability.diagnostics(f.grant);assert.equal(value.stage,'cleanup')
+ await assert.rejects(f.capability.check(f.grant),/CUA_TASK_CLOSED/)
+ assert.equal(f.nativeRequests.length,count)
+})
+
+test('actual Host cleanup rejection is separately projected and never reported as a clean close',async t=>{
+ const native=chromeTransport(),f=await fixture({officialCua:true,strict:true,config:{application:'',windowId:0},nativeResponse:native.respond,humanAnswer:request=>{native.state.allowed=true;return{answers:[{id:request.questions[0].id,selected:[request.questions[0].options[0].label]}]}}})
+ const cap=f.ctx.get('cuaTaskApproval');if(typeof cap?.diagnostics!=='function'){t.skip('requires local.8');return}
+ admittedHuman(f,'Use Chrome for a synthetic cleanup check')
+ const input={parent:f.parent.agent,goal:'Synthetic cleanup',expiresAt:Date.now()+1500,signal:f.controller.signal},selected=await cap.prepare(input),client=f.ctx.cuaTaskTargets.rows.get(f.parent.agent).client
+ const child=await f.ctx.agents.create({sessionId:SessionId(crypto.randomUUID()),parentAgent:f.parent.agent,meta:{origin:'subagent',parentSession:f.parent.agent.id,agentPreset:PRESET},agentOptions:ROUTE,async setup(childCtx){await f.ctx.agentPresets.mount(childCtx,PRESET)}});owned.push(()=>child.dispose())
+ const grant=cap.begin({...input,...selected,child:child.agent})
+ await f.ctx.tools.execute({agent:child.agent,calls:[call('cua',{method:'getApp',params:{selector:selected.application}})],signal:f.controller.signal})
+ const dispose=client.dispose.bind(client);client.dispose=async()=>{throw Object.assign(Error('PRIVATE_CLEANUP_DATA'),{code:'NATIVE_ERROR'})}
+ try{await assert.rejects(grant.dispose(),/PRIVATE_CLEANUP_DATA/);const d=cap.diagnostics(grant);assert.equal(d.primary.code,'NATIVE_ERROR');assert.equal(d.primary.stage,'cleanup');assert.doesNotMatch(JSON.stringify(d),/PRIVATE_CLEANUP_DATA/)}finally{client.dispose=dispose;await dispose()}
+})

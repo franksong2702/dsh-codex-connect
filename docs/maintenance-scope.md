@@ -32,6 +32,8 @@ The maintainer explicitly approved task-triggered private target metadata discov
 
 The maintainer subsequently accepted task-only keyboard input for the selected running Chrome **application instance**, including the residual risk that an in-flight key or release can reach another window of that same instance during a switch. Local.7 may add bounded typing, editing chords and HTTP/HTTPS navigation under a genuine root task card describing that scope and risk. It preserves single-window observation/AX actions, process-start and pinned executable identity, per-event checks, takeover/Stop/revocation/expiry closure and release-only cleanup. This development acceptance grants no actual application access and does not replace each task's human approval. New applications/windows, cross-application control, persistent grants, daily deployment and public release remain outside this admission.
 
+Following the bounded local acceptance attempt, the maintainer approved isolated local.8 repairs: retain finite startup error codes/stages/chains, and verify the initial-focus convergence defect with cancellation and identity guards intact. This admits offline implementation, regression, review and Draft PR updates. It does not infer the historical Native cause, relax HID/permission checks, authorize another deployment/live test, or certify performance. Diagnostic projection excludes page/input/credential/target content.
+
 | Surface | Disposition | Retained obligations |
 | --- | --- | --- |
 | Authorization, manual models, installation, compatibility, Canary, diagnostics | Maintain | Scoped defect fixes and supported-version evidence; no automatic expansion of support |

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "codex-cua-local.7",
+  "id": "codex-cua-local.8",
   "baseVersion": "0.2.2-alpha.2",
-  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.7",
+  "candidateVersion": "0.2.2-alpha.2.codex-cua-local.8",
   "published": false,
   "nativeArchitecture": "arm64",
   "packages": {
@@ -48,7 +48,7 @@
     "@deepseek-ai/dsh-cua": {
       "baseIntegrity": "sha512-yceImk1O0NkKTdwe8IQYX9SPmsulcJD7LtmPm7oJXunY2+4HQkJNA3qOSk5zJyr1NpWffnRdUcJvTIDgIMGOSA==",
       "patch": "patches/dsh-cua.patch",
-      "patchSha256": "e88a9b0ac948408534e891e7a382ad5b8d8a3f8fe96700bffe1a4092dfda637e",
+      "patchSha256": "f9990ac02d877bc731066f0de631e41000515e66bdfc3daa5ee11c40323ad9d4",
       "files": [
         {
           "path": "lib/bridge.js",
@@ -63,7 +63,7 @@
         {
           "path": "lib/index.js",
           "baseSha256": "e62f507fa5471f2797eb9d4f0d22f10f5edb3d49d05f2be2ea7ae6024485b2b2",
-          "patchedSha256": "a291151bd85a44dec5d59c55238d83efbc79b27daac3b11f05a6148bca22c6f0"
+          "patchedSha256": "36c3528326636981c3d640f64f5d4514a332836410efae494d99d4437361592a"
         },
         {
           "path": "lib/protocol.js",
@@ -115,7 +115,7 @@
     "@deepseek-ai/dsh-experimental-cua-macos": {
       "baseIntegrity": "sha512-rHYMMIYahSn1qxntUDYYsVd5jjf5Z7svdKjHgRyaJ2JoQWgNJc26Zzgr5uTQ9IL3BkOXoj7llTOBdZMR/uKH+w==",
       "patch": "patches/dsh-experimental-cua-macos.patch",
-      "patchSha256": "e93e115f515c4d2feea31dc94a061c3b85cf7ab27d9fc40b0302a8a9cfcd6a06",
+      "patchSha256": "a302f830db0ced41aba9444ebdaa4bdce74852652203cacc3f2336d5da57493f",
       "files": [
         {
           "path": "native/Sources/CuaNative/AXAccess.swift",
@@ -130,7 +130,7 @@
         {
           "path": "native/Sources/CuaNative/AXWorker.swift",
           "baseSha256": "e06f40f7b365e56469618d2451ade877ed7df5c01a69d933430f2ae2b9d664f1",
-          "patchedSha256": "254beb2dd9f15baf1325adb8d9152031174024b6780396c2a106c22607fdd556"
+          "patchedSha256": "8d7ca01c6646adae9bc8b5f8e3606e5444f8a66c641e22736ccf8d99748c4a55"
         },
         {
           "path": "native/Sources/CuaNative/NativeProtocol.generated.swift",
@@ -190,7 +190,7 @@
         {
           "path": "native/Sources/CuaNative/RequestCoordinator.swift",
           "baseSha256": "bf47dd6e1e720f809fe335c7da52930dffc48ca0e4568910dae30140e96626fa",
-          "patchedSha256": "06a016141b8a88552469f4f3e3086afd6fb7ae67d9ec15e26d3a14e5cd891a2b"
+          "patchedSha256": "5ae59b90f199e5173bfa6cf9a7ea4c86bd11a81922f0126998b82f790afcc2a0"
         },
         {
           "path": "native/Sources/CuaNative/BalancedInputSequence.swift",

@@ -6,6 +6,7 @@ import { NativeToolExecutor } from '@deepseek-ai/dsh-tool-executor-native'
 import { appendDelegatedPolicyOverrides } from '@deepseek-ai/dsh-subagent'
 import { acquireDesktopLease } from './lease.mjs'
 import { chromeInputDenial } from './input-policy.mjs'
+import { createTaskDiagnostics, taskDiagnosticProjection } from './diagnostics.mjs'
 
 export const PRESET = 'codex-terra-computer-use'
 export const TOOL = 'codex_computer_use'
@@ -95,7 +96,8 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
       const state = { handle: undefined, appHandle: undefined, snapshotId: undefined, result: undefined, proposal: undefined, blocked: undefined, requests: 0, operations: 0, effective: undefined, observed: false }
       const leaseMonitor = setInterval(() => { if (!lease.valid()) { state.blocked = 'desktop_lease_lost'; abort.abort('lease_lost') } }, 50)
       const started = Date.now()
-      let taskGrant, taskRevoked
+      const diagnostic = createTaskDiagnostics()
+      let taskGrant, taskRevoked, hostDiagnostic = null
       let quiescent = false
       const run = (async () => {
         const check = () => {
@@ -143,7 +145,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
                 if (exec.name !== 'cua') return
                 if (result.isError) {
                   const detail = JSON.stringify(result.error)
-                  if (/CUA_INPUT_|CUA_CHROME_/u.test(detail)) { state.blocked = 'chrome_input_closed'; abort.abort('chrome_input_closed') }
+                  if (/CUA_INPUT_|CUA_CHROME_/u.test(detail)) { diagnostic.error(result.error, state.requests ? 'operation' : 'preflight', 'tool'); state.blocked = 'chrome_input_closed'; abort.abort('chrome_input_closed') }
                   else if (/CUA_TASK_/u.test(detail)) state.blocked = 'task_authorization_denied'
                   else if (/APP_ACCESS_REVOKED/u.test(detail)) state.blocked = 'application_access_revoked'
                   else if (/APP_APPROVAL_UNAVAILABLE|APP_ACCESS_REQUIRED|APP_ACCESS_DENIED|PERMISSION_DENIED|permission|Permission|authorization|Accessibility|Screen Recording/u.test(detail)) state.blocked = 'application_authorization_required'
@@ -175,6 +177,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
               childCtx.on('agent/pre-step', async (event, next) => {
                 if (event.agent !== child) return next()
                 check()
+                diagnostic.enter('before_model')
                 if (config.inputScope === 'chrome-instance') await taskApproval.check(taskGrant)
                 if (++state.requests > config.maxSteps) { state.blocked = 'step_budget_exhausted'; abort.abort('budget'); return { kind: 'reject' } }
                 if (event.modelSelection.provider !== ROUTE.provider || event.modelSelection.model !== ROUTE.model || event.modelSelection.reasoningEffort !== ROUTE.reasoningEffort) {
@@ -213,7 +216,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
           const child = state.handle.agent
           if (!ctx.agents.isOwnedBy(child.id, parent) || !child.ctx.tools.get('cua', child)) { state.blocked = 'scoped_cua_unavailable'; return }
           taskGrant = taskApproval.begin({ parent, child, application: config.application, windowId: config.windowId, goal, expiresAt: started + config.maxDurationMs, signal, ...(config.targetSelectionId ? {targetSelectionId:config.targetSelectionId} : {}), ...(config.inputScope ? {inputScope:config.inputScope} : {}) })
-          taskRevoked = () => { state.blocked ??= /^CUA_(?:INPUT|CHROME)_/u.test(taskGrant.signal.reason?.code ?? '') ? 'chrome_input_closed' : Date.now() >= started + config.maxDurationMs ? 'task_authorization_expired' : 'task_authorization_revoked'; abort.abort('task_permission_closed') }
+          taskRevoked = () => { diagnostic.error(taskGrant.signal.reason, diagnostic.snapshot().stage, 'lifecycle'); state.blocked ??= /^CUA_(?:INPUT|CHROME)_/u.test(taskGrant.signal.reason?.code ?? '') ? 'chrome_input_closed' : Date.now() >= started + config.maxDurationMs ? 'task_authorization_expired' : 'task_authorization_revoked'; abort.abort('task_permission_closed') }
           taskGrant.signal.addEventListener('abort', taskRevoked, { once: true })
           if (taskGrant.signal.aborted) taskRevoked()
           const cancel = () => child.cancel({ kind: 'parent' })
@@ -221,6 +224,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
           try {
             check()
             if (automatic || config.inputScope === 'chrome-instance') {
+              diagnostic.enter('preflight')
               // Host-owned warmup uses this real child's standard pipeline. No
               // Terra request or candidate-directory context precedes human consent.
               const batch = await child.ctx.tools.execute({ agent: child, signal,
@@ -237,6 +241,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
             state.effective = child.session.requestHeader()?.config
           } finally { signal.removeEventListener('abort', cancel) }
         } catch (error) {
+          diagnostic.error(error, diagnostic.snapshot().stage, 'worker')
           // Host error bodies can contain private state. Return finite reasons only.
           if (!signal.aborted && !state.blocked) state.blocked = /^(?:CUA_TASK_RETRY|CUA_TARGET_RETRY)_REQUIRES_USER_INPUT$/u.test(error?.code ?? '') ? 'task_retry_requires_new_user_input'
             : error?.code === 'CUA_TARGET_CLEANUP_UNCERTAIN' ? 'cleanup_uncertain'
@@ -245,6 +250,8 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
           if (taskGrant && taskRevoked) taskGrant.signal.removeEventListener('abort', taskRevoked)
           const cleanup = await Promise.allSettled([Promise.resolve().then(() => taskGrant?.dispose()), Promise.resolve().then(() => (selected || preparing) && !taskGrant ? targets.clear(parent.id) : undefined), Promise.resolve().then(() => state.handle?.dispose())])
           quiescent = cleanup.every(result => result.status === 'fulfilled')
+          for (const outcome of cleanup) if (outcome.status === 'rejected') { diagnostic.error(outcome.reason, 'cleanup', 'worker'); diagnostic.error({code:'CLEANUP_UNCONFIRMED'}, 'cleanup', 'worker') }
+          if (taskGrant && typeof taskApproval.diagnostics === 'function') { try { hostDiagnostic = taskDiagnosticProjection(taskApproval.diagnostics(taskGrant)) } catch (error) { diagnostic.error(error, 'receipt', 'worker') } }
           if (!quiescent) state.blocked = 'cleanup_uncertain'
         }
       })()
@@ -256,6 +263,7 @@ export function computerUseTool(ctx, configured, acquireLease = acquireDesktopLe
           ...(state.result && !state.blocked && !signal.aborted ? { summary: state.result.summary } : {}),
           workerSessionId: state.handle?.agent.id ?? null, taskId: taskGrant?.id ?? null, requestedModel: ROUTE, effectiveModel: state.effective ?? null,
           effectiveModelSource: state.effective ? 'host_request_header' : 'unknown', backendEffectiveModel: null, inputScope: config.inputScope ?? 'window-only',
+          diagnostics: { host: hostDiagnostic, worker: diagnostic.snapshot() },
           modelSteps: state.requests, cuaCalls: state.operations, elapsedMs: Date.now() - started, cleanup: quiescent ? 'drained' : 'uncertain', acceptance: 'not_independently_verified' }
       } finally { clearTimeout(deadline); clearInterval(leaseMonitor); active.delete(run); lease.release(quiescent) }
     },

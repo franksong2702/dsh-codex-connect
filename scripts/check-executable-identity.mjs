@@ -43,7 +43,7 @@ try {
     join(lineage, 'ExecutableIdentityFixture.swift'), '-o', binary])
   process.stdout.write(await command(binary, []))
   const policy = join(source, 'native/Sources/CuaNative/ChromeInputPolicy.swift')
-  if (spec.candidateVersion.endsWith('codex-cua-local.7')) {
+  if (patch.files.some(file => file.path === 'native/Sources/CuaNative/ChromeInputPolicy.swift')) {
     if (hash(await readFile(policy)) !== hash(await readFile(join(lineage, 'ChromeInputPolicy.swift')))) throw new Error('Pure input policy differs from reviewed native source')
     const protocol = await readFile(join(source, 'native/Sources/CuaNative/Protocol.swift'), 'utf8')
     const boundary = protocol.indexOf('struct NativeRequest:')
@@ -55,6 +55,18 @@ try {
       types, policy, join(source, 'native/Sources/CuaNative/ExecutableIdentity.swift'),
       join(source, 'native/Sources/CuaNative/BalancedInputSequence.swift'), join(lineage, 'ChromeInputFixture.swift'), '-o', inputBinary])
     process.stdout.write(await command(inputBinary, [join(lineage, 'chrome-input-cases.json')]))
+    const coordinator = await readFile(join(source, 'native/Sources/CuaNative/RequestCoordinator.swift'), 'utf8')
+    const worker = await readFile(join(source, 'native/Sources/CuaNative/AXWorker.swift'), 'utf8')
+    const foregroundStart = coordinator.indexOf('    private func performForeground('), foregroundEnd = coordinator.indexOf('    private func transportFailed(', foregroundStart)
+    const raiseStart = worker.indexOf('    static func shouldRaise('), raiseEnd = worker.indexOf('    func raise(', raiseStart)
+    if ([foregroundStart,foregroundEnd,raiseStart,raiseEnd].some(value => value < 0)) throw new Error('Production focus fixture boundary missing')
+    const fixture = (await readFile(join(lineage, 'InitialFocusFixture.swift'), 'utf8'))
+      .replace('/* PRODUCTION_SHOULD_RAISE */', worker.slice(raiseStart, raiseEnd))
+      .replace('/* PRODUCTION_FOREGROUND */', coordinator.slice(foregroundStart, foregroundEnd).replace('private func', 'func'))
+    const focusSource = join(temporary, 'initial-focus.swift'), focusBinary = join(temporary, 'initial-focus-fixture')
+    await writeFile(focusSource, fixture)
+    await command('xcrun', ['swiftc', '-swift-version', '6', '-module-cache-path', join(temporary, 'module-cache'), types, policy, focusSource, '-o', focusBinary])
+    process.stdout.write(await command(focusBinary, []))
   }
   process.stdout.write(`${JSON.stringify({ candidate: spec.candidateVersion, nativeDriverExecuted: false, desktopActions: 0, realModels: 0, sourceIntegrityVerified: true })}\n`)
 } finally { await rm(temporary, { recursive: true, force: true }) }

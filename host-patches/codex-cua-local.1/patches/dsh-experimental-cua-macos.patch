@@ -229,7 +229,12 @@
 +            let route = WindowRoute(owner: identity, windowID: id, bounds: window.bounds, taskWindow: taskWindow)
 @@ -453,0 +550 @@
 +        if plan.taskInputFocus { try chromeInput?.checkPreparing() }
-@@ -469 +566,8 @@
+@@ -461,0 +559,4 @@
++        if plan.taskInputFocus {
++            return !(before.frontPID == plan.identity.pid && before.focusedWindowID == id
++                     && before.frontWindowID == id && before.frontWindowPID == plan.identity.pid)
++        }
+@@ -469 +570,8 @@
 -        guard let id = plan.snapshotID, let index = plan.index, let element = try snapshot(plan.appHandle, id).elements[index] else {
 +        if plan.taskInputFocus {
 +            try chromeInput?.checkPreparing()
@@ -239,12 +244,18 @@
 +            return
 +        }
 +        guard let id = plan.snapshotID, let index = plan.index else {
-@@ -472 +576,3 @@
+@@ -472 +580,3 @@
 -        try ax().perform(element, "AXRaise")
 +        let value = try snapshot(plan.appHandle, id)
 +        guard let element = value.elements[index] else { throw NativeFailure(code: "STALE_SNAPSHOT", message: "Raise target is no longer available") }
 +        try ax().perform(element, "AXRaise", constraint: constraint(value, handle: plan.appHandle))
-@@ -473,0 +580,7 @@
+@@ -473,0 +584,13 @@
++    func rejectTaskInputFocus(_ plan: ForegroundPlan) throws -> JSONValue {
++        guard plan.taskInputFocus, let input = chromeInput, input.owner == plan.identity,
++              taskHandle == plan.appHandle else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task focus identity changed") }
++        input.close()
++        throw NativeFailure(code: "CUA_INPUT_FOCUS_LOST", message: "Initial Chrome focus did not settle within the bounded preparation window")
++    }
 +    func finishTaskInputFocus(_ plan: ForegroundPlan) throws -> JSONValue {
 +        guard plan.taskInputFocus, let input = chromeInput, input.owner == plan.identity,
 +              taskHandle == plan.appHandle else { throw NativeFailure(code: "CUA_INPUT_SCOPE_DENIED", message: "Task focus identity changed") }
@@ -252,11 +263,11 @@
 +        return .object(["inputScope": .string("chrome-instance"), "taskId": .string(input.taskID),
 +            "pid": .number(Double(input.owner.pid)), "windowId": .number(Double(input.window.windowID)), "focused": .bool(true)])
 +    }
-@@ -474,0 +588 @@
+@@ -474,0 +598 @@
 +        try taskWindow?.require()
-@@ -486,0 +601 @@
+@@ -486,0 +611 @@
 +        try taskWindow?.require()
-@@ -497 +612 @@
+@@ -497 +622 @@
 -    func shutdown() { closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
 +    func shutdown() { chromeInput?.close(); chromeInput = nil; taskWindow = nil; taskCandidates.removeAll(); closed = true; snapshots.removeAll(); observedWindowBounds.removeAll(); targets.removeAll(); hovers.removeAll(); access = nil; keyboard = nil; pointer = nil }
 --- a/native/Sources/CuaNative/NativeProtocol.generated.swift
@@ -1059,8 +1070,22 @@
 +}
 --- a/native/Sources/CuaNative/RequestCoordinator.swift
 +++ b/native/Sources/CuaNative/RequestCoordinator.swift
-@@ -237,0 +238 @@
-+        if plan.taskInputFocus { return try await worker.finishTaskInputFocus(plan) }
+@@ -236,0 +237,15 @@
++        if plan.taskInputFocus {
++            // Activation/AXRaise dispatch can precede observed focus. Issue those
++            // commands only once; never refocus or re-arm after a takeover.
++            let settleDeadline = DispatchTime.now().uptimeNanoseconds + 1_000_000_000
++            while true {
++                try cancellation.check()
++                let observed = try await worker.foregroundObservation(plan)
++                if observed.frontPID == plan.identity.pid && observed.focusedWindowID == plan.targetWindowID
++                    && observed.frontWindowID == plan.targetWindowID && observed.frontWindowPID == plan.identity.pid {
++                    return try await worker.finishTaskInputFocus(plan)
++                }
++                if DispatchTime.now().uptimeNanoseconds >= settleDeadline { return try await worker.rejectTaskInputFocus(plan) }
++                try await Task.sleep(nanoseconds: 20_000_000)
++            }
++        }
 --- /dev/null
 +++ b/native/Sources/CuaNative/BalancedInputSequence.swift
 @@ -0,0 +1,25 @@
