@@ -48,7 +48,7 @@
     "@deepseek-ai/dsh-cua": {
       "baseIntegrity": "sha512-yceImk1O0NkKTdwe8IQYX9SPmsulcJD7LtmPm7oJXunY2+4HQkJNA3qOSk5zJyr1NpWffnRdUcJvTIDgIMGOSA==",
       "patch": "patches/dsh-cua.patch",
-      "patchSha256": "efc3422edac3466cbc700dc52233df539c4ead8bc98b3a9e8521a330b3b35b34",
+      "patchSha256": "0788448724a75f28a3a35fb5301e05e14a9760e78475458a65f568dd01bf3f21",
       "files": [
         {
           "path": "lib/bridge.js",

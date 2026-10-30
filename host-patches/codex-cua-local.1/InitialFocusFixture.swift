@@ -17,9 +17,10 @@ final class CancellationLatch { var cancelled=false;func check()throws {if cance
 @MainActor final class AXWorker {
  let cancellation:CancellationLatch;let policy=ChromeInputPolicy(pid:42,expiresAt:2000,hardware:[0])
  var observations=0,activations=0,raises=0,arms=0
- var focusedAt=3;var hardware:[UInt32]=[0];var takeoverOnRaise=false;var cancelOnRaise=false;var identityChanged=false;var raceAtArm=false
+ var focusedAt=3;var hardware:[UInt32]=[0];var takeoverOnRaise=false;var cancelOnRaise=false;var takeoverWhileActivating=false;var cancelWhileActivating=false;var identityChanged=false;var raceAtArm=false
  init(_ cancellation:CancellationLatch){self.cancellation=cancellation}
  func foregroundObservation(_ plan:ForegroundPlan)throws->ForegroundObservation{
+  if observations==1 && takeoverWhileActivating {hardware=[1]};if observations==1 && cancelWhileActivating {cancellation.cancelled=true}
   try cancellation.check();try policy.checkPreparing(now:1000,hardware:hardware,identity:{if self.identityChanged{throw NativeFailure(code:"STALE_APP",message:"synthetic replacement")}},window:{})
   observations+=1;let ready=observations>=focusedAt
   return ForegroundObservation(frontPID:ready ? 42:99,focusedWindowID:ready ? 7:8,frontWindowID:ready ? 7:8,frontWindowPID:ready ? 42:99)
@@ -44,13 +45,14 @@ final class CancellationLatch { var cancelled=false;func check()throws {if cance
  @MainActor static func main()async throws{
   let delayed=try await scenario{ $0.focusedAt=4 };precondition(delayed.arms==1&&delayed.activations==1&&delayed.raises==1,"delay must settle without repeating activation/raise")
   let already=try await scenario{ $0.focusedAt=1 };precondition(already.arms==1&&already.activations==0&&already.raises==0,"already-front window must not be raised")
-  for mode in ["takeover","cancel","timeout","race"]{
+  for mode in ["takeover","cancel","timeout","race","takeover_wait","cancel_wait"]{
    let latch=CancellationLatch(),w=AXWorker(latch);ApplicationCatalog.worker=w
-   if mode=="takeover"{w.takeoverOnRaise=true};if mode=="cancel"{w.cancelOnRaise=true};if mode=="timeout"{w.focusedAt=Int.max};if mode=="race"{w.raceAtArm=true}
+   if mode=="takeover"{w.takeoverOnRaise=true};if mode=="cancel"{w.cancelOnRaise=true};if mode=="timeout"{w.focusedAt=Int.max};if mode=="race"{w.raceAtArm=true};if mode=="takeover_wait"{w.takeoverWhileActivating=true};if mode=="cancel_wait"{w.cancelWhileActivating=true}
    do{_=try await CoordinatorHarness(worker:w,cancellation:latch).performForeground(ForegroundPlan(),requestID:"synthetic");preconditionFailure("expected closure: \(mode)")}catch{}
-   precondition(w.activations==1&&w.raises==1,"failure must not trigger another focus command")
-   if mode != "cancel"{precondition(w.policy.closed,"failure must latch")}
+   precondition(w.activations==1&&w.raises == (["timeout","takeover_wait","cancel_wait"].contains(mode) ? 0 : 1),"failure must not trigger another focus command")
+   if mode != "cancel" && mode != "cancel_wait" {precondition(w.policy.closed,"failure must latch")}
+   if ["timeout","takeover_wait","cancel_wait"].contains(mode){precondition(w.arms==0,"activation failure must not arm")}
   }
-  print("InitialFocusFixture: 6 production-coordinator scenarios passed; fake delayed focus/takeover/cancel/timeout/last-moment race; no OS operations")
+  print("InitialFocusFixture: 8 production-coordinator scenarios passed; fake delayed focus/takeover/cancel/timeout/last-moment race; no OS operations")
  }
 }
