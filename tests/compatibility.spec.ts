@@ -74,7 +74,7 @@ describe('compatibility contract', () => {
     ]) expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
   })
 
-  it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4'])('accepts exact consistent %s and pi-ai 0.85.1', version => {
+  it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])('accepts exact consistent %s and pi-ai 0.85.1', version => {
     const packages = { ...compatiblePackages, '@deepseek-ai/dsh-llm': version,
       '@deepseek-ai/dsh-llm-pi-ai': version, '@deepseek-ai/dsh-compaction': version }
     expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('compatible')
@@ -99,7 +99,7 @@ describe('compatibility contract', () => {
   )
 
   it('does not infer later prereleases, stable releases, or a new pi-ai pair from declared support', () => {
-    for (const version of ['0.1.7-rc.3', '0.1.7-alpha.2', '0.2.0-rc.3', '0.2.0', '0.2.1-alpha.6', '0.2.1-rc.5', '0.2.1', '0.2.2-alpha.1']) {
+    for (const version of ['0.1.7-rc.3', '0.1.7-alpha.2', '0.2.0-rc.3', '0.2.0', '0.2.1-alpha.6', '0.2.1-rc.6', '0.2.1', '0.2.2-alpha.1']) {
       const packages = { ...compatiblePackages, '@deepseek-ai/dsh-llm': version,
         '@deepseek-ai/dsh-llm-pi-ai': version, '@deepseek-ai/dsh-compaction': version }
       expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
@@ -135,7 +135,7 @@ describe('compatibility contract', () => {
       expect(evaluateCompatibility({ nodeVersion: 'v24.19.0', packageVersions: { ...packages, [name]: '0.2.1-rc.1' } }).status).toBe('unverified')
       expect(evaluateCompatibility({ nodeVersion: 'v24.19.0', packageVersions: { ...packages, [name]: undefined } }).status).toBe('unknown')
     }
-    for (const version of ['0.2.1-rc.5', '0.2.1']) {
+    for (const version of ['0.2.1-rc.6', '0.2.1']) {
       expect(evaluateCompatibility({ nodeVersion: 'v24.19.0', packageVersions: {
         ...compatiblePackages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified')
@@ -162,7 +162,23 @@ describe('compatibility contract', () => {
       expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, [name]: undefined } }).status).toBe('unknown')
     }
     expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, '@earendil-works/pi-ai': '0.85.2' } }).status).toBe('unverified')
-    for (const version of ['0.2.1-rc.5', '0.2.1']) {
+    for (const version of ['0.2.1-rc.6', '0.2.1']) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions: {
+        ...packages, ...Object.fromEntries(names.map(name => [name, version])),
+      } }).status).toBe('unverified')
+    }
+  })
+
+  it.each(['v22.19.0', 'v24.13.0'])('admits exact rc.5 while retaining rc.4 isolation and future-version refusal on %s', nodeVersion => {
+    const names = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const
+    const packages = { ...compatiblePackages, ...Object.fromEntries(names.map(name => [name, '0.2.1-rc.5'])) }
+    expect(evaluateCompatibility({ nodeVersion, packageVersions: packages }).status).toBe('compatible')
+    for (const name of names) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, [name]: '0.2.1-rc.4' } }).status).toBe('unverified')
+      expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, [name]: undefined } }).status).toBe('unknown')
+    }
+    expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, '@earendil-works/pi-ai': '0.85.2' } }).status).toBe('unverified')
+    for (const version of ['0.2.1-rc.6', '0.2.1']) {
       expect(evaluateCompatibility({ nodeVersion, packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified')
