@@ -12,16 +12,16 @@ Codex Connect adds the `openai-codex` model provider to the normal Harness agent
 
 ## Quick start
 
-**Unpublished compatibility candidate:** `0.2.0-alpha.11` targets only exact DSH `0.2.1-rc.4`, retaining the twelve previous hosts. The published Alpha 10 artifact still rejects rc.4. Installation commands remain on the published Alpha 10 / rc.3 pair pending separate publication and readback. See the [candidate evidence](docs/agent-notes/dsh-021-rc4-compatibility.md); keyless checks do not establish real OAuth or Desktop acceptance.
+**Published Alpha 11:** [`0.2.0-alpha.11`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.11) delivers GPT-6.1 Terra, the unified speed menu, exact DSH rc.4/rc.5, seeded-fork originals and bounded native bili preflight, with a higher direct Undici minimum. All fourteen exact Hosts passed against one package; npm version/alpha, Git tag, prerelease and archive integrity were independently read back. `latest` remains Alpha 10. See the [release record](docs/release-notes/0.2.0-alpha.11.md); keyless checks do not establish real-account/model or Desktop acceptance, and Computer Use is not included.
 
-**Published Alpha 10:** [`0.2.0-alpha.10`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.10) adds only exact DSH `0.2.1-rc.3`, retains the eleven previous hosts, and delivers the default-off read-only quota tool and compact speed menu. npm version, alpha tag, Git tag, prerelease and archive hashes were independently verified; `latest` is unchanged. The upstream rc.3 Git-source mapping remains unverified; keyless contracts do not establish real-account/model or Desktop acceptance. See the [release record](docs/release-notes/0.2.0-alpha.10.md).
+**Historical Alpha 10:** [`0.2.0-alpha.10`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.10) adds only exact DSH `0.2.1-rc.3`, retains the eleven previous hosts, and delivers the default-off read-only quota tool and compact speed menu. npm version, alpha tag, Git tag, prerelease and archive hashes were independently verified; `latest` is unchanged. The upstream rc.3 Git-source mapping remains unverified; keyless contracts do not establish real-account/model or Desktop acceptance. See the [release record](docs/release-notes/0.2.0-alpha.10.md).
 
-This guide recommends Codex Connect `0.2.0-alpha.10` / DSH `0.2.1-rc.3`; the other exact supported hosts are listed below. Check `dsh --version` first and use `doctor --json` for local diagnostics; the CLI version alone does not prove which model-runtime packages are installed, and missing metadata is reported as unknown. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
+This guide recommends Codex Connect `0.2.0-alpha.11` / DSH `0.2.1-rc.5`; the other exact supported hosts are listed below. Check `dsh --version` first and use `doctor --json` for local diagnostics; the CLI version alone does not prove which model-runtime packages are installed, and missing metadata is reported as unknown. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.2.0-alpha.10` |
-| DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2` or `0.2.1-rc.3` (consistent package set) |
+| Codex Connect | `0.2.0-alpha.11` |
+| DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4` or `0.2.1-rc.5` (consistent package set) |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
@@ -39,20 +39,20 @@ Historical release [`0.2.0-alpha.3`](docs/release-notes/0.2.0-alpha.3.md) adds o
 
 Historical release [`0.2.0-alpha.2`](docs/release-notes/0.2.0-alpha.2.md) publishes exact DSH `0.2.1-alpha.1` compatibility and the cross-route image selection handle repair. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects that host. Existing supported hosts do not require an upgrade.
 
-As of 2026-10-23, npm `alpha` points to `0.2.0-alpha.10`, while `latest` remains `0.2.0-alpha.1`. Default installation still selects the earlier Alpha; the `latest` tag does not make it a stable release. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-10-31, npm `alpha` points to `0.2.0-alpha.11`, while `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
 
 Historical release [`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.
 
 It retains Alpha 4.54's handling of initial system instructions and tool definitions on DSH 0.2.0-rc.2, diagnostics for differing host/plugin provider libraries, and Canary's normal-request checks, along with Alpha 4.53's core maintenance changes, existing-task recovery and safety, and 4.52's [opt-in local request metrics](docs/request-metrics.md). Collection stays off until a private directory is configured; unknown usage is not zero. No Task reopening or model-library/OAuth upgrade is included.
 
-The package passed keyless installation/runtime regression on all twelve exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
+The package passed keyless installation/runtime regression on all fourteen exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 Historically, on 2026-10-10 the maintainer reported successful login and normal use on Desktop `0.2.0-rc.2` with the identified local adaptation build. Only the historical `0.2.0-alpha.3` client was compared with that local adaptation and found to differ only by the package-version string. This comparison does not establish `0.2.0-alpha.4` Desktop or live-account acceptance, nor acceptance of later npm artifacts; no new real Desktop acceptance was performed. See the [Desktop acceptance record](INSTALL.md#official-desktop).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.10
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.11
 dsh web
 ```
 
@@ -184,6 +184,6 @@ Published `0.2.0-alpha.1` adds `gpt-6.1-sol` to the manual model catalog and con
 
 Alpha 5 capability calibration: the [source comparison](docs/agent-notes/gpt61-capability-calibration.md) distinguishes the pinned 272k fallback/872k local ceiling, official Work/Codex product text advertising 500k surfaced in search results, and separate API limits. That historical change refreshed only Sol61's policy-source pin; then-current defaults, native-provider metadata precedence and Fast/effort behavior were unchanged. No account/endpoint capacity was verified.
 
-Unpublished source follow-up for #338: Sol61 now uses a dedicated **500,000-token** base default for its missing entry and known old bundled-static metadata, following the official Work/Codex product default. Explicit provider metadata and user overrides keep precedence; other models, output limits and the 872,000 local override ceiling are unchanged. [Scope and evidence](docs/agent-notes/sol61-context-default.md) distinguish the calibrated default from measured route capacity.
+Published base-default follow-up for #338: Sol61 now uses a dedicated **500,000-token** base default for its missing entry and known old bundled-static metadata, following the official Work/Codex product default. Explicit provider metadata and user overrides keep precedence; other models, output limits and the 872,000 local override ceiling are unchanged. [Scope and evidence](docs/agent-notes/sol61-context-default.md) distinguish the calibrated default from measured route capacity.
 
-Unpublished source candidate: `gpt-6.1-terra` is available through the manual catalog and configuration selector, with text/image input and existing Responses tools. Its official Codex fallback is 500,000 tokens with an optional 872,000 local ceiling and 128,000 output limit; native provider metadata wins, with the same effort mask as Sol61. Low, Medium, High, Xhigh and Max are exposed; Default omits effort. API `none` is not advertised by the pinned OAuth catalog, and Ultra orchestration is unsupported. This does not add a desktop Computer Use executor or expand Ultrafast eligibility. [Sources, scope and synthetic validation](docs/agent-notes/gpt61-terra-support.md); real-account access remains unverified.
+Published in Alpha 11: `gpt-6.1-terra` is available through the manual catalog and configuration selector, with text/image input and existing Responses tools. Its official Codex fallback is 500,000 tokens with an optional 872,000 local ceiling and 128,000 output limit; native provider metadata wins, with the same effort mask as Sol61. Low, Medium, High, Xhigh and Max are exposed; Default omits effort. API `none` is not advertised by the pinned OAuth catalog, and Ultra orchestration is unsupported. This does not add a desktop Computer Use executor or expand Ultrafast eligibility. [Sources, scope and synthetic validation](docs/agent-notes/gpt61-terra-support.md); real-account access remains unverified.
