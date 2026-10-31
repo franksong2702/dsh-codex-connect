@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "dshVersion": "0.2.1-rc.5",
+  "nodeVersion": "v24.13.0",
+  "plugin": "dsh-codex-connect",
+  "pluginVersion": "0.2.0-alpha.11",
+  "pluginArtifactSha256": "e46c37a8e567e4cd147de0726e28ec332c50c483929a94449d17de2f8112d4b4",
+  "defaultsUnchanged": true,
+  "capabilities": {
+    "enableProxy": false,
+    "enableSearch": false,
+    "enableReserveFallback": false,
+    "enableNativeCompaction": false,
+    "enableImageTool": false,
+    "enableImageGeneration": false,
+    "enableAutoReview": false
+  },
+  "baseCommit": "b084aa007f959316ae5dd60b72bc8db0adbbb3fd",
+  "installer": "npm 11.6.2",
+  "scope": "isolated exact Host and scripted runtime; not Desktop/account acceptance",
+  "runtime": {
+    "schemaVersion": 1,
+    "provider": "openai-codex",
+    "modelCount": 12,
+    "reasoningModelCount": 12,
+    "preparedModelCount": 12,
+    "disposalVerified": true,
+    "reserveTransitionsVerified": true,
+    "images": {
+      "syntheticOnly": true,
+      "generated": 2,
+      "edited": 2,
+      "codeRuns": 2,
+      "dispatchEvent": "tool/ptc-dispatch",
+      "originalDownloadVerified": true,
+      "originalAuthenticationVerified": true,
+      "inheritedOriginalVerified": true,
+      "earlierForkDenied": true,
+      "unrelatedSessionDenied": true,
+      "editSourcesVerified": true,
+      "inheritedEditVerified": true,
+      "invalidEditRefused": true,
+      "selectionHandlesVerified": true,
+      "realProviderRequests": 0
+    },
+    "requestMetrics": {
+      "syntheticOnly": true,
+      "dispatches": 2,
+      "startupConfiguration": true,
+      "installedCli": true,
+      "unknownUsagePreserved": true
+    },
+    "searchRouteLifecycle": {
+      "syntheticOnly": true,
+      "dispatches": 6,
+      "reloadCycles": 2,
+      "sourceLimitVerified": true,
+      "fetchRouteUnchanged": true,
+      "restorationVerified": true,
+      "volatileHostChoiceVerified": true,
+      "hostRoundTripCases": 4,
+      "betweenSearchUpdatesVerified": true,
+      "unsetSelectionVerified": true
+    },
+    "preflightActivity": {
+      "syntheticOnly": true,
+      "cases": 6,
+      "publicProviderCallback": true,
+      "lateHeadersFullBudget": true,
+      "finiteTotalDeadline": true,
+      "ordinaryIdlePreserved": true,
+      "callerCancellationUnchanged": true,
+      "realProviderRequests": 0
+    },
+    "retryPolicy": {
+      "syntheticOnly": true,
+      "cases": 6,
+      "preparedPolicyVerified": true,
+      "omittedDefaultsPreserved": true,
+      "disposalVerified": true,
+      "realProviderRequests": 0
+    },
+    "taskHttpLifecycle": {
+      "syntheticOnly": true,
+      "reloadCycles": 2,
+      "authenticationVerified": true,
+      "disposalVerified": true
+    }
+  },
+  "nativeCompactionLifecycle": {
+    "syntheticOnly": true,
+    "freshProcesses": 10,
+    "encodings": [
+      "none",
+      "zstd"
+    ],
+    "phases": [
+      "write",
+      "resume-fork",
+      "verify-child",
+      "failure-paths",
+      "automatic"
+    ]
+  },
+  "liveAcceptance": false,
+  "note": "Artifact hash identifies the tested build; final commit CI must independently test the submitted source. Later evidence/install guidance changes do not change runtime behavior."
+}

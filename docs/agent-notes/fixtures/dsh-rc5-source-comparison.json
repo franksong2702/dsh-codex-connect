@@ -1,0 +1,232 @@
+{
+  "source": "official exact npm tarballs; SHA512 checked before reading",
+  "normalization": "only exact rc.4/rc.5 literals in valid UTF8; other bytes compared unchanged",
+  "packages": [
+    {
+      "name": "@deepseek-ai/dsh",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-8gxl6zOi6vx1sDolH+vjh9txrpbXD+t74Z2YfWkEBtR3xP2YEtk0bbLkgLZRnYQgDxCoXitXyXDKn5k0+6iXrg==",
+          "tarSha256": "1fddead34d3c943b7a4eed1d614e14fa19925803455e28c5141645caf4b02d13",
+          "files": 20
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-WkyJZv4zl9sCAxSzRctGm58m0rilGqwR6pniBiLOz5CPDfHfDuAUicg0AAazXI7oj/Cph6/cjNTncA/rpLTXpw==",
+          "tarSha256": "60987566f19e0ded1f7918c00a65c19c56ea25f5977ee0bfd5697c5c113ec4e1",
+          "files": 20
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-3l/QwI87Cn618wGxDZ6TBbU2OyGSFKfJdHKP3xrpwP0aMhRGHLCGUJFB7YzmR3kZCYAi+dZ7dHx7BwA+8gw5Jg==",
+          "tarSha256": "bb300caaf1d80a0928e53f685eb0e53028b3529858200196667d0cf1fb00a892",
+          "files": 24
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-mHNbxag0rZVNHaXZvr4OhiveaTTGMNPEpzO4nS8ohOQiQL0MWqA7brwtjBbaAlB3aMZ13tbHGHINpFlXdu8J3Q==",
+          "tarSha256": "2d9b3f2df391f030b7848a4294e8f80009c448e2225d3c7ac67004e9ff4d1142",
+          "files": 24
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-loop",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-KjrrYqwwwBoh3PUp3ILqLSESZQBe52V8LJ+sBgSpONxR1cf5UpZOS+K1RPOa5+zvLohU+4LKf4PhespnTmnwnQ==",
+          "tarSha256": "2f99e630d53900283c191cf713d5856b831bc2a475e177e5cf07818ca3068b38",
+          "files": 15
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-fWDnhe4md8D0D18puVuNQIg5EklenitiqtyL4p1sbCUytraGn11naUqiUJ77O0Mpit4qJTvCozsgEzyBpbsXuA==",
+          "tarSha256": "4250f6f2f9806e5a6cc04c4673328f6253d9c018b3d9668d8d9957cae1228f84",
+          "files": 15
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-AzKbc7JIS0Pi0o6lKMou1Lh3OrHntt/N93x6Po6JU9zkW910kUfeSSUx+19N4BjSpLpP/a3dbIr2KNlYYg9u6Q==",
+          "tarSha256": "fbc0eaab9e3e95783fbd7c38f893297c4bd6340c0d458cb3f21b482c7fe857f6",
+          "files": 38
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-g9mSILkqY7wByl0tpLBhXxWxQ3MoNzXokuJq86R/snPL3v1OonXv1b46wtvldEgyr88aK1gBBlifMsRnXjMWTA==",
+          "tarSha256": "6b422d70aee363dcce81be0481dda9d801c2ae03a4f314497e407d184df2313c",
+          "files": 38
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-ih6RqeKhj3CUIvnOCx2mjF7rHIohXaDKaVJx7QU/ZtHHc4rF/907mD4yi9Ur7NyRr4hCdSB/egNKmvVeyXGiCA==",
+          "tarSha256": "2680de9b09702bbd76d2326aed681d11def2fee8add9005863ea59fd1cb42f08",
+          "files": 22
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-zpFGj+Wuy737v7IkJYpnRdKCWV6NxACqDOoeO3zjZMd0zMA9KCN68W65/GPg/upXNINkChWCE7mTdVp8REMI/Q==",
+          "tarSha256": "e3356b562b196081ab44fa48528e8fc26ad4e62f846cfe44e2f873ca5f3c0917",
+          "files": 22
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-Xh3IpV3Qdu0Fw3he3OwC7+84KWwfpDQMwqozzNrRyR8mDKU+7h1UbU4Ea1/NMkMc81nwqq46NS+TUHXUzB+ejA==",
+          "tarSha256": "8dc086d9a17e414abf272d9c6f5fb910079a06c5ef0b2777a48b860a9c581c33",
+          "files": 28
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-tOEMsbG1jH4EV80xcGucfeWsKHLjnETjRLtSnyFrVl2oma95tzTHBjti5MK60IvT2ijcCWhx8CrUKcqRksfDPA==",
+          "tarSha256": "9614366d61214a304f937d0f3b8481d5827d2aef4529f3bff9eb49ef8ac65283",
+          "files": 28
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-w2/T9pKmvGvK+q2KL+cHUHDbosfF1eQqg7PAd4xeb9TAH8G34qoImf5n2eRN73csgM8NOEGYUEvK+rMrksRmbg==",
+          "tarSha256": "08d3c5a9039ae8dd527195263757d9e53af853f67811db90a315169809fa6e32",
+          "files": 28
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-A5NdQFgeY4qi29+lBzgZiOloiFe+E1iBbIRjJTplee79rswYGUUmUZYmOvAcdmk4tERkY2S9htuc+V+jNifqRw==",
+          "tarSha256": "8571710817dbf5172079168861bfaef581efc26a4b83a4c003f2d1ef632ae7b4",
+          "files": 28
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-0J3ccW9vSQ+gsBgHEa1xBmMSI5yLjRB/fRqpQA08JmzeDFRVhJW1j5/niJUDYlCRZfBBLnsaV/cAoibdk3FYfg==",
+          "tarSha256": "fc705c8689018c76a0e58cd29d162dec35241e0923c3961bb5a9ec29c26ec005",
+          "files": 16
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-eEUbn1QqqyxqN3TS/RP53IxIys5ojlYArbGL5iVEACiR6vrkRv6krc6R2pJXc2zHSJItqGhkTWmekbtpxH9vqg==",
+          "tarSha256": "5ced97b65baad12ce724f116193966ac246ac6f771b9301abd24b49894cb9052",
+          "files": 16
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-e7DqxYoKtsPUH/4UKhlLVZfPsPxc4zziPF7hhBAWVlJMhyicUtsrEXrgASKtZXXe6zg6w9dVQLW72wR2mkm6VQ==",
+          "tarSha256": "bc289fc5048707fdd03dc1d8ea3ffcd63c62ea03801f342ea96f6e1a052f026c",
+          "files": 18
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-9jPIVpB+B6ipKz3lXrvR4gxe1XU2pl8U9vIEpKTiWHKW4vG3GF7j6vVQge7gtd3mkkBj65hc8pIvedS/ird0FA==",
+          "tarSha256": "feb6fdb7cd21dc10848144b2596a8d8e407734e85014d3c81589b03c4263ecb7",
+          "files": 18
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-timeout",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-8NQcrgG/3dscm4BVPYRhWl8zQdzR1Okl/awn2rFQwrbaht8FbUU83oYYvt2FhSY51wzJxbAADw2CKgy7w+iK0Q==",
+          "tarSha256": "b01203d0efa3f9714e6204bb0233d21c5440110411888adb0314ea8a12a0746b",
+          "files": 7
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-tQR1A6sQGG7XruB5zeobk+SUhvrxGYf+62WnMOcgdhrr9wCD4MCojZKBtubbm5BhozwEHAyTeESbk9l2+B/Uyg==",
+          "tarSha256": "f28bb83ca39afb8d8cc20b12ce9c2c4090c8c8513794c3aee536903f2107114d",
+          "files": 7
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-qhXGHh+/+41cqKtOtXXYDRC8yAokR1H5jUReGtVwjRCvb6U3D7pfAWtHrtCcy/M8Ih5P0ylPVivv3LgrwMWJOw==",
+          "tarSha256": "4643a3542a877d6f9b51b14914fe211beac1e6be5cc15e53848e5b7a51ee78c3",
+          "files": 56
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-+zm0C8oyH8qH1mEZp7xO1uTLRhrHykJiuDUuPtxHw4trtbqMVCsVd+Dc/SXWFKY/65QhOh7HCZU90PCALGmFQA==",
+          "tarSha256": "e6b4db0740db9d119678955674b1664c4d2de5ad04189708362d9711609b02ce",
+          "files": 56
+        }
+      ],
+      "normalizedChangedFiles": []
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-chat",
+      "receipts": [
+        {
+          "version": "0.2.1-rc.4",
+          "integrity": "sha512-oWGB0Vex4yg4wfnpJPqd1mxTTYhZI16+OALPPEJTtofwbmveg2/t+ZAY9HZ/Rtvy9FVqb8auW8jCMrJ+fiw3YA==",
+          "tarSha256": "9482169f61e19e854126328dec6a537ac63bbe54edeeec9578645da825301acf",
+          "files": 106
+        },
+        {
+          "version": "0.2.1-rc.5",
+          "integrity": "sha512-/UzmkMvOW94RtwHNbnU36+U5syK3QBRoDYzX9n6iyb+w9PrlKjUIckGqZNZnAoEG374htpvUrrT0YPSp4BDJ+A==",
+          "tarSha256": "f43404aca1e3cafc6df656c67aadc614f799a13afe5e6ab881d2cc5b46f158c5",
+          "files": 107
+        }
+      ],
+      "normalizedChangedFiles": [
+        "package/lib/client.js",
+        "package/README.md",
+        "package/README.zh.md",
+        "package/lib/types/client/chat/ReasoningContent.d.ts",
+        "package/lib/types/client/chat/ReasoningRow.d.ts",
+        "package/lib/types/client/contract/slots.d.ts",
+        "package/README.i18n.yaml",
+        "package/lib/types/client/reasoning-text.d.ts"
+      ]
+    }
+  ],
+  "liveAcceptance": false
+}
