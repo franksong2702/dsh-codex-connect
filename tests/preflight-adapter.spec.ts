@@ -30,7 +30,8 @@ function adapter(origin: string | undefined = config.trustedProxyOrigin, enabled
     proxy, () => origin, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? config : undefined)
 }
 
-function responseSource(responseHeaders: HeadersInit = headers, cooperative = true, headersReady?: Promise<void>) {
+function responseSource(responseHeaders: HeadersInit = headers, cooperative = true, headersReady?: Promise<void>,
+  metadata?: { origin: string; redirected?: boolean; url?: string }) {
   const started = Promise.withResolvers<void>()
   const closed = Promise.withResolvers<void>()
   let output: ReadableStreamDefaultController<Uint8Array>
@@ -63,6 +64,10 @@ function responseSource(responseHeaders: HeadersInit = headers, cooperative = tr
       },
       cancel() { finished = true; signal?.removeEventListener('abort', onAbort); closed.resolve() },
     }, { highWaterMark: 0 }), { headers: responseHeaders })
+    if (metadata !== undefined) Object.defineProperties(response, {
+      url: { value: metadata.url ?? metadata.origin + '/bili/' + String(_input) },
+      redirected: { value: metadata.redirected ?? false },
+    })
     await headersReady
     return response
   })
@@ -356,6 +361,148 @@ it('preserves earlier caller cancellation when the absolute budget expires in th
   const result = await pending
   expect(result.error).toBeUndefined()
   expect(result.chunks.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'aborted' } })
+})
+
+// Native interception uses no Codex proxy-manager origin, but still requires explicit startup authorization.
+const nativeOrigin = 'http://127.0.0.1:43123'
+const nativeConfig = { ...config, trustedProxyOrigin: nativeOrigin, maxDurationMs: 900_000 }
+const nativeStateSymbol = Symbol.for('billion-context.native-intercept-state')
+function installNative(source: ReturnType<typeof responseSource>) {
+  Object.defineProperty(source.fetch, Symbol.for('billion-context.native-fetch-chain'), { value: true, configurable: true })
+  const state = { origin: nativeOrigin }
+  vi.stubGlobal('fetch', source.fetch)
+  vi.stubGlobal(Symbol.for('billion-context.native-fetch-intercept'), true)
+  vi.stubGlobal(nativeStateSymbol, state)
+  return state
+}
+function nativeAdapter(preflight = nativeConfig, enabled = true) {
+  return createOpenAICodexAdapter(syntheticCredentials(), () => undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? preflight : undefined)
+}
+
+it('admits explicitly authorized native late headers, then real SDK output beyond five minutes without a Codex proxy manager', async () => {
+  vi.useFakeTimers()
+  const gate = Promise.withResolvers<void>()
+  const source = responseSource(headers, true, gate.promise, { origin: nativeOrigin })
+  installNative(source)
+  const pending = collect(nativeAdapter().stream(request))
+  await source.started
+  await vi.advanceTimersByTimeAsync(299_000)
+  gate.resolve()
+  await vi.advanceTimersByTimeAsync(2_000)
+  expect(source.signal?.aborted).toBe(false) // accepted headers renewed the outstanding read
+  for (let index = 0; index < 21; index++) await pulse(source, 30_000)
+  expect(source.signal?.aborted).toBe(false)
+  source.complete()
+  const result = await pending
+  expect(result.error).toBeUndefined()
+  expect(result.chunks).toContainEqual(expect.objectContaining({ type: 'block-end', block: { type: 'text', text: 'OK' } }))
+  expect(result.chunks.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'stop' } })
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+it('bounds native heartbeats at 900 seconds even for an uncooperative response body', async () => {
+  vi.useFakeTimers()
+  const source = responseSource(headers, false, undefined, { origin: nativeOrigin })
+  installNative(source)
+  const pending = collect(nativeAdapter().stream(request))
+  await source.started
+  await vi.advanceTimersByTimeAsync(0)
+  for (let index = 0; index < 29; index++) await pulse(source, 30_000)
+  await vi.advanceTimersByTimeAsync(29_999)
+  expect(source.signal?.aborted).toBe(false)
+  await vi.advanceTimersByTimeAsync(1)
+  expect((await pending).error).toMatchObject({ code: 'TIMEOUT', message: 'Codex preflight timeout after 900000ms' })
+  expect(source.signal?.aborted).toBe(true)
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+it.each(['default disabled', 'explicit unrelated proxy', 'upstream URL', 'empty URL', 'redirect', 'no native chain', 'missing header'])
+  ('keeps ordinary idle timeout despite native-looking comments: %s', async mode => {
+    vi.useFakeTimers()
+    const source = responseSource(mode === 'missing header' ? { 'content-type': 'text/event-stream' } : headers,
+      true, undefined, { origin: nativeOrigin, ...(mode === 'upstream URL' ? { url: 'https://chatgpt.com/backend-api/codex/responses' }
+        : mode === 'empty URL' ? { url: '' } : mode === 'redirect' ? { redirected: true } : {}) })
+    installNative(source)
+    if (mode === 'no native chain') vi.stubGlobal(Symbol.for('billion-context.native-fetch-intercept'), false)
+    const pending = collect(nativeAdapter(mode === 'explicit unrelated proxy' ? config : nativeConfig, mode !== 'default disabled').stream(request))
+    await source.started
+    await vi.advanceTimersByTimeAsync(0)
+    for (let index = 0; index < 9; index++) await pulse(source, 30_000)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect((await pending).error).toMatchObject({ code: 'TIMEOUT', message: mode === 'default disabled'
+      ? 'pi-ai stream idle timeout after 300000ms' : 'Codex stream idle timeout after 300000ms' })
+    expect(source.signal?.aborted).toBe(true)
+  })
+
+it.each(['state before headers', 'origin before headers', 'fetch before headers', 'state after headers'])
+  ('rejects stale native lifetime authority: %s', async change => {
+    vi.useFakeTimers()
+    const gate = Promise.withResolvers<void>()
+    const source = responseSource(headers, true, gate.promise, { origin: nativeOrigin })
+    const state = installNative(source)
+    const pending = collect(nativeAdapter().stream(request))
+    await source.started
+    if (change === 'state before headers') vi.stubGlobal(nativeStateSymbol, { origin: nativeOrigin })
+    if (change === 'origin before headers') state.origin = 'http://127.0.0.1:43124'
+    if (change === 'fetch before headers') vi.stubGlobal('fetch', vi.fn())
+    gate.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    if (change === 'state after headers') vi.stubGlobal(nativeStateSymbol, { origin: nativeOrigin })
+    for (let index = 0; index < 9; index++) await pulse(source, 30_000)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect((await pending).error).toMatchObject({ code: 'TIMEOUT', message: 'Codex stream idle timeout after 300000ms' })
+  })
+
+it('preserves native caller cancellation promptly and cleans up owned timers', async () => {
+  vi.useFakeTimers()
+  const source = responseSource(headers, false, undefined, { origin: nativeOrigin })
+  installNative(source)
+  const caller = new AbortController()
+  const pending = collect(nativeAdapter().stream({ ...request, signal: caller.signal }))
+  await source.started
+  await vi.advanceTimersByTimeAsync(0)
+  await pulse(source, 30_000)
+  caller.abort(new Error('native caller cancellation'))
+  await vi.advanceTimersByTimeAsync(0)
+  const result = await pending
+  expect(result.error).toBeUndefined()
+  expect(result.chunks.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'aborted' } })
+  expect(source.signal?.aborted).toBe(true)
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+it('stops native frame recognition at first data even before a converted Host event', async () => {
+  vi.useFakeTimers()
+  const source = responseSource(headers, true, undefined, { origin: nativeOrigin })
+  installNative(source)
+  const pending = collect(nativeAdapter().stream(request))
+  await source.started
+  await vi.advanceTimersByTimeAsync(0)
+  source.emit('data: {"type":"response.created","response":{"id":"synthetic"}}\n\n')
+  await vi.advanceTimersByTimeAsync(0)
+  for (let index = 0; index < 9; index++) await pulse(source, 30_000)
+  await vi.advanceTimersByTimeAsync(30_000)
+  expect((await pending).error).toMatchObject({ code: 'TIMEOUT', message: 'Codex stream idle timeout after 300000ms' })
+})
+
+it('ends native preflight on semantic output, then enforces ordinary semantic idle', async () => {
+  vi.useFakeTimers()
+  const source = responseSource(headers, true, undefined, { origin: nativeOrigin })
+  installNative(source)
+  const iterator = nativeAdapter().stream(request)[Symbol.asyncIterator]()
+  const first = iterator.next()
+  await source.started
+  await vi.advanceTimersByTimeAsync(0)
+  for (let index = 0; index < 25; index++) await pulse(source, 30_000)
+  source.firstData()
+  expect((await first).done).toBe(false)
+  // Drain the already-produced block-start/text chunks without waiting on the network.
+  const drain = (async () => { for (;;) { if ((await iterator.next()).done) return } })().catch(error => error)
+  await vi.advanceTimersByTimeAsync(0)
+  for (let index = 0; index < 9; index++) await pulse(source, 30_000)
+  await vi.advanceTimersByTimeAsync(30_000)
+  expect(await drain).toMatchObject({ code: 'TIMEOUT', message: 'Codex stream idle timeout after 300000ms' })
 })
 
 it('preserves the unmodified Host aborted finish on cooperative cancellation', async () => {

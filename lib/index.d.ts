@@ -13,7 +13,7 @@ declare module '@deepseek-ai/dsh-llm' {
     };
   }
 }
-/** Startup-only authorization for one acquired proxy route and one finite total budget. */
+/** Startup-only authorization for one acquired or installed native proxy route and finite total budget. */
 interface OpenAICodexPreflightConfig {
   protocol: 'bili-v1';
   trustedProxyOrigin: string;

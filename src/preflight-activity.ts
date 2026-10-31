@@ -8,10 +8,11 @@ import { isValidOpenAICodexProxyUrl, normalizeOpenAICodexProxyUrl } from './sett
 import { createPreflightWatchdog, OPENAI_CODEX_MAX_PREFLIGHT_MS, OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
   PREFLIGHT_IDLE_TIMEOUT, PREFLIGHT_TOTAL_TIMEOUT } from './preflight-watchdog.ts'
 import type { PreflightWatchdog } from './preflight-watchdog.ts'
+import { captureNativePreflightAuthority, isCurrentNativePreflightAuthority, isNativePreflightResponse } from './native-preflight.ts'
 
 export { OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS } from './preflight-watchdog.ts'
 
-/** Startup-only authorization for one acquired proxy route and one finite total budget. */
+/** Startup-only authorization for one acquired or installed native proxy route and finite total budget. */
 export interface OpenAICodexPreflightConfig {
   protocol: 'bili-v1'
   trustedProxyOrigin: string
@@ -194,25 +195,36 @@ export class OpenAICodexPreflightActivity {
     }
   }
 
-  /** Observe only the exact acquired proxy route, preserving the SDK's response bytes and request policy. */
+  /** Observe only an explicitly authorized acquired/native route, preserving SDK bytes and request policy. */
   wrap(options: SimpleStreamOptions | undefined, actualProxyOrigin: string | undefined): SimpleStreamOptions {
     const scope = this.scopes.getStore()
     const signal = options?.signal
     if (scope === undefined || scope.closed || scope.watchdog === undefined || signal === undefined || signal !== scope.providerSignal) {
       throw new LlmError('Codex preflight requires the request-scoped public provider callback', 'UNSUPPORTED_OPTION')
     }
-    if (actualProxyOrigin === undefined || normalizeOpenAICodexProxyUrl(actualProxyOrigin) !== this.config.trustedProxyOrigin) return options!
+    const config = this.config
+    if (actualProxyOrigin !== undefined
+      && normalizeOpenAICodexProxyUrl(actualProxyOrigin) !== config.trustedProxyOrigin) return options!
     const fetch = options?.fetch ?? globalThis.fetch
     const watchdog = scope.watchdog
     return { ...options, fetch: async (input, init) => {
       const generation = ++scope.generation
       scope.stop?.()
+      const authority = actualProxyOrigin === undefined ? captureNativePreflightAuthority() : undefined
       const response = await fetch(input, init)
+      // Public adapter fetch hooks (diagnostics/governor) wrap the installed chain;
+      // their function identity is not the native route's authority.
+      if (actualProxyOrigin === undefined && (authority?.origin !== config.trustedProxyOrigin
+        || !isNativePreflightResponse(authority, response, input))) return response
       const mediaType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
       if (scope.closed || signal.aborted || generation !== scope.generation || !response.ok || response.body === null
         || mediaType !== 'text/event-stream' || response.headers.get('x-bili-preflight') !== 'compressing'
-        || !watchdog.preflight.begin(this.config.maxDurationMs)) return response
-      const frames = new PreflightFrames(watchdog.preflight, () => !scope.closed && !signal.aborted && generation === scope.generation)
+        || !watchdog.preflight.begin(config.maxDurationMs)) return response
+      // Early headers count once, but only exact subsequent frames renew idle time.
+      watchdog.preflight.pulse()
+      const frames = new PreflightFrames(watchdog.preflight, () => !scope.closed && !signal.aborted
+        && generation === scope.generation && (actualProxyOrigin !== undefined
+          || authority !== undefined && isCurrentNativePreflightAuthority(authority)))
       scope.stop = () => { frames.stop() }
       return observePreflight(response, frames)
     } }
