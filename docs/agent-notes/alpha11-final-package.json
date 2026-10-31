@@ -1,0 +1,453 @@
+{
+  "schemaVersion": 1,
+  "package": "dsh-codex-connect",
+  "version": "0.2.0-alpha.11",
+  "inputCommit": "0a4c9eb77b88b0def6f5f4ef6be340f9a4c2e76e",
+  "inputTreeBeforeReleaseNotes": "6ef4a0c8ea61a2a47e384dabef1d6a5fcc2f0af2",
+  "releaseNotesSha256": "9195bfa9866457e6874877c475ca657ae38a84bea0ba8391be10e7dd7a04f241",
+  "sha256": "535772fb35ebcc735523416561966d068b9f022ec3e0c96d11cc69dbbeb6008d",
+  "sha1": "4c20268c3b578d828a92ca8b72027865883da7ab",
+  "integrity": "sha512-rYH3Y6zUtFjzjqrCi50p09kqukaXqJo5fEwTQKSxkrTqp8COZjEqWy8Dy14eqkLhxWl9GbX4mZA6yv1uO87+GQ==",
+  "bytes": 1476318,
+  "fileCount": 72,
+  "packingNpmVersions": [
+    "11.6.2",
+    "11.6.4"
+  ],
+  "sameArchiveBytes": true,
+  "syntheticOnly": true,
+  "files": [
+    {
+      "path": "INSTALL.md",
+      "size": 46643,
+      "mode": "0o644",
+      "sha256": "3e458a3881149048cc2eeeba4ac40997272756b84528172548f23dbb29273306"
+    },
+    {
+      "path": "LICENSE",
+      "size": 10385,
+      "mode": "0o644",
+      "sha256": "450c531c051596c362e5d891909afe0f86928a7e12ba986e9b815bdf737105ad"
+    },
+    {
+      "path": "MIGRATION.md",
+      "size": 6464,
+      "mode": "0o644",
+      "sha256": "ad06fa8df2c5ca4b68ebe8625188cdc9341cecb57b13d7c5628059a705ca6ed1"
+    },
+    {
+      "path": "NOTICE",
+      "size": 1269,
+      "mode": "0o644",
+      "sha256": "0030305902e8709bbf1d78c414a10a55437bcafeee56a81bcf7033c570dea48d"
+    },
+    {
+      "path": "README.i18n.yaml",
+      "size": 382,
+      "mode": "0o644",
+      "sha256": "269acdb5a7434687e692dd015c588c6558aa6316c2b6a04adf4830bc3715b121"
+    },
+    {
+      "path": "README.md",
+      "size": 25602,
+      "mode": "0o644",
+      "sha256": "c868122fd5f9cd63540701beb7d3d8e8ff6ec03271160cdf7549889b7755516a"
+    },
+    {
+      "path": "VERSIONING.md",
+      "size": 6861,
+      "mode": "0o644",
+      "sha256": "1eb03827c90c7f835157a4deb507df7f69acb45af3025d6af36ad56f48bf32f3"
+    },
+    {
+      "path": "compatibility.json",
+      "size": 1250,
+      "mode": "0o644",
+      "sha256": "adfb497d485112a2cf1ed1703138d8f28a99e4f5c1dba8f6c9b60e0b2a92dca0"
+    },
+    {
+      "path": "cordis.patch.yml",
+      "size": 465,
+      "mode": "0o644",
+      "sha256": "a94e0b6c7416471892274477e149159985283097bbde3147a4c83b919a5e6516"
+    },
+    {
+      "path": "docs/README.zh.md",
+      "size": 23197,
+      "mode": "0o644",
+      "sha256": "8149cf324499aed76f0385f8e84feb6abf371c3e2b3ec901e254e17c871ed33e"
+    },
+    {
+      "path": "docs/VERSIONING.zh.md",
+      "size": 5983,
+      "mode": "0o644",
+      "sha256": "040a9db2618dc590ea549a58f516b27a55b828f5ea268e1ae55692dcd6bc46cd"
+    },
+    {
+      "path": "docs/assets/composer-capabilities.jpg",
+      "size": 10246,
+      "mode": "0o644",
+      "sha256": "6312bab3e103d9cb4c2828a63e6a3b9f19529c3431edc18f6b1b36b6c6bcd667"
+    },
+    {
+      "path": "docs/assets/en/hero.jpg",
+      "size": 266932,
+      "mode": "0o644",
+      "sha256": "4cbf6ea0bc489916f229f81c4c2174466b0e49e6ac3a3cf63685a5efc066301b"
+    },
+    {
+      "path": "docs/assets/en/image-generation.png",
+      "size": 27823,
+      "mode": "0o644",
+      "sha256": "2f6f7e09a821b0aab5a01fc6cf6ada9c82099a107fb27b20810c64a7c859b9ac"
+    },
+    {
+      "path": "docs/assets/en/model-selector.jpg",
+      "size": 14633,
+      "mode": "0o644",
+      "sha256": "412c20c588a5e5a70b078662b41605c4dffb8e46f752c85e0146178609e3ba4c"
+    },
+    {
+      "path": "docs/assets/en/oauth-status.jpg",
+      "size": 7560,
+      "mode": "0o644",
+      "sha256": "7d7c4a61b94cc48a7378894210712e25034d08a825fef9753ccf794778426c6b"
+    },
+    {
+      "path": "docs/assets/en/plugin-configuration.jpg",
+      "size": 63272,
+      "mode": "0o644",
+      "sha256": "e9ceee8046df7e4a8d3bd33f450cdbef4816fa72f3948bd1e938ba2074d9c418"
+    },
+    {
+      "path": "docs/assets/en/plugin-entry.jpg",
+      "size": 12778,
+      "mode": "0o644",
+      "sha256": "3c97666e3d5700ecdf3404e80d55f1f1ff31d52b63f3820dd9f7d57dc6a883f4"
+    },
+    {
+      "path": "docs/assets/hero.jpg",
+      "size": 266932,
+      "mode": "0o644",
+      "sha256": "4cbf6ea0bc489916f229f81c4c2174466b0e49e6ac3a3cf63685a5efc066301b"
+    },
+    {
+      "path": "docs/assets/model-selector.jpg",
+      "size": 9098,
+      "mode": "0o644",
+      "sha256": "d6c67e81b67898a6c65c104bf4850fbcbb6a6d25bebbc17f8be044414e91c9c4"
+    },
+    {
+      "path": "docs/assets/oauth-status.jpg",
+      "size": 8256,
+      "mode": "0o644",
+      "sha256": "1886ab0c4c8abf1325129c18ba486f6110d20fd1cc574edcc192b18dbcc1c3c8"
+    },
+    {
+      "path": "docs/assets/plugin-configuration.jpg",
+      "size": 28366,
+      "mode": "0o644",
+      "sha256": "61d2f7ac8773c4b22fd6adebf3848f414c53ad6baff762c57e061949a7f51e9d"
+    },
+    {
+      "path": "docs/assets/zh/hero.jpg",
+      "size": 206792,
+      "mode": "0o644",
+      "sha256": "4d18f21e13b6e6f0d04da2e45fcfd946bf4555540c528350c020c8601ed285bc"
+    },
+    {
+      "path": "docs/assets/zh/image-generation.png",
+      "size": 30115,
+      "mode": "0o644",
+      "sha256": "209bfa1947b2f7654d5a1a6d082fe2a77afa08521219458cb84c0514fd4ef502"
+    },
+    {
+      "path": "docs/assets/zh/model-selector.jpg",
+      "size": 14633,
+      "mode": "0o644",
+      "sha256": "412c20c588a5e5a70b078662b41605c4dffb8e46f752c85e0146178609e3ba4c"
+    },
+    {
+      "path": "docs/assets/zh/oauth-status.jpg",
+      "size": 7401,
+      "mode": "0o644",
+      "sha256": "078b4a6d605b72b5bda0d970588950f6fdc62781876117bc9ff02dc657c75c84"
+    },
+    {
+      "path": "docs/assets/zh/plugin-configuration.jpg",
+      "size": 54654,
+      "mode": "0o644",
+      "sha256": "1869b614a5c0d5523130be4631db5776163020ed6d823a3a97125b2a73989c28"
+    },
+    {
+      "path": "docs/assets/zh/plugin-entry.jpg",
+      "size": 12458,
+      "mode": "0o644",
+      "sha256": "949d116d242c54b75ae83a84242d50317b937f6fe3d74e60793819a68bed35e2"
+    },
+    {
+      "path": "docs/auto-review.md",
+      "size": 6644,
+      "mode": "0o644",
+      "sha256": "ab550e807ec1a2bcb5e84d35ee9c5ff5f7e11323b36469600f4b13f6e87b543f"
+    },
+    {
+      "path": "docs/auto-review.zh.md",
+      "size": 5767,
+      "mode": "0o644",
+      "sha256": "abf7b775017b9488ba00451461f4e0c8c3cd71e2cc9b0da75ed06f92bf46599f"
+    },
+    {
+      "path": "docs/design.i18n.yaml",
+      "size": 237,
+      "mode": "0o644",
+      "sha256": "de67183d657b69f2cdf6417b594aebc10a3af141f4ea3ace81a569be0a18fbe5"
+    },
+    {
+      "path": "docs/design.md",
+      "size": 14251,
+      "mode": "0o644",
+      "sha256": "7a7d6ccef69d18d096e0cd12ceb4d5d75a38e39a51e036c8b106865b349707cd"
+    },
+    {
+      "path": "docs/design.zh.md",
+      "size": 7248,
+      "mode": "0o644",
+      "sha256": "761de4ff65a301071b7fedfb552150b0d79aef6507e35693ac3aeef6c1ed3e3b"
+    },
+    {
+      "path": "docs/licenses/pi-ai-oauth.txt",
+      "size": 1070,
+      "mode": "0o644",
+      "sha256": "4f6a1985796db5225e3b1e59972bd47e07a27a0748427cb3d3c8fbf39f9311f0"
+    },
+    {
+      "path": "docs/licenses/standalone-cli.txt",
+      "size": 6213,
+      "mode": "0o644",
+      "sha256": "1f019d401888bdd64f076df3df1b485d22c999074ef618f84323929e32de43f8"
+    },
+    {
+      "path": "docs/maintenance-scope.md",
+      "size": 9310,
+      "mode": "0o644",
+      "sha256": "7b525abf763ae7b91ba782ffca8cb66708f94810b1eb7c9c70fd7d01cddc630b"
+    },
+    {
+      "path": "docs/preflight-activity.md",
+      "size": 6336,
+      "mode": "0o644",
+      "sha256": "c4a6392adc583a81b775d4a6f5a985fe848ca114fb9e8cb6e43b14494f98df6f"
+    },
+    {
+      "path": "docs/preflight-activity.zh.md",
+      "size": 5590,
+      "mode": "0o644",
+      "sha256": "3c269dee7d66aa19eb547107dbf1cde17de51b39c0d01fc4988a968c13610127"
+    },
+    {
+      "path": "docs/quota-tool.md",
+      "size": 4941,
+      "mode": "0o644",
+      "sha256": "e803e1d5b32677fa6da0ad770cd5550086fd34776b6839489a0031d38a9d700f"
+    },
+    {
+      "path": "docs/reference.i18n.yaml",
+      "size": 265,
+      "mode": "0o644",
+      "sha256": "54724e2ce6d338252842eebe5fb4a52d186efbd749559d53c4dbcfb2dec48b18"
+    },
+    {
+      "path": "docs/reference.md",
+      "size": 39849,
+      "mode": "0o644",
+      "sha256": "272f45ac1e93a3bdc94f104250c2a45391da28db0b79dfc2108dedbd9dbf0231"
+    },
+    {
+      "path": "docs/reference.zh.md",
+      "size": 35909,
+      "mode": "0o644",
+      "sha256": "7b05758ebd5bc824706fb651b1afbd457f02efbc25168ff9b9713761d00b7636"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.1.md",
+      "size": 3713,
+      "mode": "0o644",
+      "sha256": "30730d1da9d57b267500b58c12d8bf0d16f18640580848c9c751ff883163f5ae"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.10.md",
+      "size": 2190,
+      "mode": "0o644",
+      "sha256": "ebc6297aa12600ad33c843090a11e615f0e95f49fd15699e6676a79ea7327ae2"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.11.md",
+      "size": 4892,
+      "mode": "0o644",
+      "sha256": "9195bfa9866457e6874877c475ca657ae38a84bea0ba8391be10e7dd7a04f241"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.2.md",
+      "size": 3928,
+      "mode": "0o644",
+      "sha256": "2e143eff0dfd7d7235629ab2f6f1a360306464b4bce0afd6a9e2e31f8f45d82d"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.3.md",
+      "size": 5329,
+      "mode": "0o644",
+      "sha256": "1ba7bc8632c1739d45ab07a361d9c54c53e42eb8e83ed5c9443abb14d0c6fdc9"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.4.md",
+      "size": 5647,
+      "mode": "0o644",
+      "sha256": "f5f037180679a47097f671613428bd3c7406c77b8fcc3e078befd52a35eebed5"
+    },
+    {
+      "path": "docs/release-notes/0.2.0-alpha.6.md",
+      "size": 4725,
+      "mode": "0o644",
+      "sha256": "b38ef14dae356c4d080280e46ffcef6ae07a31fb5127a0312e700674537fac3f"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.37.md",
+      "size": 3849,
+      "mode": "0o644",
+      "sha256": "164f5f7f97c6e0ea603d0b90d1f08620037b08173dd6003257818c233c218692"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.38.md",
+      "size": 3510,
+      "mode": "0o644",
+      "sha256": "08d124ba68d3dc8442acdfd69f1448a5a2c59c5288c5ac15d97f98db0f7f331d"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.39.md",
+      "size": 3942,
+      "mode": "0o644",
+      "sha256": "75643c34b86882d2039a2fbfb9e5ad06650426747ae0031feae43ea7b68a17cd"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.42.md",
+      "size": 3359,
+      "mode": "0o644",
+      "sha256": "011187c19197cbd1ad57ad47e3c8f540e2b2d72d011027fb9b6f18fb045f7c2d"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.43.md",
+      "size": 3371,
+      "mode": "0o644",
+      "sha256": "0a340f109d0f223f8952f01a81d4a8552bb5f004d4dcc2acce4ceb1fa761222b"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.45.md",
+      "size": 1819,
+      "mode": "0o644",
+      "sha256": "550108c900f236ee4508b5388a557e96bc7d005ef5805ce4f0b47e7de573b76a"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.46.md",
+      "size": 2161,
+      "mode": "0o644",
+      "sha256": "245b7799275cebb3868f10e66d9631e860a3e6e459c9e59fbbe7f6de4170e411"
+    },
+    {
+      "path": "docs/release-notes/alpha-4.47.md",
+      "size": 2012,
+      "mode": "0o644",
+      "sha256": "5e48c27fc5015b5da7344639583a21a9ae64e23568b9395f6f4feb9cf1636448"
+    },
+    {
+      "path": "docs/request-metrics.md",
+      "size": 9484,
+      "mode": "0o644",
+      "sha256": "a8275a5287246207095aaa9d071f55d3a62bf2d6cbb16408a76d9fbf0f81b47f"
+    },
+    {
+      "path": "docs/request-metrics.zh.md",
+      "size": 5661,
+      "mode": "0o644",
+      "sha256": "c12899f489232746218cdf1b5a965212ae47ac547a675be107a3845f38996102"
+    },
+    {
+      "path": "docs/runtime-identity.md",
+      "size": 8819,
+      "mode": "0o644",
+      "sha256": "3136fee36605e23cb886657132007167a4381bbb7569cc2fcaddc05c287319c3"
+    },
+    {
+      "path": "docs/skills/codex-quota-awareness/SKILL.md",
+      "size": 1314,
+      "mode": "0o644",
+      "sha256": "0f1a7952db62c5734d732339387e064101eddae194e47b5c6c4166b989125da0"
+    },
+    {
+      "path": "docs/versioning.i18n.yaml",
+      "size": 255,
+      "mode": "0o644",
+      "sha256": "fd2ac1f88465e8a37e925d887b328318325612964f7cac97c72fea16da23d113"
+    },
+    {
+      "path": "lib/bin.js",
+      "size": 317667,
+      "mode": "0o755",
+      "sha256": "4a0b78f456e2c0e020ba27a3b30c752f0ffd46bdc6070d44983803017433b2e5"
+    },
+    {
+      "path": "lib/client.js",
+      "size": 366490,
+      "mode": "0o644",
+      "sha256": "397c43a0b8ffb6e849c33b5e4b45f181a350dfe73a0fa4b88af554f6818975fc"
+    },
+    {
+      "path": "lib/index.d.ts",
+      "size": 53313,
+      "mode": "0o644",
+      "sha256": "c69006db93fff0cacfb174dac8fc995aa6cb2eb7ca7310f992e3577b5a2c4224"
+    },
+    {
+      "path": "lib/index.js",
+      "size": 588893,
+      "mode": "0o644",
+      "sha256": "6715e58807d8a66a785376a6d410b1d9c2ebe72e68bbd9da730a6a5b66d529a0"
+    },
+    {
+      "path": "lib/invariant.d.ts",
+      "size": 493,
+      "mode": "0o644",
+      "sha256": "17e904efaf1c481a375eadc943c58378f931c5928ca1e790704211ac9ae257b5"
+    },
+    {
+      "path": "lib/invariant.js",
+      "size": 561,
+      "mode": "0o644",
+      "sha256": "6b527ed5798a1b101fc3429aae8b2336006c38f1bcad94b3b2d75ecf4a0f1c11"
+    },
+    {
+      "path": "lib/models-Cb_GvhEd.js",
+      "size": 34805,
+      "mode": "0o644",
+      "sha256": "22f54db1d23e50be9ee540cae100cb07f21f8464b93fb9bb5be0b3be21c2a70d"
+    },
+    {
+      "path": "lib/openai-codex-responses-BB8WGoNN.js",
+      "size": 109645,
+      "mode": "0o644",
+      "sha256": "2e698d8f35d8d4e45b222859599c768444f1059d53e8a703951f373d7672a989"
+    },
+    {
+      "path": "lib/undici-runtime-BL0gKP3f.js",
+      "size": 1152,
+      "mode": "0o644",
+      "sha256": "458d297120559cb78715440374bcf24c7a3517401525db52df75f3b119240820"
+    },
+    {
+      "path": "package.json",
+      "size": 13686,
+      "mode": "0o644",
+      "sha256": "507e72293aa9c62ee13e6e33b7b175eda1e38327ef4d8daff37ebecebfc648e2"
+    }
+  ]
+}
