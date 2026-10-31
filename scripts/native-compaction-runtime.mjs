@@ -9,16 +9,23 @@ const DSH_PACKAGES = [
   'dsh-token-meter', 'dsh-compaction-basic', 'dsh-session-persistence-jsonl',
 ]
 export const DURABLE_RUNTIME_VERSIONS = Object.freeze({
-  '@deepseek-ai/cordis': '4.0.4',
+  '@deepseek-ai/cordis': '4.0.5',
   ...Object.fromEntries(DSH_PACKAGES.map(name => [`@deepseek-ai/${name}`, '0.1.7-rc.1'])),
   '@earendil-works/pi-ai': '0.85.1',
 })
+
+// The 4.0.5 official Cordis implementation is byte-identical to 4.0.4.
+// Keep both verified direct sets; this is not a semver range or a new DSH host.
+const VERIFIED_RUNTIME_SETS = [
+  DURABLE_RUNTIME_VERSIONS,
+  Object.freeze({ ...DURABLE_RUNTIME_VERSIONS, '@deepseek-ai/cordis': '4.0.4' }),
+]
 
 /** This probe is narrower than the plugin support matrix; mixed or new hosts fail closed. */
 export function assertDurableRuntimeVersions(versions) {
   if (versions === null || typeof versions !== 'object' || Array.isArray(versions)
     || Object.keys(versions).length !== Object.keys(DURABLE_RUNTIME_VERSIONS).length
-    || Object.entries(DURABLE_RUNTIME_VERSIONS).some(([name, version]) => versions[name] !== version)) {
+    || !VERIFIED_RUNTIME_SETS.some(set => Object.entries(set).every(([name, version]) => versions[name] === version))) {
     throw new Error('DURABLE_RUNTIME_MISMATCH')
   }
 }
