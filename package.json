@@ -218,7 +218,7 @@
     "diff": "^9.0.0",
     "eslint": "^10.10.0",
     "immer": "^10.1.1",
-    "katex": "^0.19.1",
+    "katex": "^0.18.9",
     "jsdom": "29.1.1",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.0.0",
