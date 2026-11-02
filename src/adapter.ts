@@ -4,6 +4,7 @@ import type { OpenAICodexReasoningEffort } from './reasoning-contract.ts'
 import { defaultProviderAuthContext, InMemoryCredentialStore } from '@earendil-works/pi-ai'
 import type { Context as PiContext, Provider, SimpleStreamOptions } from '@earendil-works/pi-ai'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
+import { codexRequestOptions } from './codex-request-options.ts'
 import { codexProviderContext } from './pi-context.ts'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, GenerateOptions, PreparedAdapterCall, ResolvedRetryPolicy, RetryPolicyConfig, StreamChunk } from '@deepseek-ai/dsh-llm'
@@ -126,7 +127,7 @@ function requestProvider(
       const operation = (actualProxyOrigin: string | undefined) => {
         const diagnosticOptions = withCodexDiagnosticFetch(options, backendRequests)
         const requestOptions = preflight === undefined ? diagnosticOptions : preflight.wrap(diagnosticOptions, actualProxyOrigin)
-        return streamSimple.call(configured, model, codexProviderContext(context), requestOptions)
+        return streamSimple.call(configured, model, codexProviderContext(context), codexRequestOptions(provider.id, model, requestOptions))
       }
       if (backendRequests !== undefined) return backendRequests.runStream(operation)
       const proxyUrl = resolveProxyUrl?.()
