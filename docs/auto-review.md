@@ -12,6 +12,8 @@ With **Workspace Write** and approval **ask**, an ordinary allowed in-workspace 
 
 On rc.5, the Auto preset can conditionally return an `ask` after its classifier denies an otherwise downstream-allowed call. That can reach the plugin's answerer. A canonical ordinary workspace file and a recognized native `str_replace_editor` view action can satisfy local eligibility when retained user authorization is available. This is a conditional code path, not a guaranteed way to provoke a review; do not manufacture an escalation or disable guards to reach it. A direct, reliably usable preset-to-dedicated-reviewer integration requires a separate Host integration/policy decision.
 
+The public `llm/stream` waterfall is a general LLM hook, not a dedicated risk-review backend seam. The rc.5 classifier has no purpose label; alpha.3 adds `purpose: auto-review` and a session ID, which do not authenticate an arbitrary caller as a pending tool action. The dedicated reviewer's input/output protocol also differs from the preset classifier. Routing by model name or purpose alone cannot establish action identity, authorization or protocol equivalence. The installed rc.5 synthetic fixture checks six classifier/downstream-policy combinations, including preservation of downstream denial and `never`; it does not issue an approval request, execute a tool or establish a Windows workflow.
+
 The ChatGPT Codex Responses transport omits unsupported `temperature`, including the preset's zero value, after payload callbacks. Other payload fields and non-Codex provider/API sampling configuration are preserved. This compatibility projection neither changes the session model nor authorizes tool execution.
 
 ## Decision rules

@@ -15,6 +15,8 @@ export async function checkInstalledStockReview(importHost, CodexConnect) {
   const ctx = new Context()
   let gate
   let receivedOptions
+  let classification = { risk: 'low', decision: 'allow' }
+  let override
   const bodies = []
   process.env.DSH_HOME = root
   globalThis.fetch = async (_url, init) => {
@@ -22,7 +24,7 @@ export async function checkInstalledStockReview(importHost, CodexConnect) {
     const raw = new Headers(init.headers).get('content-encoding') === 'zstd' ? zstdDecompressSync(init.body).toString() : String(init.body)
     bodies.push(JSON.parse(raw))
     if (Object.hasOwn(bodies.at(-1), 'temperature')) return Response.json({ detail: 'Unsupported parameter: temperature' }, { status: 400 })
-    const text = JSON.stringify({ risk: 'low', decision: 'allow' })
+    const text = JSON.stringify(classification)
     const item = { type: 'message', id: 'fixture', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text, annotations: [] }] }
     const events = [
       { type: 'response.output_item.added', output_index: 0, item: { ...item, content: [] } },
@@ -40,7 +42,7 @@ export async function checkInstalledStockReview(importHost, CodexConnect) {
       effect(generator) { const scope = generator(); scope.next(); scope.next() },
       on(event, handler) { assert.equal(event, 'tools/pre-execute'); gate = handler; return () => {} },
       permissionPresets: { current: () => 'auto', registerAuto: () => () => {} },
-      approval: { overrideOf: () => undefined }, workingDirectory: { ensure: async () => root },
+      approval: { overrideOf: () => override }, workingDirectory: { ensure: async () => root },
       llm: { stream(options) { receivedOptions = options; return ctx.llm.stream(options) } },
     })
     const name = 'str_replace_editor'
@@ -55,11 +57,33 @@ export async function checkInstalledStockReview(importHost, CodexConnect) {
       requestHeader: () => ({ config: { provider: 'openai-codex', model: 'gpt-6.1-sol' }, tools: [{ name, description: 'Synthetic read only; never executed', parameters: { type: 'object' } }] }) }
     const result = await gate({ agent: { session }, name, arguments: args, callId: 'fixture', rootCallId: 'fixture', signal: new AbortController().signal }, async () => ({ kind: 'allow' }))
     assert.equal(receivedOptions.temperature, 0, 'actual stock classifier must supply zero')
+    assert.equal(receivedOptions.purpose, undefined, 'the exact rc.5 classifier provides no dedicated review-purpose identity')
     assert.equal(result.kind, 'allow', result.reason ?? 'stock classifier must complete through the installed Codex transport')
     assert.equal(bodies.length, 1)
     assert.equal(Object.hasOwn(bodies[0], 'temperature'), false)
     assert.equal(bodies[0].model, 'gpt-6.1-sol')
-    return { syntheticOnly: true, stockPreset: true, temperatureOmitted: true, toolExecutions: 0, realProviderRequests: 0 }
+    // This boundary determines whether any approval answerer can be reached.
+    // It never invokes ApprovalService, answers an approval, or executes a tool.
+    for (const test of [
+      { classification: { risk: 'medium', decision: 'deny' }, downstream: 'allow', expected: 'ask', downstreamCalls: 1 },
+      { classification: { risk: 'medium', decision: 'deny' }, downstream: 'deny', expected: 'deny', downstreamCalls: 1 },
+      { classification: { risk: 'low', decision: 'allow' }, downstream: 'deny', expected: 'deny', downstreamCalls: 1 },
+      { classification: { risk: 'medium', decision: 'deny' }, downstream: 'ask', expected: 'ask', downstreamCalls: 1 },
+      { classification: { risk: 'medium', decision: 'deny' }, downstream: 'allow', override: 'never', expected: 'deny', downstreamCalls: 0 },
+    ]) {
+      classification = test.classification
+      override = test.override
+      let downstreamCalls = 0
+      const result = await gate({ agent: { session }, name, arguments: args, callId: 'fixture', rootCallId: 'fixture', signal: new AbortController().signal }, async () => {
+        downstreamCalls++
+        return { kind: test.downstream }
+      })
+      assert.equal(result.kind, test.expected, 'stock Auto gate must preserve downstream and never-policy boundaries')
+      assert.equal(downstreamCalls, test.downstreamCalls)
+    }
+    assert.equal(bodies.length, 6)
+    assert.ok(bodies.every(body => body.model === 'gpt-6.1-sol' && !Object.hasOwn(body, 'temperature')), 'stock classifier remains on the session model; no dedicated reviewer was substituted')
+    return { syntheticOnly: true, stockPreset: true, temperatureOmitted: true, stockGateCases: 6, conditionalApprovalAsk: true, approvalRequests: 0, toolExecutions: 0, realProviderRequests: 0 }
   } finally {
     try { await ctx.fiber.dispose() } finally {
       globalThis.fetch = fetch
