@@ -1,0 +1,406 @@
+{
+  "schemaVersion": 1,
+  "comparison": "Official alpha.3 versus rc.1 and their framework versions; version strings normalized only for comparison",
+  "dshPairs": [
+    {
+      "package": "@deepseek-ai/dsh",
+      "alpha3SRI": "sha512-ffV06fOgiOeIJOmA3EgPj+U6azJrsLACiscLj9t+AfM7p9p14bMzErWRhgeC8nizBTyQ2ckxkPQtj4Pqon8mGw==",
+      "rc1SRI": "sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==",
+      "changedFilesAfterVersionNormalization": [
+        "package.json"
+      ],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        20,
+        20
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-agent",
+      "alpha3SRI": "sha512-qlKlA1R69bCLKb3hxh5bncGnfvORbrrefbwsFJYLNtpV1nv1xunGBkV69qgxM7AXEM7sKYB2X85Zf5B3+6HQng==",
+      "rc1SRI": "sha512-3zNf9+SRLKkzItWN83OAZtG1M2TO3fPB6vi3w/Z44jiXJioz1WoZJj6qFYHwP57i+8RmMUOWP7OBPpV9m/Sqlw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        30,
+        30
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-agent-loop",
+      "alpha3SRI": "sha512-4GvJDq0DxFxSOoE/hl1k8mUuaP+tzaSjU05zOAUHEzk2xVrUmajHnEWa/q/y05hqnv4M24MssaaXpxKemFYKBg==",
+      "rc1SRI": "sha512-LsmoSB/wckh2bNVMIKan+6G3QlAYM9Uhthh+9ti6N5AXqFqR7m7gWdEbQ/MWks9DgjWw/EP6x943UBga+TADCA==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        20,
+        20
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm",
+      "alpha3SRI": "sha512-38zhgIebeyxHjXQvoB8XSVvSX1rq4orwc2A2XwqvAFB3MubIdXMQp4BMFbEnFo2cp/HzUczOhMTgUNcnHPVnpQ==",
+      "rc1SRI": "sha512-XeEvH+6bpkjx0E2P1B5ZE+WWa+VHp4DimQaJDKNUZEFouqHMuN1B61TIz6IzUquRxa/6X4yJy+qXQ9WwAeMw5w==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        44,
+        44
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-llm-pi-ai",
+      "alpha3SRI": "sha512-2Q2s2K1AShV6XKEWJ5JGlKIQrvpffNBX1n8jCzaMoaK5v/c06/uasMnnJxRsTXydPXmU2CKF+sq5fs32NgUBsQ==",
+      "rc1SRI": "sha512-druY5fR7w3NVBLQ88Jrh19sxOA7KTk5tzv57sCH8Awj9Zr7MzEzUb8XuQPDgCXmsWmZrKlKbKC6JUg9guVi34A==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        29,
+        29
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-tools",
+      "alpha3SRI": "sha512-GFCNGCCu7KpL2k5Yb3vORaGb7IDKIKfAA5BGVYtexIU6bNt3FbYjPExNazpod6L1ICIF1QqE/XVPk/VrvrCZaw==",
+      "rc1SRI": "sha512-svB49dLPCHkKHgGwik3dTvEH0sL1vKwIzlQgqjE4qzEqFbSEROW8fByk3g2y2lxDv8TqgEUa0Vp2qFrVbm2lfw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        34,
+        34
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-tool-executor-native",
+      "alpha3SRI": "sha512-jI7Dx9rpLyzrnVSKswBFRSTOXm2TVh9OT4jrMnHr2tzueF1iHr5TBJwOQEiqKOYq9qxLzDblueB6Bi56Wz6hqQ==",
+      "rc1SRI": "sha512-GOpzjU0igQpQKTnup7lg6Vn1275yn8vcVAli0S7y1ZnkIMucsmcKTEY/tT0dPR3Bg1gca+XRcFidWKjuxVTfPw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        15,
+        15
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-session",
+      "alpha3SRI": "sha512-HEp+U+chQHwr2R9AVV14Fetn0QbA8Qs2+Uv1MBeCpneSa1Uuoxkdg3RnXTOhGC3DHuddVcOKToEomQ6jkCtkyw==",
+      "rc1SRI": "sha512-e0zx9HFNn8EyqrymGQS85SjKOyr61//ChTgIVDlCBSZvBB723fuXyi9LiHIIuPTlkgmWJl3gm5J51ebEXew7PQ==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        34,
+        34
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-subagent",
+      "alpha3SRI": "sha512-iXnb7rtHo2Jy4Ff78vJ2LjQF7+qgTB4pQiQa1o3BUodsrBRKL7XIfiuGX5SBtw1a2qkWJNo2WRtKPWI1sqEJmw==",
+      "rc1SRI": "sha512-UeWI8SlxUgPvIwv0ABo/5UauOAC6NyfE8V4sUUkUSqYpZ6I+Des4eI0NTasDf7+bF4Q6/5AIjZczvusWZ3O4wQ==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        62,
+        62
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-compaction",
+      "alpha3SRI": "sha512-HbEWHAvpd1ER/zc6ysueN7qtGyelLgnrGJOULI96qA8P7ztQDbraHftVW4tpsv7MHCVTTWkHEHK5YAGnn4vRbQ==",
+      "rc1SRI": "sha512-KWn/GpZ5adrSkS4O6U25gvVdtNG4D8tZ/xdUCsIEftveCJvT4R0s38PPcmIALS92jxHjrrCa6msVanW3lh1S1Q==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        16,
+        16
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-attachment",
+      "alpha3SRI": "sha512-je1GHmt2AAClPJeoY2tzuj6dtVz0LPRHWWlVt0VKXW8NI8KMScxsdX1Gv2drC3OM1lQ/RzLBe8ApUnzNcMYkAg==",
+      "rc1SRI": "sha512-iXw72OnKY95NYN9a6nHse/b4LbTbpgINRV38zk1Q+7K0Qlm1qiMZ2NwGfW9Hz+ch6SBxI6L8NZiFeMnBjSR86A==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        18,
+        18
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-atomic-write",
+      "alpha3SRI": "sha512-bp0EusmBZmCWjwZJPimeVQc9d6gYb83K1IEeEOL0TkbjNZMaXFFi5y8Nqq5yzYlC3OAMGXsQwpQl9nWgByjDqA==",
+      "rc1SRI": "sha512-P9Ys/iN0WL6th9jB2uOsiEXaR3Kb/oVbiI42VPFa+AxtIhj4vYF6Tx8MvvRSxzDDxNWPrR1dsAuhxtI2pT+MVQ==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        7,
+        7
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-settings",
+      "alpha3SRI": "sha512-E9lprad0JU8bWhv9wnzygpGaJlD2rqlgqtBGP1/X8tVIXVGCrDXIgID7q/EWGOZ1nq+mTVU82+/lyUpdh5yalw==",
+      "rc1SRI": "sha512-Wyec4ea7GeZjN/ktXXzm0BO1Im3e1e0Rsq5cYGDkN6cZfLZLz40BeHSw3Erg7Rrangl14ZW5FuZ4s5gvlSlSLA==",
+      "changedFilesAfterVersionNormalization": [
+        "package.json"
+      ],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        22,
+        22
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-client-ui-chat",
+      "alpha3SRI": "sha512-tL+cIAv/TwLXBbdiAAwcBIi0IHVQahd7lPeW51XIZNn5rbq0FFuGmkyfUbrKm/GVks1bX5tJTiRJlyXaziw8zg==",
+      "rc1SRI": "sha512-xyPgqo3h9J2gxVLBhRH7kag1MDhqgjQJagP+TSHSISJ8afMG6GtsmTeyArU5ITZeu8luNuWdb5jMBKmsjPOTLw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        117,
+        117
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-api-remotes",
+      "alpha3SRI": "sha512-2Gf7k+REzIYLY9W3guYiVEREwvasxvUpzpaF6BYu8ujjqa9+5qfOQdKE1DLFk2cJNyjRnVjz+s0Fjd2Pe+4YUA==",
+      "rc1SRI": "sha512-LuToAbdrMBlZP+VACF+HdWIIyrcl9vWTdOvpCyyle4piITpKGUBjn5CsB7smS21/2fLqtoW1vg6MS97rTE30fg==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        23,
+        23
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-api-session-controller",
+      "alpha3SRI": "sha512-QJWNh/ymWg7+dRzBB/Xctodx7GYMBhiKPsIWENfxRV9nSeRCu0BCjoTksIcoIao4Oy1DOUm1CQr6LyjZj2UUKg==",
+      "rc1SRI": "sha512-BtAWPuxMzaEKTQWR2D4vNbZf+3eJ9Zi9Y2XFx843SJF/nECakC+QVXeT3WB+YguU0i+9RqEf4Fy/R7nXNfJOyw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        97,
+        97
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-host-webserver",
+      "alpha3SRI": "sha512-DsHbAsOEEjwLo2VRCWkYOSGWwPUhNgCCibg8ltuT9UZWBeTJEAktrEV80/aljZaBlGzmIOz23+MMMaMJUr0D0A==",
+      "rc1SRI": "sha512-+H7hrb6h/6OKjfQrvfryJuL4Ouka/Fj6LyTIxy5Pwsp/x5zyHEcwpYs+pBqJVKwa6c0IKJeSKKXUWKYjUYk9+Q==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        16,
+        16
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-experimental-auto-review",
+      "alpha3SRI": "sha512-PzZrT6pmcuiy81M9PPQqBUR8l5FRFxZwnM6iuac7SzNcjTh8L/83DpitAeDcEzPlf9tHVJR7Ol9bP9Ppj/EduQ==",
+      "rc1SRI": "sha512-U+cWd+mwkVgvmArM7oBpP5QRoe0m18oTi/JuXKOd6grQVsG5RXN5gboahH6yams8eid1jYCyz0zqci7A/Eqodw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        22,
+        22
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "@deepseek-ai/dsh-fs",
+      "alpha3SRI": "sha512-lfpv4OtZDG/YEtMJ5fWywQyO7O4HQBMkOT1EAxQWK9GPFI1DFpVN9xhK9KVqYdiiYH4rbQ7LnhRAWfGHtdcY6A==",
+      "rc1SRI": "sha512-sbr+u+3dG4KAUdY7FoMLJg/gSE39gvgBMwmvVeR/6acNrlHaIducvnuxRUYAq2V0+NOVnG8fA9sdfBq2uGAfUw==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        8,
+        8
+      ],
+      "archiveManifestIdentityVerified": true
+    }
+  ],
+  "frameworkPairs": [
+    {
+      "package": "cordis",
+      "old": "4.0.6-alpha.2",
+      "new": "4.1.0",
+      "oldSRI": "sha512-/JVFMlHToFpIsoWPuTfQrv5wQ8hK021ZGRnovzHB9p1xhe+/y2wgidAf5BvsNZQDUF2GXEnhSm3RnAxYmteeYQ==",
+      "newSRI": "sha512-CJrjNyBkKn1SfvBQUcgFYKFnLjS+uKrhdMsbHU60xabvi12d+xQ+IQSNlME5Z+B+4Zi6n4BDknKY94tEPeo47w==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        32,
+        32
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "cordis-plugin-loader",
+      "old": "1.0.7-alpha.2",
+      "new": "1.1.0",
+      "oldSRI": "sha512-6iMp4SeaD3tHzsC3fa2bIOmLSM/mW6U5Z1KTnIKla62NmnesOodpPXl9hNckEx0Ah2xxwVddVJhtvvDiFdmj2g==",
+      "newSRI": "sha512-154u0LnADauDvOdQ41QtoOrRFQtvP2Ih68aYYaXzI/l7gRPwX/5MDtDDsJWeDffQA3ELn2xt3MUYsyizi+O9KA==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        31,
+        31
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "cordis-plugin-include",
+      "old": "1.0.11-alpha.2",
+      "new": "1.1.0",
+      "oldSRI": "sha512-XNmzyZXrfGCWvD6Er0JUiR4adQGlO0Jw/ZyIv46yb8we7HyfdKe70nAOs1kQypZavIXRj84WGPmeJROhHvF7Vw==",
+      "newSRI": "sha512-tD5JTHTDU1j1bkjgTK150UUSzypBSVhHoEl7/vgpYiDt7Czg43++IFUKaRlwXHMl5WC51S8T2V7p2IHpJ1Ny0A==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        13,
+        13
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "cosmokit",
+      "old": "1.8.7-alpha.2",
+      "new": "1.9.0",
+      "oldSRI": "sha512-cZQ1AhU/fxPkPnp0HAk7zbBGG0lnFUtlceACSDqWQ0a1RiTV1vcL2YRkHD5xCY026j/4Smgce1TuaCFZXhzt6A==",
+      "newSRI": "sha512-5O1S53mZiJyZYcvxxD0Qv1EY7qFPSxbGyD8CbVK6gw7W9FvcXZj2YIX1ZkOqyQQ3Xt2rFkZDHJv0+V3Zmmp8CA==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        25,
+        25
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "schemastery",
+      "old": "3.18.6-alpha.2",
+      "new": "3.19.0",
+      "oldSRI": "sha512-lRrvZLD9v1BAG5625lyYcRcMJ2xInGjWl65W6H3kL/YSCXUU2/aD1XLBXvoNYvXw2RuAXEfNTSFuZ/XArstwVA==",
+      "newSRI": "sha512-bDXoYQa7ghAhmdYD5VPlzKxEzJV/aKkz5l4V5h1u06z8GAPN1ROewSjvR9WiXhpa52E9fng8lpH5QdCRIQgnyQ==",
+      "changedFilesAfterVersionNormalization": [],
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "fileSetEqual": true,
+      "fileCounts": [
+        8,
+        8
+      ],
+      "archiveManifestIdentityVerified": true
+    },
+    {
+      "package": "cordis-plugin-timer",
+      "old": "1.1.8-alpha.2",
+      "new": "1.2.0",
+      "oldSRI": "sha512-rxjZwxJvkJ4as+Xxhvtmr2mYiSZYsmLicVvEHRgAxS4e7B9QwTQwQPjCWqrmFvyH905TAaa2ouMJcqoPX1Jx6w==",
+      "newSRI": "sha512-DTFp2IcK4Xnp0BWG546fwgeKjrBcSm9a9QjCtaV5Ko9hxiB/Cg03FINSNiR7OEbeg7/s4Y7QBxgQYFVYRl9V+g==",
+      "rawChangedFiles": [
+        "package.json"
+      ],
+      "changedFilesAfterVersionNormalization": [],
+      "fileSetEqual": true,
+      "fileCounts": [
+        9,
+        9
+      ],
+      "archiveManifestIdentityVerified": true
+    }
+  ],
+  "DSHCodeIdenticalAfterVersionNormalization": true,
+  "tarballsVerifiedAgainstRegistrySRI": true,
+  "executedUpstreamCodeForComparison": false,
+  "limits": "Static equality does not establish dependency graph/installed runtime or live account/Desktop acceptance.",
+  "registry": "https://registry.npmjs.org",
+  "scope": "@deepseek-ai",
+  "textDecoding": "strict UTF-8; non-text compared as raw bytes; file presence checked independently"
+}

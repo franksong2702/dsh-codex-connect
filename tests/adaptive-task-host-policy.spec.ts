@@ -35,3 +35,13 @@ it('does not accept a manifest with the wrong package identity', () => {
   read.mockReturnValueOnce(JSON.stringify({ name: 'foreign', version: '0.2.2-alpha.3' }))
   expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_VERSION_MISMATCH')
 })
+
+it('closes automation on exact rc.1 and rejects mixing either recovery Host', () => {
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.1'
+  expect(taskHostRecoveryOnly()).toBe(true)
+  expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_RECOVERY_ONLY')
+  for (const replacement of ['0.2.2-alpha.3', '0.2.2-rc.2', undefined]) {
+    versions['dsh-tools'] = replacement
+    expect(() => taskHostRecoveryOnly()).toThrow('TASK_HOST_VERSION_MISMATCH')
+  }
+})

@@ -31,7 +31,7 @@ describe('installation version guidance', () => {
       '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.5')?.verifiedDshVersions)
       .toEqual(published)
-    expect(declared.dshPluginApi.versions).toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3'])
+    expect(declared.dshPluginApi.versions).toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.10')?.verifiedDshVersions)
       .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.11')?.verifiedDshVersions)
@@ -73,7 +73,7 @@ describe('installation version guidance', () => {
     expect(install).not.toContain('Alpha 12 candidate, not yet published')
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.12')?.verifiedDshVersions)
-      .toEqual(declared.dshPluginApi.versions)
+      .toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.1'))
     expect(compatibility.pluginVersions.filter((entry: { version: string }) => entry.version !== '0.2.0-alpha.12')
       .every((entry: { verifiedDshVersions: string[] }) => !entry.verifiedDshVersions.includes('0.2.2-alpha.3'))).toBe(true)
   })
@@ -197,4 +197,9 @@ describe('installation version guidance', () => {
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.46/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.2\.0-alpha\.12/iu)
   })
+})
+
+it('does not claim that the published Alpha 12 archive supports the unshipped rc.1 candidate', () => {
+  expect(compatibility.pluginVersions.every((entry: { verifiedDshVersions: string[] }) =>
+    !entry.verifiedDshVersions.includes('0.2.2-rc.1'))).toBe(true)
 })

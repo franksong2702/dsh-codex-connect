@@ -1,4 +1,4 @@
-import { RECOVERY_HOST, RECOVERY_CASES, inspectRecoveryReport } from './adaptive-task-recovery-contract.mjs'
+import { isRecoveryHost, RECOVERY_CASES, inspectRecoveryReport } from './adaptive-task-recovery-contract.mjs'
 /** Dedicated Task evidence; ordinary installation/browser checks cannot satisfy this contract. */
 import assert from 'node:assert/strict'
 import { ADAPTIVE_TASK_CASES } from './adaptive-task-cases.mjs'
@@ -18,7 +18,7 @@ export const TASK_RUNTIME_PACKAGES = Object.freeze([
 ])
 
 export function inspectTaskTestReport(report, version) {
-  if (version === RECOVERY_HOST) return inspectRecoveryReport(report)
+  if (isRecoveryHost(version)) return inspectRecoveryReport(report)
   assert.equal(report.success, true, 'Task test process did not pass')
   assert.equal(report.numFailedTests, 0)
   assert.equal(report.numPendingTests, 0)
@@ -51,10 +51,10 @@ export function assertTaskMatrix(report, versions, bundleDigest) {
     assert.equal(host.externalNetworkAttempts, 0)
     assert.ok(Number.isSafeInteger(host.pid) && host.pid > 0)
     pids.add(host.pid)
-    const expected = host.version === RECOVERY_HOST ? RECOVERY_CASES : TASK_HOST_CASES
+    const expected = isRecoveryHost(host.version) ? RECOVERY_CASES : TASK_HOST_CASES
     assert.deepEqual(host.cases, [...expected])
     assert.equal(host.tests, expected.length + 1)
-    if (host.version === RECOVERY_HOST) {
+    if (isRecoveryHost(host.version)) {
       assert.equal(host.profile, 'recovery-only'); assert.equal(host.automationExercised, false)
       assert.equal(host.runtimePackages['@deepseek-ai/dsh-tool-executor-native'], host.version)
     } else assert.notEqual(host.profile, 'recovery-only')
