@@ -77,7 +77,7 @@ async function setup(options: { compression?: 'none' | 'zstd'; persistence?: boo
   let dispatch = runtime
   const governor = new OpenAICodexBackendRequests(undefined, undefined, 8, () => dispatch.reserveAuxiliary(), undefined, reserveAdaptiveTaskAttempt)
   ctx.effect(() => () => governor.dispose())
-  const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, () => options.nativeCompaction === true, governor,
+  const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, () => options.nativeCompaction === true, governor,
     { wrapProvider: withAdaptiveTaskProvider, stream: (options, delegate) => dispatch.stream(options, delegate) })
   ctx.llm.registerAdapter(['openai-codex'], adapter)
   const handle = await ctx.agents.create({ sessionId: SessionId('delegation-root'), meta: { cwd: root },

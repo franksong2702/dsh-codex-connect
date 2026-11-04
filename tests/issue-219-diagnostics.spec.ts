@@ -98,7 +98,7 @@ describe('issue 219 provider-to-DSH diagnostics', () => {
     const requests = new OpenAICodexBackendRequests()
     try {
       const adapter = createOpenAICodexAdapter(
-        credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, requests,
+        credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, requests,
       )
       const chunks = await collect(adapter.stream(options))
       expect(error(chunks).code).toBe('PI_AI_ERROR')

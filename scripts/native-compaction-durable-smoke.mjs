@@ -203,7 +203,7 @@ async function child(phase, root) {
     await ctx.plugin(meter.default)
     await ctx.plugin(selectPersistencePlugin(persistence), { root: join(root, 'sessions'), compression: 'none', packChunks: true })
     await ctx.plugin(compaction.default, { auto: false, compactionRetries: 0, maxOverflowRetries: 0, ...(controlled ? { retainTokens: 0, maxTokens: 1024 } : {}) })
-    const adapter = adapterModule.createOpenAICodexAdapter(captured, () => undefined, undefined, () => [MODEL], undefined, undefined, undefined, () => phase === 'write')
+    const adapter = adapterModule.createOpenAICodexAdapter(captured, () => undefined, undefined, () => [MODEL], undefined, undefined, undefined, undefined, () => phase === 'write')
     ctx.llm.registerAdapter([PROVIDER], adapter)
     const selection = { provider: PROVIDER, model: MODEL, reasoningEffort: llm.ReasoningEffortId('low'), maxTokens: controlled ? 2048 : 256 }
     const id = sessions.SessionId('native-durable-luna-acceptance')

@@ -212,7 +212,7 @@ describe('real adapter with synthetic transport', () => {
       ].map(sse).join(''))) },
       cancel: cancelled,
     }), { headers: hasMediaType ? { 'content-type': 'text/event-stream' } : {} }))
-    const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, manager)
+    const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, manager)
     const chunks = await consume(adapter.stream(options))
     expect(chunks).toContainEqual(expect.objectContaining({ type: 'finish', reason: { kind: 'stop' } }))
     expect(cancelled).toHaveBeenCalledOnce()
@@ -227,7 +227,7 @@ describe('real adapter with synthetic transport', () => {
       read: async () => ({ type: 'oauth', accountId: 'fixture', access: token, refresh: 'fake-refresh', expires: Date.now() + 3600000 }) } as unknown as OpenAICodexCredentialStore
     const fetch = vi.fn(async () => response({ type: 'response.completed', response: { id: 'resp_fixture', status: 'completed', output: [], ...(reported === undefined ? {} : { usage: reported }) } }))
     vi.stubGlobal('fetch', fetch)
-    const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, manager)
+    const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, manager)
     const chunks = await consume(adapter.stream(options))
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(chunks.some(chunk => chunk.type === 'finish')).toBe(true)

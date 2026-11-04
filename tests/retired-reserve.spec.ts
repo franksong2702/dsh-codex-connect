@@ -53,3 +53,11 @@ it('does not retire a foreign provider model with the same model id', async () =
   const adapter = createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined)
   await expect(adapter.prepareCall('foreign-provider', 'gpt-reserve')).rejects.not.toMatchObject({ code: 'MODEL_RETIRED' })
 })
+
+it('ignores an old factory-slot value and cannot use it as Reserve authority', async () => {
+  const consume = vi.fn(() => { throw new Error('retired authority must never be consulted') })
+  const adapter = createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined,
+    undefined, undefined, undefined, undefined, undefined, { consume })
+  await expect(adapter.prepareCall('openai-codex', 'gpt-reserve')).rejects.toMatchObject({ code: 'MODEL_RETIRED' })
+  expect(consume).not.toHaveBeenCalled()
+})

@@ -240,6 +240,7 @@ export function createOpenAICodexAdapter(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
+  _removedReserveSlot?: unknown, // Inert ABI slot; preserves following lifecycle/governor arguments.
   nativeCompactionEnabled?: () => boolean,
   backendRequests?: OpenAICodexBackendRequests,
   taskDispatch?: OpenAICodexTaskDispatch,

@@ -498,6 +498,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     proxyManager,
     resolveProviderProxyUrl,
     () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
+    undefined, // Inert retired slot; no Reserve object or authority is created.
     () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
     backendRequests,
     taskRuntime,

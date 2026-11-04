@@ -34,7 +34,8 @@ describe('startup provider retry policy', () => {
   it('rejects null at adapter load even when the Host optional schema passes it through', () => {
     const retryPolicy = CodexConnect.Config({ retryPolicy: null as unknown as RetryPolicyConfig }).retryPolicy
     expect(() => createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined,
-      undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, retryPolicy)).toThrow('retryPolicy')
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined, undefined, retryPolicy)).toThrow('retryPolicy')
   })
 
   it.each([configured, { mode: 'normal', maxRetries: 0 }, { mode: 'always', backoff: { maxDelayMs: 20_000 } }] as RetryPolicyConfig[])
@@ -56,7 +57,8 @@ describe('startup provider retry policy', () => {
     const expected = resolveRetryPolicy(input, 'fixture')
     let overrides: Record<string, number> | undefined
     const adapter = createOpenAICodexAdapter({} as OpenAICodexCredentialStore, () => undefined,
-      undefined, undefined, undefined, undefined, () => overrides, undefined, undefined, undefined, undefined, undefined, input)
+      undefined, undefined, undefined, undefined, () => overrides,
+      undefined, undefined, undefined, undefined, undefined, undefined, input)
     input.maxRetries = 0
     input.retryableCodes!.push('SERVER')
     input.backoff!.maxDelayMs = 1
@@ -97,7 +99,8 @@ describe('startup provider retry policy', () => {
     const captureActiveAccount = vi.fn()
     const credentials = { captureActiveAccount } as unknown as OpenAICodexCredentialStore
     expect(() => createOpenAICodexAdapter(credentials, () => undefined,
-      undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined, undefined,
       { mode: 'normal', maxRetries: -1 })).toThrow('retryPolicy.maxRetries')
     expect(captureActiveAccount).not.toHaveBeenCalled()
   })
