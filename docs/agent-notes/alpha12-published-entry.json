@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.0-alpha.12",
+  "host": "0.2.2-alpha.3",
+  "entry": "dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.12",
+  "artifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+  "installedFilesMatch": 73,
+  "defaultsUnchanged": true,
+  "optionalDefaultsOff": true,
+  "unanchoredDoctor": {
+    "exit": 1,
+    "status": "unknown",
+    "scope": "standalone",
+    "reason": "DSH peer metadata absent from standalone plugin roots; no ancestor fallback"
+  },
+  "selectedInstallationDoctor": {
+    "exit": 0,
+    "status": "compatible",
+    "scope": "selected-installation",
+    "credentialState": "missing",
+    "runningHostProof": false
+  },
+  "runtime": {
+    "schemaVersion": 1,
+    "provider": "openai-codex",
+    "modelCount": 12,
+    "reasoningModelCount": 12,
+    "preparedModelCount": 12,
+    "disposalVerified": true,
+    "reserveRetirement": {
+      "syntheticOnly": true,
+      "retiredModelBlocked": true,
+      "explicitOrdinarySelectionVerified": true,
+      "legacyFlagIgnored": true,
+      "returnFilePreserved": true,
+      "quotaNegotiations": 0,
+      "toolExecutions": 0,
+      "realProviderRequests": 0
+    },
+    "nativeCompactionLifecycle": {
+      "syntheticOnly": true,
+      "freshProcesses": 10,
+      "encodings": [
+        "none",
+        "zstd"
+      ],
+      "phases": [
+        "write",
+        "resume-fork",
+        "verify-child",
+        "failure-paths",
+        "automatic"
+      ]
+    },
+    "images": {
+      "syntheticOnly": true,
+      "generated": 2,
+      "edited": 2,
+      "codeRuns": 2,
+      "dispatchEvent": "tool/ptc-dispatch",
+      "originalDownloadVerified": true,
+      "originalAuthenticationVerified": true,
+      "inheritedOriginalVerified": true,
+      "earlierForkDenied": true,
+      "unrelatedSessionDenied": true,
+      "editSourcesVerified": true,
+      "inheritedEditVerified": true,
+      "invalidEditRefused": true,
+      "selectionHandlesVerified": true,
+      "realProviderRequests": 0
+    },
+    "requestMetrics": {
+      "syntheticOnly": true,
+      "dispatches": 2,
+      "startupConfiguration": true,
+      "installedCli": true,
+      "unknownUsagePreserved": true
+    },
+    "searchRouteLifecycle": {
+      "syntheticOnly": true,
+      "dispatches": 6,
+      "reloadCycles": 2,
+      "sourceLimitVerified": true,
+      "fetchRouteUnchanged": true,
+      "restorationVerified": true,
+      "volatileHostChoiceVerified": true,
+      "hostRoundTripCases": 4,
+      "betweenSearchUpdatesVerified": true,
+      "unsetSelectionVerified": true
+    },
+    "preflightActivity": {
+      "syntheticOnly": true,
+      "cases": 6,
+      "publicProviderCallback": true,
+      "lateHeadersFullBudget": true,
+      "finiteTotalDeadline": true,
+      "ordinaryIdlePreserved": true,
+      "callerCancellationUnchanged": true,
+      "realProviderRequests": 0
+    },
+    "retryPolicy": {
+      "syntheticOnly": true,
+      "cases": 6,
+      "preparedPolicyVerified": true,
+      "omittedDefaultsPreserved": true,
+      "disposalVerified": true,
+      "realProviderRequests": 0
+    },
+    "taskHttpLifecycle": {
+      "syntheticOnly": true,
+      "reloadCycles": 2,
+      "authenticationVerified": true,
+      "disposalVerified": true
+    }
+  },
+  "syntheticOnly": true,
+  "realAccountModelGUIAcceptance": false,
+  "projection": "Nested synthetic receipts and ephemeral PIDs omitted; original fixture result retained locally."
+}
