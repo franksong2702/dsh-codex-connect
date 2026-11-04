@@ -1,6 +1,6 @@
 # Installation Runbook for CLI Agents
 
-**Unreleased development:** The development branch retires Luna Reserve and adds exact stock DSH `0.2.2-alpha.3`. This is not part of published Alpha 11; its verified pairings and commands below are unchanged. Do not use the Alpha 11 command for alpha.3. Release integration remains pending. See [compatibility and migration evidence](docs/agent-notes/dsh-alpha3-reserve-retirement.md).
+**Alpha 12 candidate, not yet published:** `0.2.0-alpha.12` retires Luna Reserve, adds exact stock DSH `0.2.2-alpha.3` with recovery-only Task handling, and fixes the stock Auto review preset's unsupported Codex temperature parameter. The published Alpha 11 pairings and commands below remain unchanged until publication is confirmed. Do not use the Alpha 11 command for alpha.3. See the bilingual [release and migration notes](docs/release-notes/0.2.0-alpha.12.md).
 
 The unreleased alpha.3 candidate retains saved Task inspection, authenticated Stop/manual takeover and existing strictly checked safe-disable/archive exits. It refuses automatic routing/resume/delegation without deleting saved data or resetting spent requests. The prior fourteen Hosts and closed public activation gate remain unchanged.
 

@@ -1,0 +1,1651 @@
+{
+  "schemaVersion": 1,
+  "pluginVersion": "0.2.0-alpha.12",
+  "sameArtifact": true,
+  "artifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+  "rawReportSha256": "7859348be74ec8843a466a28266eb7691033ac9d6556d8c4ebf371d99ba3fef6",
+  "syntheticOnly": true,
+  "projection": "Nested receipt arrays and ephemeral process IDs omitted; complete raw report digest retained.",
+  "checkerSha256": {
+    "scripts/check-dsh-matrix.mjs": "8967a07e263ac2eedf2f84a68d7739b45e3466f4382712075de741b5eb9b4a68",
+    "scripts/check-dsh-install.mjs": "a33b73f0f37cfef50e673111cee3a41a524f0cd45cc425728160d85c30afc77d",
+    "scripts/check-installed-runtime.mjs": "c1a7c10aadb184c45f4116fbd4985eeb40cc6ec8ab4f04fdd1b22c9e6fc102a7"
+  },
+  "reports": [
+    {
+      "dshVersion": "0.1.7-rc.1",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.1.7-rc.2",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.0-rc.1",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.0-rc.2",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-alpha.1",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-alpha.2",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-alpha.3",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-alpha.4",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-alpha.5",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-rc.1",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": false,
+          "hostRoundTripCases": 0,
+          "betweenSearchUpdatesVerified": false,
+          "unsetSelectionVerified": false
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-rc.2",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 6,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": true,
+          "hostRoundTripCases": 4,
+          "betweenSearchUpdatesVerified": true,
+          "unsetSelectionVerified": true
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-rc.3",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 6,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": true,
+          "hostRoundTripCases": 4,
+          "betweenSearchUpdatesVerified": true,
+          "unsetSelectionVerified": true
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-rc.4",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 6,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": true,
+          "hostRoundTripCases": 4,
+          "betweenSearchUpdatesVerified": true,
+          "unsetSelectionVerified": true
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.1-rc.5",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 6,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": true,
+          "hostRoundTripCases": 4,
+          "betweenSearchUpdatesVerified": true,
+          "unsetSelectionVerified": true
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    },
+    {
+      "dshVersion": "0.2.2-alpha.3",
+      "nodeVersion": "v24.13.0",
+      "pluginVersion": "0.2.0-alpha.12",
+      "pluginArtifactSha256": "ad07fe2e0b2c9235a471d5d91f7bc6b37f5b0d18770bf2bc7783ca2064d4337f",
+      "defaultsUnchanged": true,
+      "capabilities": {
+        "enableProxy": false,
+        "enableSearch": false,
+        "enableReserveFallback": false,
+        "enableNativeCompaction": false,
+        "enableImageTool": false,
+        "enableImageGeneration": false,
+        "enableAutoReview": false
+      },
+      "runtime": {
+        "schemaVersion": 1,
+        "provider": "openai-codex",
+        "modelCount": 12,
+        "reasoningModelCount": 12,
+        "preparedModelCount": 12,
+        "disposalVerified": true,
+        "reserveRetirement": {
+          "syntheticOnly": true,
+          "retiredModelBlocked": true,
+          "explicitOrdinarySelectionVerified": true,
+          "legacyFlagIgnored": true,
+          "returnFilePreserved": true,
+          "quotaNegotiations": 0,
+          "toolExecutions": 0,
+          "realProviderRequests": 0
+        },
+        "nativeCompactionLifecycle": {
+          "syntheticOnly": true,
+          "freshProcesses": 10,
+          "encodings": [
+            "none",
+            "zstd"
+          ],
+          "phases": [
+            "write",
+            "resume-fork",
+            "verify-child",
+            "failure-paths",
+            "automatic"
+          ]
+        },
+        "images": {
+          "syntheticOnly": true,
+          "generated": 2,
+          "edited": 2,
+          "codeRuns": 2,
+          "dispatchEvent": "tool/ptc-dispatch",
+          "originalDownloadVerified": true,
+          "originalAuthenticationVerified": true,
+          "inheritedOriginalVerified": true,
+          "earlierForkDenied": true,
+          "unrelatedSessionDenied": true,
+          "editSourcesVerified": true,
+          "inheritedEditVerified": true,
+          "invalidEditRefused": true,
+          "selectionHandlesVerified": true,
+          "realProviderRequests": 0
+        },
+        "requestMetrics": {
+          "syntheticOnly": true,
+          "dispatches": 2,
+          "startupConfiguration": true,
+          "installedCli": true,
+          "unknownUsagePreserved": true
+        },
+        "searchRouteLifecycle": {
+          "syntheticOnly": true,
+          "dispatches": 6,
+          "reloadCycles": 2,
+          "sourceLimitVerified": true,
+          "fetchRouteUnchanged": true,
+          "restorationVerified": true,
+          "volatileHostChoiceVerified": true,
+          "hostRoundTripCases": 4,
+          "betweenSearchUpdatesVerified": true,
+          "unsetSelectionVerified": true
+        },
+        "preflightActivity": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "publicProviderCallback": true,
+          "lateHeadersFullBudget": true,
+          "finiteTotalDeadline": true,
+          "ordinaryIdlePreserved": true,
+          "callerCancellationUnchanged": true,
+          "realProviderRequests": 0
+        },
+        "retryPolicy": {
+          "syntheticOnly": true,
+          "cases": 6,
+          "preparedPolicyVerified": true,
+          "omittedDefaultsPreserved": true,
+          "disposalVerified": true,
+          "realProviderRequests": 0
+        },
+        "taskHttpLifecycle": {
+          "syntheticOnly": true,
+          "reloadCycles": 2,
+          "authenticationVerified": true,
+          "disposalVerified": true
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Codex Connect
 
-**Unreleased development:** This branch retires Luna Reserve and adds exact stock DSH `0.2.2-alpha.3` compatibility. Published Alpha 11 retains its original fourteen-Host range; do not install it for alpha.3. See [the compatibility and migration evidence](docs/agent-notes/dsh-alpha3-reserve-retirement.md).
+**Alpha 12 candidate, not yet published:** `0.2.0-alpha.12` retires Luna Reserve, adds exact stock DSH `0.2.2-alpha.3` compatibility with the recovery-only restriction below, and fixes unsupported Codex Responses temperature in the stock Auto review preset. Published Alpha 11 retains its original fourteen-Host range; do not install it for alpha.3. See the [release and migration notes](docs/release-notes/0.2.0-alpha.12.md).
 
 On exact DSH `0.2.2-alpha.3`, saved Task records are recovery-only: inspect state, stop or take over manually. Automatic routing, resume and evidence-child creation are rejected, including internal direct entry points. Existing safe-disable/archive exits retain their owner, receipt and cleanup checks. The prior fourteen Hosts keep their behavior; Task's public activation gate remains closed everywhere.
 
