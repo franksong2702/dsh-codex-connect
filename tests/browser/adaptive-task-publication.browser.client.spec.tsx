@@ -184,3 +184,14 @@ it('cancels an old session read and never lets its late response create controls
   await new Promise(resolve => setTimeout(resolve, 40))
   expect(element!.querySelectorAll('button,input')).toHaveLength(0)
 })
+it.each(['en', 'zh'])('explains alpha.3 recovery-only without offering activation in %s', async language => {
+  const current = { ...state('interrupted'), unavailable: 'TASK_HOST_RECOVERY_ONLY' }
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(current)))
+  mount(language)
+  await page.getByRole('button', { name: language === 'zh' ? '已有任务控制' : 'Existing task controls', exact: true }).click()
+  expect(element!.textContent).toContain(language === 'zh' ? '当前 Harness 版本仅支持旧任务恢复' : 'This Harness version supports recovery of old tasks only')
+  expect(element!.textContent).toContain('3 / 10')
+  expect(element!.querySelectorAll('input,select')).toHaveLength(0)
+  await expect.element(page.getByRole('button', { name: language === 'zh' ? '停止这项任务' : 'Stop this task', exact: true })).toBeEnabled()
+  await expect.element(page.getByRole('button', { name: language === 'zh' ? '切回手动' : 'Take over manually', exact: true })).toBeEnabled()
+})

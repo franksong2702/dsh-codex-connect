@@ -18,6 +18,8 @@ After the published npm artifact comparison and isolated actual-Host candidate c
 
 ## Disposition
 
+The maintainer approved retiring Luna Reserve on 2026-11-04 after the stock alpha.3 route lifecycle proved incompatible. This admits removing its exclusive product path and inert old-setting compatibility, while preserving shared quota/account services, existing files and unrelated task budget reservations. It does not itself establish alpha.3 compatibility; exact packed/installed validation and the existing support matrix remain required.
+
 | Surface | Disposition | Retained obligations |
 | --- | --- | --- |
 | Authorization, manual models, installation, compatibility, Canary, diagnostics | Maintain | Scoped defect fixes and supported-version evidence; no automatic expansion of support |
@@ -27,7 +29,7 @@ After the published npm artifact comparison and isolated actual-Host candidate c
 | Internal autonomy evaluation, container runners, grading and budget experiments | Archive research | Preserve source, unfinished changes and dated evidence outside public delivery; no new scenarios, live A/B or pilot work |
 | Retired Think/Split stacks | Historical archive | Do not rebase, reopen or restore as active roadmap work |
 | Native compaction / Remember | Freeze expansion | Preserve existing checkpoint decoding/replay, fallback and recovery; address concrete safety defects without a broad quality study |
-| Luna Reserve | Freeze expansion | Keep default-off and existing safety checks; no manufactured exhaustion or new eligibility experiment |
+| Luna Reserve | Retire per maintainer decision, 2026-11-04 | Ignore legacy opt-in; reject old model selections with explicit ordinary-model recovery; preserve old files and shared quota/account safety |
 | Speculative routing and unproven optimizations | Exclude from roadmap | No distinct speculative-routing implementation was located in the inspected main source/scripts/docs; no deletion target is asserted |
 | Published Search, images, Auto-review and Fast Mode | Existing maintenance only | No new features or silent disablement in this scope change |
 

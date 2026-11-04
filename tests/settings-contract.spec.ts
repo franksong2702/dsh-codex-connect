@@ -79,14 +79,15 @@ describe('OpenAI Codex proxy settings contract', () => {
     })).toBeUndefined()
   })
 
-  it('keeps Reserve fallback opt-in across Host and browser settings', () => {
+  it('accepts the legacy Reserve flag but ignores it in effective Host and browser settings', () => {
     expect(Config({}).enableReserveFallback.get()).toBe(false)
     expect(resolveOpenAICodexSettings({}).enableReserveFallback).toBe(false)
+    expect(resolveOpenAICodexSettings({ enableReserveFallback: true }).enableReserveFallback).toBe(false)
     expect(Config({ enableReserveFallback: true }).enableReserveFallback.get()).toBe(true)
     expect(decodeOpenAICodexSettings({
       ...DEFAULT_OPENAI_CODEX_SETTINGS,
       enableReserveFallback: true,
-    })?.enableReserveFallback).toBe(true)
+    })?.enableReserveFallback).toBe(false)
   })
 
   it('keeps top-level and subagent Fast Mode defaults separate and rejects malformed values', () => {

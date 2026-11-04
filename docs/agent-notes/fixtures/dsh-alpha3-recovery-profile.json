@@ -1,0 +1,492 @@
+{
+  "scope": "focused exact-alpha.3 recovery profile; not final fifteen-Host acceptance",
+  "baseCommit": "cef0db8911e55aa8f547694b85712f60d22353df",
+  "rawReportSha256": "513891843565e80764b3e01920f96815004276f6167a3396df4f2a918ea4ce83",
+  "redactions": [
+    "temporary process IDs omitted"
+  ],
+  "report": {
+    "schemaVersion": 1,
+    "kind": "adaptive-task-delegation-host-matrix",
+    "node": "v24.13.0",
+    "bundleDigest": "2eb26c18b0625f638d43fdd7b5e42fcf676c31e2cca4c795dddf75a21d3c88e5",
+    "syntheticOnly": true,
+    "realProviderDispatches": 0,
+    "externalNetworkAttempts": 0,
+    "reports": [
+      {
+        "version": "0.2.2-alpha.3",
+        "profile": "recovery-only",
+        "bundleDigest": "2eb26c18b0625f638d43fdd7b5e42fcf676c31e2cca4c795dddf75a21d3c88e5",
+        "cases": [
+          "alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters",
+          "alpha3 cold ledger cleanup requires actual absence of live children and keeps delivery unconfirmed",
+          "alpha3 never claims cleanup of a still-live owned child",
+          "alpha3 refuses direct evidence-child creation before removed presentation APIs",
+          "alpha3 v1 blocks old automatic dispatch before the model",
+          "alpha3 v1 keeps signed Host HTTP ownership and safety exits",
+          "alpha3 v1 manual takeover permits only an ordinary explicit model",
+          "alpha3 v1 preserves ordinary work in another live root",
+          "alpha3 v1 preserves owner and revision checks on safety exits",
+          "alpha3 v1 reads old state without requests or new authority",
+          "alpha3 v1 refuses missing or corrupt retained state without dispatch",
+          "alpha3 v1 rejects stale and direct activation without mutation",
+          "alpha3 v1 serializes concurrent exits and survives runtime reload",
+          "alpha3 v1 stops and preserves spent counters",
+          "alpha3 v2 blocks old automatic dispatch before the model",
+          "alpha3 v2 keeps signed Host HTTP ownership and safety exits",
+          "alpha3 v2 manual takeover permits only an ordinary explicit model",
+          "alpha3 v2 preserves ordinary work in another live root",
+          "alpha3 v2 preserves owner and revision checks on safety exits",
+          "alpha3 v2 reads old state without requests or new authority",
+          "alpha3 v2 refuses missing or corrupt retained state without dispatch",
+          "alpha3 v2 rejects stale and direct activation without mutation",
+          "alpha3 v2 serializes concurrent exits and survives runtime reload",
+          "alpha3 v2 stops and preserves spent counters",
+          "uses the exact isolated host without a neighboring runtime"
+        ],
+        "tests": 25,
+        "node": "v24.13.0",
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "runtimePackages": {
+          "@deepseek-ai/dsh-agent": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-agent-loop": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-llm": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-llm-pi-ai": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-session": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-session-projection": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-system-prompt": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-tools": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-settings": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-token-meter": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-compaction": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-compaction-basic": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-session-persistence": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-atomic-write": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-home-paths": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-client-connection": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-host-webserver": "0.2.2-alpha.3",
+          "@deepseek-ai/dsh-api-session-controller": "0.2.2-alpha.3",
+          "@earendil-works/pi-ai": "0.85.1",
+          "@deepseek-ai/dsh-tool-executor-native": "0.2.2-alpha.3"
+        },
+        "crashes": {
+          "profile": "alpha3-recovery-only",
+          "passed": true,
+          "syntheticOnly": true,
+          "cases": 12,
+          "freshProcesses": 24,
+          "node": "v24.13.0",
+          "bundleSha256": "8e4c0dcf2b74275b3cf94c723b801063d991084dd7655916c56ea937c1eead3d",
+          "reports": [
+            {
+              "version": 1,
+              "compression": "none",
+              "cut": "seed",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "seed",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "seed",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 1,
+              "compression": "none",
+              "cut": "stop",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "stop",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "stop",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 1,
+              "compression": "none",
+              "cut": "manual",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "manual",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "none",
+                  "cut": "manual",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 1,
+              "compression": "zstd",
+              "cut": "seed",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "seed",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "seed",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 1,
+              "compression": "zstd",
+              "cut": "stop",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "stop",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "stop",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 1,
+              "compression": "zstd",
+              "cut": "manual",
+              "phases": [
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "manual",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 1,
+                  "compression": "zstd",
+                  "cut": "manual",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": false,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "none",
+              "cut": "seed",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "seed",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "seed",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "none",
+              "cut": "stop",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "stop",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "stop",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "none",
+              "cut": "manual",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "manual",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "none",
+                  "cut": "manual",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "zstd",
+              "cut": "seed",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "seed",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "seed",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "zstd",
+              "cut": "stop",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "stop",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "stop",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            },
+            {
+              "version": 2,
+              "compression": "zstd",
+              "cut": "manual",
+              "phases": [
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "manual",
+                  "phase": "write",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true,
+                  "abruptExit": 85
+                },
+                {
+                  "version": 2,
+                  "compression": "zstd",
+                  "cut": "manual",
+                  "phase": "read",
+                  "calls": 0,
+                  "children": 0,
+                  "externalNetworkAttempts": 0,
+                  "passed": true
+                }
+              ],
+              "passed": true,
+              "recoveryFetches": 0,
+              "recoveryChildCreates": 0,
+              "oldEpochRejected": true,
+              "cleanup": "verified"
+            }
+          ],
+          "externalNetworkAttempts": 0,
+          "realProviderRequests": 0
+        },
+        "syntheticOnly": true,
+        "realProviderDispatches": 0,
+        "externalNetworkAttempts": 0
+      }
+    ]
+  }
+}

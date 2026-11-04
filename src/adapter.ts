@@ -6,7 +6,7 @@ import type { Context as PiContext, Provider, SimpleStreamOptions } from '@earen
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { codexRequestOptions } from './codex-request-options.ts'
 import { codexProviderContext } from './pi-context.ts'
-import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
+import { LlmError, resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, GenerateOptions, PreparedAdapterCall, ResolvedRetryPolicy, RetryPolicyConfig, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -24,8 +24,6 @@ import { isValidOpenAICodexContextBudget, openAICodexContextLimit } from './mode
 import { OPENAI_CODEX_TRANSPORT, withOpenAICodexModels } from './model-catalog.ts'
 import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import type { OpenAICodexBackendRequests } from './backend-request.ts'
-import type { ReserveRequestPermits } from './reserve-state.ts'
-import { OPENAI_CODEX_RESERVE_MODEL, OPENAI_CODEX_RESERVE_NORMAL_MODEL } from './reserve-usage.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
 import { imageSelectionHandleText } from './image-input-contract.ts'
@@ -68,7 +66,7 @@ export function withOpenAICodexFastMode(
       const sessionId = options?.sessionId
       const enabled = provider.id === OPENAI_CODEX_PROVIDER
         && model.provider === OPENAI_CODEX_PROVIDER
-        && model.id !== OPENAI_CODEX_RESERVE_MODEL
+        && model.id !== 'gpt-reserve'
         && fastMode !== undefined
         && fastMode.isEnabled(sessionId)
       const scoped = fastMode instanceof ConversationSpeedRegistry
@@ -77,7 +75,7 @@ export function withOpenAICodexFastMode(
       const requestedMode = scoped && captured !== undefined ? fastMode.confirmCapturedSpeed(sessionId, captured, {
         workspace: fastMode.workspaceFor(sessionId), accountKey: currentSpeedRequestAccount(), provider: model.provider, model: model.id,
       }) : enabled ? 'fast' : 'standard'
-      const mode = model.id === OPENAI_CODEX_RESERVE_MODEL ? 'standard' : requestedMode
+      const mode = requestedMode
       if (mode === 'standard' && (!scoped || options?.onPayload === undefined)) return streamSimple.call(provider, model, context, options)
       const previousOnPayload = options?.onPayload
       const nextOptions: SimpleStreamOptions = {
@@ -93,19 +91,10 @@ export function withOpenAICodexFastMode(
   }
 }
 
-/** Add an internal Luna route whose dispatch requires one fresh agent-request permit. */
-export function withOpenAICodexReserve(provider: Provider, permits: ReserveRequestPermits): Provider {
-  const models = provider.getModels().filter(model => model.id !== OPENAI_CODEX_RESERVE_MODEL)
-  const luna = models.find(model => model.id === OPENAI_CODEX_RESERVE_NORMAL_MODEL)
-  if (luna === undefined) throw new Error('Codex Reserve requires the Luna model catalog')
-  const reserve = { ...luna, id: OPENAI_CODEX_RESERVE_MODEL, name: 'Luna Reserve' }
-  return {
-    ...provider,
-    getModels: () => [...models, reserve],
-    streamSimple(model, context, options) {
-      if (model.id === OPENAI_CODEX_RESERVE_MODEL) permits.consume(options?.sessionId, options?.apiKey)
-      return provider.streamSimple(model, context, options)
-    },
+/** Reject persisted legacy selections before resolving credentials or provider state. */
+function rejectRetiredReserve(provider: string, model: string): void {
+  if (provider === OPENAI_CODEX_PROVIDER && model === 'gpt-reserve') {
+    throw new LlmError('Luna Reserve has been removed. Select an ordinary model explicitly to continue this conversation. No model request was sent.', 'MODEL_RETIRED')
   }
 }
 
@@ -252,7 +241,7 @@ export function createOpenAICodexAdapter(
   proxyManager?: OpenAICodexProxyManager,
   resolveProxyUrl?: () => string | undefined,
   contextWindowOverrides?: () => Readonly<Record<string, number>> | undefined,
-  reservePermits?: ReserveRequestPermits,
+  _removedReserveSlot?: unknown, // Inert ABI slot; preserves following lifecycle/governor arguments.
   nativeCompactionEnabled?: () => boolean,
   backendRequests?: OpenAICodexBackendRequests,
   taskDispatch?: OpenAICodexTaskDispatch,
@@ -264,8 +253,7 @@ export function createOpenAICodexAdapter(
   if (retryPolicyConfig === null) throw new TypeError('dsh-codex-connect retryPolicy must be an object or omitted')
   const retryPolicy = resolveRetryPolicy(retryPolicyConfig, 'dsh-codex-connect retryPolicy')
   const preflight = preflightActivity === undefined ? undefined : new OpenAICodexPreflightActivity(preflightActivity)
-  const baseline = withOpenAICodexModels(openaiCodexProvider(), 'bundled-static')
-  const provider = reservePermits === undefined ? baseline : withOpenAICodexReserve(baseline, reservePermits)
+  const provider = withOpenAICodexModels(openaiCodexProvider(), 'bundled-static')
   let profiles: Map<string, ResolvedPiAiProviderProfile> | undefined
   let previousOverrides: Readonly<Record<string, number>> | undefined
   let previousReasoningEffort: OpenAICodexReasoningEffort | undefined
@@ -286,6 +274,7 @@ export function createOpenAICodexAdapter(
       stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
       options: GenerateOptions,
     ): AsyncIterable<StreamChunk> {
+      rejectRetiredReserve(options.provider, options.model)
       const dispatch = (request: GenerateOptions) => {
         const projected = imageEditingEnabled?.() === true ? withOpenAICodexImageSelectionHandles(request) : request
         const observed = (nextOptions: GenerateOptions) => streamWithCodexRequestDiagnostics(next => {
@@ -304,7 +293,13 @@ export function createOpenAICodexAdapter(
         : execute(options)
     }
 
+    override async resolveModel(providerId: string, model: string, signal?: AbortSignal) {
+      rejectRetiredReserve(providerId, model)
+      return super.resolveModel(providerId, model, signal)
+    }
+
     override async prepareCall(providerId: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
+      rejectRetiredReserve(providerId, model)
       const prepared = await super.prepareCall(providerId, model, signal)
       return {
         model: prepared.model,
@@ -322,7 +317,7 @@ export function createOpenAICodexAdapter(
       // capture/refresh our account. Project our current provider metadata here.
       const provider = currentProfiles().get(providerId)?.piProvider
       if (provider === undefined) return super.listModels(providerId)
-      const catalog = provider.getModels().filter(model => model.id !== OPENAI_CODEX_RESERVE_MODEL)
+      const catalog = provider.getModels().filter(model => model.id !== 'gpt-reserve')
         .map(model => ({ provider: providerId, id: model.id, name: model.name, inputModalities: [...model.input] }))
       const configured = visibleModelIds?.()
       if (configured === undefined) return catalog

@@ -45,7 +45,12 @@ function selectVolatileRoute(web: WebRuntime, provider: string): () => void {
   // A traced service's ctx getter belongs to the caller. Its own data slot
   // retains the actual owner, to which Loader scopes volatile-update events.
   const owner = Object.getOwnPropertyDescriptor(web, 'ctx')?.value as Context | undefined
-  if (owner === undefined || typeof owner.on !== 'function' || owner.fiber.config !== config) {
+  // Newer Cordis retains raw input in fiber.config and exposes the running
+  // Volatile references through effectiveConfig. Never accept raw input as a
+  // substitute when that public running-config surface exists.
+  const ownerConfig: unknown = owner === undefined ? undefined
+    : 'effectiveConfig' in owner.fiber ? Reflect.get(owner.fiber, 'effectiveConfig') : owner.fiber.config
+  if (owner === undefined || typeof owner.on !== 'function' || ownerConfig !== config) {
     throw new Error('The installed DeepSeek Harness does not expose the supported search route owner')
   }
   let selectedByPlugin = true

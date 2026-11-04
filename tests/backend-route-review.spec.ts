@@ -51,7 +51,7 @@ describe('managed route queue contracts', () => {
   })
 
   it('bounds a shared quota read while it waits for a backend slot', async () => {
-    const quota = new OpenAICodexQuotaState({ credentials, proxyManager: proxy as never, enabled: () => false, resolveProxyUrl: () => undefined, backendRequests: requests })
+    const quota = new OpenAICodexQuotaState({ credentials, proxyManager: proxy as never, resolveProxyUrl: () => undefined, backendRequests: requests })
     const pending = quota.read().catch(error => error)
     await flush()
     await vi.advanceTimersByTimeAsync(15_000)

@@ -108,7 +108,6 @@ const CONFIG_FIELDS = [
   'reasoningEffort',
   'contextWindowOverrides',
   'enableProxy',
-  'enableReserveFallback',
   'enableNewSessionFastMode',
   'enableNewSubagentFastMode',
   'enableNativeCompaction',
@@ -846,17 +845,8 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             </select>
             <span style={bodyStyle}>{t('reasoningEffortHelp')}</span>
           </label>
-          <label style={toggleRowStyle}>
-            <input
-              type="checkbox"
-              checked={draft.enableReserveFallback}
-              onChange={event => { update('enableReserveFallback', event.currentTarget.checked) }}
-            />
-            <span style={toggleCopyStyle}>
-              <span style={labelStyle}>{t('enableReserveFallback')}</span>
-              <span style={bodyStyle}>{t('enableReserveFallbackHelp')}</span>
-            </span>
-          </label>
+
+          <p style={bodyStyle}>{t('retiredReserveNotice')}</p>
           {(['newSessionSpeedMode', 'newSubagentSpeedMode'] as const).map(field => (
             <label key={field} style={formFieldStyle}>
               <span style={labelStyle}>{t(field)}</span>
