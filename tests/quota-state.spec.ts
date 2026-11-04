@@ -238,6 +238,62 @@ describe('OpenAICodexQuotaState acceptance', () => {
     await h.state.dispose()
   })
 
+  it.each([false, true])('revokes old authority as foreground refresh starts (failure: %s)', async fail => {
+    const h = setup()
+    const refresh = deferred<Record<string, unknown>>()
+    try {
+      const previous = await h.state.read()
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(readResponse).toHaveBeenCalledTimes(1)
+      readResponse.mockReturnValueOnce(refresh.promise)
+      const pending = h.state.read()
+      // Observe the rejection before resolving the shared request.
+      const outcome = pending.then(value => ({ value }), error => ({ error }))
+      await flush()
+      expect(readResponse).toHaveBeenCalledTimes(2)
+      expect(previous.authoritySignal.aborted).toBe(true)
+      if (fail) {
+        refresh.reject(new Error('fixture refresh failure'))
+        expect(await outcome).toMatchObject({ error: expect.any(Error) })
+      } else {
+        refresh.resolve(response())
+        const result = await pending
+        expect(result.authoritySignal.aborted).toBe(false)
+        expect((await h.state.read()).authoritySignal).toBe(result.authoritySignal)
+      }
+    } finally {
+      refresh.resolve(response())
+      await h.state.dispose()
+    }
+  })
+
+  it('revokes only the foreground-refreshed identity and evicted observations', async () => {
+    const h = setup()
+    try {
+      const first = await h.state.read()
+      h.setAccount('second')
+      const second = await h.state.read()
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(readResponse).toHaveBeenCalledTimes(2)
+      h.setAccount('acct')
+      const refreshed = await h.state.read()
+      expect(first.authoritySignal.aborted).toBe(true)
+      expect(second.authoritySignal.aborted).toBe(false)
+      for (let index = 0; index < 14; index++) {
+        h.setAccount(`eviction-${index}`)
+        await h.state.read()
+      }
+      expect(second.authoritySignal.aborted).toBe(false)
+      h.setAccount('eviction-14')
+      await h.state.read()
+      expect(refreshed.authoritySignal.aborted).toBe(true)
+      expect(second.authoritySignal.aborted).toBe(false)
+      h.setAccount('eviction-15')
+      await h.state.read()
+      expect(second.authoritySignal.aborted).toBe(true)
+    } finally { await h.state.dispose() }
+  })
+
   it('does not issue a late GET after disposal during pending auth', async () => {
     const h = setup()
     const auth = deferred<{ access: string; accountId: string }>()
