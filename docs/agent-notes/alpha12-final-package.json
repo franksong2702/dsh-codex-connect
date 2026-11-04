@@ -391,5 +391,8 @@
     "0.2.2-alpha.3"
   ],
   "syntheticOnly": true,
-  "realAccountModelGUIAcceptance": false
+  "realAccountModelGUIAcceptance": false,
+  "immutableReleaseSource": "58ca6542dab3791c1ae83abe486cd5559ef9625c",
+  "publicationRun": 41783364661,
+  "note": "Files describe the immutable release source/archive; later repository recommendation edits are not archive replacements."
 }
