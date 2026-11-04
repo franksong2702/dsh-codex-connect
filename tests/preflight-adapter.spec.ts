@@ -27,7 +27,7 @@ function adapter(origin: string | undefined = config.trustedProxyOrigin, enabled
     runStream: <T>(_origin: string | undefined, operation: () => T): T => operation(),
   } as OpenAICodexProxyManager
   return createOpenAICodexAdapter(credentials, () => attachments, undefined, undefined,
-    proxy, () => origin, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? config : undefined)
+    proxy, () => origin, undefined, undefined, undefined, undefined, undefined, enabled ? config : undefined)
 }
 
 function responseSource(responseHeaders: HeadersInit = headers, cooperative = true, headersReady?: Promise<void>,
@@ -157,7 +157,7 @@ it.each([
   vi.stubGlobal('fetch', source.fetch)
   // Undefined is an intentional direct route, not adapter()'s default test proxy.
   const host = origin === undefined ? createOpenAICodexAdapter(syntheticCredentials(), () => undefined, undefined,
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? config : undefined) : adapter(origin, enabled)
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? config : undefined) : adapter(origin, enabled)
   const pending = collect(host.stream(request))
   await source.started
   await vi.advanceTimersByTimeAsync(0)
@@ -377,7 +377,7 @@ function installNative(source: ReturnType<typeof responseSource>) {
 }
 function nativeAdapter(preflight = nativeConfig, enabled = true) {
   return createOpenAICodexAdapter(syntheticCredentials(), () => undefined, undefined, undefined,
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? preflight : undefined)
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, enabled ? preflight : undefined)
 }
 
 it('admits explicitly authorized native late headers, then real SDK output beyond five minutes without a Codex proxy manager', async () => {

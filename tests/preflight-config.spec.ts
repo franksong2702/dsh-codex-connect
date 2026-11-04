@@ -38,7 +38,7 @@ describe('preflight startup configuration', () => {
     const captureActiveAccount = vi.fn()
     const credentials = { captureActiveAccount } as unknown as OpenAICodexCredentialStore
     const host = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined, undefined,
-      undefined, undefined, undefined, undefined, undefined, undefined, undefined, config)
+      undefined, undefined, undefined, undefined, undefined, undefined, config)
     expect(await host.listModels('openai-codex')).not.toHaveLength(0)
     expect(captureActiveAccount).not.toHaveBeenCalled()
   })

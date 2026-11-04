@@ -33,8 +33,7 @@ function fixture(initial?: OpenAICodexReasoningEffort) {
     ].map(event => `data: ${JSON.stringify(event)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } })
   })
   vi.stubGlobal('fetch', fetch)
-  const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, () => ['gpt-6-astra'], undefined, undefined, undefined,
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, () => effort)
+  const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, () => ['gpt-6-astra'], undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, () => effort)
   return { adapter, wires, read, fetch, set: (next?: OpenAICodexReasoningEffort) => { effort = next } }
 }
 const options: GenerateOptions = { provider: 'openai-codex', model: 'gpt-6.1-sol', messages: [], maxTokens: 1024 }

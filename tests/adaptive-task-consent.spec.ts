@@ -108,7 +108,7 @@ async function setup(selectedChild = child, catalogModels = [main, selectedChild
   const governor = new OpenAICodexBackendRequests(undefined, undefined, 8, () => runtime.reserveAuxiliary(), undefined, reserveAdaptiveTaskAttempt)
   ctx.effect(() => () => governor.dispose())
   ctx.llm.registerAdapter(['openai-codex'], createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined,
-    undefined, undefined, undefined, undefined, () => false, governor, runtime))
+    undefined, undefined, undefined, () => false, governor, runtime))
   const { agent } = await ctx.agents.create({ sessionId: SessionId('consent-root'), meta: { cwd: root },
     agentOptions: { provider: 'openai-codex', model: main, reasoningEffort: ReasoningEffortId('medium') } })
   await writeFile(join(root, 'notes.txt'), 'approved first\nsecond')

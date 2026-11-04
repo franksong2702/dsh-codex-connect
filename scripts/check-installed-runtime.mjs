@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkInstalledReserve } from './check-installed-reserve.mjs'
+import { checkInstalledRetiredReserve } from './check-installed-retired-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
 import { checkInstalledImages } from './check-installed-images.mjs'
 import { createInstalledHostContext } from './installed-host-context.mjs'
@@ -102,7 +102,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const taskHttpLifecycle = await checkInstalledTaskHttp(importHost, OpenAICodex)
     const preflightActivity = await checkInstalledPreflight(importHost, OpenAICodex)
     const retryPolicy = await checkInstalledRetryPolicy(importHost, OpenAICodex)
-    const reserveTransitionsVerified = await checkInstalledReserve(importHost, OpenAICodex)
+    const reserveRetirement = await checkInstalledRetiredReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
     const toolsModule = await importHost('@deepseek-ai/dsh-tools')
@@ -116,7 +116,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       ...projection,
       preparedModelCount: models.length,
       disposalVerified: true,
-      reserveTransitionsVerified,
+      reserveRetirement,
       nativeCompactionLifecycle,
       images,
       requestMetrics,

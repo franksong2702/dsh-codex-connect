@@ -270,7 +270,7 @@ The value is a full `http://` or `https://` origin including its port, not a bar
 
 ## Optional configuration
 
-Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableReserveFallback`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all five default to `false`. Luna Reserve is a published experiment in Alpha 4.35: enable it only when explicitly requested, never as an automatic installation step. Real-account Reserve entry and recovery remain unverified; authorization must come from the identity-matched backend response, not a generic `429` or quota percentage. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers the provider and selects it while the capability remains enabled; disabling restores the previous provider before unregistering Codex Search. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
+Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all four default to `false`. Luna Reserve has been removed: legacy `enableReserveFallback` values are ignored and old `gpt-reserve` conversations require an explicit ordinary-model selection. Old return files are preserved untouched. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers the provider and selects it while the capability remains enabled; disabling restores the previous provider before unregistering Codex Search. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
 
 Apply only requested choices and preserve unrelated keys:
 
@@ -278,7 +278,6 @@ Apply only requested choices and preserve unrelated keys:
 - id: llm-openai-codex
   config:
     enableSearch: true
-    enableReserveFallback: false
     enableImageTool: false
     enableImageGeneration: false
     enableAutoReview: false

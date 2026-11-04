@@ -603,7 +603,7 @@ interface OpenAICodexSettingsConfig {
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined;
   enableSearch: boolean;
-  /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
+  /** @deprecated Inert compatibility field for old Host/browser snapshots; always resolves false. */
   enableReserveFallback: boolean;
   /** Default Fast Mode for newly started top-level sessions; existing sessions are unchanged. */
   enableNewSessionFastMode: boolean;
@@ -917,7 +917,7 @@ export interface Config {
   contextWindowOverrides?: Record<string, number | null> | null | undefined;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
-  /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
+  /** @deprecated Accepted only for old configuration files; Luna Reserve has been removed. */
   enableReserveFallback?: boolean;
   /** Enable Fast Mode for newly started top-level sessions only. */
   enableNewSessionFastMode?: boolean;

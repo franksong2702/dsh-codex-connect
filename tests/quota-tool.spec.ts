@@ -10,7 +10,7 @@ afterEach(async () => { await context?.fiber.dispose(); context = undefined; vi.
 
 function snapshot(): OpenAICodexQuotaSnapshot {
   return {
-    fetchedAt: Date.now(), authoritySignal: new AbortController().signal, decision: { kind: 'unavailable' },
+    fetchedAt: Date.now(), authoritySignal: new AbortController().signal,
     usage: {
       rateLimits: [
         { id: 'codex', name: 'private upstream label', windows: [{ remainingPercent: 27, windowSeconds: 18_000, resetAt: Math.floor(Date.now() / 1000) + 100 }] },

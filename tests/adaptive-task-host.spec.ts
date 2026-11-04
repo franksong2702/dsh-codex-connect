@@ -75,7 +75,7 @@ async function setup(options: { persistence?: 'none' | 'zstd'; maxConcurrent?: n
   const governor = new OpenAICodexBackendRequests(undefined, undefined, options.maxConcurrent ?? 8, async () => runtime.reserveAuxiliary(), undefined, reserveAdaptiveTaskAttempt)
   const dispatch = { wrapProvider: withAdaptiveTaskProvider, stream: (...args: Parameters<AdaptiveTaskRuntime['stream']>) => runtime.stream(...args) }
   const adapter = createOpenAICodexAdapter(credentials, () => undefined, undefined, undefined,
-    undefined, undefined, undefined, undefined, () => options.nativeCompaction === true, governor, dispatch)
+    undefined, undefined, undefined, () => options.nativeCompaction === true, governor, dispatch)
   ctx.llm.registerAdapter(['openai-codex'], adapter)
   catalog = await Promise.all(ADAPTIVE_TASK_MODELS.map(model => adapter.resolveModel('openai-codex', model)))
   let feature = await ctx.plugin(function TaskHost(host: Context) {

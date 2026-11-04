@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validRetiredReserveReport } from './retired-reserve-report.mjs'
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
@@ -325,7 +326,7 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
       || runtimeReport?.['disposalVerified'] !== true) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
-    if (runtimeReport?.['reserveTransitionsVerified'] !== true) {
+    if (!validRetiredReserveReport(runtimeReport?.['reserveRetirement'])) {
       throw new CompatibilityCheckError('installed runtime contract returned an invalid report')
     }
     if (runtimeReport?.nativeCompactionLifecycle?.syntheticOnly !== true
