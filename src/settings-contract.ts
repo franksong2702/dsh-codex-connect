@@ -115,7 +115,7 @@ export interface OpenAICodexSettingsConfig {
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined
   enableSearch: boolean
-  /** Follow explicit server-authorized Luna Reserve transitions for agent requests. */
+  /** @deprecated Inert compatibility field for old Host/browser snapshots; always resolves false. */
   enableReserveFallback: boolean
   /** Default Fast Mode for newly started top-level sessions; existing sessions are unchanged. */
   enableNewSessionFastMode: boolean
@@ -191,7 +191,7 @@ export function resolveOpenAICodexSettings(
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
   }
   parseOpenAICodexImageModelHint(resolved.imageModelHint)
-  return { ...resolved, reasoningEffort: parseOpenAICodexReasoningEffort(resolved.reasoningEffort) ?? undefined, newSessionSpeedMode: parseOpenAICodexSpeedDefault(resolved.newSessionSpeedMode) ?? undefined,
+  return { ...resolved, enableReserveFallback: false, reasoningEffort: parseOpenAICodexReasoningEffort(resolved.reasoningEffort) ?? undefined, newSessionSpeedMode: parseOpenAICodexSpeedDefault(resolved.newSessionSpeedMode) ?? undefined,
     newSubagentSpeedMode: parseOpenAICodexSpeedDefault(resolved.newSubagentSpeedMode) ?? undefined, contextWindowOverrides: resolveOpenAICodexContextWindowOverrides(resolved.contextWindowOverrides) }
 }
 
@@ -265,7 +265,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     proxyUrl: proxyUrl === undefined ? DEFAULT_OPENAI_CODEX_PROXY_URL : normalizeOpenAICodexProxyUrl(proxyUrl)!,
     contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
     enableSearch,
-    enableReserveFallback: enableReserveFallback ?? false,
+    enableReserveFallback: false,
     enableNewSessionFastMode: enableNewSessionFastMode ?? false,
     enableNewSubagentFastMode: enableNewSubagentFastMode ?? false,
     enableNativeCompaction: enableNativeCompaction ?? false,

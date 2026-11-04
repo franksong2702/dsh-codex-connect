@@ -1,5 +1,9 @@
 # Codex Connect
 
+**尚未发布的开发变更：** 此分支退役 Luna Reserve，并适配精确的 stock DSH `0.2.2-alpha.3`。已发布的 Alpha 11 仍仅支持原有十四个 Host 版本，请勿用它安装到 alpha.3。参见[兼容性与迁移证据](agent-notes/dsh-alpha3-reserve-retirement.md)。
+
+在精确的 DSH `0.2.2-alpha.3` 上，旧 Task 仅保留状态查看、停止和转手动。自动路由、续跑和证据子任务创建均被拒绝，包括内部直接入口。原有停用委派／归档安全退出仍保留 owner、回执和清理校验。原十四个 Host 的行为不变，所有版本的 Task 公共激活入口继续关闭。
+
 当前开发遵循[核心维护范围](maintenance-scope.md)：保留接入、兼容、诊断与恢复，冻结 Task 自动编排及未证明收益的优化。此决定不会删除已发布选项，也不会远程停用已有安装。
 
 [![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
@@ -97,7 +101,7 @@ node /absolute/profile/node_modules/dsh-codex-connect/lib/bin.js doctor --json \
 
 **较早的 Alpha 4.40/4.41 组合：**任务级模型安排默认关闭。用户明确授予任务权限后，由 GPT-5.6 Sol／Medium 起步；当前模型可以在授权范围内继续、调档或交接主任务。请求共用同一任务账本与预算；停止、手动接管和重启恢复都保留授权边界。Phase 2 的只读委派需要单独同意，不会给委派工作者写入权限。原版 DSH `0.1.7-rc.1` 配合 Alpha 4.43 时，这些 Task 控件仍暂停；不能从旧组合推断它们可用。参见 [Phase 1](experiments/adaptive-task-phase1.md) 与 [Phase 2 同意边界](experiments/adaptive-task-phase2-consent.md)。
 
-Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权、GPT-5.6 Sol／Medium 起步与 Luna Reserve 不变。模型出现在目录中不代表账户具有调用资格。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
+Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-luna`，已有原生定义时保留其元数据。两者提供 Low 到 Max（含 Xhigh），Default 不指定推理档位；尚未实现 Codex Sol 的 Ultra 编排模式。新任务可明确授权使用它们，但已有授权及 GPT-5.6 Sol／Medium 起步不变；Luna Reserve 后续已移除。模型出现在目录中不代表账户具有调用资格。参见[兼容范围与验证](experiments/gpt6-sol-luna-compatibility.md)。
 
 以下选项在新安装时全部关闭。请在 **设置 → 插件 → 插件配置 → Codex Connect** 或 **设置 → 模型 → Openai-Codex → 更多设置** 中编辑，再点击 **保存更改**。发生冲突或保存失败时会保留草稿。
 
@@ -105,14 +109,11 @@ Alpha 4.40 还会在旧提供方目录缺失时补充 `gpt-6-sol` 和 `gpt-6-lun
 |---|---|---|
 | 代理 | `enableProxy` | 不带凭据的 HTTP(S)，只作用于本插件流量，包括压缩的 OAuth 和额度响应；无关的 Fetch 请求仍使用宿主原来的传输方式。代理请求失败不会静默改走直连。 |
 | Codex 搜索 | `enableSearch` | 将整个 profile 的搜索路由切换为 Codex；关闭后恢复之前的路由。 |
-| Luna Reserve | `enableReserveFallback` | 只在服务端为当前已固定账户明确授权时使用隐藏的 Reserve 路由；不修改全局默认模型，也不因普通 `429` 重试。 |
 | 图片查看 | `enableImageTool` | 为视觉模型添加 `view_image`，读取本地文件和经过校验的公网 HTTP(S) 图片。 |
 | GPT Image 图片生成与编辑 | `enableImageGeneration` | 根据提示词生图，或编辑明确选定的会话图片并使用有顺序的参考图；可用性、尺寸和额度仍由账户及服务端控制。同时作为跨路由图片句柄桥接的开关：在非 Codex 路由上把 Codex Connect 图片选择句柄持久化到图片工具结果中，使图片编辑在这些路由上同样可用；`openai-codex` 路由会跳过，因为其适配器已在每次请求时注入相同句柄。可选 `imageHandleBridgeTools` 可将桥接限定到指定工具。 |
 | 自动审查 | `enableAutoReview` | 将有界的审批上下文、工具参数、工作目录和待执行动作发送到 `chatgpt.com`，首次启用需要确认。失败时交还人工审批。 |
 
-**已发布的实验功能：** Alpha 4.35 包含 Luna Reserve 回退，仍默认关闭。真实账户进入 Reserve 及恢复普通模型的过程仍未验证；Alpha 4.34 不包含该功能。
-
-启用 `enableReserveFallback: true` 后，账户 UI 和 agent 路由共用一份绑定身份的额度状态，最近有使用需求时按服务端返回的额度窗口后台刷新；有效状态可跨 agent step 复用。普通额度读取也共用缓存，即使 Reserve 已关闭。只有身份完整、非 FedRAMP 且服务端授权时，插件才进入 `gpt-reserve`；普通额度确认恢复后，切回该会话先前的模型和推理强度。Reserve 有自己的额度，不出现在模型选择器中，也不是无限额度。资格由服务端决定，重置时间本身不授权切换。当前版本只支持已知的 `gpt-5.6-luna` 元数据。刷新、身份和验证限制见 [Luna Reserve 回退](reference.zh.md#luna-reserve-回退)。
+**Luna Reserve 已移除。** 旧 `enableReserveFallback` 开关会被忽略，不再协商或自动切换模型。旧 `gpt-reserve` 会话须由用户明确选择普通模型；如宿主不支持在原会话切换，请保留原会话并用所选普通模型新建对话。旧 return 文件原样保留，不读取、迁移或删除。账户额度 UI 和只读额度工具仍使用普通 60 秒缓存及失败冷却，不后台轮询。参见[迁移说明](reference.zh.md#luna-reserve-回退)。
 
 使用你当前 GPT 订阅计划提供的图片生成能力。成功生成的图片会显示在对话回复下方，无需展开处理过程；原工具卡片仍保留在处理过程里。生成原文件与附件预览分开保存；关闭能力或卸载插件不会删除这些文件。存储和访问规则见[配置与恢复](reference.zh.md#搜索与图片工具)。
 

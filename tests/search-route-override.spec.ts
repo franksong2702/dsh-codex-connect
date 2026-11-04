@@ -108,6 +108,30 @@ describe('supported DSH search route override', () => {
     expect(f.listeners.size).toBe(0)
   })
 
+  it('binds new Cordis to the effective running config instead of retained raw input', () => {
+    const f = volatileHost()
+    const owner = Object.getOwnPropertyDescriptor(f.web, 'ctx')?.value
+    owner.fiber = { config: { searchProvider: 'raw-input' }, effectiveConfig: f.config }
+    const restore = selectOpenAICodexSearchRoute(f.web, 'openai-codex')
+    expect(f.selected()).toBe('openai-codex')
+    f.change('fixture-newer')
+    expect(f.selected()).toBe('fixture-newer')
+    restore()
+    expect(f.target.config).toBe(f.config)
+    expect(f.listeners.size).toBe(0)
+  })
+
+  it.each([undefined, {}])('rejects mismatched effective config even when raw config matches (%s)', effectiveConfig => {
+    const f = volatileHost()
+    const owner = Object.getOwnPropertyDescriptor(f.web, 'ctx')?.value
+    owner.fiber = { config: f.config, effectiveConfig }
+    expect(() => selectOpenAICodexSearchRoute(f.web, 'openai-codex'))
+      .toThrow('does not expose the supported search route owner')
+    expect(f.selected()).toBe('fixture-original')
+    expect(f.target.config).toBe(f.config)
+    expect(f.listeners.size).toBe(0)
+  })
+
   it('rejects frozen or malformed config before changing the runtime', () => {
     const f = volatileHost()
     Object.freeze(f.config)

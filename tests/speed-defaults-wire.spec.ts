@@ -13,7 +13,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { afterEach, expect, it, vi } from 'vitest'
 import * as CodexConnect from '../src/index.ts'
-import { reserveToken } from './reserve-fixture.ts'
+import { codexTestToken } from './codex-token-fixture.ts'
 let ctx: Context | undefined
 let home: string | undefined
 afterEach(async () => {
@@ -27,7 +27,7 @@ async function fixture(config: CodexConnect.Config) {
   vi.stubEnv('DSH_HOME', home)
   const credentials = new CodexConnect.OpenAICodexCredentialStore()
   await credentials.modify(CodexConnect.OPENAI_CODEX_PROVIDER, async () => ({ type: 'oauth', accountId: 'startup-fixture',
-    access: reserveToken('startup-fixture'), refresh: 'synthetic-only', expires: Date.now() + 3600000 }))
+    access: codexTestToken('startup-fixture'), refresh: 'synthetic-only', expires: Date.now() + 3600000 }))
   const wires: Record<string, unknown>[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init: RequestInit) => {
     expect(String(url)).toBe('https://chatgpt.com/backend-api/codex/responses')

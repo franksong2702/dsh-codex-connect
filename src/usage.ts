@@ -251,14 +251,13 @@ export async function readOpenAICodexRateLimits(
     }
     throw error
   })
-  return parseOpenAICodexUsage(await readOpenAICodexUsageResponse(auth, signal, false))
+  return parseOpenAICodexUsage(await readOpenAICodexUsageResponse(auth, signal))
 }
 
-/** Read one bounded account response; public quota and Reserve decisions share these exact bytes. */
+/** Read one bounded ordinary account-quota response. */
 export async function readOpenAICodexUsageResponse(
   auth: { access: string; accountId: string },
   signal: AbortSignal,
-  supportsReserve: boolean,
   requestFetch: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<unknown> {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(USAGE_REQUEST_TIMEOUT_MS)])
@@ -266,7 +265,6 @@ export async function readOpenAICodexUsageResponse(
   const { headers } = prepareOpenAICodexBackendHeaders({
     authorization: `Bearer ${auth.access}`,
     'chatgpt-account-id': auth.accountId,
-    ...supportsReserve ? { 'x-openai-codex-luna-reserve': '1' } : {},
     accept: 'application/json',
     'cache-control': 'no-store',
   }, 'plugin')

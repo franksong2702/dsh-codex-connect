@@ -1,3 +1,4 @@
+import { assertTaskHostAutomation, taskHostRecoveryOnly, TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
 /** Phase 1: a real per-task opt-in around the ordinary host loop, not a mandatory model router. */
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
@@ -62,6 +63,7 @@ export class AdaptiveTaskRuntime {
       const config = await next()
       const task = await this.load(agent)
       if (task === undefined || task.mode === 'manual') return config
+      assertTaskHostAutomation()
       signal.throwIfAborted()
       if (task.mode !== 'auto') taskFailure('TASK_REQUIRES_USER_RESUME')
       if (selectionSeq(agent) !== task.selectionSeq) {
@@ -141,7 +143,8 @@ export class AdaptiveTaskRuntime {
       reserved: task?.reserved ?? 0, maximumRequests: task?.maximumRequests ?? ADAPTIVE_TASK_REQUEST_LIMIT,
       capabilities: task?.capabilities ?? capabilities, eligibility: 'not-probed', canStart: task === undefined && isFresh(agent)
         && allowsTaskRoute(capabilities, ADAPTIVE_TASK_START),
-      ...(task?.mode === 'stopped' && agent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' } : {}) }
+      ...(task?.mode === 'stopped' && agent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' }
+        : task !== undefined && taskHostRecoveryOnly() ? { unavailable: TASK_HOST_RECOVERY_ONLY } : {}) }
   }
   async command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState> {
     if (decodeTaskCommand(command) === undefined) taskFailure('TASK_COMMAND_INVALID')
@@ -160,6 +163,7 @@ export class AdaptiveTaskRuntime {
         return this.state(agent.id, principal)
       }
     }
+    if (command.action === 'start' || command.action === 'resume') assertTaskHostAutomation()
     // Revocation must remain available when catalog discovery/provider availability fails.
     const capabilities = command.action === 'start' || command.action === 'resume' ? await this.capabilities() : []
     const apply = async (signal?: AbortSignal) => {
@@ -228,6 +232,7 @@ export class AdaptiveTaskRuntime {
     return this.state(agent.id, principal)
   }
   private install(agent: Agent, task: TaskDocument): void {
+    assertTaskHostAutomation()
     if (this.stopped || this.tools.has(agent)) return
     const life = this.lifetimes.get(agent)
     if (life === undefined || life.signal.aborted) this.lifetimes.set(agent, new AbortController())
@@ -300,6 +305,7 @@ export class AdaptiveTaskRuntime {
       if (parentTask !== undefined && parentTask.mode !== 'manual') taskFailure('TASK_DELEGATION_NOT_INCLUDED')
     }
     const task = await this.load(agent)
+    if (task !== undefined && task.mode !== 'manual') assertTaskHostAutomation()
     if (task?.mode === 'auto') await this.reserve(agent)
     else if (task !== undefined && task.mode !== 'manual') taskFailure('TASK_NOT_AUTHORIZED')
   }
@@ -320,6 +326,7 @@ export class AdaptiveTaskRuntime {
         ? { ...options, messages: portableTaskMessages(agent.session, options.messages, { afterSeq: task.handoffSeq, model: options.model }) } : options)
       return
     }
+    assertTaskHostAutomation()
     if (task.mode !== 'auto' || this.stopped) taskFailure('TASK_REQUIRES_USER_RESUME')
     const hostDefault = options.purpose === 'compaction' && options.reasoningEffort === undefined
     const route = { model: options.model, effort: hostDefault ? task.route.effort : String(options.reasoningEffort) }

@@ -1,5 +1,9 @@
 # Installation Runbook for CLI Agents
 
+**Unreleased development:** The development branch retires Luna Reserve and adds exact stock DSH `0.2.2-alpha.3`. This is not part of published Alpha 11; its verified pairings and commands below are unchanged. Do not use the Alpha 11 command for alpha.3. Release integration remains pending. See [compatibility and migration evidence](docs/agent-notes/dsh-alpha3-reserve-retirement.md).
+
+The unreleased alpha.3 candidate retains saved Task inspection, authenticated Stop/manual takeover and existing strictly checked safe-disable/archive exits. It refuses automatic routing/resume/delegation without deleting saved data or resetting spent requests. The prior fourteen Hosts and closed public activation gate remain unchanged.
+
 **Published Alpha 11:** [`0.2.0-alpha.11`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.11) verifies exact DSH rc.4/rc.5 while retaining all twelve prior Hosts. Its final fourteen-Host archive, protected publication, registry/tag/prerelease and public exact-version installation have been verified. It also delivers Terra, the unified speed menu, seeded-fork originals, bounded bili preflight and the direct Undici minimum. See the [release record](docs/release-notes/0.2.0-alpha.11.md). Keyless/runtime fixtures do not establish real-account/Desktop acceptance; Computer Use and DSH 0.2.2-alpha.2 support are excluded. Daily installation or Host upgrade requires a separate user request.
 
 **Historical Alpha 10:** `0.2.0-alpha.10` adds only exact DSH `0.2.1-rc.3`, retaining the eleven previous pairings. Alpha 9 is not an rc.3 pairing. Public npm version/alpha, archive integrity and exact Git tag/prerelease have been independently verified; see the [publication record](#020-alpha10-verified-publication). The rc.3 upstream Git-source mapping remains unverified. Keyless checks do not establish real-account or Desktop acceptance.
@@ -270,7 +274,7 @@ The value is a full `http://` or `https://` origin including its port, not a bar
 
 ## Optional configuration
 
-Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableReserveFallback`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all five default to `false`. Luna Reserve is a published experiment in Alpha 4.35: enable it only when explicitly requested, never as an automatic installation step. Real-account Reserve entry and recovery remain unverified; authorization must come from the identity-matched backend response, not a generic `429` or quota percentage. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers the provider and selects it while the capability remains enabled; disabling restores the previous provider before unregistering Codex Search. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
+Use **Settings → Plugins → Plugin configuration → Codex Connect** for live, staged Save/Discard edits organized under Account & quota, Models, Network, and Capabilities. Switching modules preserves the draft. The same settings control `enableSearch`, `enableImageTool`, `enableImageGeneration`, and `enableAutoReview`; all four default to `false`. Luna Reserve has been removed: legacy `enableReserveFallback` values are ignored and old `gpt-reserve` conversations require an explicit ordinary-model selection. Old return files are preserved untouched. Enabling Auto-review permits bounded approval context, tool arguments, working directory, and the planned action to be sent to `chatgpt.com`; failures return to human approval. Enabling image generation uses the image generation capability included with the current GPT subscription and saves results as DSH attachments. Enabling search registers the provider and selects it while the capability remains enabled; disabling restores the previous provider before unregistering Codex Search. Setting `agent-default-model` to `openai-codex` remains a separate explicit change.
 
 Apply only requested choices and preserve unrelated keys:
 
@@ -278,7 +282,6 @@ Apply only requested choices and preserve unrelated keys:
 - id: llm-openai-codex
   config:
     enableSearch: true
-    enableReserveFallback: false
     enableImageTool: false
     enableImageGeneration: false
     enableAutoReview: false
