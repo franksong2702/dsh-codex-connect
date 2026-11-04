@@ -12,6 +12,7 @@ import { checkInstalledMetrics } from './check-installed-metrics.mjs'
 import { checkInstalledSearchRoute } from './check-installed-search-route.mjs'
 import { checkInstalledTaskHttp } from './check-installed-task-http.mjs'
 import { checkInstalledPreflight } from './check-installed-preflight.mjs'
+import { checkInstalledStockReview } from './check-installed-stock-review.mjs'
 import { checkInstalledRetryPolicy } from './check-installed-retry-policy.mjs'
 
 const JSON_SCHEMA_VERSION = 1
@@ -105,6 +106,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const reserveRetirement = await checkInstalledRetiredReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
+    if (toolsManifest.version === '0.2.1-rc.5') await checkInstalledStockReview(importHost, OpenAICodex)
     const toolsModule = await importHost('@deepseek-ai/dsh-tools')
     const separateExecutor = typeof toolsModule.default.prototype.setExecutor === 'function'
       ? JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tool-executor-ptc/package.json'), 'utf8')) : undefined
