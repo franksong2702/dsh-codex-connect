@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-10-31",
-  "latestDshVersion": "0.2.1-rc.5",
+  "checkedAt": "2026-11-04",
+  "latestDshVersion": "0.2.2-alpha.3",
   "pluginVersions": [
     {
       "version": "0.1.0-alpha.4.14",
@@ -438,6 +438,26 @@
         "0.2.1-rc.3",
         "0.2.1-rc.4",
         "0.2.1-rc.5"
+      ]
+    },
+    {
+      "version": "0.2.0-alpha.12",
+      "verifiedDshVersions": [
+        "0.1.7-rc.1",
+        "0.1.7-rc.2",
+        "0.2.0-rc.1",
+        "0.2.0-rc.2",
+        "0.2.1-alpha.1",
+        "0.2.1-alpha.2",
+        "0.2.1-alpha.3",
+        "0.2.1-alpha.4",
+        "0.2.1-alpha.5",
+        "0.2.1-rc.1",
+        "0.2.1-rc.2",
+        "0.2.1-rc.3",
+        "0.2.1-rc.4",
+        "0.2.1-rc.5",
+        "0.2.2-alpha.3"
       ]
     }
   ]

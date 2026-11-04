@@ -65,13 +65,16 @@ describe('installation version guidance', () => {
       .not.toContain('0.2.1-rc.3')
   })
 
-  it('keeps alpha.3 development support separate from published Alpha 11', async () => {
+  it('keeps verified Alpha 12 candidate support separate from published Alpha 11', async () => {
     const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
     for (const guide of [...guides, install]) expect(guide).toContain('0.2.2-alpha.3')
-    expect(install).toContain('Unreleased development')
-    expect(compatibility.pluginVersions.every((entry: { verifiedDshVersions: string[] }) =>
-      !entry.verifiedDshVersions.includes('0.2.2-alpha.3'))).toBe(true)
+    expect(install).toContain('Alpha 12 candidate, not yet published')
+    const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
+    expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.12')?.verifiedDshVersions)
+      .toEqual(declared.dshPluginApi.versions)
+    expect(compatibility.pluginVersions.filter((entry: { version: string }) => entry.version !== '0.2.0-alpha.12')
+      .every((entry: { verifiedDshVersions: string[] }) => !entry.verifiedDshVersions.includes('0.2.2-alpha.3'))).toBe(true)
   })
 
   it.each(['0.2.1-rc.4', '0.2.1-rc.5'])('recommends %s only with published Alpha 11 and preserves Alpha 10 limits', version => {

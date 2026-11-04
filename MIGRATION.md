@@ -1,5 +1,13 @@
 # Migrating from `dsh-codex`
 
+## Alpha 12 candidate: Reserve retirement and alpha.3 recovery
+
+Alpha 12 is not yet published. Its [bilingual release notes](docs/release-notes/0.2.0-alpha.12.md) describe the migration and verification limits. Legacy `enableReserveFallback` settings become inert on every Host. A saved `gpt-reserve` selection returns `MODEL_RETIRED` before account access or network activity: explicitly select an ordinary model, or preserve the old conversation and start another if the Host cannot replace its selection. No replacement model/account is guessed; old return files, sessions and OAuth credentials are not read for migration or deleted. Shared ordinary quota/account safety remains.
+
+Only on exact DSH `0.2.2-alpha.3`, old Task state is recovery-only: authenticated inspection, Stop/manual takeover and existing strictly checked safe-disable/archive exits. Automatic routing/resume/delegation recovery are refused, including stale/direct callers. Ownership, counters, receipts, ledger fencing, cancellation and truthful child cleanup remain required. The previous fourteen supported Hosts retain their behavior, and public Task activation remains closed everywhere. No daily Host upgrade or reauthorization is part of this migration.
+
+Alpha 12 尚未发布。[双语发行说明](docs/release-notes/0.2.0-alpha.12.md#中文)列出迁移和验证边界。所有 Host 上旧 `enableReserveFallback` 配置不再生效；遗留 `gpt-reserve` 在读取账户或联网前返回 `MODEL_RETIRED`，需要明确选择普通模型，无法修改旧选择时保留会话另开一个。不猜测替代模型或账户，不因迁移读取或删除旧 return 文件、会话或 OAuth 凭据。仅在精确的 DSH `0.2.2-alpha.3` 上，旧 Task 保留经过身份校验的查看、停止／转手动和原有严格的安全退出，拒绝自动路由、续跑及委派恢复；计数、回执、ledger fencing、取消和真实清理义务不变。原十四个 Host 行为保留，所有版本公共激活入口仍关闭。本迁移不包含升级日常 Host 或重新授权。
+
 ## Alpha 4.43 candidate: upgrade the Harness together
 
 This candidate targets DeepSeek Harness `0.1.7-rc.1` only. Upgrade the Harness

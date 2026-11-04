@@ -1,6 +1,6 @@
 # Codex Connect
 
-**尚未发布的开发变更：** 此分支退役 Luna Reserve，并适配精确的 stock DSH `0.2.2-alpha.3`。已发布的 Alpha 11 仍仅支持原有十四个 Host 版本，请勿用它安装到 alpha.3。参见[兼容性与迁移证据](agent-notes/dsh-alpha3-reserve-retirement.md)。
+**Alpha 12 候选，尚未发布：** `0.2.0-alpha.12` 退役 Luna Reserve，在下述仅恢复限制下适配精确的 stock DSH `0.2.2-alpha.3`，并修复自带 Auto review preset 在 Codex Responses 路线上发送不支持的 temperature 参数的问题。已发布的 Alpha 11 仍仅支持原有十四个 Host 版本，请勿用它安装到 alpha.3。参见[发行与迁移说明](release-notes/0.2.0-alpha.12.md)。
 
 在精确的 DSH `0.2.2-alpha.3` 上，旧 Task 仅保留状态查看、停止和转手动。自动路由、续跑和证据子任务创建均被拒绝，包括内部直接入口。原有停用委派／归档安全退出仍保留 owner、回执和清理校验。原十四个 Host 的行为不变，所有版本的 Task 公共激活入口继续关闭。
 
