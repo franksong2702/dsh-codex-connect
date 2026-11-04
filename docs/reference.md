@@ -237,3 +237,9 @@ The callback must match the pending flow's redirect URI and OAuth state; code-on
 If startup reports an `openai-codex` collision, inspect the effective configuration and remove only the confirmed legacy `dsh-codex` bundle or manual provider row. Do not delete credentials or unrelated providers. See [MIGRATION.md](../MIGRATION.md) for package migration and repair of Alpha 4.10 search histories.
 
 OAuth is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default); `~/.codex/auth.json` is never copied or modified. Removing the package does not remove OAuth state. Run `logout` only when deleting credentials is intentional.
+
+### Saved Task recovery on DSH alpha.3 (unreleased)
+
+Exact `0.2.2-alpha.3` retains saved state inspection, authenticated Stop/manual takeover and existing strictly checked delegation-disable/archive exits. It rejects automatic routing, resume and evidence-child creation, including direct internal entry points. A stale client cannot reopen them. The public gate already rejects start/resume/upgrade/delegation grants on every Host; the prior fourteen Hosts keep their behavior.
+
+Owner/session binding, spent counters, receipts and ledger data remain intact. Recovery never respawns a child or sends a model request. Manual takeover permits ordinary work under the explicitly selected model without refunding reservations. Cleanup requires actual Host ownership/liveness proof; live children, missing/corrupt state or unconfirmed delivery remain blocked. Cancellation signals and function return values are not delivery/archive proof. No old files are deleted, no account/model is guessed, and no runtime setting reopens automation.

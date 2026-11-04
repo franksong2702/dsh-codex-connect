@@ -2,6 +2,8 @@
 
 **Unreleased development:** This branch retires Luna Reserve and adds exact stock DSH `0.2.2-alpha.3` compatibility. Published Alpha 11 retains its original fourteen-Host range; do not install it for alpha.3. See [the compatibility and migration evidence](docs/agent-notes/dsh-alpha3-reserve-retirement.md).
 
+On exact DSH `0.2.2-alpha.3`, saved Task records are recovery-only: inspect state, stop or take over manually. Automatic routing, resume and evidence-child creation are rejected, including internal direct entry points. Existing safe-disable/archive exits retain their owner, receipt and cleanup checks. The prior fourteen Hosts keep their behavior; Task's public activation gate remains closed everywhere.
+
 [![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
 
 English | [中文](docs/README.zh.md)
