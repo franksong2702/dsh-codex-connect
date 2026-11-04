@@ -1,5 +1,7 @@
 # Codex Connect
 
+**尚未发布的开发变更：** 此分支退役 Luna Reserve，并适配精确的 stock DSH `0.2.2-alpha.3`。已发布的 Alpha 11 仍仅支持原有十四个 Host 版本，请勿用它安装到 alpha.3。参见[兼容性与迁移证据](agent-notes/dsh-alpha3-reserve-retirement.md)。
+
 当前开发遵循[核心维护范围](maintenance-scope.md)：保留接入、兼容、诊断与恢复，冻结 Task 自动编排及未证明收益的优化。此决定不会删除已发布选项，也不会远程停用已有安装。
 
 [![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)

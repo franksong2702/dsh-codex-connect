@@ -31,11 +31,11 @@ describe('installation version guidance', () => {
       '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.5')?.verifiedDshVersions)
       .toEqual(published)
-    expect(declared.dshPluginApi.versions).toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])
+    expect(declared.dshPluginApi.versions).toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.10')?.verifiedDshVersions)
       .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.11')?.verifiedDshVersions)
-      .toEqual(declared.dshPluginApi.versions)
+      .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
       .toEqual([...published, '0.2.1-rc.2'])
     expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.11` / DSH `0.2.1-rc.5`')
@@ -63,6 +63,15 @@ describe('installation version guidance', () => {
     }
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
       .not.toContain('0.2.1-rc.3')
+  })
+
+  it('keeps alpha.3 development support separate from published Alpha 11', async () => {
+    const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
+      readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
+    for (const guide of [...guides, install]) expect(guide).toContain('0.2.2-alpha.3')
+    expect(install).toContain('Unreleased development')
+    expect(compatibility.pluginVersions.every((entry: { verifiedDshVersions: string[] }) =>
+      !entry.verifiedDshVersions.includes('0.2.2-alpha.3'))).toBe(true)
   })
 
   it.each(['0.2.1-rc.4', '0.2.1-rc.5'])('recommends %s only with published Alpha 11 and preserves Alpha 10 limits', version => {
