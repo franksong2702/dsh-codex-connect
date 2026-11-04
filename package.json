@@ -88,7 +88,7 @@
     "NOTICE"
   ],
   "dependencies": {
-    "@deepseek-ai/schemastery": "3.18.4",
+    "@deepseek-ai/schemastery": "3.18.5",
     "@earendil-works/pi-ai": "0.85.1",
     "undici": "^8.12.3"
   },
@@ -145,8 +145,8 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.4",
-    "@deepseek-ai/cordis-plugin-include": "1.0.9",
-    "@deepseek-ai/cordis-plugin-loader": "1.0.5",
+    "@deepseek-ai/cordis-plugin-include": "1.0.10",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.6",
     "@deepseek-ai/dsh-agent": "0.1.7-rc.1",
     "@deepseek-ai/dsh-agent-default-model": "0.1.7-rc.1",
     "@deepseek-ai/dsh-agent-loop": "0.1.7-rc.1",
