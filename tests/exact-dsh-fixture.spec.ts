@@ -117,6 +117,30 @@ describe('exact DSH install fixture', () => {
       expect(run.delays).toEqual([1_000, 2_000])
     })
 
+    const bodyTimeout = () => new Response(new ReadableStream({ start(controller) {
+      controller.error(new DOMException('Body deadline expired', 'TimeoutError'))
+    } }), { status: 200 })
+
+    it('retries body timeouts after successful headers within the same three-attempt budget', async () => {
+      const run = await read([bodyTimeout, bodyTimeout, ok])
+      await expect(run.result).resolves.toEqual(manifest)
+      expect(run.calls()).toBe(3)
+      expect(run.delays).toEqual([1_000, 2_000])
+    })
+
+    it('keeps exhausted body deadlines as failures and never starts a fourth attempt', async () => {
+      const run = await read([bodyTimeout, bodyTimeout, bodyTimeout, ok])
+      await expect(run.result).rejects.toThrow(/after 3 attempts: Body deadline expired/u)
+      expect(run.calls()).toBe(3)
+    })
+
+    it('does not retry invalid JSON as a transport failure', async () => {
+      const run = await read([() => new Response('{invalid', { status: 200 }), ok])
+      await expect(run.result).rejects.toBeInstanceOf(SyntaxError)
+      expect(run.calls()).toBe(1)
+      expect(run.delays).toEqual([])
+    })
+
     it('fails at once on a non-transient status', async () => {
       const run = await read([status(404), ok])
       await expect(run.result).rejects.toThrow('HTTP 404')

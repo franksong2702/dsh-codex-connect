@@ -1,6 +1,6 @@
 /** The recovery profile is a complete positive contract, not a way to omit failing cases. */
 import { expect, it } from 'vitest'
-import { RECOVERY_CASES, inspectRecoveryReport, assertRecoveryCrashes } from '../scripts/adaptive-task-recovery-contract.mjs'
+import { RECOVERY_CASES, isRecoveryHost, recoveryCordisVersion, inspectRecoveryReport, assertRecoveryCrashes } from '../scripts/adaptive-task-recovery-contract.mjs'
 const identity = 'uses the exact isolated host without a neighboring runtime'
 function report() {
   const titles = [...RECOVERY_CASES, identity]
@@ -46,4 +46,15 @@ it.each(['missing-case', 'duplicate-pid', 'wrong-cut', 'no-crash', 'v2-no-epoch-
   if (mutation === 'no-crash') r.reports[0]!.phases[0]!.abruptExit = 0
   if (mutation === 'v2-no-epoch-fence') r.reports[6]!.oldEpochRejected = false
   expect(() => assertRecoveryCrashes(r)).toThrow()
+})
+
+it('selects recovery only for the two exact verified contract candidates', () => {
+  expect(isRecoveryHost('0.2.2-rc.1')).toBe(true)
+  expect(isRecoveryHost('0.2.2-alpha.3')).toBe(true)
+  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.2', '0.2.3', undefined]) {
+    expect(isRecoveryHost(version)).toBe(false)
+    expect(() => recoveryCordisVersion(version as string)).toThrow()
+  }
+  expect(recoveryCordisVersion('0.2.2-rc.1')).toBe('4.1.0')
+  expect(recoveryCordisVersion('0.2.2-alpha.3')).toBe('4.0.6-alpha.2')
 })
