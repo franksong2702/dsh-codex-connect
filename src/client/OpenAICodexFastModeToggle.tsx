@@ -19,7 +19,8 @@ export interface OpenAICodexFastModeToggleInjected {
 
 function isEligible(state: ModelDirectoryState): boolean {
   const current = state.current
-  return state.status === 'ready'
+  // The Host keeps its effective selection while saving effort/model changes.
+  return (state.status === 'ready' || state.status === 'selecting')
     && current?.provider === CODEX_PROVIDER
     && typeof current.model === 'string'
     && current.model.startsWith('gpt-')
@@ -34,10 +35,10 @@ function isEligible(state: ModelDirectoryState): boolean {
 export function OpenAICodexFastModeToggle(props: OpenAICodexFastModeToggleInjected & { sessionId: string; t: Translate }) {
   const snapshot = useSyncExternalStore(listener => props.directory.subscribe(listener), () => props.directory.getSnapshot(), () => props.directory.getSnapshot())
   if (!isEligible(snapshot)) return null
-  return <AccountScopedSpeedControl {...props} model={snapshot.current!.model} />
+  return <AccountScopedSpeedControl {...props} model={snapshot.current!.model} selectionPending={snapshot.status === 'selecting'} />
 }
 
-function AccountScopedSpeedControl(props: OpenAICodexFastModeToggleInjected & { sessionId: string; model: string; t: Translate }) {
+function AccountScopedSpeedControl(props: OpenAICodexFastModeToggleInjected & { sessionId: string; model: string; selectionPending: boolean; t: Translate }) {
   const subscribe = useCallback((listener: () => void) => props.account?.subscribe(listener) ?? (() => undefined), [props.account])
   const snapshot = useCallback(() => props.account?.getSnapshot(), [props.account])
   const account = useSyncExternalStore(subscribe, snapshot, snapshot)
@@ -45,5 +46,5 @@ function AccountScopedSpeedControl(props: OpenAICodexFastModeToggleInjected & { 
     account.status.status, account.operation.kind, account.authorizationRevision ?? 0].join(':')
   const available = account === undefined || (!account.busy && account.status.status === 'signed-in')
   return <OpenAICodexSpeedControl key={props.sessionId + ':' + props.model + ':' + identity}
-    sessionId={props.sessionId} model={props.model} t={props.t} available={available} />
+    sessionId={props.sessionId} model={props.model} t={props.t} available={available} selectionPending={props.selectionPending} />
 }
