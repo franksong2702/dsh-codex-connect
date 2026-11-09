@@ -18,8 +18,9 @@ export function taskHostRecoveryOnly(): boolean {
     } catch { /* Missing metadata cannot manufacture an alpha.3 match. */ }
     return undefined
   })
-  if (!versions.includes('0.2.2-alpha.3')) return false
-  if (!versions.every(version => version === '0.2.2-alpha.3')) taskFailure('TASK_HOST_VERSION_MISMATCH')
+  const recovery = versions.find(version => version === '0.2.2-alpha.3' || version === '0.2.2-rc.1')
+  if (recovery === undefined) return false
+  if (!versions.every(version => version === recovery)) taskFailure('TASK_HOST_VERSION_MISMATCH')
   return true
 }
 
