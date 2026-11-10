@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { isRecoveryHost, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
+import { checkRecoveryCrashes } from './check-adaptive-task-recovery-crashes.mjs'
 /** Exact-host Phase 2 synthetic matrix. This is separate from the Phase 1 matrix. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -38,7 +40,7 @@ async function main() {
   const registry = cachedTaskRegistry(join(ROOT, 'node_modules/.cache/task-matrix/manifests'))
   try {
     const bundle = join(root, 'bundle'); await build({ config: false,
-      entry: Object.fromEntries(entries.map(name => [name, join(ROOT, 'tests', `${name}.ts`)])), outDir: bundle,
+      entry: Object.fromEntries([...entries.map(name => [name, join(ROOT, 'tests', `${name}.ts`)]), ['adaptive-task-recovery.fixture', join(ROOT, 'tests/adaptive-task-recovery.fixture.ts')]]), outDir: bundle,
       platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
     const files = (await readdir(bundle)).filter(name => name.endsWith('.mjs')).sort()
@@ -73,12 +75,12 @@ async function main() {
         await mkdir(failure, { recursive: true }); await writeFile(join(failure, 'install.stderr'), install.stderr); await writeFile(join(failure, 'install.stdout'), install.stdout)
         throw new Error(`Task ${version} install failed: ${install.error?.message ?? install.cleanupError?.message ?? install.stderr}`)
       }
-      const identity = await readTaskHostIdentity(host, version, [...PHASE2_RUNTIME_PACKAGES, '@earendil-works/pi-ai'])
+      const identity = await readTaskHostIdentity(host, version, [...PHASE2_RUNTIME_PACKAGES, '@earendil-works/pi-ai', ...(isRecoveryHost(version) ? ['@deepseek-ai/dsh-tool-executor-native'] : [])])
       for (const name of files) await copyFile(join(bundle, name), join(host, 'tests', name))
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), `import {it,expect} from 'vitest'; import {writeFileSync} from 'node:fs';\nit('uses the exact isolated host without a neighboring runtime', async()=>{ const entries=${JSON.stringify(identity.entries)}; for(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(path));} writeFileSync(${JSON.stringify(join(host, 'identity.json'))}, JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}})); });\n`)
       await copyFile(join(ROOT, 'scripts/adaptive-task-delegation-network-guard.mjs'), join(host, 'network-guard.mjs'))
-      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
+      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       const test = await runBoundedCommand(process.execPath, [join(vitest, 'vitest.mjs'), 'run', '--config', join(host, 'vitest.config.mjs'), '--reporter=json', '--outputFile', join(host, 'tests.json')], { cwd: host, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
       if (test.error || test.cleanupError || test.status !== 0) {
@@ -89,11 +91,19 @@ async function main() {
         try { failedReport = JSON.parse(await readFile(join(host, 'tests.json'), 'utf8')) } catch {}
         throw new Error(`Task ${version} tests failed: ${taskMatrixFailureSummary(test, failedReport)}`)
       }
-      const result = JSON.parse(await readFile(join(host, 'tests.json'), 'utf8')); const cases = inspectDelegationMatrixReport(result)
+      const result = JSON.parse(await readFile(join(host, 'tests.json'), 'utf8')); const cases = inspectDelegationMatrixReport(result, version)
       const actual = JSON.parse(await readFile(join(host, 'identity.json'), 'utf8'))
       assert.deepEqual(actual.packages, identity.packages); assert.equal(actual.node, process.version)
       const network = JSON.parse(await readFile(join(host, 'network.json'), 'utf8')); assert.equal(network.pid, actual.pid); assert.equal(network.attempts, 0)
       console.error(`Phase 2 ${process.version} / ${version}: ${cases.length} tests passed; verifying crash boundaries`)
+      if (isRecoveryHost(version)) {
+        const crashes = await checkRecoveryCrashes(host); assertRecoveryCrashes(crashes)
+        reports.push({ version, profile: 'recovery-only', bundleDigest, cases, tests: result.numTotalTests,
+          pid: actual.pid, node: actual.node, installer: { npm: manager.stdout.trim(), peerChecks: true },
+          runtimePackages: actual.packages, crashes, syntheticOnly: true, realProviderDispatches: 0,
+          externalNetworkAttempts: network.attempts })
+        await rm(host, { recursive: true, force: true }); continue
+      }
       const crash = await runBoundedCommand(process.execPath, [join(ROOT, 'scripts/check-adaptive-task-delegation-crashes.mjs'), '--host', host],
         { cwd: ROOT, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
       if (crash.error || crash.cleanupError || crash.status !== 0) {

@@ -1,3 +1,4 @@
+import { assertTaskHostAutomation, taskHostRecoveryOnly, TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
 /** Default-off composition: v1 main-task grants and explicitly upgraded v2 roots have one owner. */
 import { randomUUID } from 'node:crypto'
 import { withAdaptiveTaskProvider } from './adaptive-task-scope.ts'
@@ -129,7 +130,8 @@ export class AdaptiveTaskControlRuntime {
     return { revision: doc.revision, mode: doc.mode, reserved: doc.reserved, maximumRequests: doc.maximumRequests,
       capabilities: doc.capabilities, canStart: false, eligibility: 'not-probed', ...(current === undefined ? {} : { current }),
       ...(['auto', 'interrupted'].includes(doc.mode) ? { requested: doc.route } : {}),
-      ...(doc.mode === 'stopped' && parent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' } : {}),
+      ...(doc.mode === 'stopped' && parent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' }
+        : taskHostRecoveryOnly() ? { unavailable: TASK_HOST_RECOVERY_ONLY } : {}),
       delegation: { version: 2, idle: parent.status === 'idle', enabled: grant !== null,
         canDowngrade: doc.mode === 'manual' && grant === null && parent.status === 'idle'
           && doc.delegation.runs.every(run => !childUnresolved(run) && run.delivery === 'recorded'),
@@ -156,6 +158,7 @@ export class AdaptiveTaskControlRuntime {
       if (receipt.digest !== operation.digest) taskFailure('TASK_OPERATION_CONFLICT')
       return this.state(parent.id, principal)
     }
+    if (!['manual', 'stop', 'delegate-disable', 'downgrade'].includes(command.action)) assertTaskHostAutomation()
     if (doc?.version !== 2 && command.action !== 'upgrade') {
       if (!['start', 'resume', 'stop', 'manual'].includes(command.action)) taskFailure('TASK_LEDGER_MIGRATION_REQUIRED')
       await this.legacy.command(command, principal)

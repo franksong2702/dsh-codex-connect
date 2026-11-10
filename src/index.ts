@@ -64,8 +64,6 @@ import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerImageHandleBridge } from './image-handle-bridge.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
-import { ReserveRequestPermits, ReserveReturnStore } from './reserve-state.ts'
-import { registerReserveRouting } from './reserve-routing.ts'
 import { OpenAICodexQuotaState } from './quota-state.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -292,7 +290,7 @@ export interface Config {
   contextWindowOverrides?: Record<string, number | null> | null | undefined
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
-  /** Automatically follow server-authorized Luna Reserve transitions, never generic rate limits. */
+  /** @deprecated Accepted only for old configuration files; Luna Reserve has been removed. */
   enableReserveFallback?: boolean
   /** Enable Fast Mode for newly started top-level sessions only. */
   enableNewSessionFastMode?: boolean
@@ -424,7 +422,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     reasoningEffort: configValue(config.reasoningEffort),
     models: configValue(config.models), enableProxy: configValue(config.enableProxy), proxyUrl: configValue(config.proxyUrl),
     contextWindowOverrides: configValue(config.contextWindowOverrides), enableSearch: configValue(config.enableSearch),
-    enableReserveFallback: configValue(config.enableReserveFallback), enableNativeCompaction: configValue(config.enableNativeCompaction),
+    enableReserveFallback: false, enableNativeCompaction: configValue(config.enableNativeCompaction),
     enableNewSessionFastMode: configValue(config.enableNewSessionFastMode),
     enableNewSubagentFastMode: configValue(config.enableNewSubagentFastMode),
     enableImageTool: configValue(config.enableImageTool), enableImageGeneration: configValue(config.enableImageGeneration),
@@ -470,19 +468,11 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     credentials,
     proxyManager,
     backendRequests,
-    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
     resolveProxyUrl: resolveProviderProxyUrl,
   })
   if (config.enableQuotaTool === true) {
     ctx.inject(['tools'], toolCtx => toolCtx.tools.register(quotaTool(quota)))
   }
-  const reservePermits = new ReserveRequestPermits()
-  const stopReserveRouting = registerReserveRouting(ctx, {
-    quota,
-    returns: new ReserveReturnStore(join(dirname(credentials.filename), 'codex-connect-reserve')),
-    permits: reservePermits,
-    enabled: () => resolveOpenAICodexSettings(current()).enableReserveFallback,
-  })
   assertNoOpenAICodexProviderConflict(ctx.llm.listProviders().map(provider => provider.id))
   new OpenAICodexTransport(
     ctx,
@@ -508,7 +498,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     proxyManager,
     resolveProviderProxyUrl,
     () => resolveOpenAICodexSettings(current()).contextWindowOverrides,
-    reservePermits,
+    undefined, // Inert retired slot; no Reserve object or authority is created.
     () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
     backendRequests,
     taskRuntime,
@@ -663,7 +653,6 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   ctx.effect(() => async () => {
     stopped = true
     backendRequests.dispose()
-    await stopReserveRouting()
     await quota.dispose()
     await Promise.all([searchTail, imageTail, imageGenerationTail])
     const search = searchFiber

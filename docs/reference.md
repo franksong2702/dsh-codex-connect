@@ -102,23 +102,11 @@ Direct connection is the default. An enabled credential-free HTTP(S) proxy appli
 
 ### Luna Reserve fallback
 
-Published Alpha 4.35 includes this default-off experiment; Alpha 4.34 does not include it. Real-account Reserve entry and recovery remain unverified. See the [publication and installation evidence](../.github/ALPHA_435_RELEASE_READINESS.md).
+**Removed.** `enableReserveFallback` remains only as an inert compatibility field for old configurations. Valid legacy booleans are accepted but always resolve to `false`. They create no routing, dispatch permits, negotiation header, JWT entitlement parsing or background refresh. The settings UI no longer offers this switch.
 
-`enableReserveFallback: true` opts agent requests into backend-authorized Luna Reserve fallback. The account UI and routing share an in-memory account/user-bound quota snapshot; concurrent reads coalesce and fresh reads do not issue another quota `GET`. A cold or stale read waits for refresh. After a successful fetch, background refresh runs at 60/30/15/5 seconds for usage below 75%, at least 75%, at least 90%, and at least 99%, using the highest consumption across ordinary and relevant model windows. Future reset times shorten the next refresh to reset plus one second; they never establish recovery. Cache reads do not postpone that deadline. Transient failures discard cached decisions and use exponential backoff starting at 60 seconds, with up to 10% positive jitter and a 15-minute local cap; a longer valid `Retry-After` takes precedence. Authentication rejections and non-retryable 4xx errors stop automatic usage requests for that credential until credentials/state change. Delays beyond the timer range stop automatic retry rather than overflowing. Background GETs stop after two minutes without a foreground quota consumer; stale routing authority still expires. Account mutations, settings changes, and plugin disposal invalidate the state; UI receives only the public quota projection.
+Old `gpt-reserve` requests report that the feature has been removed before account resolution or network dispatch. Explicitly choose an ordinary model through the Host model picker to continue. If the Host cannot switch that conversation, preserve it and start a new conversation with the model you choose. The plugin never guesses a target, inherits old authority or changes accounts. Old private return files are not read, migrated or deleted.
 
-A valid shared decision issues a private one-shot permit for the next `gpt-reserve` dispatch in that session/account. This local dispatch guard is not a server-side per-call authorization requirement. Cancellation, replacement, an agent error, turn stopping, quota invalidation, snapshot refresh, or cache eviction revokes an unused permit. Return-target I/O rechecks that authority before restoring an ordinary model. Direct and auxiliary Reserve calls fail before a model request. With fallback disabled, ordinary agent steps do not query quota and there is no background quota poller; account UI reads share a 60-second credential-bound cache, concurrent GET coalescing, and failure cooldowns. An already-Reserve session requires an explicitly selected ordinary model.
-
-The access token must contain non-empty `chatgpt_account_id` and `chatgpt_user_id` (or `user_id`) claims under `https://api.openai.com/auth`, and `chatgpt_account_is_fedramp` must be absent or `false`. Missing, partial, FedRAMP, changed, or response-mismatched identity disables fallback for that step. The plugin does not guess identity from an email address or subscription plan.
-
-The plugin routes to the hidden model only when the quota response matches both the captured account and user and supplies a valid Luna Reserve authorization banner for the applicable model. A generic HTTP `429`, a rounded quota percentage, a reset time, or a Reserve model name is not authorization and is never retried as Reserve. This version accepts only the known `gpt-5.6-luna` Reserve metadata; other metadata is not inferred. The server decides eligibility and whether `5h`, weekly, or another backend limit causes Reserve authorization.
-
-Before entering Reserve, the plugin atomically saves the session's ordinary model request controls in a private `codex-connect-reserve/<SHA-256 of session id>.json` file beside the Codex credential file. The record contains a hash of the account/user pair and the ordinary model, reasoning effort, temperature, output limit, and stop sequences; it does not contain a bearer token or raw account and user ids. The Reserve request omits those ordinary controls and uses Luna's own defaults. A later identity-matched quota response must explicitly allow ordinary usage before the complete saved request configuration is restored. A missing, corrupt, oversized, wrong-account, or fork-without-its-own return record is never guessed or inherited: select an ordinary model explicitly to continue.
-
-Reserve is not exposed in model discovery and does not modify profile-wide defaults. Its allowance is separate from ordinary usage, not unlimited. When both are explicitly exhausted, routing stops with a usage-exhausted message. If a model request reports Harness's typed account-quota failure, the plugin invalidates cached state and allows at most one fresh, authorized entry or recovery retry per turn. Generic rate-limit failures never trigger this path.
-
-Reserve uses Luna's 272,000-token catalog context window, not the previous model's larger window. This release does not authorize automatic or manual compaction calls through Reserve. Switching a long conversation can therefore exceed Luna's context limit; compact before ordinary usage runs out or configure a separate, available summarization model. The plugin does not claim a cross-host exact token preflight or automatic long-context recovery.
-
-Automated coverage uses synthetic tokens and quota responses. It verifies local routing and restoration rules without contacting a real account, and therefore does not establish live account eligibility, available quota, or current server policy.
+The shared quota service, account UI and read-only quota tool retain account/credential-fingerprint-bound 60-second caching, coalesced GETs, independent caller cancellation, exponential failure cooldown/Retry-After, configuration invalidation and disposal cleanup. There is no background poller. Quota observations do not authorize model/account changes.
 
 ### Search and image tools
 
@@ -182,7 +170,7 @@ The main plugin options are:
 | `proxyUrl` | `http://127.0.0.1:7890` | Credential-free HTTP(S) proxy origin; inactive until enabled |
 | `contextWindowOverrides` | none | Per-model client context-budget overrides |
 | `enableSearch` | `false` | Register Codex search and select it when the setting is saved |
-| `enableReserveFallback` | `false` | Follow identity-matched, backend-authorized Luna Reserve transitions for agent requests |
+| `enableReserveFallback` | `false` | Deprecated compatibility field; accepted but ignored after Reserve retirement |
 | `enableImageTool` | `false` | Register `view_image` |
 | `enableImageGeneration` | `false` | Register GPT Image generation and explicit editing in Alpha 4.48 |
 | `imageModelHint` | empty | Optional unverified image route hint; empty keeps the default request |
@@ -249,3 +237,9 @@ The callback must match the pending flow's redirect URI and OAuth state; code-on
 If startup reports an `openai-codex` collision, inspect the effective configuration and remove only the confirmed legacy `dsh-codex` bundle or manual provider row. Do not delete credentials or unrelated providers. See [MIGRATION.md](../MIGRATION.md) for package migration and repair of Alpha 4.10 search histories.
 
 OAuth is stored separately at `$DSH_HOME/.openai-codex-auth.json` (`~/.dsh` by default); `~/.codex/auth.json` is never copied or modified. Removing the package does not remove OAuth state. Run `logout` only when deleting credentials is intentional.
+
+### Saved Task recovery on DSH alpha.3 (unreleased)
+
+Exact `0.2.2-alpha.3` retains saved state inspection, authenticated Stop/manual takeover and existing strictly checked delegation-disable/archive exits. It rejects automatic routing, resume and evidence-child creation, including direct internal entry points. A stale client cannot reopen them. The public gate already rejects start/resume/upgrade/delegation grants on every Host; the prior fourteen Hosts keep their behavior.
+
+Owner/session binding, spent counters, receipts and ledger data remain intact. Recovery never respawns a child or sends a model request. Manual takeover permits ordinary work under the explicitly selected model without refunding reservations. Cleanup requires actual Host ownership/liveness proof; live children, missing/corrupt state or unconfirmed delivery remain blocked. Cancellation signals and function return values are not delivery/archive proof. No old files are deleted, no account/model is guessed, and no runtime setting reopens automation.
