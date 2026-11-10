@@ -74,7 +74,7 @@ function dependencyVersion(consumer: NodeJS.Require, name: string): string {
 describe('host development dependency security regressions', () => {
   it.each([
     [[], 'undici', '8.12.3', 8],
-    [['jsdom'], 'undici', '7.29.1', 7],
+    [['jsdom'], 'undici', '7.30.1', 7],
     [['@deepseek-ai/dsh-web', '@deepseek-ai/dsh-app-boot', 'ajv'], 'fast-uri', '3.1.9', 3],
     [['@deepseek-ai/dsh-attachment-local'], 'sharp', '0.35.5', 0],
     [['@deepseek-ai/dsh-host-webserver'], 'compression', '1.8.2', 1],
