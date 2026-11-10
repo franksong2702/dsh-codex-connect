@@ -8,3 +8,6 @@ export declare function inspectRecoveryReport(report: unknown): {
   automationExercised: false
 }
 export declare function assertRecoveryCrashes(report: unknown): void
+
+export declare function isRecoveryHost(version: unknown): boolean
+export declare function recoveryCordisVersion(version: string): '4.0.6-alpha.2' | '4.1.0'

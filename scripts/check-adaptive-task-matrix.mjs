@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { RECOVERY_HOST } from './adaptive-task-recovery-contract.mjs'
+import { isRecoveryHost, recoveryCordisVersion } from './adaptive-task-recovery-contract.mjs'
 /** Run the same task lifecycle contract and bundled implementation on exact disposable DSH runtimes. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -86,11 +86,11 @@ async function main() {
       // This gate exercises the task's actual runtime imports. The separate installed-
       // artifact matrix owns full DSH CLI/profile installation. Keep the complete exact
       // override closure, but do not install every unrelated host UI/remote backend here.
-      const roots = version === RECOVERY_HOST ? [...TASK_RUNTIME_PACKAGES, '@deepseek-ai/dsh-tool-executor-native',
+      const roots = isRecoveryHost(version) ? [...TASK_RUNTIME_PACKAGES, '@deepseek-ai/dsh-tool-executor-native',
         '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'] : TASK_RUNTIME_PACKAGES
       metadata.dependencies = Object.fromEntries(roots.map(name => [name, version]))
       // Match alpha.3's published Core peer exactly; peer checks remain enabled.
-      if (version === RECOVERY_HOST) metadata.dependencies['@deepseek-ai/cordis'] = '4.0.6-alpha.2'
+      if (isRecoveryHost(version)) metadata.dependencies['@deepseek-ai/cordis'] = recoveryCordisVersion(version)
       // Match the installed plugin's dependency ownership instead of replacing its provider with the host's.
       metadata.dependencies['@earendil-works/pi-ai'] = pkg.dependencies['@earendil-works/pi-ai']
       metadata.dependencies.undici = pkg.dependencies.undici
@@ -103,8 +103,9 @@ async function main() {
       await mkdir(env.HOME)
       await writeFile(env.npm_config_userconfig, '')
       console.error(`Task ${version}: installing ${TASK_RUNTIME_PACKAGES.length} runtime roots with ${Object.keys(overrides).length} exact DSH overrides`)
-      const npm = version === RECOVERY_HOST ? process.env.MATRIX_NPM_CLI : undefined
-      if (version === RECOVERY_HOST) assert.ok(npm, 'alpha.3 recovery fixture requires the pinned npm10.9.3 acceptance installer')
+      // Honor the explicitly selected acceptance installer for every Host, like Phase 2; peer checks remain enabled.
+      const npm = process.env.MATRIX_NPM_CLI
+      if (isRecoveryHost(version)) assert.ok(npm, 'alpha.3 recovery fixture requires the pinned npm10.9.3 acceptance installer')
       const command = npm ? process.execPath : process.platform === 'win32' ? 'npm.cmd' : 'npm'
       const prefix = npm ? [resolve(npm)] : []
       if (npm) {
@@ -115,15 +116,15 @@ async function main() {
         [...prefix, 'install', '--ignore-scripts', '--prefer-offline', '--no-audit', '--no-fund', '--package-lock=false', '--registry=https://registry.npmjs.org'],
         { cwd: host, env, timeoutMs: 600000 })
       if (install.error || install.cleanupError || install.status !== 0) throw new Error(`Task ${version} install failed: ${install.error?.message ?? install.cleanupError?.message ?? install.stderr.slice(-2000)}`)
-      const identity = await readTaskHostIdentity(host, version, [...TASK_RUNTIME_PACKAGES, '@earendil-works/pi-ai', ...(version === RECOVERY_HOST ? ['@deepseek-ai/dsh-tool-executor-native', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'] : [])])
+      const identity = await readTaskHostIdentity(host, version, [...TASK_RUNTIME_PACKAGES, '@earendil-works/pi-ai', ...(isRecoveryHost(version) ? ['@deepseek-ai/dsh-tool-executor-native', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'] : [])])
       // Only the test framework comes from the developer installation. All runtime imports stay in this host.
       for (const name of files) await copyFile(join(bundle, name), join(host, 'tests', name))
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       const identitySource = `import {it,expect} from 'vitest';\nimport {writeFileSync} from 'node:fs';\nimport {pathToFileURL} from 'node:url';\nit(${JSON.stringify(TASK_IDENTITY_CASE)}, async()=>{\nconst entries=${JSON.stringify(identity.entries)};\nfor(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(pathToFileURL(path).href));}\nwriteFileSync(${JSON.stringify(join(host, 'identity.json'))},JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}}));\n});\n`
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), identitySource)
-      await copyFile(join(ROOT, version === RECOVERY_HOST ? 'scripts/adaptive-task-delegation-network-guard.mjs' : 'scripts/adaptive-task-matrix-network-guard.mjs'), join(host, 'network-guard.mjs'))
+      await copyFile(join(ROOT, isRecoveryHost(version) ? 'scripts/adaptive-task-delegation-network-guard.mjs' : 'scripts/adaptive-task-matrix-network-guard.mjs'), join(host, 'network-guard.mjs'))
       const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] },
-        test: { include: version === RECOVERY_HOST ? ['tests/adaptive-task-recovery.fixture.mjs', 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
+        test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
           isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       console.error(`Task ${version}: running identical task lifecycle cases`)

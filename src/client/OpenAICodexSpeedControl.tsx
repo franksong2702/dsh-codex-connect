@@ -19,7 +19,9 @@ const SPEED_ACTIVE_COLOR = '#f97316'
  * lifecycle and routes are unchanged. Account availability gates Ultrafast
  * exactly as before; Fast and Standard remain selectable.
  */
-export function OpenAICodexSpeedControl({ sessionId, model, t, available = true }: { sessionId: string; model: string; t: Translate; available?: boolean }) {
+export function OpenAICodexSpeedControl({ sessionId, model, t, available = true, selectionPending = false }: {
+  sessionId: string; model: string; t: Translate; available?: boolean; selectionPending?: boolean
+}) {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const [selection, setSelection] = useState<ConversationSpeedState>()
   const [status, setStatus] = useState<'loading' | 'ready' | 'unconfirmed'>('loading')
@@ -31,6 +33,16 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
   const disclosureId = useId()
 
   useEffect(() => {
+    // Keep the mounted control during Host selection, but retire any in-flight
+    // speed operation. Every committed model/selection (including effort)
+    // changes the server generation, so read it again after settlement.
+    if (selectionPending) {
+      controller.current?.abort()
+      controller.current = undefined
+      setMenuOpen(false)
+      setDisclosureOpen(false)
+      return
+    }
     const abort = new AbortController()
     controller.current = abort
     setStatus('loading')
@@ -43,14 +55,14 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
     }).catch(() => { if (!abort.signal.aborted) setStatus('unconfirmed') })
       .finally(() => { if (controller.current === abort) controller.current = undefined })
     return () => { abort.abort(); if (controller.current === abort) controller.current = undefined }
-  }, [sessionId, model, readAttempt])
+  }, [sessionId, model, readAttempt, selectionPending])
 
   // A view does not own the session choice. Navigation/unmount cancels only
   // this view's request; Host model/account lifecycle governs invalidation.
   useEffect(() => () => { controller.current?.abort() }, [])
 
   const select = (mode: OpenAICodexSpeedMode): void => {
-    if (status !== 'ready' || selection === undefined || controller.current !== undefined) return
+    if (selectionPending || status !== 'ready' || selection === undefined || controller.current !== undefined) return
     const abort = new AbortController(); controller.current = abort; setStatus('loading')
     void requestJson(OPENAI_CODEX_SPEED_MODE_PATH, {
       method: 'POST', credentials: 'same-origin', headers: { accept: 'application/json', 'content-type': 'application/json' },
@@ -78,7 +90,7 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
 
   const closeMenu = (): void => { setMenuOpen(false); setDisclosureOpen(false) }
   const openMenu = (): void => {
-    if (status !== 'ready') return
+    if (selectionPending || status !== 'ready') return
     setMenuOpen(true)
   }
 
@@ -113,12 +125,12 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
 
   const onButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>): void => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-    if (status !== 'ready') return
+    if (selectionPending || status !== 'ready') return
     event.preventDefault()
     if (!menuOpen) openMenu()
   }
 
-  const busy = status === 'loading'
+  const busy = status === 'loading' || selectionPending
   const currentMode = status === 'ready' ? selection?.mode : undefined
   const active = currentMode === 'fast' || currentMode === 'ultrafast'
   const label = busy
@@ -130,13 +142,13 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
         : currentMode === 'ultrafast'
           ? t('speedMenuUltrafastTitle')
           : t('speedMenuStandardTitle')
-  // The button only blocks while a read/write is in flight (main's contract).
+  // Also block while the Host selection is unsettled; keep the same button.
   // Account availability gates Ultrafast exactly as before; Fast and Standard
   // stay selectable while the shared account mutates or no account is signed
   // in.
   const disabled = busy
   return <span ref={anchorRef} style={{ display: 'inline-flex', position: 'relative' }}>
-    <Menu open={menuOpen && status === 'ready' && selection !== undefined} onClose={closeMenu}
+    <Menu open={!selectionPending && menuOpen && status === 'ready' && selection !== undefined} onClose={closeMenu}
       portal align="end" side="top" autoFocus
       // A fresh reader makes Menu's layout effect place the intrinsic-height
       // disclosure before paint, including its first expanded/collapsed frame.
@@ -146,7 +158,7 @@ export function OpenAICodexSpeedControl({ sessionId, model, t, available = true 
           data-openai-codex-speed-menu={currentMode ?? status}
           aria-label={label} title={label}
           aria-pressed={active} aria-busy={busy}
-          aria-haspopup="menu" aria-expanded={menuOpen}
+          aria-haspopup="menu" aria-expanded={menuOpen && !selectionPending}
           disabled={disabled}
           onClick={() => {
             if (status === 'unconfirmed') { setReadAttempt(attempt => attempt + 1); return }
