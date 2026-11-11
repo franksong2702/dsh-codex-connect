@@ -1,4 +1,4 @@
-import { RECOVERY_HOST, RECOVERY_CASES, inspectRecoveryReport, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
+import { isRecoveryHost, RECOVERY_CASES, inspectRecoveryReport, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { TASK_RUNTIME_PACKAGES } from './adaptive-task-matrix-contract.mjs'
@@ -9,7 +9,7 @@ export const PHASE2_RUNTIME_PACKAGES = Object.freeze([...TASK_RUNTIME_PACKAGES,
   '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'])
 
 export function inspectDelegationMatrixReport(report, version) {
-  if (version === RECOVERY_HOST) return inspectRecoveryReport(report).cases.concat('uses the exact isolated host without a neighboring runtime').sort()
+  if (isRecoveryHost(version)) return inspectRecoveryReport(report).cases.concat('uses the exact isolated host without a neighboring runtime').sort()
   assert.equal(report.success, true)
   assert.equal(report.numFailedTests, 0)
   assert.equal(report.numPendingTests, 0)
@@ -43,7 +43,7 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
     assert.equal(host.externalNetworkAttempts, 0)
     assert.equal(host.bundleDigest, bundleDigest)
     assert.equal(host.node, report.node)
-    const hostCases = host.version === RECOVERY_HOST ? [...RECOVERY_CASES, 'uses the exact isolated host without a neighboring runtime'].sort() : expected
+    const hostCases = isRecoveryHost(host.version) ? [...RECOVERY_CASES, 'uses the exact isolated host without a neighboring runtime'].sort() : expected
     assert.deepEqual(host.cases, hostCases)
     assert.equal(host.tests, hostCases.length)
     assert.ok(Number.isSafeInteger(host.pid) && host.pid > 0); pids.add(host.pid)
@@ -52,7 +52,7 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
     for (const [name, version] of Object.entries(host.runtimePackages)) {
       if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, host.version)
     }
-    if (host.version === RECOVERY_HOST) {
+    if (isRecoveryHost(host.version)) {
       assert.equal(host.profile, 'recovery-only')
       assert.equal(host.runtimePackages['@deepseek-ai/dsh-tool-executor-native'], host.version)
       assert.equal(host.crashes.node, report.node); assertRecoveryCrashes(host.crashes)
@@ -67,7 +67,7 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
       assert.equal(run.oldEpochRejected, true); assert.equal(run.cleanup, 'verified')
     }
   }
-  assert.equal(new Set(report.reports.filter(host => host.version !== RECOVERY_HOST).map(host => host.crashes.bundleSha256)).size, versions.some(v => v !== RECOVERY_HOST) ? 1 : 0)
+  assert.equal(new Set(report.reports.filter(host => !isRecoveryHost(host.version)).map(host => host.crashes.bundleSha256)).size, versions.some(v => !isRecoveryHost(v)) ? 1 : 0)
   assert.equal(pids.size, versions.length)
   return report
 }

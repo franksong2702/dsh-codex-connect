@@ -1,6 +1,11 @@
 /** Explicit replacement contract for one exact Host; never a generic version skip. */
 import assert from 'node:assert/strict'
 export const RECOVERY_HOST = '0.2.2-alpha.3'
+export function isRecoveryHost(version) { return version === RECOVERY_HOST || version === '0.2.2-rc.1' }
+export function recoveryCordisVersion(version) {
+  assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
+  return version === RECOVERY_HOST ? '4.0.6-alpha.2' : '4.1.0'
+}
 export const RECOVERY_CASES = Object.freeze([
   ...[1, 2].flatMap(v => [
     `alpha3 v${v} reads old state without requests or new authority`,
