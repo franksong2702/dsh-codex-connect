@@ -1,3 +1,4 @@
+import { assertTaskHostAutomation } from './adaptive-task-host-policy.ts'
 /**
  * Host-owned child bridge for Phase 2 delegation.
  *
@@ -110,6 +111,7 @@ export class TaskDelegationHost {
     if (this.agents.get(parent.id) !== parent) throw new Error('TASK_PARENT_NOT_LIVE')
     controls.check()
     if (childRun.childSessionId !== null || childRun.childSessionKey !== null) throw new Error('TASK_CHILD_ALREADY_BOUND')
+    assertTaskHostAutomation()
     const sessionId = SessionId(`task-child-${childRun.id}`)
     let submitted = false
     let violation = false

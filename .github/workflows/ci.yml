@@ -58,7 +58,11 @@ jobs:
         run: pnpm run pack:check
       - name: Validate declared DSH installation matrix
         run: pnpm --silent run check:dsh-matrix
+      - name: Prepare pinned recovery fixture installer (peer checks remain enabled)
+        run: npm install --prefix "${{ runner.temp }}/recovery-npm" --ignore-scripts --no-audit --no-fund npm@10.9.3
       - name: Verify task model selection on every declared host
+        env:
+          MATRIX_NPM_CLI: ${{ runner.temp }}/recovery-npm/node_modules/npm/bin/npm-cli.js
         run: node scripts/check-adaptive-task-matrix.mjs
       - name: Verify committed build output
         shell: bash

@@ -75,7 +75,8 @@ function quotaOf(
 
 function isGptModel(state: ModelDirectoryState): boolean {
   const current = state.current
-  return state.status === 'ready'
+  // Selection progress does not invalidate the current model's quota.
+  return (state.status === 'ready' || state.status === 'selecting')
     && current?.provider === CODEX_PROVIDER
     && typeof current.model === 'string'
     && current.model.toLowerCase().startsWith('gpt-')
@@ -182,7 +183,7 @@ export function OpenAICodexQuotaIndicator({ directory, t }: OpenAICodexQuotaIndi
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [eligible])
+  }, [eligible, directory])
 
   if (!eligible || request.status !== 'ready' || request.usage === undefined) return null
   const model = directoryState.current?.model

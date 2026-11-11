@@ -74,7 +74,8 @@ function dependencyVersion(consumer: NodeJS.Require, name: string): string {
 describe('host development dependency security regressions', () => {
   it.each([
     [[], 'undici', '8.12.3', 8],
-    [['jsdom'], 'undici', '7.29.1', 7],
+    [['jsdom'], 'undici', '7.30.1', 7],
+    [['@deepseek-ai/dsh-web', '@deepseek-ai/dsh-app-boot', 'ajv'], 'fast-uri', '3.1.9', 3],
     [['@deepseek-ai/dsh-attachment-local'], 'sharp', '0.35.5', 0],
     [['@deepseek-ai/dsh-host-webserver'], 'compression', '1.8.2', 1],
     [['vitest', 'vite', 'postcss'], 'source-map-js', '1.2.2', 1],
@@ -100,6 +101,32 @@ describe('host development dependency security regressions', () => {
     for (const version of ['8.12.3', '8.12.4', '8.13.0']) {
       expect(semver.satisfies(version, manifest.dependencies.undici)).toBe(true)
     }
+  })
+
+  it('rejects percent-encoded schemes through the host Ajv URI consumer', () => {
+    const uri = consumerRequire('@deepseek-ai/dsh-web', '@deepseek-ai/dsh-app-boot', 'ajv')('fast-uri') as {
+      parse(source: string): { error?: string }
+    }
+    expect(uri.parse('%6Aavascript:alert(1)').error).toBeDefined()
+  })
+
+  it('retains ordinary relative schema references through the host Ajv consumer', () => {
+    const Ajv = consumerRequire('@deepseek-ai/dsh-web', '@deepseek-ai/dsh-app-boot')('ajv') as new () => {
+      addSchema(schema: unknown): void
+      compile(schema: unknown): (data: unknown) => boolean
+    }
+    const ajv = new Ajv()
+    ajv.addSchema({ $id: 'https://example.invalid/schema/value.json', type: 'string', minLength: 1 })
+    const validate = ajv.compile({
+      $id: 'https://example.invalid/schema/root.json',
+      type: 'object',
+      properties: { value: { $ref: 'value.json' } },
+      required: ['value'],
+      additionalProperties: false,
+    })
+    expect(validate({ value: 'ordinary' })).toBe(true)
+    expect(validate({ value: '' })).toBe(false)
+    expect(validate({ value: 5 })).toBe(false)
   })
 
   it('uses patched librsvg and retains the libheif floor in the loaded native artifact', () => {

@@ -85,7 +85,15 @@ export async function readDshRegistryManifest(name, version, {
       last = error
       continue
     }
-    if (response.ok) return response.json()
+    if (response.ok) {
+      try { return await response.json() } catch (error) {
+        // The same request deadline also covers the response body. Do not lose
+        // bounded transport retries after headers; malformed JSON fails at once.
+        if (!(error instanceof TypeError) && error?.name !== 'TimeoutError' && error?.name !== 'AbortError') throw error
+        last = error
+        continue
+      }
+    }
     last = new Error(`npm registry returned HTTP ${response.status} for ${name}@${version}`)
     if (!retryableRegistryStatus(response.status)) throw last
   }

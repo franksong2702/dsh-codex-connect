@@ -141,18 +141,18 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex Plugin configuration card', () => {
-  it('counts saved native context and Reserve capabilities without counting an unsaved draft', async () => {
+  it('ignores retired Reserve in capability counts and does not count an unsaved draft', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
       ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])) : json({ status: 'signed-out' })))
     const { scope } = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableReserveFallback: true })
     render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
     const capabilities = screen.getByRole('tab', { name: en.capabilitiesModule })
-    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 1 }))).toBeTruthy()
+    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 0 }))).toBeTruthy()
     fireEvent.click(capabilities)
     fireEvent.click(screen.getByRole('checkbox', { name: en.enableNativeCompaction }))
-    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 1 }))).toBeTruthy()
+    expect(within(capabilities).getByText(t('capabilitiesModuleEnabled', { count: 0 }))).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: en.save }))
-    await within(capabilities).findByText(t('capabilitiesModuleEnabled', { count: 2 }))
+    await within(capabilities).findByText(t('capabilitiesModuleEnabled', { count: 1 }))
   })
 
   it('shows a dedicated remote-origin trust state without auth mutations and copies only the suggested command', async () => {
@@ -438,35 +438,16 @@ describe('OpenAI Codex Plugin configuration card', () => {
     expect(scope.getSnapshot().value).toMatchObject({ searchModel: 'remote-model', enableImageGeneration: false, enableSearch: false })
   })
 
-  it('stages, saves, reloads, and discards the Reserve fallback opt-in', async () => {
+  it('does not offer or rewrite a retired true Reserve flag while saving another capability', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }]))))
-    const { scope, mutate } = settingsScopeFixture()
-    const first = render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
-    const reserve = await screen.findByRole('checkbox', { name: /Automatic Luna Reserve/u }) as HTMLInputElement
-
-    expect(reserve.checked).toBe(false)
-    fireEvent.click(reserve)
-    expect(reserve.checked).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: en.discard }))
-    expect(reserve.checked).toBe(false)
-    expect(mutate).not.toHaveBeenCalled()
-
-    fireEvent.click(reserve)
-    fireEvent.click(screen.getByRole('button', { name: en.save }))
-    expect(await screen.findByText(en.settingsSaved)).toBeTruthy()
-    expect(mutate).toHaveBeenCalledExactlyOnceWith([
-      { op: 'set', path: ['enableReserveFallback'], value: true },
-    ], 0)
-    expect(scope.getSnapshot().value?.enableReserveFallback).toBe(true)
-
-    first.unmount()
+    const { scope, mutate } = settingsScopeFixture(true, { ...DEFAULT_OPENAI_CODEX_SETTINGS, enableReserveFallback: true })
     render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
-    const reloaded = await screen.findByRole('checkbox', { name: /Automatic Luna Reserve/u }) as HTMLInputElement
-    expect(reloaded.checked).toBe(true)
-    fireEvent.click(reloaded)
-    fireEvent.click(screen.getByRole('button', { name: en.discard }))
-    expect(reloaded.checked).toBe(true)
-    expect(mutate).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('checkbox', { name: /Automatic Luna Reserve/u })).toBeNull()
+    expect(await screen.findByText(en.retiredReserveNotice)).toBeTruthy()
+    fireEvent.click(screen.getByRole('checkbox', { name: en.enableNativeCompaction }))
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaved)
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([{ op: 'set', path: ['enableNativeCompaction'], value: true }], 0)
   })
 
   it('saves separate explicit speed defaults and resets to the preserved legacy preference', async () => {

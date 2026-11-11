@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validRetiredReserveReport } from './retired-reserve-report.mjs'
 
 import { readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -20,7 +21,7 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
-      || report.runtime?.reserveTransitionsVerified !== true
+      || !validRetiredReserveReport(report.runtime?.reserveRetirement)
       || report.runtime?.images?.syntheticOnly !== true
       || report.runtime.images.generated !== 2 || report.runtime.images.edited !== 2 || report.runtime.images.codeRuns !== 2
       || report.runtime.images.editSourcesVerified !== true || report.runtime.images.inheritedEditVerified !== true
