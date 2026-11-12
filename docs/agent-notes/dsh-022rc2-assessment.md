@@ -62,7 +62,7 @@ All runs used synthetic adapters and no account credentials or real model calls.
 The stock rc.2 install and complete installed-runtime checker passed with npm
 10.9.3, without peer exemptions or an upstream repair. Packed SHA-256:
 `e864efa0f0512f9c42cf06cf177a1fc9450ecd6070245cea72f4ffa1cc9d8afc`.
-Final rebuilt npm 10.9.3 pack has the identical SHA-256. The full 17-Host matrix is still pending.
+Final rebuilt npm 10.9.3 pack and all 17 Host installation checks have the identical SHA-256.
 Defaults stayed unchanged; image, native-compaction, preflight, retry and Task
 HTTP checks used only synthetic traffic.
 
@@ -80,12 +80,36 @@ Final candidate `pnpm run check` passed: 175 files, 2,504 tests passed, two
 existing skips; lint, types, build, strict compatibility and 74-file package
 inventory all passed. Production dependencies still audit at zero advisories.
 
-## Pending before compatibility acceptance
+## Completed exact-Host matrices
 
-- 17-Host same-artifact installation matrix (individual rc.2 install/runtime passed).
-- Updated phase-1/phase-2 matrices requiring the extra rc.2 ownership fixtures.
-- Remote review of the completed official API and actual rc.2 UI evidence.
-- Remote CI for the submitted candidate.
+All three matrices passed on Node 22.22.3 with npm 10.9.3 and peer checks enabled,
+against source commit `fbe2a5650e7a6d252c603a0460e5ed80b2386c3f`:
+
+- Task lifecycle: 17/17 Hosts, one bundle
+  `bff8cc9a753a88ba2a3559cc36520410b8f9dab97e59dd79ef7011ca6ff04fab`.
+- Delegation/recovery: 17/17 Hosts, one bundle
+  `1b8a0990cf5af6a1bb2b08aaa6748ab5a75260846e8b0e7c9d0bf0af257b6789`.
+  rc.2 requires 31 functional cases plus independent package identity, and
+  12 crash cases / 24 fresh processes. Older delegation Hosts retain their
+  full 138-test and 18-crash / 36-process contract.
+- Full stock Host installation/runtime: 17/17, exactly the same packed artifact
+  `e864efa0f0512f9c42cf06cf177a1fc9450ecd6070245cea72f4ffa1cc9d8afc`.
+  No peer exemptions, no upstream repair, unchanged defaults, zero real provider
+  requests. Includes images, native compaction, preflight, retry and Task HTTP.
+
+[Matrix evidence](dsh-022rc2-matrix-evidence.json) records every exact Host and
+per-profile counts. These are local automated synthetic checks, not Desktop or
+live-account acceptance. The final evidence-only commit changes no packed files.
+
+## Remaining boundaries
+
+- Remote CI for a submitted PR has not been established by this local work.
 - Desktop interactive installation, OAuth and live model acceptance remain unrun.
+- Missing optional ownership service with retained v2 state remains conservatively
+  blocked; metadata/ancestry never substitutes for real Host ownership.
+- Production audit is zero; full audit separately reports one pre-existing
+  development-only `eslint > minimatch@10.2.6` moderate globparts DoS advisory,
+  [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+  No unrelated major dependency upgrade is bundled into this fix.
 
 No merge, publication, deployment or daily-service restart is part of this work.
