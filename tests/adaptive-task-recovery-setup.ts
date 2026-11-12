@@ -31,6 +31,15 @@ export async function setup(version: 1 | 2, persisted?: { root: string; compress
   const root = persisted?.root ?? await mkdtemp(join(tmpdir(), 'alpha3-task-recovery-')); if (persisted === undefined) roots.push(root)
   const ctx = new Context(); contexts.push(ctx)
   for (const p of [Llm, Sessions, Projection, AgentRegistry, Prompt, Tools]) await ctx.plugin(p)
+  let ownershipFiber: Awaited<ReturnType<typeof ctx.plugin>> | undefined
+  if (typeof ctx.agents.roots !== 'function') {
+    // rc.2 moves live tree membership into the real subagent service. Mount
+    // that read-only seam, not a fabricated rootOf() or a delegation tool.
+    const fsName = '@deepseek-ai/dsh-fs-local', directoryName = '@deepseek-ai/dsh-working-directory', subagentName = '@deepseek-ai/dsh-subagent'
+    await ctx.plugin((await import(fsName)).default)
+    await ctx.plugin((await import(directoryName)).default)
+    ownershipFiber = await ctx.plugin((await import(subagentName)).default)
+  }
   // Use the actual published root executor, never a fake execute()/success adapter.
   const nativeName = '@deepseek-ai/dsh-tool-executor-native'
   await ctx.plugin(await import(nativeName))
@@ -68,9 +77,10 @@ export async function setup(version: 1 | 2, persisted?: { root: string; compress
   }
   let fiber = await load()
   const agentOptions = { provider: 'openai-codex', model, reasoningEffort: ReasoningEffortId('medium') }
-  const { agent } = persisted?.readExisting === true
+  const handle = persisted?.readExisting === true
     ? await ctx.agents.resume({ resumeSessionId: SessionId('recovery-root'), agentOptions })
     : await ctx.agents.create({ sessionId: SessionId('recovery-root'), meta: { cwd: root }, agentOptions })
+  const { agent } = handle
   const h = agent.session.header
   const sessionKey = taskIdentity(JSON.stringify([h.id, h.createdAt, h.cwd ?? '', h.isSeeded, h.parentSession ?? '']))
   const base: TaskDocument = { version: 1, sessionId: agent.id, sessionKey, owner, runtime: taskIdentity('prior-process'),
@@ -86,7 +96,7 @@ export async function setup(version: 1 | 2, persisted?: { root: string; compress
   const command = (action: Parameters<AdaptiveTaskControlRuntime['command']>[0]['action'], revision: number, extra = {}, principal = owner) =>
     runtime.command({ sessionId: agent.id, action, revision, operationId: randomUUID(), ...extra }, principal)
   const send = async () => { agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Synthetic ordinary request' }] })); await agent.whenIdle() }
-  return { ctx, agent, store, state, command, send, calls: () => calls, runtime: () => runtime, hold() { hold = true },
+  return { ctx, agent, handle, ownershipFiber, store, state, command, send, calls: () => calls, runtime: () => runtime, hold() { hold = true },
     async removeState() { await unlink(join(directory, taskIdentity(agent.id) + '.json')) },
     async corruptState() { await writeFile(join(directory, taskIdentity(agent.id) + '.json'), 'invalid synthetic task') },
     async reload() { await fiber.dispose(); fiber = await load() } }
