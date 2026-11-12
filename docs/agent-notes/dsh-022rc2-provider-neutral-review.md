@@ -54,10 +54,36 @@ final downstream request configuration:
 - New packed SHA-256:
   `8190a1922166a30e0cc3c9fa8acb51e26a40b4ef490bc32067ae6624ac2049f6`.
 
-## Still running / not established
+## Completed final matrices
 
-The updated 17-Host Task, delegation/recovery and same-artifact installation
-matrices are running. Their old bundle/tarball hashes are not evidence for this
-changed runtime. Remote CI and final independent re-review remain pending.
-No Desktop/OAuth/live-model acceptance, merge, publication, deployment or daily
-service restart is claimed.
+The corrected source is PR #433 head
+`8f9130dadc02fafd96af46808686037ca84470a1`, whose complete tree
+`ccd8ef4b1418345e0673455fbb253cf59d101919` is identical to independently reviewed
+local commit `86a5ad168ef3d185fbb48978df65d400e47f9cff`.
+
+All three updated matrices passed on Node 22.22.3 with npm 10.9.3 and peer checks:
+
+- Task lifecycle: 17/17 Hosts; bundle SHA-256
+  `bc40f5ed9a3bca433266a1ae033b6f0a7124b4d2b500e9e5ff540ff2c271ecfb`.
+- Delegation/recovery: 17/17 Hosts; bundle SHA-256
+  `0625b592959c2088a8dcb140c08d9f9cd57c3212af8461a47757bd0845178aa5`.
+  Earlier Hosts require 139 total tests plus 18 crash cases / 36 processes.
+  Alpha.3/rc.1 require 26 functional + 1 identity test; rc.2 requires 33 functional
+  + 1 identity test. Each recovery Host also passes 12 crashes / 24 processes.
+- Full stock Host installation/runtime: 17/17, same artifact on every Host:
+  `8190a1922166a30e0cc3c9fa8acb51e26a40b4ef490bc32067ae6624ac2049f6`.
+  Defaults unchanged, no peer exemptions or upstream repair, no real providers.
+
+[Per-Host final evidence](dsh-022rc2-provider-neutral-matrix-evidence.json) records
+exact versions, counts and hashes. These are the new fix's results; the old
+`e864…` tarball and old bundle results were not reused. This final evidence update
+changes only excluded agent notes, not runtime, fixtures or packed bytes.
+
+## Remaining boundaries
+
+Independent Astra review cleared the core correction after reading its exact
+source and red/green evidence. Remote CI and merge coordination are tracked
+separately on [PR #433](https://github.com/franksong2702/dsh-codex-connect/pull/433).
+No Desktop/OAuth/live-model acceptance, publication, deployment or daily-service
+restart is claimed. Public Task remains frozen and the missing optional ownership
+service with retained state remains a conservative refusal.

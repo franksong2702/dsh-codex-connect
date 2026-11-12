@@ -3,7 +3,8 @@
 **Follow-up:** Astra review found a missing cross-provider descendant case after
 root binding. See the [provider-neutral fence correction](dsh-022rc2-provider-neutral-review.md).
 The historical matrices below describe their stated source commit, not the
-subsequent runtime fix; new matrices are required for that fix.
+subsequent runtime fix. Its new matrices have now completed and are recorded
+in the linked provider-neutral correction.
 
 This is unreleased candidate evidence for issue #432, not a publication, Desktop
 acceptance, or a change to the published verified-compatibility catalog. The

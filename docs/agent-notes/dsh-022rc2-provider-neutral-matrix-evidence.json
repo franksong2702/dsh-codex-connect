@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 1,
+  "status": "all-local-matrices-passed",
+  "sourceCommit": "8f9130dadc02fafd96af46808686037ca84470a1",
+  "equivalentLocalCommit": "86a5ad168ef3d185fbb48978df65d400e47f9cff",
+  "sourceTree": "ccd8ef4b1418345e0673455fbb253cf59d101919",
+  "node": "v22.22.3",
+  "npm": "10.9.3",
+  "syntheticOnly": true,
+  "desktopAcceptance": false,
+  "realProviderRequests": 0,
+  "artifactSha256": "8190a1922166a30e0cc3c9fa8acb51e26a40b4ef490bc32067ae6624ac2049f6",
+  "phase1": {
+    "status": "passed",
+    "hosts": 17,
+    "bundleSha256": "bc40f5ed9a3bca433266a1ae033b6f0a7124b4d2b500e9e5ff540ff2c271ecfb",
+    "reports": [
+      {
+        "version": "0.1.7-rc.1",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.1.7-rc.2",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.0-rc.1",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.0-rc.2",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-alpha.1",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-alpha.2",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-alpha.3",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-alpha.4",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-alpha.5",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-rc.1",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-rc.2",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-rc.3",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-rc.4",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.1-rc.5",
+        "tests": 39,
+        "functionalCases": 38,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.2-alpha.3",
+        "tests": 27,
+        "profile": "recovery-only",
+        "functionalCases": 26,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.2-rc.1",
+        "tests": 27,
+        "profile": "recovery-only",
+        "functionalCases": 26,
+        "identityTests": 1
+      },
+      {
+        "version": "0.2.2-rc.2",
+        "tests": 34,
+        "profile": "recovery-only",
+        "functionalCases": 33,
+        "identityTests": 1
+      }
+    ]
+  },
+  "phase2": {
+    "status": "passed",
+    "hosts": 17,
+    "bundleSha256": "0625b592959c2088a8dcb140c08d9f9cd57c3212af8461a47757bd0845178aa5",
+    "reports": [
+      {
+        "version": "0.1.7-rc.1",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.1.7-rc.2",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.0-rc.1",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.0-rc.2",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-alpha.1",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-alpha.2",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-alpha.3",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-alpha.4",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-alpha.5",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-rc.1",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-rc.2",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-rc.3",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-rc.4",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.1-rc.5",
+        "tests": 139,
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 138,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 18,
+          "freshProcesses": 36
+        }
+      },
+      {
+        "version": "0.2.2-alpha.3",
+        "tests": 27,
+        "profile": "recovery-only",
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 26,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 12,
+          "freshProcesses": 24,
+          "externalNetworkAttempts": 0
+        }
+      },
+      {
+        "version": "0.2.2-rc.1",
+        "tests": 27,
+        "profile": "recovery-only",
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 26,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 12,
+          "freshProcesses": 24,
+          "externalNetworkAttempts": 0
+        }
+      },
+      {
+        "version": "0.2.2-rc.2",
+        "tests": 34,
+        "profile": "recovery-only",
+        "installer": {
+          "npm": "10.9.3",
+          "peerChecks": true
+        },
+        "functionalCases": 33,
+        "identityTests": 1,
+        "crashes": {
+          "passed": true,
+          "cases": 12,
+          "freshProcesses": 24,
+          "externalNetworkAttempts": 0
+        }
+      }
+    ]
+  },
+  "sameArtifactInstallation": {
+    "status": "passed",
+    "hosts": 17,
+    "sameArtifact": true,
+    "artifactSha256": "8190a1922166a30e0cc3c9fa8acb51e26a40b4ef490bc32067ae6624ac2049f6",
+    "versions": [
+      "0.1.7-rc.1",
+      "0.1.7-rc.2",
+      "0.2.0-rc.1",
+      "0.2.0-rc.2",
+      "0.2.1-alpha.1",
+      "0.2.1-alpha.2",
+      "0.2.1-alpha.3",
+      "0.2.1-alpha.4",
+      "0.2.1-alpha.5",
+      "0.2.1-rc.1",
+      "0.2.1-rc.2",
+      "0.2.1-rc.3",
+      "0.2.1-rc.4",
+      "0.2.1-rc.5",
+      "0.2.2-alpha.3",
+      "0.2.2-rc.1",
+      "0.2.2-rc.2"
+    ],
+    "defaultsUnchanged": true,
+    "peerExemptions": false,
+    "upstreamRepair": false,
+    "realProviderRequests": 0,
+    "installedRuntimeChecks": [
+      "provider/model enumeration",
+      "disposal",
+      "Reserve retirement",
+      "images and ownership",
+      "native compaction persistence/fork/failure/automatic lifecycle",
+      "request metrics",
+      "search lifecycle",
+      "preflight and cancellation",
+      "retry policy",
+      "Task HTTP lifecycle"
+    ]
+  },
+  "additionalValidation": {
+    "fullCheckPassed": true,
+    "testFiles": 175,
+    "passedTests": 2505,
+    "existingSkippedTests": 2,
+    "browserBaselinePassed": 101,
+    "actualRc1FunctionalCases": 26,
+    "actualRc2FunctionalCases": 33,
+    "eachRecoveryCrashCases": 12,
+    "eachRecoveryFreshProcesses": 24
+  },
+  "limits": [
+    "Synthetic local checks, not Desktop/OAuth/live-model acceptance.",
+    "Remote CI and merge are tracked separately on PR #433.",
+    "No published version, catalog, service or production default was changed.",
+    "Evidence-only commit does not change source or packed artifact."
+  ]
+}
