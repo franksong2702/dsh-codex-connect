@@ -23,6 +23,7 @@ export const RECOVERY_CASES = Object.freeze([
   'alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters',
   'alpha3 cold ledger cleanup requires actual absence of live children and keeps delivery unconfirmed',
   'alpha3 never claims cleanup of a still-live owned child',
+  ...['interrupted', 'manual'].map(mode => `recovery v2 rejects managed non-Codex descendants after ${mode} root binding`),
 ])
 export const RC2_RECOVERY_CASES = Object.freeze([
   'rc2 orphan with its own v2 ledger never falls through to the legacy provider',

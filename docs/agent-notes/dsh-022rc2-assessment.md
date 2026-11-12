@@ -1,5 +1,10 @@
 # DSH 0.2.2-rc.2 candidate assessment (2026-11-12)
 
+**Follow-up:** Astra review found a missing cross-provider descendant case after
+root binding. See the [provider-neutral fence correction](dsh-022rc2-provider-neutral-review.md).
+The historical matrices below describe their stated source commit, not the
+subsequent runtime fix; new matrices are required for that fix.
+
 This is unreleased candidate evidence for issue #432, not a publication, Desktop
 acceptance, or a change to the published verified-compatibility catalog. The
 product version remains 0.2.0-alpha.13. Exact rc.2 peer metadata applies only to

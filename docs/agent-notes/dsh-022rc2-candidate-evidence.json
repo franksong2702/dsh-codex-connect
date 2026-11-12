@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "locally-validated-unreleased-candidate",
+  "status": "historical-snapshot-before-provider-neutral-fence-fix",
   "host": "0.2.2-rc.2",
   "sourceBase": "b343c1fd5052dd5f6138fd885d0dae7ccae2aeed",
   "upstreamCommit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
@@ -133,5 +133,6 @@
     "path": "eslint > minimatch",
     "advisory": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
     "introducedByCandidate": false
-  }
+  },
+  "supersededBy": "dsh-022rc2-provider-neutral-review.md"
 }
