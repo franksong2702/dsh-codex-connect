@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { recoveryCases, recoveryRuntimePackages, RC2_RECOVERY_RUNTIME_PACKAGES } from '../scripts/adaptive-task-recovery-contract.mjs'
 // @ts-expect-error Plain Node matrix helper is outside the source build.
 import { assertDelegationMatrix, inspectDelegationMatrixReport, PHASE2_REQUIRED_CASES, PHASE2_RUNTIME_PACKAGES } from '../scripts/adaptive-task-delegation-matrix-contract.mjs'
 
@@ -42,4 +43,42 @@ it.each(['missing-package', 'mixed-runtime', 'node', 'network', 'digest', 'case'
   if (kind === 'crash-count') host.crashes.freshProcesses = 35
   if (kind === 'crash-replay') host.crashes.reports[0].recoveryFetches = 1
   expect(() => assertDelegationMatrix(report, versions, digest)).toThrow()
+})
+
+function rc2Matrix(): any {
+  const version = '0.2.2-rc.2', node = 'v24.13.0'
+  const cases = [...recoveryCases(version), 'uses the exact isolated host without a neighboring runtime'].sort()
+  let pid = 1
+  const crashes = { profile: 'alpha3-recovery-only', node, passed: true, syntheticOnly: true, cases: 12, freshProcesses: 24,
+    externalNetworkAttempts: 0, realProviderRequests: 0, bundleSha256: digest,
+    reports: [1, 2].flatMap(v => ['none', 'zstd'].flatMap(compression => ['seed', 'stop', 'manual'].map(cut => ({
+      version: v, compression, cut, passed: true, recoveryFetches: 0, recoveryChildCreates: 0,
+      oldEpochRejected: v === 2, cleanup: 'verified', phases: ['write', 'read'].map(phase => ({
+        version: v, compression, cut, phase, pid: pid++, passed: true, calls: 0, children: 0, externalNetworkAttempts: 0,
+        ...(phase === 'write' ? { abruptExit: 85 } : {}),
+      })),
+    })))) }
+  return { schemaVersion: 1, kind: 'adaptive-task-delegation-host-matrix', node, bundleDigest: digest,
+    syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0,
+    reports: [{ version, node, bundleDigest: digest, syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0,
+      cases, tests: cases.length, pid: 100, profile: 'recovery-only', crashes,
+      runtimePackages: { ...Object.fromEntries([...PHASE2_RUNTIME_PACKAGES, ...recoveryRuntimePackages(version)].map(name => [name, version])),
+        '@earendil-works/pi-ai': '0.85.1' } }] }
+}
+it('requires all rc2 functional cases, real identity and crash boundaries in Phase 2', () => {
+  const r = rc2Matrix()
+  expect(assertDelegationMatrix(r, ['0.2.2-rc.2'], digest)).toBe(r)
+  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 32, numPassedTests: 32,
+    testResults: [{ assertionResults: r.reports[0].cases.map((title: string) => ({ title, status: 'passed' })) }] }
+  expect(inspectDelegationMatrixReport(data, '0.2.2-rc.2')).toHaveLength(32)
+  data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
+  expect(() => inspectDelegationMatrixReport(data, '0.2.2-rc.2')).toThrow()
+})
+it.each(RC2_RECOVERY_RUNTIME_PACKAGES)('rejects missing or mixed rc2 Phase 2 %s', name => {
+  for (const mutation of ['missing', 'mixed']) {
+    const r = rc2Matrix()
+    if (mutation === 'missing') delete r.reports[0].runtimePackages[name]
+    else r.reports[0].runtimePackages[name] = '0.2.2-rc.1'
+    expect(() => assertDelegationMatrix(r, ['0.2.2-rc.2'], digest)).toThrow()
+  }
 })

@@ -1,3 +1,4 @@
+import { taskIsOwnedBy } from './adaptive-task-host-ownership.ts'
 import { assertTaskHostAutomation } from './adaptive-task-host-policy.ts'
 /** Opt-in internal v2 execution boundary. Not constructed by the product entry point. */
 import { randomUUID } from 'node:crypto'
@@ -172,7 +173,7 @@ export class AdaptiveTaskDelegation {
     const parents = (id: string) => {
       const header = this.sessions.get(id as Agent['id'])?.header
       if (header?.parentSession !== undefined) pending.push(header.parentSession)
-      for (const owner of live) if (this.agents.isOwnedBy(id as Agent['id'], owner)) pending.push(owner.id)
+      for (const owner of live) if (taskIsOwnedBy(this.ctx, id as Agent['id'], owner)) pending.push(owner.id)
     }
     parents(agent.id)
     if (pending.length === 0) return false
