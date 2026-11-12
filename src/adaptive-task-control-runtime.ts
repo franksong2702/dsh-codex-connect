@@ -1,3 +1,4 @@
+import { taskDurableAncestors, taskIsOwnedBy, taskLiveRoots, taskVerifiedRuntimeRoot } from './adaptive-task-host-ownership.ts'
 import { assertTaskHostAutomation, taskHostRecoveryOnly, TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
 /** Default-off composition: v1 main-task grants and explicitly upgraded v2 roots have one owner. */
 import { randomUUID } from 'node:crypto'
@@ -53,7 +54,7 @@ export class AdaptiveTaskControlRuntime {
   }
   private root(id: string): Agent {
     const agent = this.agents.get(SessionId(id))
-    if (agent === undefined || !this.agents.roots().includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+    if (agent === undefined || !taskLiveRoots(this.ctx).includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     return agent
   }
   private identity(agent: Agent, owner: string): LedgerIdentity {
@@ -88,16 +89,48 @@ export class AdaptiveTaskControlRuntime {
   }
   /** Both durable ancestry and actual live ownership route descendants to the rejecting executor. */
   private async managed(agent: Agent): Promise<boolean> {
-    for (const root of this.agents.roots()) {
-      let current: Agent | undefined = agent
-      const visited = new Set<string>()
-      let belongs = root === agent || this.agents.isOwnedBy(agent.id, root)
-      while (!belongs && current?.session.header.parentSession !== undefined) {
-        const id = current.session.header.parentSession
-        if (id === root.id) { belongs = true; break }
-        if (visited.has(id) || visited.size >= 64) taskFailure('TASK_CHILD_BINDING_MISMATCH')
-        visited.add(id); current = this.agents.get(id)
+    if (typeof this.agents.roots !== 'function' || typeof this.agents.isOwnedBy !== 'function') {
+      // Read durable relation only as denial evidence, never as ownership.
+      const ancestry = taskDurableAncestors(this.ctx, agent)
+      const related = new Set([agent.id, ...ancestry])
+      const recheck = () => {
+        if (JSON.stringify(taskDurableAncestors(this.ctx, agent)) !== JSON.stringify(ancestry)) taskFailure('TASK_CHILD_BINDING_MISMATCH')
       }
+      const records = new Map<string, boolean>()
+      const retained = async (id: string) => {
+        if (!records.has(id)) records.set(id, (await this.store.read(id))?.version === 2)
+        return records.get(id) === true
+      }
+      for (const id of related) await retained(id)
+      let runtimeRoot: Agent
+      try { runtimeRoot = taskVerifiedRuntimeRoot(this.ctx, agent) } catch (error) {
+        // No Task anywhere in the live registry or known durable ancestry:
+        // this plugin has no Task authority to intercept an ordinary request.
+        // Ambiguous ownership with any retained v2 state stays fail-closed.
+        if ([...records.values()].some(Boolean)) throw error
+        const live = this.agents.list()
+        for (const candidate of live) if (await retained(candidate.id)) throw error
+        recheck()
+        const current = this.agents.list()
+        if (current.length !== live.length || current.some((candidate, index) => candidate !== live[index])) taskFailure('TASK_CHILD_BINDING_MISMATCH')
+        return false
+      }
+      related.add(runtimeRoot.id)
+      let managed = false
+      for (const id of related) {
+        if (!await retained(id)) continue
+        const root = this.agents.get(SessionId(id))
+        if (root === undefined || root.session.header.parentSession !== undefined
+          || taskVerifiedRuntimeRoot(this.ctx, root) !== root) taskFailure('TASK_CHILD_BINDING_MISMATCH')
+        await this.ensure(root); managed = true
+      }
+      recheck()
+      if (taskVerifiedRuntimeRoot(this.ctx, agent) !== runtimeRoot) taskFailure('TASK_CHILD_BINDING_MISMATCH')
+      return managed
+    }
+    for (const root of taskLiveRoots(this.ctx)) {
+      const belongs = root === agent || taskIsOwnedBy(this.ctx, agent.id, root)
+        || taskDurableAncestors(this.ctx, agent).includes(root.id)
       if (belongs && (await this.store.read(root.id))?.version === 2) { await this.ensure(root); return true }
     }
     return false
