@@ -309,7 +309,7 @@
           "npm": "10.9.3",
           "peerChecks": true
         },
-        "functionalCases": 25,
+        "functionalCases": 24,
         "crashes": {
           "passed": true,
           "cases": 12,
@@ -325,7 +325,7 @@
           "npm": "10.9.3",
           "peerChecks": true
         },
-        "functionalCases": 25,
+        "functionalCases": 24,
         "crashes": {
           "passed": true,
           "cases": 12,
@@ -341,7 +341,7 @@
           "npm": "10.9.3",
           "peerChecks": true
         },
-        "functionalCases": 32,
+        "functionalCases": 31,
         "crashes": {
           "passed": true,
           "cases": 12,
