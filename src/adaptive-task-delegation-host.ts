@@ -1,3 +1,4 @@
+import { taskDurableAncestors, taskIsOwnedBy, taskLiveRoots } from './adaptive-task-host-ownership.ts'
 import { assertTaskHostAutomation } from './adaptive-task-host-policy.ts'
 /**
  * Host-owned child bridge for Phase 2 delegation.
@@ -95,14 +96,14 @@ export class TaskDelegationHost {
     const expectedKey = taskIdentity(JSON.stringify([header.id, header.createdAt, header.cwd ?? '', header.isSeeded, header.parentSession ?? '']))
     if (parent.id !== identity.sessionId || identity.sessionKey !== expectedKey
       || this.agents.get(parent.id) !== parent || this.sessions.get(parent.session.id) !== parent.session
-      || !this.agents.roots().includes(parent)
+      || !taskLiveRoots(this.ctx).includes(parent)
       || header.parentSession !== undefined) throw new Error('TASK_PARENT_NOT_LIVE')
   }
 
   assertNoChildren(parent: Agent): void {
     for (const candidate of this.agents.list()) {
       if (candidate === parent) continue
-      if (candidate.session.header.parentSession === parent.id || this.agents.isOwnedBy(candidate.id, parent)) throw new Error('TASK_CHILDREN_LIVE')
+      if (taskDurableAncestors(this.ctx, candidate).includes(parent.id) || taskIsOwnedBy(this.ctx, candidate.id, parent)) throw new Error('TASK_CHILDREN_LIVE')
     }
   }
 
@@ -160,7 +161,7 @@ export class TaskDelegationHost {
     }
     const handle = await parent.ctx.agents.create(creation)
     const agent = handle.agent
-    if (!this.agents.isOwnedBy(agent.id, parent)) {
+    if (!taskIsOwnedBy(this.ctx, agent.id, parent)) {
       await handle.dispose()
       throw new Error('TASK_CHILD_OWNER_MISMATCH')
     }
@@ -205,6 +206,6 @@ export class TaskDelegationHost {
 
   private isLive(agent: Agent, sessionId: string, parent: Agent): boolean {
     return agent.id === sessionId && this.agents.get(SessionId(sessionId)) === agent
-      && this.sessions.get(agent.session.id) === agent.session && this.agents.isOwnedBy(agent.id, parent)
+      && this.sessions.get(agent.session.id) === agent.session && taskIsOwnedBy(this.ctx, agent.id, parent)
   }
 }

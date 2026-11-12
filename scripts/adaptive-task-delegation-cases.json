@@ -135,5 +135,6 @@
   "v2 main-model changes cannot run while a child is unresolved",
   "v2 title-purpose and direct auxiliary calls share the root counter without double debit",
   "keeps standalone streams and auxiliary work ordinary without optional task services",
-  "rejects live task control and dispatch when the session service is missing"
+  "rejects live task control and dispatch when the session service is missing",
+  "an exact active evidence child cannot switch to an unwrapped provider before dispatch"
 ]

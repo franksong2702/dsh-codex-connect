@@ -1,7 +1,7 @@
 /** Explicit replacement contract for one exact Host; never a generic version skip. */
 import assert from 'node:assert/strict'
 export const RECOVERY_HOST = '0.2.2-alpha.3'
-export function isRecoveryHost(version) { return version === RECOVERY_HOST || version === '0.2.2-rc.1' }
+export function isRecoveryHost(version) { return version === RECOVERY_HOST || version === '0.2.2-rc.1' || version === '0.2.2-rc.2' }
 export function recoveryCordisVersion(version) {
   assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
   return version === RECOVERY_HOST ? '4.0.6-alpha.2' : '4.1.0'
@@ -23,16 +23,43 @@ export const RECOVERY_CASES = Object.freeze([
   'alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters',
   'alpha3 cold ledger cleanup requires actual absence of live children and keeps delivery unconfirmed',
   'alpha3 never claims cleanup of a still-live owned child',
+  ...['interrupted', 'manual'].map(mode => `recovery v2 rejects managed non-Codex descendants after ${mode} root binding`),
 ])
-export function inspectRecoveryReport(report) {
+export const RC2_RECOVERY_CASES = Object.freeze([
+  'rc2 orphan with its own v2 ledger never falls through to the legacy provider',
+  'rc2 disposed durable ancestor v2 never becomes an ordinary child request',
+  'rc2 missing optional ownership service with no v2 state leaves ordinary requests alone',
+  'rc2 unmanaged delegated agent without any v2 state is not blocked by a Task hook',
+  'rc2 missing ownership service with a live v2 ledger refuses ambiguous dispatch',
+  'rc2 unrelated non-Codex ordinary turn is not intercepted by retained Task state',
+  'rc2 revalidates the exact live caller after asynchronous empty-state reads',
+])
+
+export const RECOVERY_RUNTIME_PACKAGES = Object.freeze([
+  '@deepseek-ai/dsh-tool-executor-native', '@deepseek-ai/dsh-client-connection',
+  '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller',
+])
+export const RC2_RECOVERY_RUNTIME_PACKAGES = Object.freeze([
+  '@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-working-directory', '@deepseek-ai/dsh-fs-local',
+])
+export function recoveryCases(version) {
+  assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
+  return version === '0.2.2-rc.2' ? [...RECOVERY_CASES, ...RC2_RECOVERY_CASES] : [...RECOVERY_CASES]
+}
+export function recoveryRuntimePackages(version) {
+  assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
+  return [...RECOVERY_RUNTIME_PACKAGES, ...(version === '0.2.2-rc.2' ? RC2_RECOVERY_RUNTIME_PACKAGES : [])]
+}
+
+export function inspectRecoveryReport(report, version = RECOVERY_HOST) {
   assert.equal(report.success, true); assert.equal(report.numFailedTests, 0)
   assert.equal(report.numPendingTests, 0); assert.equal(report.numTodoTests, 0)
-  const cases = [...RECOVERY_CASES, 'uses the exact isolated host without a neighboring runtime']
+  const cases = [...recoveryCases(version), 'uses the exact isolated host without a neighboring runtime']
   const results = report.testResults.flatMap(suite => suite.assertionResults)
   assert.deepEqual(results.map(row => row.title).sort(), [...cases].sort())
   assert.ok(results.every(row => row.status === 'passed'))
   assert.equal(report.numTotalTests, cases.length); assert.equal(report.numPassedTests, cases.length)
-  return { cases: [...RECOVERY_CASES], tests: cases.length, profile: 'recovery-only', automationExercised: false }
+  return { cases: recoveryCases(version), tests: cases.length, profile: 'recovery-only', automationExercised: false }
 }
 export function assertRecoveryCrashes(report) {
   assert.equal(report.profile, 'alpha3-recovery-only'); assert.equal(report.passed, true)

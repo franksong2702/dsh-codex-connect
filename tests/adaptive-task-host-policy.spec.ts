@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const { read } = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock('node:fs', async original => ({ ...await original<typeof import('node:fs')>(), readFileSync: read }))
-import { assertTaskHostAutomation, taskHostRecoveryOnly } from '../src/adaptive-task-host-policy.ts'
+import { assertTaskHostAutomation, taskHostRecoveryOnly, taskHostUsesSubagentOwnership } from '../src/adaptive-task-host-policy.ts'
 let versions: Record<string, string | undefined>
 beforeEach(() => {
   versions = { 'dsh-agent': '0.1.7-rc.1', 'dsh-agent-loop': '0.1.7-rc.1', 'dsh-tools': '0.1.7-rc.1' }
@@ -44,4 +44,36 @@ it('closes automation on exact rc.1 and rejects mixing either recovery Host', ()
     versions['dsh-tools'] = replacement
     expect(() => taskHostRecoveryOnly()).toThrow('TASK_HOST_VERSION_MISMATCH')
   }
+})
+
+it('keeps exact rc2 recovery-only and rejects every partial binding', () => {
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.2'
+  expect(taskHostRecoveryOnly()).toBe(true)
+  expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_RECOVERY_ONLY')
+  for (const name of Object.keys(versions)) {
+    versions[name] = '0.2.2-rc.1'
+    expect(() => taskHostRecoveryOnly()).toThrow('TASK_HOST_VERSION_MISMATCH')
+    versions[name] = '0.2.2-rc.2'
+  }
+})
+
+it('requires exact subagent metadata for replacement ownership, never just the core version', () => {
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.2'
+  versions['dsh-subagent'] = '0.2.2-rc.2'
+  expect(taskHostUsesSubagentOwnership()).toBe(true)
+  for (const version of [undefined, '0.2.2-rc.1', '0.2.2-rc.3']) {
+    versions['dsh-subagent'] = version
+    expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
+  }
+})
+it('rejects a foreign subagent manifest and keeps legacy Host ownership unchanged', () => {
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.2'
+  versions['dsh-subagent'] = '0.2.2-rc.2'
+  read.mockImplementation((filename: string) => {
+    const name = filename.split('/').at(-2)!
+    return JSON.stringify({ name: name === 'dsh-subagent' ? 'foreign' : '@deepseek-ai/' + name, version: versions[name] })
+  })
+  expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.1'
+  expect(taskHostUsesSubagentOwnership()).toBe(false)
 })
