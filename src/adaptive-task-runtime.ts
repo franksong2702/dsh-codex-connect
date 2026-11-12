@@ -1,3 +1,4 @@
+import { taskLiveRoots } from './adaptive-task-host-ownership.ts'
 import { assertTaskHostAutomation, taskHostRecoveryOnly, TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
 /** Phase 1: a real per-task opt-in around the ordinary host loop, not a mandatory model router. */
 import { randomUUID } from 'node:crypto'
@@ -86,7 +87,7 @@ export class AdaptiveTaskRuntime {
   }
   private owner(sessionId: string): Agent {
     const agent = this.ctx.get('agents')?.get(SessionId(sessionId))
-    if (agent === undefined || !this.ctx.get('agents')?.roots().includes(agent)
+    if (agent === undefined || !taskLiveRoots(this.ctx).includes(agent)
       || this.ctx.get('sessions')?.get(agent.id) !== agent.session) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     return agent
   }

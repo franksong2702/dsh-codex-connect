@@ -1,3 +1,6 @@
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import { LlmAdapter, createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 /** Exact alpha.3 recovery contract; executed by installed-Host matrices. */
 import { expect, it, afterEach } from 'vitest'
 import { SessionId } from '@deepseek-ai/dsh-session'
@@ -186,4 +189,56 @@ for (const version of [1, 2] as const) it(`alpha3 v${version} keeps signed Host 
   result = await http(path, headers, { sessionId: f.agent.id, action: 'manual', revision: result.value.revision, operationId: 'http-manual-operation-0001' })
   expect(result).toMatchObject({ status: 200, value: { mode: 'manual', reserved: 3 } })
   expect(f.calls()).toBe(0)
+})
+
+it.each(['interrupted', 'manual'] as const)('recovery v2 rejects managed non-Codex descendants after %s root binding', async mode => {
+  const f = await setup(2), state = await f.state()
+  if (mode === 'manual') await f.command('manual', state.revision)
+  const before = await f.store.read(f.agent.id)
+  let calls = 0
+  const info = { provider: 'fixture-other', id: 'ordinary', name: 'Synthetic other' }
+  class Other extends LlmAdapter {
+    providerInfo(provider: string) { return { id: provider, name: 'Synthetic other' } }
+    async listModels() { return [info] }
+    async resolveModel() { return info }
+    async *stream(): AsyncIterable<StreamChunk> { calls++; yield { type: 'finish', reason: { kind: 'stop' } } }
+  }
+  f.ctx.llm.registerAdapter(['fixture-other'], new Other())
+  // A bound Task elsewhere must not claim an unrelated provider's ordinary work.
+  const unrelated = await f.ctx.agents.create({ sessionId: SessionId('unrelated-non-codex'), agentOptions: { provider: 'fixture-other', model: 'ordinary' } })
+  unrelated.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Synthetic ordinary request' }] }))
+  await unrelated.agent.whenIdle(); expect(calls).toBe(1); calls = 0
+  if (typeof f.ctx.agents.isOwnedBy === 'function') {
+    const child = await f.agent.ctx.agents.create({ sessionId: SessionId('managed-non-codex'), parentAgent: f.agent,
+      meta: { parentSession: f.agent.id, origin: 'subagent' }, agentOptions: { provider: 'fixture-other', model: 'ordinary' } } as Parameters<typeof f.ctx.agents.create>[0])
+    expect(f.ctx.agents.isOwnedBy(child.agent.id, f.agent)).toBe(true)
+    child.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Synthetic child request' }] }))
+    await child.agent.whenIdle()
+    expect(child.agent.session.snapshotEvents().findLast(event => event.type === 'turn/end')?.data).toMatchObject({ reason: { kind: 'error' } })
+    await child.dispose()
+  } else {
+    // The real rc.2 manager owns creation and tree identity. The synthetic
+    // provider contributes detached seed data only, never a fabricated owner.
+    const subagents = f.ctx.get('subagents') as unknown as {
+      rootOf(agent: Agent): Agent
+      registerProvider(provider: unknown): () => void
+      startActivation(spec: unknown): Promise<{ result: Promise<{ stopReason: string }>; dispose(): Promise<void> }>
+    }
+    subagents.registerProvider({ name: 'fixture-local', inheritsParentContext: false,
+      capabilities: { agentOptions: true, agentPreset: false, outputSchema: false, depthLimit: false },
+      async prepareContinuable() { return {} } })
+    let verified = false
+    f.ctx.on('agent/request', async ({ agent }, next) => {
+      if (agent.id === 'managed-non-codex') verified = subagents.rootOf(agent) === f.agent
+      return next()
+    }, { prepend: true })
+    const activation = await subagents.startActivation({ provider: 'fixture-local', label: 'synthetic',
+      parent: f.agent, childId: SessionId('managed-non-codex'), delivery: 'caller', signal: new AbortController().signal,
+      agentOptions: { provider: 'fixture-other', model: 'ordinary' }, prompt: [{ type: 'text', text: 'Synthetic child request' }] })
+    expect((await activation.result).stopReason).toBe('error')
+    expect(verified).toBe(true)
+    await activation.dispose()
+  }
+  expect(calls).toBe(0); expect(f.calls()).toBe(0)
+  expect(await f.store.read(f.agent.id)).toEqual(before)
 })

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "status": "historical-snapshot-before-provider-neutral-fence-fix",
+  "host": "0.2.2-rc.2",
+  "sourceBase": "b343c1fd5052dd5f6138fd885d0dae7ccae2aeed",
+  "upstreamCommit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
+  "packages": [
+    {
+      "name": "@deepseek-ai/dsh",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-J727r2C471x2cYXGjqZ0D9T1ZyaYQDFH/Ynx8iq+85oslM4nky5YTBnbAuTtxMhW7nhY8wuAEfjjFCQ+K6Swgw==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-UsbQ3QBB8Gl8YTzQ7ScuXHuuI8o+1m1vZktAA3ayzxZHxvX1uRAG3kYkKf8sDRlkhue63Zb+DfAw3VPjd3PSpw==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-agent/-/dsh-agent-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-loop",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-jV/xbmSi/WUdjMRQbtv6xcPl4d2pOhXlyXt8t1Rf2QcUlOVh1DZoSazGmm+/P3CiyYuBwsE3Y5nwldQOGdHmHw==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-agent-loop/-/dsh-agent-loop-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-OiVq3aZWfGjV3/YxebTKo3WozOUz9aGSG/IZnN0medfciAhprh5VkZTCWvwxQCFCN1I9b38Y5RZbwqcCX+m7Eg==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-session/-/dsh-session-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-team",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-Bfna9V+vLFCNylbEcItIWwoRHdmvLUo0DWTAJIGpSNToHFGT40WVM9EnQwRFAJLTx6u1LTYdqzSbY5KZ7ajgKA==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-agent-team/-/dsh-agent-team-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-CqXtsX/ztS1M8xs5Q8z9S6xGuKa64jI0XTjNzeEpI+1GnCXt9RBONKUfWsxMKoqopAUjuIeiYMc9SCvh+6vIXQ==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-tools/-/dsh-tools-0.2.2-rc.2.tgz"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent",
+      "version": "0.2.2-rc.2",
+      "integrity": "sha512-XMVsLFZZQMJXXRBnl+afQ2aPWTnEq4qZr3aQ/3MOI9EiPXvgzK2dOvHMyRX6cxHkbOeUsJI6xs6uBfikHixGqg==",
+      "tarball": "https://registry.npmjs.org/@deepseek-ai/dsh-subagent/-/dsh-subagent-0.2.2-rc.2.tgz"
+    }
+  ],
+  "syntheticRecovery": {
+    "cases": [
+      "alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters",
+      "alpha3 cold ledger cleanup requires actual absence of live children and keeps delivery unconfirmed",
+      "alpha3 never claims cleanup of a still-live owned child",
+      "alpha3 refuses direct evidence-child creation before removed presentation APIs",
+      "alpha3 v1 blocks old automatic dispatch before the model",
+      "alpha3 v1 keeps signed Host HTTP ownership and safety exits",
+      "alpha3 v1 manual takeover permits only an ordinary explicit model",
+      "alpha3 v1 preserves ordinary work in another live root",
+      "alpha3 v1 preserves owner and revision checks on safety exits",
+      "alpha3 v1 reads old state without requests or new authority",
+      "alpha3 v1 refuses missing or corrupt retained state without dispatch",
+      "alpha3 v1 rejects stale and direct activation without mutation",
+      "alpha3 v1 serializes concurrent exits and survives runtime reload",
+      "alpha3 v1 stops and preserves spent counters",
+      "alpha3 v2 blocks old automatic dispatch before the model",
+      "alpha3 v2 keeps signed Host HTTP ownership and safety exits",
+      "alpha3 v2 manual takeover permits only an ordinary explicit model",
+      "alpha3 v2 preserves ordinary work in another live root",
+      "alpha3 v2 preserves owner and revision checks on safety exits",
+      "alpha3 v2 reads old state without requests or new authority",
+      "alpha3 v2 refuses missing or corrupt retained state without dispatch",
+      "alpha3 v2 rejects stale and direct activation without mutation",
+      "alpha3 v2 serializes concurrent exits and survives runtime reload",
+      "alpha3 v2 stops and preserves spent counters",
+      "rc2 disposed durable ancestor v2 never becomes an ordinary child request",
+      "rc2 missing optional ownership service with no v2 state leaves ordinary requests alone",
+      "rc2 missing ownership service with a live v2 ledger refuses ambiguous dispatch",
+      "rc2 orphan with its own v2 ledger never falls through to the legacy provider",
+      "rc2 revalidates the exact live caller after asynchronous empty-state reads",
+      "rc2 unmanaged delegated agent without any v2 state is not blocked by a Task hook",
+      "rc2 unrelated non-Codex ordinary turn is not intercepted by retained Task state"
+    ],
+    "tests": 31,
+    "bundleSha256": "90176b8baa07e4ad0705b8ed8ce03370c5046e2db75ee2b4ebec9ca86c5042a7",
+    "crashCases": 12,
+    "freshProcesses": 24,
+    "externalNetworkAttempts": 0,
+    "realProviderRequests": 0
+  },
+  "mutation": {
+    "case": "rc2 orphan with its own v2 ledger never falls through to the legacy provider",
+    "oldFilteredRootsProviderCalls": 1,
+    "candidateProviderCalls": 0
+  },
+  "desktopAcceptance": false,
+  "publishedCatalogChanged": false,
+  "pending": [
+    "remote-ci",
+    "Desktop-interactive-installation",
+    "OAuth-and-live-model-acceptance"
+  ],
+  "individualInstall": {
+    "passed": true,
+    "artifactSha256": "e864efa0f0512f9c42cf06cf177a1fc9450ecd6070245cea72f4ffa1cc9d8afc",
+    "npm": "10.9.3",
+    "defaultsUnchanged": true,
+    "syntheticOnly": true
+  },
+  "rc2Browser": {
+    "passed": 16,
+    "productionUiChanged": false,
+    "geometryVerified": true
+  },
+  "finalValidation": {
+    "fullCheck": "passed",
+    "testFiles": 175,
+    "passedTests": 2504,
+    "existingSkippedTests": 2,
+    "packedFiles": 74,
+    "finalArtifactMatchesIndividualInstall": true,
+    "artifactSha256": "e864efa0f0512f9c42cf06cf177a1fc9450ecd6070245cea72f4ffa1cc9d8afc"
+  },
+  "matrixEvidence": "dsh-022rc2-matrix-evidence.json",
+  "productionAudit": {
+    "dependencies": 97,
+    "vulnerabilities": 0
+  },
+  "developmentAudit": {
+    "moderate": 1,
+    "package": "minimatch@10.2.6",
+    "path": "eslint > minimatch",
+    "advisory": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+    "introducedByCandidate": false
+  },
+  "supersededBy": "dsh-022rc2-provider-neutral-review.md"
+}
