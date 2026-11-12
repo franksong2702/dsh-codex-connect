@@ -1,9 +1,9 @@
 /** The recovery profile is a complete positive contract, not a way to omit failing cases. */
 import { expect, it } from 'vitest'
-import { RECOVERY_CASES, isRecoveryHost, recoveryCordisVersion, inspectRecoveryReport, assertRecoveryCrashes } from '../scripts/adaptive-task-recovery-contract.mjs'
+import { RECOVERY_CASES, RC2_RECOVERY_CASES, recoveryCases, recoveryRuntimePackages, isRecoveryHost, recoveryCordisVersion, inspectRecoveryReport, assertRecoveryCrashes } from '../scripts/adaptive-task-recovery-contract.mjs'
 const identity = 'uses the exact isolated host without a neighboring runtime'
-function report() {
-  const titles = [...RECOVERY_CASES, identity]
+function report(version = '0.2.2-alpha.3') {
+  const titles = [...recoveryCases(version), identity]
   return { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0,
     numPassedTests: titles.length, numTotalTests: titles.length,
     testResults: [{ assertionResults: titles.map(title => ({ title, status: 'passed' })) }] }
@@ -48,13 +48,37 @@ it.each(['missing-case', 'duplicate-pid', 'wrong-cut', 'no-crash', 'v2-no-epoch-
   expect(() => assertRecoveryCrashes(r)).toThrow()
 })
 
-it('selects recovery only for the two exact verified contract candidates', () => {
+it('selects recovery only for the three exact recovery contract candidates', () => {
   expect(isRecoveryHost('0.2.2-rc.1')).toBe(true)
   expect(isRecoveryHost('0.2.2-alpha.3')).toBe(true)
-  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.2', '0.2.3', undefined]) {
+  expect(isRecoveryHost('0.2.2-rc.2')).toBe(true)
+  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.3', '0.2.3', undefined]) {
     expect(isRecoveryHost(version)).toBe(false)
     expect(() => recoveryCordisVersion(version as string)).toThrow()
   }
   expect(recoveryCordisVersion('0.2.2-rc.1')).toBe('4.1.0')
   expect(recoveryCordisVersion('0.2.2-alpha.3')).toBe('4.0.6-alpha.2')
+})
+
+it('requires the seven rc2 ownership regressions in addition to all prior recovery cases', () => {
+  expect(RECOVERY_CASES).toHaveLength(26)
+  expect(RC2_RECOVERY_CASES).toHaveLength(7)
+  expect(inspectRecoveryReport(report('0.2.2-rc.2'), '0.2.2-rc.2').tests).toBe(34)
+  expect(inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.1').tests).toBe(27)
+  expect(() => inspectRecoveryReport(report(), '0.2.2-rc.2')).toThrow()
+  expect(() => recoveryCases('0.2.2-rc.3')).toThrow()
+  expect(() => recoveryRuntimePackages('0.2.2-rc.3')).toThrow()
+})
+it.each(RC2_RECOVERY_CASES)('rejects rc2 evidence omitting %s even with adjusted passing totals', title => {
+  const r = report('0.2.2-rc.2')
+  r.testResults[0]!.assertionResults = r.testResults[0]!.assertionResults.filter(row => row.title !== title)
+  r.numTotalTests--; r.numPassedTests--
+  expect(() => inspectRecoveryReport(r, '0.2.2-rc.2')).toThrow()
+})
+it('only the exact rc2 profile adds its ownership and concrete filesystem services', () => {
+  const names = ['@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-working-directory', '@deepseek-ai/dsh-fs-local']
+  for (const name of names) {
+    expect(recoveryRuntimePackages('0.2.2-rc.2')).toContain(name)
+    expect(recoveryRuntimePackages('0.2.2-rc.1')).not.toContain(name)
+  }
 })

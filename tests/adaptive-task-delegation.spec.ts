@@ -8,7 +8,7 @@ import { zstdDecompressSync } from 'node:zlib'
 import { Context } from '@deepseek-ai/cordis'
 import { AgentRegistry, installModelSelection } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import Llm, { createUserMessage, ReasoningEffortId, ToolCallId } from '@deepseek-ai/dsh-llm'
+import Llm, { LlmAdapter, createUserMessage, ReasoningEffortId, ToolCallId } from '@deepseek-ai/dsh-llm'
 import Sessions, { SessionId } from '@deepseek-ai/dsh-session'
 import Projection from '@deepseek-ai/dsh-session-projection'
 import Prompt from '@deepseek-ai/dsh-system-prompt'
@@ -445,4 +445,28 @@ it('tool registration failure during explicit resume withdraws all authority and
   expect(f.ctx.tools.get(ADAPTIVE_TASK_TOOL, f.parent)).toBeUndefined()
   f.setDispatch(fresh); await f.send(); expect(f.wires).toHaveLength(1)
   await fresh.dispose()
+})
+
+it('an exact active evidence child cannot switch to an unwrapped provider before dispatch', async () => {
+  const f = await setup(), original = f.host.create.bind(f.host)
+  let otherCalls = 0
+  const info = { provider: 'fixture-other', id: 'ordinary', name: 'Synthetic other' }
+  class Other extends LlmAdapter {
+    providerInfo(provider: string) { return { id: provider, name: 'Synthetic other' } }
+    async listModels() { return [info] }
+    async resolveModel() { return info }
+    async *stream() { otherCalls++; yield { type: 'finish' as const, reason: { kind: 'stop' as const } } }
+  }
+  f.ctx.llm.registerAdapter(['fixture-other'], new Other())
+  vi.spyOn(f.host, 'create').mockImplementation(async (...args) => {
+    const owned = await original(...args)
+    f.ctx.effect(() => installModelSelection(owned.agent.ctx, { current: { provider: 'fixture-other', model: 'ordinary' }, assembled: undefined }))
+    owned.agent.session.append('model/selection', { provider: 'fixture-other', model: 'ordinary' })
+    return owned
+  })
+  f.setReply(() => f.wires.length === 1 ? tool(TASK_DELEGATE_TOOL, f.args, f.parentCall) : answer())
+  await f.send()
+  expect(otherCalls).toBe(0)
+  expect(f.wires.every(wire => wire.model === route.model)).toBe(true)
+  expect((await f.read()).delegation.runs[0]?.attempts).toHaveLength(0)
 })
