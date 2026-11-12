@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "unreleased-candidate-incomplete-matrix",
+  "status": "historical-snapshot-before-provider-neutral-fence-fix",
   "host": "0.2.2-rc.2",
   "sourceBase": "b343c1fd5052dd5f6138fd885d0dae7ccae2aeed",
   "upstreamCommit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
@@ -97,9 +97,9 @@
   "desktopAcceptance": false,
   "publishedCatalogChanged": false,
   "pending": [
-    "same-artifact-17-host-installation-matrix",
-    "updated-phase1-and-phase2-matrices",
-    "remote-ci"
+    "remote-ci",
+    "Desktop-interactive-installation",
+    "OAuth-and-live-model-acceptance"
   ],
   "individualInstall": {
     "passed": true,
@@ -121,5 +121,18 @@
     "packedFiles": 74,
     "finalArtifactMatchesIndividualInstall": true,
     "artifactSha256": "e864efa0f0512f9c42cf06cf177a1fc9450ecd6070245cea72f4ffa1cc9d8afc"
-  }
+  },
+  "matrixEvidence": "dsh-022rc2-matrix-evidence.json",
+  "productionAudit": {
+    "dependencies": 97,
+    "vulnerabilities": 0
+  },
+  "developmentAudit": {
+    "moderate": 1,
+    "package": "minimatch@10.2.6",
+    "path": "eslint > minimatch",
+    "advisory": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+    "introducedByCandidate": false
+  },
+  "supersededBy": "dsh-022rc2-provider-neutral-review.md"
 }

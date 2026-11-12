@@ -61,10 +61,10 @@ it('selects recovery only for the three exact recovery contract candidates', () 
 })
 
 it('requires the seven rc2 ownership regressions in addition to all prior recovery cases', () => {
-  expect(RECOVERY_CASES).toHaveLength(24)
+  expect(RECOVERY_CASES).toHaveLength(26)
   expect(RC2_RECOVERY_CASES).toHaveLength(7)
-  expect(inspectRecoveryReport(report('0.2.2-rc.2'), '0.2.2-rc.2').tests).toBe(32)
-  expect(inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.1').tests).toBe(25)
+  expect(inspectRecoveryReport(report('0.2.2-rc.2'), '0.2.2-rc.2').tests).toBe(34)
+  expect(inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.1').tests).toBe(27)
   expect(() => inspectRecoveryReport(report(), '0.2.2-rc.2')).toThrow()
   expect(() => recoveryCases('0.2.2-rc.3')).toThrow()
   expect(() => recoveryRuntimePackages('0.2.2-rc.3')).toThrow()
