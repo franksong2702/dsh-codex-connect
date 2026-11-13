@@ -94,6 +94,14 @@ Fresh installations register the model provider and leave every additional capab
 
 Edit these options under **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Saving commits edited fields together and preserves concurrent changes to untouched fields. A conflicting edit or failed save keeps your draft; discard it to reload the latest settings. Most settings affect only this plugin; enabling Codex Search also selects it as the active profile-wide search route.
 
+### Existing task recovery visibility
+
+**Source change, not yet published:** under **Capabilities**, turn off **Show existing task recovery controls** and **Save changes**, or set `showTaskRecoveryControls: false` on the plugin row. This profile-wide presentation preference defaults to `true`; clients receiving the same Host settings share it. Older configurations retain recovery access.
+
+When off, the composer recovery control/dialog is not mounted and makes no task-state reads. It does not stop tasks, delete history, reset accounting or enable frozen Task features; speed selection and quota display are unchanged. Re-enable and save to restore recovery access when applicable. If hidden while Stop/manual takeover is pending, the server may already have applied the action: re-enable and read state again before retrying. Client cancellation is not a rollback.
+
+The control waits during initial settings loading, avoiding a task read before a saved false arrives unless settings become unavailable without an accepted value. In that unavailable case, recovery remains reachable and may read task state. Old remote clients using memory-only settings (for example, DSH `0.1.7-rc.1` non-loopback pages) cannot apply this profile preference; there is no browser-local fallback. Phone/Hermex behavior and real-profile disk persistence require separate acceptance; synthetic Host reload/browser-remount tests are not evidence of either.
+
 ### Proxy
 
 Disabling the proxy or unloading the plugin gives active proxy operations one second to finish, then destroys this instance's pools with a further one-second completion limit. New proxy operations are rejected during shutdown; interrupted requests are not retried directly. Arbitrary application callbacks cannot be forcibly terminated by the proxy manager. The scoped dispatcher remains until late callbacks settle, so they cannot bypass their destroyed proxy; unrelated traffic still uses the host dispatcher.
@@ -166,6 +174,7 @@ The main plugin options are:
 | Field | Default | Meaning |
 |---|---:|---|
 | `models` | full catalog | Visible Codex model ids; an empty array hides all entries |
+| `showTaskRecoveryControls` | `true` | Unreleased: show existing-task recovery controls; hiding does not stop tasks |
 | `enableProxy` | `false` | Use `proxyUrl` for Codex Connect traffic |
 | `proxyUrl` | `http://127.0.0.1:7890` | Credential-free HTTP(S) proxy origin; inactive until enabled |
 | `contextWindowOverrides` | none | Per-model client context-budget overrides |

@@ -288,6 +288,8 @@ export interface Config {
    * Whole-map or per-model null disables inherited overrides; omitted keys inherit lower layers.
    */
   contextWindowOverrides?: Record<string, number | null> | null | undefined
+  /** Show existing task recovery controls; hiding does not stop or change tasks. */
+  showTaskRecoveryControls?: boolean
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean
   /** @deprecated Accepted only for old configuration files; Luna Reserve has been removed. */
@@ -357,6 +359,8 @@ const configSchema = z.object({
     z.union([z.const(undefined), z.const(null), z.dict(z.union([z.const(null), z.number()]))]),
     parseSettingsContextWindowOverrides,
   ).volatile(),
+  // Schemastery null resets to the default true; raw resolver/browser null is rejected.
+  showTaskRecoveryControls: z.boolean().default(true).volatile(),
   enableSearch: z.boolean().default(false).volatile(),
   enableReserveFallback: z.boolean().default(false).volatile(),
   enableNewSessionFastMode: z.boolean().default(false).volatile(),
@@ -389,6 +393,7 @@ export interface VolatileConfig {
   proxyUrl: Volatile<string>
   preflightActivity?: OpenAICodexPreflightConfig | undefined
   contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>
+  showTaskRecoveryControls: Volatile<boolean>
   enableSearch: Volatile<boolean>
   enableReserveFallback: Volatile<boolean>
   enableNewSessionFastMode: Volatile<boolean>
@@ -420,6 +425,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   const current = (): OpenAICodexSettingsInput => Object.fromEntries(Object.entries({
     newSessionSpeedMode: configValue(config.newSessionSpeedMode), newSubagentSpeedMode: configValue(config.newSubagentSpeedMode),
     reasoningEffort: configValue(config.reasoningEffort),
+    showTaskRecoveryControls: configValue(config.showTaskRecoveryControls),
     models: configValue(config.models), enableProxy: configValue(config.enableProxy), proxyUrl: configValue(config.proxyUrl),
     contextWindowOverrides: configValue(config.contextWindowOverrides), enableSearch: configValue(config.enableSearch),
     enableReserveFallback: false, enableNativeCompaction: configValue(config.enableNativeCompaction),

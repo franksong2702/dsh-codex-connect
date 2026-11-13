@@ -38,6 +38,14 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain("'@deepseek-ai/dsh-client-ui-model-selection/client'")
   })
 
+  it('injects shared Host settings into the recovery-only composer control', async () => {
+    const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+    expect(client).toContain("id: 'codex-connect-task-models'")
+    expect(client).toContain('order: 30')
+    expect(client).toContain("inject: () => ({ language: t('adaptiveTaskLanguage'), configScope })")
+    expect(client).toContain('}, TaskRecoveryVisibility))')
+  })
+
   it('registers Fast Mode before quota in the same additive Composer slot', async () => {
     const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
     expect(client).toContain("id: 'openai-codex-fast-mode'")

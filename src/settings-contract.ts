@@ -114,6 +114,8 @@ export interface OpenAICodexSettingsConfig {
    * output-token limits, or the deployment's compaction policy.
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined
+  /** Show the recovery-only task controls beside the model selector; presentation only. */
+  showTaskRecoveryControls: boolean
   enableSearch: boolean
   /** @deprecated Inert compatibility field for old Host/browser snapshots; always resolves false. */
   enableReserveFallback: boolean
@@ -147,6 +149,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   enableProxy: false,
   proxyUrl: DEFAULT_OPENAI_CODEX_PROXY_URL,
   contextWindowOverrides: undefined,
+  showTaskRecoveryControls: true,
   enableSearch: false,
   enableReserveFallback: false,
   enableNewSessionFastMode: false,
@@ -178,6 +181,9 @@ export function resolveOpenAICodexSettings(
   value: OpenAICodexSettingsInput,
 ): OpenAICodexSettingsConfig {
   const resolved = { ...DEFAULT_OPENAI_CODEX_SETTINGS, ...value }
+  if (typeof resolved.showTaskRecoveryControls !== 'boolean') {
+    throw new TypeError('OpenAI Codex showTaskRecoveryControls must be a boolean')
+  }
   if (typeof resolved.enableReserveFallback !== 'boolean') {
     throw new TypeError('OpenAI Codex enableReserveFallback must be a boolean')
   }
@@ -221,6 +227,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const enableProxy = value['enableProxy']
   const proxyUrl = value['proxyUrl']
   const contextWindowOverrides = value['contextWindowOverrides']
+  const showTaskRecoveryControls = value['showTaskRecoveryControls']
   const enableSearch = value['enableSearch']
   const enableReserveFallback = value['enableReserveFallback']
   const enableNewSessionFastMode = value['enableNewSessionFastMode']
@@ -239,6 +246,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (enableProxy !== undefined && typeof enableProxy !== 'boolean') return undefined
   if (proxyUrl !== undefined && (typeof proxyUrl !== 'string' || !isValidOpenAICodexProxyUrl(proxyUrl))) return undefined
   if (contextWindowOverrides !== undefined && contextWindowOverrides !== null && !isValidOpenAICodexContextWindowOverrides(contextWindowOverrides)) return undefined
+  if (showTaskRecoveryControls !== undefined && typeof showTaskRecoveryControls !== 'boolean') return undefined
   if (typeof enableSearch !== 'boolean' || typeof enableImageTool !== 'boolean') return undefined
   if (enableReserveFallback !== undefined && typeof enableReserveFallback !== 'boolean') return undefined
   if (enableNewSessionFastMode !== undefined && typeof enableNewSessionFastMode !== 'boolean') return undefined
@@ -264,6 +272,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     enableProxy: enableProxy ?? false,
     proxyUrl: proxyUrl === undefined ? DEFAULT_OPENAI_CODEX_PROXY_URL : normalizeOpenAICodexProxyUrl(proxyUrl)!,
     contextWindowOverrides: overrides === undefined ? undefined : Object.freeze(overrides),
+    showTaskRecoveryControls: showTaskRecoveryControls ?? true,
     enableSearch,
     enableReserveFallback: false,
     enableNewSessionFastMode: enableNewSessionFastMode ?? false,

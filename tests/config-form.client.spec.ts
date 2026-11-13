@@ -43,8 +43,8 @@ function fixture(mode: 'host' | 'memory' | 'absent' = 'host') {
       mirrorSnapshot = { status: 'unavailable', view: undefined, error: 'unavailable' }
       for (const listener of mirrorListeners) listener()
     },
-    setMirrorStatus(status: SettingsMirrorSnapshot['status']) {
-      mirrorSnapshot = { status, view: undefined, error: null }
+    setMirrorStatus(status: SettingsMirrorSnapshot['status'], error: string | null = null) {
+      mirrorSnapshot = { status, view: undefined, error }
       for (const listener of mirrorListeners) listener()
     },
     publishWithoutNamespace() {
@@ -106,6 +106,12 @@ describe('Codex Connect Host configuration form', () => {
     const { scope, rejectRead } = fixture()
     rejectRead()
     expect(scope.getSnapshot().status).toBe('unavailable')
+  })
+
+  it('ends initial loading when the real Host mirror returns idle with a read error', () => {
+    const { scope, setMirrorStatus } = fixture()
+    setMirrorStatus('idle', 'settings describe failed')
+    expect(scope.getSnapshot()).toMatchObject({ status: 'unavailable', value: undefined })
   })
 
   it.each(['idle', 'loading', 'ready'] as const)('keeps loading when the mirror has no view (%s)', status => {
