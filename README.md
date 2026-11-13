@@ -1,8 +1,8 @@
 # Codex Connect
 
-**Published Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining the prior fifteen Hosts and the recovery-only Task restriction below. npm version/alpha, matching Git tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the [release and verification record](docs/release-notes/0.2.0-alpha.13.md). This does not request a DSH upgrade; isolated synthetic checks do not establish real-account/model, native GUI or Windows Desktop acceptance.
+**Published Alpha 14:** `0.2.0-alpha.14` improves input-area control stability, adds exact stock DSH `0.2.2-rc.2` while retaining the sixteen prior Hosts, and closes a retained Task recovery bypass across providers. Task and automatic delegation remain frozen. Registry version, exact tag/prerelease and archive integrity have been independently verified. See the [release and verification record](docs/release-notes/0.2.0-alpha.14.md). Existing supported Hosts do not require an upgrade; automated checks do not establish Desktop, OAuth or live-model acceptance.
 
-On exact DSH `0.2.2-alpha.3` and `0.2.2-rc.1`, saved Task records are recovery-only: inspect state, stop or take over manually. Automatic routing, resume and evidence-child creation are rejected, including internal direct entry points. Existing safe-disable/archive exits retain their owner, receipt and cleanup checks. The prior fourteen Hosts keep their behavior; Task's public activation gate remains closed everywhere.
+On exact DSH `0.2.2-alpha.3`, `0.2.2-rc.1` and `0.2.2-rc.2`, saved Task records remain recovery-only: inspect state, use authenticated Stop or take over manually. Automatic routing, resume and delegation recovery are rejected. Provider-neutral recovery protection also prevents managed descendants from bypassing the pause; existing owner, receipt, cleanup, cancellation and accounting checks remain, and Task public activation stays closed everywhere.
 
 [![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
 
@@ -16,18 +16,20 @@ Codex Connect adds the `openai-codex` model provider to the normal Harness agent
 
 ## Quick start
 
+**Historical Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining the prior fifteen Hosts and the recovery-only Task restriction below. npm version/alpha, matching Git tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the [release and verification record](docs/release-notes/0.2.0-alpha.13.md). This does not request a DSH upgrade; isolated synthetic checks do not establish real-account/model, native GUI or Windows Desktop acceptance.
+
 **Historical Alpha 12:** [`0.2.0-alpha.12`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.12) adds exact stock DSH `0.2.2-alpha.3` with the recovery-only restriction below, retires Luna Reserve and fixes the stock Auto review preset's unsupported Codex Responses temperature. It is published on `alpha`; `latest` remains Alpha 10. See the [release and migration notes](docs/release-notes/0.2.0-alpha.12.md). This does not request a DSH upgrade.
 
 **Historical Alpha 11:** [`0.2.0-alpha.11`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.11) delivers GPT-6.1 Terra, the unified speed menu, exact DSH rc.4/rc.5, seeded-fork originals and bounded native bili preflight, with a higher direct Undici minimum. All fourteen exact Hosts passed against one package; npm version/alpha, Git tag, prerelease and archive integrity were independently read back. `latest` remains Alpha 10. See the [release record](docs/release-notes/0.2.0-alpha.11.md); keyless checks do not establish real-account/model or Desktop acceptance, and Computer Use is not included.
 
 **Historical Alpha 10:** [`0.2.0-alpha.10`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.10) adds only exact DSH `0.2.1-rc.3`, retains the eleven previous hosts, and delivers the default-off read-only quota tool and compact speed menu. npm version, alpha tag, Git tag, prerelease and archive hashes were independently verified; `latest` is unchanged. The upstream rc.3 Git-source mapping remains unverified; keyless contracts do not establish real-account/model or Desktop acceptance. See the [release record](docs/release-notes/0.2.0-alpha.10.md).
 
-This guide recommends Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`; the other exact supported hosts are listed below. Check `dsh --version` first and use `doctor --json` for local diagnostics; the CLI version alone does not prove which model-runtime packages are installed, and missing metadata is reported as unknown. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
+This guide recommends Codex Connect `0.2.0-alpha.14` / DSH `0.2.1-rc.5`; the other exact supported hosts are listed below. Check `dsh --version` first and use `doctor --json` for local diagnostics; the CLI version alone does not prove which model-runtime packages are installed, and missing metadata is reported as unknown. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
 
 | Requirement | Verified pairing |
 |---|---|
-| Codex Connect | `0.2.0-alpha.13` |
-| DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3` or `0.2.2-rc.1` (consistent package set) |
+| Codex Connect | `0.2.0-alpha.14` |
+| DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3`, `0.2.2-rc.1` or `0.2.2-rc.2` (consistent package set) |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
 
@@ -45,20 +47,20 @@ Historical release [`0.2.0-alpha.3`](docs/release-notes/0.2.0-alpha.3.md) adds o
 
 Historical release [`0.2.0-alpha.2`](docs/release-notes/0.2.0-alpha.2.md) publishes exact DSH `0.2.1-alpha.1` compatibility and the cross-route image selection handle repair. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects that host. Existing supported hosts do not require an upgrade.
 
-As of 2026-11-09, npm `alpha` points to `0.2.0-alpha.13`, while `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
+As of 2026-11-13, npm `alpha` points to `0.2.0-alpha.14`, while `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
 
 Historical release [`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.
 
 It retains Alpha 4.54's handling of initial system instructions and tool definitions on DSH 0.2.0-rc.2, diagnostics for differing host/plugin provider libraries, and Canary's normal-request checks, along with Alpha 4.53's core maintenance changes, existing-task recovery and safety, and 4.52's [opt-in local request metrics](docs/request-metrics.md). Collection stays off until a private directory is configured; unknown usage is not zero. No Task reopening or model-library/OAuth upgrade is included.
 
-The package passed keyless installation/runtime regression on all sixteen exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
+The package passed keyless installation/runtime regression on all seventeen exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
 
 Historically, on 2026-10-10 the maintainer reported successful login and normal use on Desktop `0.2.0-rc.2` with the identified local adaptation build. Only the historical `0.2.0-alpha.3` client was compared with that local adaptation and found to differ only by the package-version string. This comparison does not establish `0.2.0-alpha.4` Desktop or live-account acceptance, nor acceptance of later npm artifacts; no new real Desktop acceptance was performed. See the [Desktop acceptance record](INSTALL.md#official-desktop).
 
 ### 1. Install
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.13
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.14
 dsh web
 ```
 
