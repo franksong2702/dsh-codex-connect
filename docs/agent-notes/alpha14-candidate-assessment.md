@@ -41,3 +41,11 @@ After confirmed publication, the exact package is `dsh-codex-connect@0.2.0-alpha
 - Full audit retains one moderate development-only minimatch advisory; the fresh production audit has zero vulnerabilities.
 
 These automated fixtures do not establish Desktop installation, OAuth, live-model, native-keyring or HMR acceptance. Public Task remains frozen. Existing recovery, cancellation, accounting and provider-neutral protection are preserved. Neither publication nor deployment is claimed.
+
+## Final catalog regression correction
+
+The first passing local full check above preceded addition of the Alpha14 catalog entry. After that entry was committed, remote run `43352224092` correctly failed two stale test expectations: all catalog rows were still treated as previously published artifacts without rc.2, and the exact committed-catalog expectation stopped at Alpha13. A local focused run reproduced both failures (39 passed, 2 failed).
+
+The correction keeps every historical entry through Alpha13 free of rc.2, requires the sole trailing Alpha14 candidate to equal all 17 exact declared targets, and retains the published Alpha13 installation recommendation. The committed-catalog expectation now explicitly lists the Alpha14 row. No schema, duplicate-version, invalid-version or runtime safety checks were removed or relaxed.
+
+After this correction, with the final catalog present: the two focused suites passed 41/41; the complete check passed 2505 tests with 2 existing skips; the browser suite passed 101/101. Build and package checks passed. The final package SHA-256 remains `706a31168ecf1981fb49844dc6df71d61d0fe89e54cb1120135840c58ff25c47`, so the already completed 17-Host same-byte installation evidence remains applicable. This correction changes only tests and excluded evidence notes, not shipped runtime or catalog data. Remote CI must still pass on the new commit before merging.
