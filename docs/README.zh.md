@@ -1,10 +1,10 @@
 # Codex Connect
 
-Alpha15 兼容候选（待发布）：精确 DSH `0.2.2-rc.3` 复用已保存会话的身份校验与恢复路径；公开 Task 与自动委派仍关闭。已发布 Alpha14 保持不变。见[发布说明](release-notes/0.2.0-alpha.15.md)。
+**已发布 Alpha 15：** [`0.2.0-alpha.15`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.15) 新增精确 DSH `0.2.2-rc.3`，保留此前十七个宿主。已保存会话的身份校验与恢复路径现在识别 rc.3 的归属信息；公开 Task 与自动委派仍关闭。公开安装包与原发布归档及全部十八个隔离宿主验证包逐字节一致。`latest` 保持 Alpha 10。见[发布与验证记录](release-notes/0.2.0-alpha.15.md)。这不要求升级日常 Host。
 
-**已发布 Alpha 13：** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) 仅新增精确的 stock DSH `0.2.2-rc.1`，保留原十五个 Host 及下述 Task 仅恢复限制。npm 版本／alpha、匹配的 Git tag／prerelease 和归档完整性均已独立核实。`latest` 保持 Alpha 10。参见[发布与验证记录](release-notes/0.2.0-alpha.13.md)。这不要求升级 DSH；隔离合成检查不代表真实账户／模型、原生 GUI 或 Windows Desktop 验收。
+**历史 Alpha 13：** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) 仅新增精确的 stock DSH `0.2.2-rc.1`，保留原十五个 Host 及下述 Task 仅恢复限制。npm 版本／alpha、匹配的 Git tag／prerelease 和归档完整性均已独立核实。`latest` 保持 Alpha 10。参见[发布与验证记录](release-notes/0.2.0-alpha.13.md)。这不要求升级 DSH；隔离合成检查不代表真实账户／模型、原生 GUI 或 Windows Desktop 验收。
 
-在精确的 DSH `0.2.2-alpha.3` 和 `0.2.2-rc.1` 上，旧 Task 仅保留状态查看、停止和转手动。自动路由、续跑和证据子任务创建均被拒绝，包括内部直接入口。原有停用委派／归档安全退出仍保留 owner、回执和清理校验。原十四个 Host 的行为不变，所有版本的 Task 公共激活入口继续关闭。
+在精确的 DSH `0.2.2-alpha.3`、`0.2.2-rc.1`、`0.2.2-rc.2` 和 `0.2.2-rc.3` 上，旧 Task 仅保留状态查看、停止和转手动。自动路由、续跑和证据子任务创建均被拒绝，包括内部直接入口。原有停用委派／归档安全退出仍保留 owner、回执和清理校验。原十四个 Host 的行为不变，所有版本的 Task 公共激活入口继续关闭。
 
 当前开发遵循[核心维护范围](maintenance-scope.md)：保留接入、兼容、诊断与恢复，冻结 Task 自动编排及未证明收益的优化。此决定不会删除已发布选项，也不会远程停用已有安装。
 
@@ -26,12 +26,12 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 **历史 Alpha 10：** [`0.2.0-alpha.10`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.10) 仅新增精确 DSH `0.2.1-rc.3`，保留原有 11 个宿主，并交付默认关闭的只读额度工具及紧凑速度菜单。npm 版本、alpha 标签、Git tag、prerelease 和包哈希已独立回读；`latest` 不变。rc.3 的上游 Git 源码映射仍未验证；无凭据合约不代表真实账户／模型或 Desktop 验收。参见[发布记录](release-notes/0.2.0-alpha.10.md)。
 
-本指南推荐 Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`；其他受支持的精确宿主版本见下表。请先运行 `dsh --version`，再用 `doctor --json` 做本地诊断；单凭 CLI 版本无法证明实际安装的模型运行库版本，缺少版本元数据时会报告未知。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
+本指南推荐 Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`；其他受支持的精确宿主版本见下表。请先运行 `dsh --version`，再用 `doctor --json` 做本地诊断；单凭 CLI 版本无法证明实际安装的模型运行库版本，缺少版本元数据时会报告未知。其他版本请查阅[安装与升级](../INSTALL.md)。`alpha` 等会移动的 npm tag 不代表兼容性保证。
 
 | 要求 | 已验证组合 |
 |---|---|
-| Codex Connect | `0.2.0-alpha.13` |
-| DeepSeek Harness | `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-alpha.4`、`0.2.1-alpha.5`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-alpha.3` 或 `0.2.2-rc.1`（包版本必须一致） |
+| Codex Connect | `0.2.0-alpha.15` |
+| DeepSeek Harness | `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1`、`0.2.0-rc.2`、`0.2.1-alpha.1`、`0.2.1-alpha.2`、`0.2.1-alpha.3`、`0.2.1-alpha.4`、`0.2.1-alpha.5`、`0.2.1-rc.1`、`0.2.1-rc.2`、`0.2.1-rc.3`、`0.2.1-rc.4`、`0.2.1-rc.5`、`0.2.2-alpha.3`、`0.2.2-rc.1`、`0.2.2-rc.2` 或 `0.2.2-rc.3`（包版本必须一致） |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | 账户 | 通过 ChatGPT OAuth 使用所请求的 Codex 模型；可用性由 OpenAI 决定 |
 
@@ -49,20 +49,20 @@ Codex Connect 为标准 Harness agent loop 添加 `openai-codex` 模型提供方
 
 历史发布 [`0.2.0-alpha.2`](release-notes/0.2.0-alpha.2.md) 已发布精确 DSH `0.2.1-alpha.1` 的兼容适配，以及跨模型路由的图片选择句柄修复。较早的 `0.2.0-alpha.1` 安装包保持不变，仍拒绝该宿主。原有受支持宿主无需升级。
 
-截至 2026-11-09，npm `alpha` 指向 `0.2.0-alpha.13`，`latest` 保持 `0.2.0-alpha.10`。默认安装仍选择 Alpha 10；安装下列宿主组合请使用精确版本命令，会移动的 npm tag 不保证其他宿主版本的兼容性。
+截至 2026-11-14，npm `alpha` 指向 `0.2.0-alpha.15`，`latest` 保持 `0.2.0-alpha.10`。默认安装仍选择 Alpha 10；安装下列宿主组合请使用精确版本命令，会移动的 npm tag 不保证其他宿主版本的兼容性。
 
 历史发布 [`0.2.0-alpha.1`](release-notes/0.2.0-alpha.1.md) 通过模型目录补充增加 `gpt-6.1-sol`，并开始较短的独立插件编号。四个受支持的 DSH 版本不变，无需升级宿主。
 
 它保留 Alpha 4.54 的改动，在 DSH 0.2.0-rc.2 调用固定版本的 Codex 提供方时保留初始系统指令和工具定义，修正宿主与插件使用不同提供方库版本时的诊断，并补强 Canary 的普通请求检查。继续保留 Alpha 4.53 的核心维护改动、已有任务恢复与安全检查，以及 4.52 的[可选本地请求计量](request-metrics.zh.md)。配置私有目录后才采集；未知用量不当作零。不恢复 Task，也不升级模型库或 OAuth。
 
-该安装包已通过上方十六个精确 DSH 版本的无凭据安装及运行回归验证。Task 控件仍暂停：激活请求会被拒绝，现有宿主的浏览器回归中，新 Session 不显示这些控件。这些检查不代表真实 OAuth、真实账户图片编辑、新宿主的已登录浏览器验收或完整用户验收；跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
+该安装包已通过上方十八个精确 DSH 版本的无凭据安装及运行回归验证。Task 控件仍暂停：激活请求会被拒绝，现有宿主的浏览器回归中，新 Session 不显示这些控件。这些检查不代表真实 OAuth、真实账户图片编辑、新宿主的已登录浏览器验收或完整用户验收；跨 Harness 升级迁移旧任务授权尚未验证。较旧组合及其任务行为见[安装与升级](../INSTALL.md)。
 
 历史记录：2026-10-10，维护者报告已在 Desktop `0.2.0-rc.2` 用已记录的本地适配包完成登录并正常使用。仅历史 `0.2.0-alpha.3` 客户端与该本地适配包进行了比较，确认只差包版本字符串。此比较不代表 `0.2.0-alpha.4` 的 Desktop 或真实账户验收，也不代表后续 npm 安装包的验收；未进行新的真实 Desktop 验收。参见[Desktop 验收记录](../INSTALL.md#official-desktop)。
 
 ### 1. 安装
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.13
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15
 dsh web
 ```
 

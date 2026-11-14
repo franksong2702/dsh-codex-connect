@@ -1,6 +1,8 @@
 # Installation Runbook for CLI Agents
 
-**Published Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining all fifteen prior Hosts. Registry version/alpha, matching source tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the bilingual [release and verification record](docs/release-notes/0.2.0-alpha.13.md). No daily Host upgrade is implied.
+**Published Alpha 15:** [`0.2.0-alpha.15`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.15) adds exact DSH `0.2.2-rc.3`, retaining all seventeen previous hosts. Authenticated retained-session recovery now recognizes rc.3 ownership; public Task and automatic delegation remain disabled. The public package matches the original release artifact and the package used by all eighteen isolated host checks byte-for-byte. `latest` remains Alpha 10. See [the release and verification record](docs/release-notes/0.2.0-alpha.15.md). No daily Host upgrade is implied.
+
+**Historical Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining all fifteen prior Hosts. Registry version/alpha, matching source tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the bilingual [release and verification record](docs/release-notes/0.2.0-alpha.13.md). No daily Host upgrade is implied.
 
 The published Alpha 13 pairings on exact DSH `0.2.2-alpha.3` and `0.2.2-rc.1` retain saved Task inspection, authenticated Stop/manual takeover and existing strictly checked safe-disable/archive exits. They refuse automatic routing/resume/delegation without deleting saved data or resetting spent requests. The original fourteen Hosts and closed public activation gate remain unchanged. Isolated synthetic checks do not establish real-account/model, native GUI, Windows Desktop or performance acceptance.
 
@@ -10,13 +12,13 @@ The published Alpha 13 pairings on exact DSH `0.2.2-alpha.3` and `0.2.2-rc.1` re
 
 **Historical Alpha 10:** `0.2.0-alpha.10` adds only exact DSH `0.2.1-rc.3`, retaining the eleven previous pairings. Alpha 9 is not an rc.3 pairing. Public npm version/alpha, archive integrity and exact Git tag/prerelease have been independently verified; see the [publication record](#020-alpha10-verified-publication). The rc.3 upstream Git-source mapping remains unverified. Keyless checks do not establish real-account or Desktop acceptance.
 
-The recommended pair is Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`. Installation/runtime regression is verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3` or `0.2.2-rc.1`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Alpha 9 adds an optional reasoning-effort fallback and independent Standard / Fast / Ultrafast defaults for new top-level and ordinary subagent conversations. Omitted/reset preferences retain legacy defaults, while explicit request effort and later manual choices win. Existing/resumed sessions remain respected; Ultrafast requires sign-in and an eligible model/account route, with eligibility/served tier still unknown. It retains the host range, finite SSE and existing opt-in defaults. Task remains paused. Keyless checks do not establish real-account, Desktop or authenticated browser acceptance. Earlier DSH pairings retain their separately published plugin versions below.
+The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`. Installation/runtime regression is verified with exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3`, `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3`, using a consistent host package set and plugin-owned pi-ai `0.85.1`. Alpha 9 adds an optional reasoning-effort fallback and independent Standard / Fast / Ultrafast defaults for new top-level and ordinary subagent conversations. Omitted/reset preferences retain legacy defaults, while explicit request effort and later manual choices win. Existing/resumed sessions remain respected; Ultrafast requires sign-in and an eligible model/account route, with eligibility/served tier still unknown. It retains the host range, finite SSE and existing opt-in defaults. Task remains paused. Keyless checks do not establish real-account, Desktop or authenticated browser acceptance. Earlier DSH pairings retain their separately published plugin versions below.
 
 The exact DSH `0.2.1-alpha.1` adaptation is published in `0.2.0-alpha.2`. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects this host. See the [release notes](docs/release-notes/0.2.0-alpha.2.md) for scope and verification limits; keyless compatibility does not establish live-account acceptance.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
 
-Channel snapshot on 2026-11-09: npm `alpha` points to `0.2.0-alpha.13`; `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
+Channel snapshot on 2026-11-14: npm `alpha` points to `0.2.0-alpha.15`; `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact-version command for the installed DSH version; moving npm tags are not compatibility guarantees.
 
 ## Safety requirements
 
@@ -42,28 +44,36 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.1.5-alpha.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.1` | `0.1.0-alpha.4.41` |
 | `0.1.5-rc.2` | `0.1.0-alpha.4.41` |
-| `0.1.7-rc.1` | `0.2.0-alpha.13` |
-| `0.1.7-rc.2` | `0.2.0-alpha.13` |
-| `0.2.0-rc.1` | `0.2.0-alpha.13` |
-| `0.2.0-rc.2` | `0.2.0-alpha.13` |
-| `0.2.1-alpha.1` | `0.2.0-alpha.13` |
-| `0.2.1-alpha.2` | `0.2.0-alpha.13` |
-| `0.2.1-alpha.3` | `0.2.0-alpha.13` |
-| `0.2.1-alpha.4` | `0.2.0-alpha.13` |
-| `0.2.1-alpha.5` | `0.2.0-alpha.13` |
-| `0.2.1-rc.1` | `0.2.0-alpha.13` |
-| `0.2.1-rc.2` | `0.2.0-alpha.13` |
-| `0.2.1-rc.3` | `0.2.0-alpha.13` |
-| `0.2.1-rc.4` | `0.2.0-alpha.13` |
-| `0.2.1-rc.5` | `0.2.0-alpha.13` |
-| `0.2.2-alpha.3` | `0.2.0-alpha.13` |
-| `0.2.2-rc.1` | `0.2.0-alpha.13` |
+| `0.1.7-rc.1` | `0.2.0-alpha.15` |
+| `0.1.7-rc.2` | `0.2.0-alpha.15` |
+| `0.2.0-rc.1` | `0.2.0-alpha.15` |
+| `0.2.0-rc.2` | `0.2.0-alpha.15` |
+| `0.2.1-alpha.1` | `0.2.0-alpha.15` |
+| `0.2.1-alpha.2` | `0.2.0-alpha.15` |
+| `0.2.1-alpha.3` | `0.2.0-alpha.15` |
+| `0.2.1-alpha.4` | `0.2.0-alpha.15` |
+| `0.2.1-alpha.5` | `0.2.0-alpha.15` |
+| `0.2.1-rc.1` | `0.2.0-alpha.15` |
+| `0.2.1-rc.2` | `0.2.0-alpha.15` |
+| `0.2.1-rc.3` | `0.2.0-alpha.15` |
+| `0.2.1-rc.4` | `0.2.0-alpha.15` |
+| `0.2.1-rc.5` | `0.2.0-alpha.15` |
+| `0.2.2-alpha.3` | `0.2.0-alpha.15` |
+| `0.2.2-rc.1` | `0.2.0-alpha.15` |
+| `0.2.2-rc.2` | `0.2.0-alpha.15` |
+| `0.2.2-rc.3` | `0.2.0-alpha.15` |
 
 If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
 Historical Alpha 5 includes exact DSH `0.2.1-alpha.4`, `0.2.1-alpha.5` and `0.2.1-rc.1` support, the [client-state repair](docs/agent-notes/dsh-021-alpha4-compatibility.md) and [runtime-identity diagnostics](docs/runtime-identity.md). The immutable npm `0.2.0-alpha.4` package still supports only its original seven hosts. The [candidate verification record](docs/agent-notes/dsh-021-alpha5-rc1-compatibility.md) and publication evidence below describe separate stages; #339 remains open for real acceptance. Host upgrades or service restarts are separate operations.
 
-`0.2.0-alpha.13` requires one consistent DSH plugin API version from the sixteen modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.13` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+`0.2.0-alpha.15` requires one consistent DSH plugin API version from the eighteen modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.15` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+
+### 0.2.0-alpha.15 verified publication
+
+[Alpha 15](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.15) is published from `16c7b3e99acd194c2ec0b5d5431930d6f7314b94`, after [exact-source main CI](https://github.com/franksong2702/dsh-codex-connect/actions/runs/43604115530) passed. The [original protected publication](https://github.com/franksong2702/dsh-codex-connect/actions/runs/43606236883) verified and uploaded npm successfully, but its twelve bounded registry readbacks returned E404 and the previous alpha tag, leaving the run failed and GitHub prerelease creation skipped. The public version then became available. Read-only integrity verification passed before the [protected metadata recovery](https://github.com/franksong2702/dsh-codex-connect/actions/runs/43606823615) created the missing tag/prerelease successfully; npm was not republished.
+
+Independent readback on 2026-11-14 returned `already-complete`: public npm bytes match the original workflow artifact and the same package used by all eighteen exact-host installation/runtime checks. SHA-256 is `87ea5a79461922fdf989246c5754b329a4fd37157bec83a81f3792f011039e20`, 75 files / 1,481,239 bytes; registry SHA-512/SHA-1, manifest, exact source tag and non-draft prerelease match. npm `alpha` is `0.2.0-alpha.15`; `latest` remains `0.2.0-alpha.10`. The immutable npm README was packed before publication and retains the prior recommendation; this repository guide is the updated installation reference. Keyless checks do not establish real-account/model, native GUI or physical Windows acceptance. Daily services were not upgraded or restarted.
 
 ### 0.2.0-alpha.13 verified publication
 
@@ -212,10 +222,10 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.41
    ```
 
-   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3` or `0.2.2-rc.1`, use `0.2.0-alpha.13`:
+   For exact DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3`, `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3`, use `0.2.0-alpha.15`:
 
    ```sh
-   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.13
+   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15
    ```
 
    For DSH `0.1.2-alpha.5`, use Alpha 4.25:
@@ -226,7 +236,7 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
    If npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.21'` only for the DSH `0.1.1-rc.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.23'` only for the DSH `0.1.2-alpha.2` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.25'` only for the DSH `0.1.2-alpha.5` combination, `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.41'` only for the DSH `0.1.2-rc.1`, `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` combinations, or `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.1.0-alpha.4.46'` only for DSH `0.1.7-rc.1`.
 
-   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3` or `0.2.2-rc.1`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.13'`.
+   For current DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3`, `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3`, if npm is unavailable after the matching GitHub prerelease is created, use `dsh plugin --profile web add 'github:franksong2702/dsh-codex-connect#v0.2.0-alpha.15'`.
 
 3. Run `dsh web --help` once to compose the installed profile without starting the server. DSH `0.1.2-rc.1` prepares profile plugin dependency fallback during this step.
 4. Run `dsh --profile web --dump-config` and require exactly one `llm-openai-codex` row loading `dsh-codex-connect`.
@@ -254,7 +264,7 @@ Install the exact published version using Desktop's own **Plugins** page or its 
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-codex-connect@0.2.0-alpha.13
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-codex-connect@0.2.0-alpha.15
 ```
 
 Start Desktop once to initialize its profile and fully quit it before CLI package operations. Use the intended `DSH_HOME`; do not inherit an unrelated Web instance's home. Preserve profile patches, default models, optional capabilities and OAuth state. Reopen Desktop after installing. Its Plugins page can enable an installed but inactive bundle; a dependency entry alone is not proof of activation.

@@ -25,7 +25,7 @@ describe('installation version guidance', () => {
       !entry.verifiedDshVersions.includes(version))).toBe(true)
   })
 
-  it('preserves historical pairings while recommending published Alpha 13 with exact rc.5', async () => {
+  it('preserves historical pairings while recommending published Alpha 15 with exact rc.5', async () => {
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
     const published = ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2',
       '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
@@ -38,7 +38,7 @@ describe('installation version guidance', () => {
       .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
       .toEqual([...published, '0.2.1-rc.2'])
-    expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`')
+    expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
     expect(install).toContain('### 0.2.0-alpha.9 verified publication')
     expect(install).toContain('### 0.2.0-alpha.8 verified publication')
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.8')?.verifiedDshVersions)
@@ -49,15 +49,15 @@ describe('installation version guidance', () => {
     expect(install).not.toContain('does not support DSH `0.2.1-rc.2`')
   })
 
-  it('recommends the verified Alpha 13 release without rewriting historical Alpha 10 and Alpha 9 pairings', async () => {
+  it('recommends the verified Alpha 15 release without rewriting historical Alpha 10 and Alpha 9 pairings', async () => {
     const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
     for (const guide of [...guides, install]) {
-      expect(guide).toContain('`0.2.0-alpha.13`')
+      expect(guide).toContain('`0.2.0-alpha.15`')
       expect(guide).toContain('`0.2.1-rc.5`')
       expect(guide).toContain('`0.2.0-alpha.10`')
       expect(guide).toContain('`0.2.1-rc.3`')
-      expect(guide).toContain('dsh-codex-connect@0.2.0-alpha.13')
+      expect(guide).toContain('dsh-codex-connect@0.2.0-alpha.15')
       expect(guide).not.toContain('Source candidate (unreleased)')
       expect(guide).not.toContain('源码候选（尚未发布）')
     }
@@ -65,11 +65,11 @@ describe('installation version guidance', () => {
       .not.toContain('0.2.1-rc.3')
   })
 
-  it('recommends published Alpha 13 while preserving Alpha 12 and earlier host limits', async () => {
+  it('recommends published Alpha 15 while preserving Alpha 12 and earlier host limits', async () => {
     const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
     for (const guide of [...guides, install]) expect(guide).toContain('0.2.2-alpha.3')
-    expect(install).toContain('**Published Alpha 13:**')
+    expect(install).toContain('**Published Alpha 15:**')
     expect(install).not.toContain('Alpha 12 candidate, not yet published')
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.12')?.verifiedDshVersions)
@@ -90,15 +90,15 @@ describe('installation version guidance', () => {
       .every((entry: { verifiedDshVersions: string[] }) => !entry.verifiedDshVersions.includes('0.2.2-alpha.3'))).toBe(true)
   })
 
-  it.each(['0.2.1-rc.4', '0.2.1-rc.5'])('recommends %s with published Alpha 13 and preserves Alpha 10/11 records', version => {
+  it.each(['0.2.1-rc.4', '0.2.1-rc.5'])('recommends %s with published Alpha 15 and preserves Alpha 10/11 records', version => {
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.10')?.verifiedDshVersions)
       .not.toContain(version)
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.11')?.verifiedDshVersions)
       .toContain(version)
-    expect(install).toContain('**Published Alpha 13:**')
+    expect(install).toContain('**Published Alpha 15:**')
     expect(install).toContain('**Historical Alpha 11:**')
     expect(install).not.toContain('**Unpublished compatibility candidate:**')
-    expect(install).toContain('add dsh-codex-connect@0.2.0-alpha.13')
+    expect(install).toContain('add dsh-codex-connect@0.2.0-alpha.15')
   })
 
   it.each([
@@ -110,22 +110,24 @@ describe('installation version guidance', () => {
     ['0.1.5-alpha.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.2', '0.1.0-alpha.4.41'],
-    ['0.1.7-rc.1', '0.2.0-alpha.13'],
-    ['0.1.7-rc.2', '0.2.0-alpha.13'],
-    ['0.2.0-rc.1', '0.2.0-alpha.13'],
-    ['0.2.0-rc.2', '0.2.0-alpha.13'],
-    ['0.2.1-alpha.1', '0.2.0-alpha.13'],
-    ['0.2.1-alpha.2', '0.2.0-alpha.13'],
-    ['0.2.1-alpha.3', '0.2.0-alpha.13'],
-    ['0.2.1-alpha.4', '0.2.0-alpha.13'],
-    ['0.2.1-alpha.5', '0.2.0-alpha.13'],
-    ['0.2.1-rc.1', '0.2.0-alpha.13'],
-    ['0.2.1-rc.2', '0.2.0-alpha.13'],
-    ['0.2.1-rc.3', '0.2.0-alpha.13'],
-    ['0.2.1-rc.4', '0.2.0-alpha.13'],
-    ['0.2.1-rc.5', '0.2.0-alpha.13'],
-    ['0.2.2-alpha.3', '0.2.0-alpha.13'],
-    ['0.2.2-rc.1', '0.2.0-alpha.13'],
+    ['0.1.7-rc.1', '0.2.0-alpha.15'],
+    ['0.1.7-rc.2', '0.2.0-alpha.15'],
+    ['0.2.0-rc.1', '0.2.0-alpha.15'],
+    ['0.2.0-rc.2', '0.2.0-alpha.15'],
+    ['0.2.1-alpha.1', '0.2.0-alpha.15'],
+    ['0.2.1-alpha.2', '0.2.0-alpha.15'],
+    ['0.2.1-alpha.3', '0.2.0-alpha.15'],
+    ['0.2.1-alpha.4', '0.2.0-alpha.15'],
+    ['0.2.1-alpha.5', '0.2.0-alpha.15'],
+    ['0.2.1-rc.1', '0.2.0-alpha.15'],
+    ['0.2.1-rc.2', '0.2.0-alpha.15'],
+    ['0.2.1-rc.3', '0.2.0-alpha.15'],
+    ['0.2.1-rc.4', '0.2.0-alpha.15'],
+    ['0.2.1-rc.5', '0.2.0-alpha.15'],
+    ['0.2.2-alpha.3', '0.2.0-alpha.15'],
+    ['0.2.2-rc.1', '0.2.0-alpha.15'],
+    ['0.2.2-rc.2', '0.2.0-alpha.15'],
+    ['0.2.2-rc.3', '0.2.0-alpha.15'],
   ])('selects the recorded DSH %s / Codex Connect %s pair before installation', (dsh, plugin) => {
     expect(firstInstall).toBeGreaterThan(0)
     expect(compatibility.pluginVersions).toContainEqual(expect.objectContaining({
@@ -144,7 +146,7 @@ describe('installation version guidance', () => {
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
     ])
     for (const guide of [english, chinese]) {
-      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.13')
+      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15')
       expect(guide).toContain('`latest`')
       expect(guide).toContain('`0.1.7-rc.1`')
       expect(guide).toContain('`0.1.7-rc.2`')
@@ -160,9 +162,9 @@ describe('installation version guidance', () => {
     expect(chinese).toContain('**Luna Reserve 已移除。**')
     expect(chinese).toContain('旧 `enableReserveFallback` 开关会被忽略')
     expect(chinese).toContain('不读取、迁移或删除')
-    expect(install).toContain('Channel snapshot on 2026-11-09: npm `alpha` points to `0.2.0-alpha.13`; `latest` remains `0.2.0-alpha.10`')
-    expect(english).toContain('As of 2026-11-09, npm `alpha` points to `0.2.0-alpha.13`, while `latest` remains `0.2.0-alpha.10`')
-    expect(chinese).toContain('截至 2026-11-09，npm `alpha` 指向 `0.2.0-alpha.13`，`latest` 保持 `0.2.0-alpha.10`')
+    expect(install).toContain('Channel snapshot on 2026-11-14: npm `alpha` points to `0.2.0-alpha.15`; `latest` remains `0.2.0-alpha.10`')
+    expect(english).toContain('As of 2026-11-14, npm `alpha` points to `0.2.0-alpha.15`, while `latest` remains `0.2.0-alpha.10`')
+    expect(chinese).toContain('截至 2026-11-14，npm `alpha` 指向 `0.2.0-alpha.15`，`latest` 保持 `0.2.0-alpha.10`')
     expect(install).toContain('Stock rc.1 keeps Task controls paused')
     expect(install).toContain('Luna Reserve has been removed')
   })
@@ -194,7 +196,7 @@ describe('installation version guidance', () => {
 
   it('uses the bundled CLI and separate profile for the published Desktop installation', () => {
     expect(shellBlocks).toContain('"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version')
-    expect(shellBlocks).toContain('"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-codex-connect@0.2.0-alpha.13')
+    expect(shellBlocks).toContain('"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add dsh-codex-connect@0.2.0-alpha.15')
     expect(install).toContain('fully quit it before CLI package operations')
     expect(install).toContain('Use the intended `DSH_HOME`')
     expect(install).toContain('Preserve profile patches, default models, optional capabilities and OAuth state')
@@ -208,7 +210,7 @@ describe('installation version guidance', () => {
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.25/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.41/iu)
     expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.1\.0-alpha\.4\.46/iu)
-    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.2\.0-alpha\.13/iu)
+    expect(install).toMatch(/npm is unavailable[^\n]*github:franksong2702\/dsh-codex-connect#v0\.2\.0-alpha\.15/iu)
   })
 })
 
@@ -220,10 +222,10 @@ it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', async () 
   const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
   expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.2' && version !== '0.2.2-rc.3'))
   expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toHaveLength(16)
-  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`')
+  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
 })
 
-it('records the Alpha15 candidate without rewriting earlier artifacts or the published recommendation', async () => {
+it('records published Alpha15 without rewriting earlier artifact support', async () => {
   const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
   expect(declared.dshPluginApi.versions).toHaveLength(18)
   expect(declared.dshPluginApi.versions.at(-1)).toBe('0.2.2-rc.3')
@@ -237,5 +239,5 @@ it('records the Alpha15 candidate without rewriting earlier artifacts or the pub
   for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
   expect(compatibility.pluginVersions.at(-1)?.version).toBe('0.2.0-alpha.15')
   expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions)
-  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.13` / DSH `0.2.1-rc.5`')
+  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
 })
