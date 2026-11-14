@@ -16,7 +16,7 @@ const REQUIRED_DSH_RANGE = REQUIRED_DSH_VERSIONS.join(' || ')
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 const SCHEMASTERY_PACKAGE = '@deepseek-ai/schemastery'
-const REQUIRED_SCHEMASTERY_VERSION = '3.18.4'
+const REQUIRED_SCHEMASTERY_VERSION = '3.18.5'
 const MAX_PACKAGE_JSON_SEARCH_DEPTH = 8
 
 function fail(message) {
