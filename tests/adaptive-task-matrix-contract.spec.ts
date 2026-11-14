@@ -22,8 +22,8 @@ it.each(['missing', 'renamed', 'duplicated', 'skipped', 'failed'])('rejects %s t
   expect(() => inspectTaskTestReport(data)).toThrow()
 })
 
-function rc2Matrix(): any {
-  const version = '0.2.2-rc.2', bundleDigest = 'a'.repeat(64), cases = recoveryCases(version)
+function rc2Matrix(version = '0.2.2-rc.2'): any {
+  const bundleDigest = 'a'.repeat(64), cases = recoveryCases(version)
   return { schemaVersion: 1, kind: 'adaptive-task-host-matrix', bundleDigest, syntheticOnly: true,
     adaptiveTaskExercised: true, productionDefaultsChanged: false, realProviderDispatches: 0,
     reports: [{ version, bundleDigest, syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0,
@@ -31,20 +31,20 @@ function rc2Matrix(): any {
       runtimePackages: Object.fromEntries([...TASK_RUNTIME_PACKAGES, ...recoveryRuntimePackages(version)].map(name => [name, version])),
       piAiVersion: '0.85.1' }] }
 }
-it('requires all rc2 functional cases plus the real host identity in Phase 1', () => {
-  const r = rc2Matrix()
-  expect(assertTaskMatrix(r, ['0.2.2-rc.2'], r.bundleDigest)).toBe(r)
+it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('requires all %s functional cases plus the real host identity in Phase 1', version => {
+  const r = rc2Matrix(version)
+  expect(assertTaskMatrix(r, [version], r.bundleDigest)).toBe(r)
   const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 34, numPassedTests: 34,
-    testResults: [{ assertionResults: [...recoveryCases('0.2.2-rc.2'), TASK_IDENTITY_CASE].map(title => ({ title, status: 'passed' })) }] }
-  expect(inspectTaskTestReport(data, '0.2.2-rc.2').tests).toBe(34)
+    testResults: [{ assertionResults: [...recoveryCases(version), TASK_IDENTITY_CASE].map(title => ({ title, status: 'passed' })) }] }
+  expect(inspectTaskTestReport(data, version).tests).toBe(34)
   data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
-  expect(() => inspectTaskTestReport(data, '0.2.2-rc.2')).toThrow()
+  expect(() => inspectTaskTestReport(data, version)).toThrow()
 })
 it.each(RC2_RECOVERY_RUNTIME_PACKAGES)('rejects missing or mixed rc2 Phase 1 %s', name => {
-  for (const mutation of ['missing', 'mixed']) {
-    const r = rc2Matrix()
+  for (const version of ['0.2.2-rc.2', '0.2.2-rc.3']) for (const mutation of ['missing', 'mixed']) {
+    const r = rc2Matrix(version)
     if (mutation === 'missing') delete r.reports[0].runtimePackages[name]
     else r.reports[0].runtimePackages[name] = '0.2.2-rc.1'
-    expect(() => assertTaskMatrix(r, ['0.2.2-rc.2'], r.bundleDigest)).toThrow()
+    expect(() => assertTaskMatrix(r, [version], r.bundleDigest)).toThrow()
   }
 })

@@ -66,14 +66,34 @@ it('requires exact subagent metadata for replacement ownership, never just the c
     expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
   }
 })
-it('rejects a foreign subagent manifest and keeps legacy Host ownership unchanged', () => {
-  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.2'
-  versions['dsh-subagent'] = '0.2.2-rc.2'
+it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('rejects a foreign %s subagent manifest and keeps legacy Host ownership unchanged', version => {
+  for (const name of Object.keys(versions)) versions[name] = version
+  versions['dsh-subagent'] = version
   read.mockImplementation((filename: string) => {
     const name = filename.split('/').at(-2)!
     return JSON.stringify({ name: name === 'dsh-subagent' ? 'foreign' : '@deepseek-ai/' + name, version: versions[name] })
   })
   expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
   for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.1'
+  expect(taskHostUsesSubagentOwnership()).toBe(false)
+})
+
+
+it('admits exact rc3 ownership for recovery while keeping automation closed', () => {
+  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.3'
+  versions['dsh-subagent'] = '0.2.2-rc.3'
+  expect(taskHostRecoveryOnly()).toBe(true)
+  expect(taskHostUsesSubagentOwnership()).toBe(true)
+  expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_RECOVERY_ONLY')
+})
+it.each(['dsh-agent', 'dsh-agent-loop', 'dsh-tools', 'dsh-subagent'])('rejects mixed or missing rc3 %s authority', name => {
+  for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.3'
+  for (const replacement of [undefined, '0.2.2-rc.2', '0.2.2-rc.4']) {
+    versions[name] = replacement
+    expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
+  }
+})
+it('never admits a future ownership version from matching metadata alone', () => {
+  for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.4'
   expect(taskHostUsesSubagentOwnership()).toBe(false)
 })

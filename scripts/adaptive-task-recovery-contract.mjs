@@ -1,7 +1,9 @@
 /** Explicit replacement contract for one exact Host; never a generic version skip. */
 import assert from 'node:assert/strict'
+/** Exact Hosts with the verified subagent-owned recovery query. */
+export function isSubagentRecoveryHost(version) { return version === '0.2.2-rc.2' || version === '0.2.2-rc.3' }
 export const RECOVERY_HOST = '0.2.2-alpha.3'
-export function isRecoveryHost(version) { return version === RECOVERY_HOST || version === '0.2.2-rc.1' || version === '0.2.2-rc.2' }
+export function isRecoveryHost(version) { return version === RECOVERY_HOST || version === '0.2.2-rc.1' || isSubagentRecoveryHost(version) }
 export function recoveryCordisVersion(version) {
   assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
   return version === RECOVERY_HOST ? '4.0.6-alpha.2' : '4.1.0'
@@ -44,11 +46,11 @@ export const RC2_RECOVERY_RUNTIME_PACKAGES = Object.freeze([
 ])
 export function recoveryCases(version) {
   assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
-  return version === '0.2.2-rc.2' ? [...RECOVERY_CASES, ...RC2_RECOVERY_CASES] : [...RECOVERY_CASES]
+  return isSubagentRecoveryHost(version) ? [...RECOVERY_CASES, ...RC2_RECOVERY_CASES] : [...RECOVERY_CASES]
 }
 export function recoveryRuntimePackages(version) {
   assert.ok(isRecoveryHost(version), 'Unverified recovery Host')
-  return [...RECOVERY_RUNTIME_PACKAGES, ...(version === '0.2.2-rc.2' ? RC2_RECOVERY_RUNTIME_PACKAGES : [])]
+  return [...RECOVERY_RUNTIME_PACKAGES, ...(isSubagentRecoveryHost(version) ? RC2_RECOVERY_RUNTIME_PACKAGES : [])]
 }
 
 export function inspectRecoveryReport(report, version = RECOVERY_HOST) {

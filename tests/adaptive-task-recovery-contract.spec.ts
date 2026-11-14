@@ -48,11 +48,12 @@ it.each(['missing-case', 'duplicate-pid', 'wrong-cut', 'no-crash', 'v2-no-epoch-
   expect(() => assertRecoveryCrashes(r)).toThrow()
 })
 
-it('selects recovery only for the three exact recovery contract candidates', () => {
+it('selects recovery only for the four exact recovery contract candidates', () => {
   expect(isRecoveryHost('0.2.2-rc.1')).toBe(true)
   expect(isRecoveryHost('0.2.2-alpha.3')).toBe(true)
   expect(isRecoveryHost('0.2.2-rc.2')).toBe(true)
-  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.3', '0.2.3', undefined]) {
+  expect(isRecoveryHost('0.2.2-rc.3')).toBe(true)
+  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.4', '0.2.3', undefined]) {
     expect(isRecoveryHost(version)).toBe(false)
     expect(() => recoveryCordisVersion(version as string)).toThrow()
   }
@@ -66,8 +67,10 @@ it('requires the seven rc2 ownership regressions in addition to all prior recove
   expect(inspectRecoveryReport(report('0.2.2-rc.2'), '0.2.2-rc.2').tests).toBe(34)
   expect(inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.1').tests).toBe(27)
   expect(() => inspectRecoveryReport(report(), '0.2.2-rc.2')).toThrow()
-  expect(() => recoveryCases('0.2.2-rc.3')).toThrow()
-  expect(() => recoveryRuntimePackages('0.2.2-rc.3')).toThrow()
+  expect(inspectRecoveryReport(report('0.2.2-rc.3'), '0.2.2-rc.3').tests).toBe(34)
+  expect(() => inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.3')).toThrow()
+  expect(() => recoveryCases('0.2.2-rc.4')).toThrow()
+  expect(() => recoveryRuntimePackages('0.2.2-rc.4')).toThrow()
 })
 it.each(RC2_RECOVERY_CASES)('rejects rc2 evidence omitting %s even with adjusted passing totals', title => {
   const r = report('0.2.2-rc.2')
@@ -79,6 +82,7 @@ it('only the exact rc2 profile adds its ownership and concrete filesystem servic
   const names = ['@deepseek-ai/dsh-subagent', '@deepseek-ai/dsh-working-directory', '@deepseek-ai/dsh-fs-local']
   for (const name of names) {
     expect(recoveryRuntimePackages('0.2.2-rc.2')).toContain(name)
+    expect(recoveryRuntimePackages('0.2.2-rc.3')).toContain(name)
     expect(recoveryRuntimePackages('0.2.2-rc.1')).not.toContain(name)
   }
 })

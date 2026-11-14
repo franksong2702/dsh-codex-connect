@@ -45,8 +45,8 @@ it.each(['missing-package', 'mixed-runtime', 'node', 'network', 'digest', 'case'
   expect(() => assertDelegationMatrix(report, versions, digest)).toThrow()
 })
 
-function rc2Matrix(): any {
-  const version = '0.2.2-rc.2', node = 'v24.13.0'
+function rc2Matrix(version = '0.2.2-rc.2'): any {
+  const node = 'v24.13.0'
   const cases = [...recoveryCases(version), 'uses the exact isolated host without a neighboring runtime'].sort()
   let pid = 1
   const crashes = { profile: 'alpha3-recovery-only', node, passed: true, syntheticOnly: true, cases: 12, freshProcesses: 24,
@@ -65,20 +65,20 @@ function rc2Matrix(): any {
       runtimePackages: { ...Object.fromEntries([...PHASE2_RUNTIME_PACKAGES, ...recoveryRuntimePackages(version)].map(name => [name, version])),
         '@earendil-works/pi-ai': '0.85.1' } }] }
 }
-it('requires all rc2 functional cases, real identity and crash boundaries in Phase 2', () => {
-  const r = rc2Matrix()
-  expect(assertDelegationMatrix(r, ['0.2.2-rc.2'], digest)).toBe(r)
+it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('requires all %s functional cases, real identity and crash boundaries in Phase 2', version => {
+  const r = rc2Matrix(version)
+  expect(assertDelegationMatrix(r, [version], digest)).toBe(r)
   const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 34, numPassedTests: 34,
     testResults: [{ assertionResults: r.reports[0].cases.map((title: string) => ({ title, status: 'passed' })) }] }
-  expect(inspectDelegationMatrixReport(data, '0.2.2-rc.2')).toHaveLength(34)
+  expect(inspectDelegationMatrixReport(data, version)).toHaveLength(34)
   data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
-  expect(() => inspectDelegationMatrixReport(data, '0.2.2-rc.2')).toThrow()
+  expect(() => inspectDelegationMatrixReport(data, version)).toThrow()
 })
 it.each(RC2_RECOVERY_RUNTIME_PACKAGES)('rejects missing or mixed rc2 Phase 2 %s', name => {
-  for (const mutation of ['missing', 'mixed']) {
-    const r = rc2Matrix()
+  for (const version of ['0.2.2-rc.2', '0.2.2-rc.3']) for (const mutation of ['missing', 'mixed']) {
+    const r = rc2Matrix(version)
     if (mutation === 'missing') delete r.reports[0].runtimePackages[name]
     else r.reports[0].runtimePackages[name] = '0.2.2-rc.1'
-    expect(() => assertDelegationMatrix(r, ['0.2.2-rc.2'], digest)).toThrow()
+    expect(() => assertDelegationMatrix(r, [version], digest)).toThrow()
   }
 })

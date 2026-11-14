@@ -1,5 +1,7 @@
 # Codex Connect
 
+Local rc.3 compatibility candidate (unreleased): exact DSH `0.2.2-rc.3` uses the existing authenticated retained-session recovery path; public Task and automatic delegation remain disabled. Published Alpha14 is unchanged. See [the compatibility note](docs/agent-notes/dsh-022-rc3-compatibility.md).
+
 **Published Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining the prior fifteen Hosts and the recovery-only Task restriction below. npm version/alpha, matching Git tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the [release and verification record](docs/release-notes/0.2.0-alpha.13.md). This does not request a DSH upgrade; isolated synthetic checks do not establish real-account/model, native GUI or Windows Desktop acceptance.
 
 On exact DSH `0.2.2-alpha.3` and `0.2.2-rc.1`, saved Task records are recovery-only: inspect state, stop or take over manually. Automatic routing, resume and evidence-child creation are rejected, including internal direct entry points. Existing safe-disable/archive exits retain their owner, receipt and cleanup checks. The prior fourteen Hosts keep their behavior; Task's public activation gate remains closed everywhere.

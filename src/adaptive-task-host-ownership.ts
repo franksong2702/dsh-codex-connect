@@ -24,7 +24,7 @@ export function taskVerifiedRuntimeRoot(ctx: Context, agent: Agent): Agent {
   exactLive(ctx, root)
   return root
 }
-/** Legacy live roots are authoritative; rc.2 uses the Host's activation registry. */
+/** Legacy live roots are authoritative; rc.2/rc.3 use the Host's activation registry. */
 export function taskLiveRoots(ctx: Context): Agent[] {
   const { agents } = services(ctx)
   if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') return agents.roots()
@@ -39,7 +39,7 @@ export function taskLiveRoots(ctx: Context): Agent[] {
     try { return taskVerifiedRuntimeRoot(ctx, agent) === agent } catch { return false }
   })
 }
-/** For rc.2 this only establishes tree membership, never permission to create children. */
+/** For rc.2/rc.3 this only establishes tree membership, never permission to create children. */
 export function taskIsOwnedBy(ctx: Context, id: Agent['id'], owner: Agent): boolean {
   const { agents } = services(ctx)
   if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') return agents.isOwnedBy(id, owner)
