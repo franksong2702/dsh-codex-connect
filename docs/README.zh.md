@@ -1,6 +1,6 @@
 # Codex Connect
 
-本地 rc.3 兼容候选（未发布）：精确 DSH `0.2.2-rc.3` 复用已保存会话的身份校验与恢复路径；公开 Task 与自动委派仍关闭。已发布 Alpha14 保持不变。见[兼容记录](agent-notes/dsh-022-rc3-compatibility.md)。
+Alpha15 兼容候选（待发布）：精确 DSH `0.2.2-rc.3` 复用已保存会话的身份校验与恢复路径；公开 Task 与自动委派仍关闭。已发布 Alpha14 保持不变。见[发布说明](release-notes/0.2.0-alpha.15.md)。
 
 **已发布 Alpha 13：** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) 仅新增精确的 stock DSH `0.2.2-rc.1`，保留原十五个 Host 及下述 Task 仅恢复限制。npm 版本／alpha、匹配的 Git tag／prerelease 和归档完整性均已独立核实。`latest` 保持 Alpha 10。参见[发布与验证记录](release-notes/0.2.0-alpha.13.md)。这不要求升级 DSH；隔离合成检查不代表真实账户／模型、原生 GUI 或 Windows Desktop 验收。
 
