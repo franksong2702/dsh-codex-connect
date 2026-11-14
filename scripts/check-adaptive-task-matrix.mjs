@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isRecoveryHost, recoveryCordisVersion, recoveryRuntimePackages } from './adaptive-task-recovery-contract.mjs'
+import { isSubagentRecoveryHost, isRecoveryHost, recoveryCordisVersion, recoveryRuntimePackages } from './adaptive-task-recovery-contract.mjs'
 /** Run the same task lifecycle contract and bundled implementation on exact disposable DSH runtimes. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -124,7 +124,7 @@ async function main() {
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), identitySource)
       await copyFile(join(ROOT, isRecoveryHost(version) ? 'scripts/adaptive-task-delegation-network-guard.mjs' : 'scripts/adaptive-task-matrix-network-guard.mjs'), join(host, 'network-guard.mjs'))
       const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] },
-        test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(version === '0.2.2-rc.2' ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
+        test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
           isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       console.error(`Task ${version}: running identical task lifecycle cases`)

@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "command": "node scripts/check-dsh-matrix.mjs",
+  "exit": 0,
+  "seconds": 1435.61,
+  "platform": "darwin-arm64",
+  "nodeVersion": "v24.13.0",
+  "npmVersion": "10.9.8",
+  "baseCommit": "e06ed3c14759244cc10f8dcfbccb19ac5e6f51f6",
+  "pluginVersion": "0.2.0-alpha.14",
+  "candidateOnly": true,
+  "sameArtifact": true,
+  "artifactSha256": "f63df837b8db7c1a5897bc019c30538a10a5e208045a9812c74d00ba2458ea0d",
+  "artifactBytes": 1480693,
+  "runtimeNetworkGuardAttempts": 0,
+  "hosts": [
+    {
+      "version": "0.1.7-rc.1",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.1.7-rc.2",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.0-rc.1",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.0-rc.2",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-alpha.1",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-alpha.2",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-alpha.3",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-alpha.4",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-alpha.5",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-rc.1",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-rc.2",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-rc.3",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-rc.4",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.1-rc.5",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.2-alpha.3",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.2-rc.1",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.2-rc.2",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    },
+    {
+      "version": "0.2.2-rc.3",
+      "passed": true,
+      "preparedModels": 12,
+      "nativeCompactionProcesses": 10,
+      "preflightCases": 6,
+      "retryCases": 6,
+      "defaultsUnchanged": true
+    }
+  ]
+}

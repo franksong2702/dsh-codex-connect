@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { isRecoveryHost, recoveryRuntimePackages, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
+import { isSubagentRecoveryHost, isRecoveryHost, recoveryRuntimePackages, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
 import { checkRecoveryCrashes } from './check-adaptive-task-recovery-crashes.mjs'
 /** Exact-host Phase 2 synthetic matrix. This is separate from the Phase 1 matrix. */
 import assert from 'node:assert/strict'
@@ -84,7 +84,7 @@ async function main() {
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), `import {it,expect} from 'vitest'; import {writeFileSync} from 'node:fs';\nit('uses the exact isolated host without a neighboring runtime', async()=>{ const entries=${JSON.stringify(identity.entries)}; for(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(path));} writeFileSync(${JSON.stringify(join(host, 'identity.json'))}, JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}})); });\n`)
       await copyFile(join(ROOT, 'scripts/adaptive-task-delegation-network-guard.mjs'), join(host, 'network-guard.mjs'))
-      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(version === '0.2.2-rc.2' ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
+      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       const test = await runBoundedCommand(process.execPath, [join(vitest, 'vitest.mjs'), 'run', '--config', join(host, 'vitest.config.mjs'), '--reporter=json', '--outputFile', join(host, 'tests.json')], { cwd: host, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
       if (test.error || test.cleanupError || test.status !== 0) {
