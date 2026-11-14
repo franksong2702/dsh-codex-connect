@@ -79,6 +79,27 @@ afterEach(() => {
 })
 
 describe('Codex model visibility in Chromium', () => {
+  it.each([['en', 390, en], ['zh', 390, zh], ['en', 960, en], ['zh', 960, zh]] as const)('saves recovery visibility across remounts in %s at %i pixels', async (_language, width, copy) => {
+    await page.viewport(width, 844)
+    host.style.width = '100%'
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    const props = { scope, t: (key: keyof typeof en) => copy[key], activeModule: 'capabilities' as const }
+    root.render(createElement(OpenAICodexConfiguration, props))
+    const toggle = page.getByRole('checkbox', { name: copy.showTaskRecoveryControls, exact: true })
+    await expect.element(toggle).toBeChecked()
+    await toggle.click()
+    expect(scope.getSnapshot().value?.showTaskRecoveryControls).toBe(true)
+    await page.getByRole('button', { name: copy.save, exact: true }).click()
+    await expect.element(page.getByText(copy.settingsSaved, { exact: true })).toBeVisible()
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([{ op: 'set', path: ['showTaskRecoveryControls'], value: false }], 0)
+    root.unmount(); root = createRoot(host)
+    root.render(createElement(OpenAICodexConfiguration, props))
+    await expect.element(toggle).not.toBeChecked()
+    await expect.element(page.getByText(copy.showTaskRecoveryControlsHelp, { exact: true })).toBeVisible()
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth)
+  })
+
   it.each([['en', 390, en], ['zh', 390, zh], ['en', 960, en], ['zh', 960, zh]] as const)('saves independent speed defaults and a legacy reset in %s at %i pixels', async (_language, width, copy) => {
     await page.viewport(width, 844)
     host.style.width = '100%'

@@ -1,6 +1,9 @@
 /** Recovery-only shipping surface; activation and delegation consent UI are retired. */
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { flushSync } from 'react-dom'
+import { TaskRecoveryVisibility } from '../../src/client/TaskRecoveryVisibility.tsx'
+import { taskRecoveryConfigFixture } from '../support/task-recovery-config-fixture.ts'
 import { afterEach, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { PublishedAdaptiveTaskControl } from '../../src/client/PublishedAdaptiveTaskControl.tsx'
@@ -14,6 +17,58 @@ const mount = (language = 'en', sessionId = 'release-fixture') => {
   root.render(createElement(PublishedAdaptiveTaskControl, { language, sessionId }))
 }
 afterEach(() => { root?.unmount(); element?.remove(); root = undefined; element = undefined; vi.unstubAllGlobals() })
+const mountVisibility = (config: ReturnType<typeof taskRecoveryConfigFixture>) => {
+  element = document.createElement('div'); document.body.append(element); root = createRoot(element)
+  flushSync(() => { root!.render(createElement(TaskRecoveryVisibility, { configScope: config.scope, sessionId: 'visibility-fixture' })) })
+}
+it('waits for saved false before issuing any task read in Chromium', () => {
+  const fetch = vi.fn(async () => Response.json(state('interrupted'))); vi.stubGlobal('fetch', fetch)
+  const config = taskRecoveryConfigFixture({ status: 'loading', value: undefined })
+  mountVisibility(config)
+  expect(fetch).not.toHaveBeenCalled()
+  flushSync(() => { config.show(false) })
+  expect(element!.innerHTML).toBe('')
+  expect(fetch).not.toHaveBeenCalled()
+})
+it('restores recovery when initially loading settings become unavailable in Chromium', async () => {
+  const fetch = vi.fn(async () => Response.json(state('interrupted'))); vi.stubGlobal('fetch', fetch)
+  const config = taskRecoveryConfigFixture({ status: 'loading', value: undefined })
+  mountVisibility(config)
+  expect(fetch).not.toHaveBeenCalled()
+  flushSync(() => { config.update({ status: 'unavailable', mode: 'memory', writable: false }) })
+  await expect.element(page.getByRole('button', { name: 'Existing task controls', exact: true })).toBeVisible()
+  expect(fetch).toHaveBeenCalledTimes(1)
+})
+it('closes a hidden recovery dialog and restores fresh safety exits without resetting counters', async () => {
+  await page.viewport(390, 844)
+  let current = state('interrupted'); const actions: string[] = []
+  const fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    if (init?.method === 'POST') {
+      const command = JSON.parse(String(init.body)); actions.push(command.action)
+      current = { ...current, mode: command.action === 'manual' ? 'manual' : 'stopped', revision: current.revision + 1 }
+    }
+    return Response.json(current)
+  }); vi.stubGlobal('fetch', fetch)
+  const config = taskRecoveryConfigFixture()
+  mountVisibility(config)
+  const opener = page.getByRole('button', { name: 'Existing task controls', exact: true })
+  await opener.click()
+  await expect.element(page.getByRole('dialog', { name: 'Existing task recovery' })).toBeVisible()
+  flushSync(() => { config.show(false) })
+  expect(document.querySelector('dialog')).toBeNull()
+  expect(element!.innerHTML).toBe('')
+  expect(actions).toEqual([])
+  const before = fetch.mock.calls.length
+  flushSync(() => { config.show(true) })
+  await opener.click()
+  await expect.element(page.getByText('Requests reserved: 3 / 10', { exact: false })).toBeVisible()
+  expect(fetch.mock.calls.length).toBeGreaterThan(before)
+  await page.getByRole('button', { name: 'Stop this task', exact: true }).click()
+  await vi.waitFor(() => expect(current.mode).toBe('stopped'))
+  await page.getByRole('button', { name: 'Take over manually', exact: true }).click()
+  await vi.waitFor(() => expect(actions).toEqual(['stop', 'manual']))
+  expect(current.reserved).toBe(3)
+})
 it.each(['en', 'zh'])('hides the public entry and all opt-in choices for a confirmed ordinary conversation in %s', async language => {
   const fetch = vi.fn(async () => Response.json(state())); vi.stubGlobal('fetch', fetch); mount(language)
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))

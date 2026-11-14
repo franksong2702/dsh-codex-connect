@@ -602,6 +602,8 @@ interface OpenAICodexSettingsConfig {
    * output-token limits, or the deployment's compaction policy.
    */
   contextWindowOverrides: Readonly<Record<string, number>> | undefined;
+  /** Show the recovery-only task controls beside the model selector; presentation only. */
+  showTaskRecoveryControls: boolean;
   enableSearch: boolean;
   /** @deprecated Inert compatibility field for old Host/browser snapshots; always resolves false. */
   enableReserveFallback: boolean;
@@ -915,6 +917,8 @@ export interface Config {
    * Whole-map or per-model null disables inherited overrides; omitted keys inherit lower layers.
    */
   contextWindowOverrides?: Record<string, number | null> | null | undefined;
+  /** Show existing task recovery controls; hiding does not stop or change tasks. */
+  showTaskRecoveryControls?: boolean;
   /** Register the optional standalone Codex search provider. */
   enableSearch?: boolean;
   /** @deprecated Accepted only for old configuration files; Luna Reserve has been removed. */
@@ -961,6 +965,7 @@ export interface VolatileConfig {
   proxyUrl: Volatile<string>;
   preflightActivity?: OpenAICodexPreflightConfig | undefined;
   contextWindowOverrides: Volatile<Record<string, number | null> | null | undefined>;
+  showTaskRecoveryControls: Volatile<boolean>;
   enableSearch: Volatile<boolean>;
   enableReserveFallback: Volatile<boolean>;
   enableNewSessionFastMode: Volatile<boolean>;

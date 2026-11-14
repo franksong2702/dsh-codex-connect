@@ -37,7 +37,7 @@ import { OpenAICodexUpdateStore } from './update-store.ts'
 import { CODEX_CONNECT_VERSION } from '../version.ts'
 import { OpenAICodexAccountStore } from './account-store.ts'
 import { OpenAICodexModelsCard } from './OpenAICodexModelsCard.tsx'
-import { PublishedAdaptiveTaskControl as AdaptiveTaskControl } from './PublishedAdaptiveTaskControl.tsx'
+import { TaskRecoveryVisibility } from './TaskRecoveryVisibility.tsx'
 import { OpenAICodexConfigForm } from './config-form.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -98,8 +98,8 @@ export function apply(ctx: ClientContext): void {
     name: 'conversation.input.right',
     id: 'codex-connect-task-models',
     order: 30,
-    inject: () => ({ language: t('adaptiveTaskLanguage') }),
-  }, AdaptiveTaskControl))
+    inject: () => ({ language: t('adaptiveTaskLanguage'), configScope }),
+  }, TaskRecoveryVisibility))
 
   ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
     name: 'tool.call.toolview',
