@@ -73,7 +73,7 @@ function dependencyVersion(consumer: NodeJS.Require, name: string): string {
 // These are local development consumers; independently installed Host packages are not repaired here.
 describe('host development dependency security regressions', () => {
   it.each([
-    [[], 'undici', '8.12.3', 8],
+    [[], 'undici', '8.12.4', 8],
     [['jsdom'], 'undici', '7.30.1', 7],
     [['@deepseek-ai/dsh-web', '@deepseek-ai/dsh-app-boot', 'ajv'], 'fast-uri', '3.1.9', 3],
     [['@deepseek-ai/dsh-attachment-local'], 'sharp', '0.35.5', 0],
@@ -95,10 +95,10 @@ describe('host development dependency security regressions', () => {
     }
     expect(semver.satisfies('8.10.0', manifest.dependencies.undici)).toBe(false)
     expect(semver.satisfies('8.10.1', manifest.dependencies.undici)).toBe(false)
-    for (const version of ['8.11.2', '8.12.0', '8.12.1', '8.12.2', '9.0.0']) {
+    for (const version of ['8.11.2', '8.12.0', '8.12.1', '8.12.2', '8.12.3', '9.0.0']) {
       expect(semver.satisfies(version, manifest.dependencies.undici)).toBe(false)
     }
-    for (const version of ['8.12.3', '8.12.4', '8.13.0']) {
+    for (const version of ['8.12.4', '8.13.0']) {
       expect(semver.satisfies(version, manifest.dependencies.undici)).toBe(true)
     }
   })
