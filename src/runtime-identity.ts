@@ -50,6 +50,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
 
 function status(value: unknown): value is CompatibilityStatus {
   return value === 'compatible' || value === 'unknown' || value === 'unverified' || value === 'incompatible'
+    || value === 'unverified-in-range' || value === 'known-bad'
 }
 
 function entry(value: unknown, node = false): CompatibilityEntry | undefined {
@@ -113,7 +114,7 @@ export function parseOpenAICodexRuntimeReport(value: unknown): OpenAICodexRuntim
     || [llm, adapter, compaction].some(item => item.installed !== currentDshVersion))) return undefined
   // The selected root can disagree with a coherent peer triple. Without the
   // root/triple version receipt it must remain unverified, never compatible.
-  const computedStatus = computed.status === 'compatible' && currentDshVersion === undefined
+  const computedStatus = (computed.status === 'compatible' || computed.status === 'unverified-in-range') && currentDshVersion === undefined
     ? 'unverified' : computed.status
   if (compatibility.status !== computedStatus) return undefined
   return {

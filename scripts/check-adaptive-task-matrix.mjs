@@ -12,6 +12,7 @@ import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { assertTaskMatrix, inspectTaskTestReport, TASK_IDENTITY_CASE, TASK_RUNTIME_PACKAGES } from './adaptive-task-matrix-contract.mjs'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
@@ -59,7 +60,7 @@ async function main() {
   const reportPath = argv[1] === undefined ? undefined : resolve(ROOT, argv[1])
   if (reportPath) assert.ok(inside(join(ROOT, 'docs/experiments'), reportPath) && reportPath.endsWith('.json'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = JSON.parse(await readFile(join(ROOT, 'compatibility.json'), 'utf8')).dshPluginApi.versions
+  const versions = dshAdmission.verifiedVersions
   const require = createRequire(join(ROOT, 'package.json'))
   const vitest = dirname(require.resolve('vitest/package.json'))
   const root = await mkdtemp(join(tmpdir(), 'dsh-task-matrix-'))
@@ -93,6 +94,7 @@ async function main() {
       if (isRecoveryHost(version)) metadata.dependencies['@deepseek-ai/cordis'] = recoveryCordisVersion(version)
       // Match the installed plugin's dependency ownership instead of replacing its provider with the host's.
       metadata.dependencies['@earendil-works/pi-ai'] = pkg.dependencies['@earendil-works/pi-ai']
+      metadata.dependencies.semver = pkg.dependencies.semver
       metadata.dependencies.undici = pkg.dependencies.undici
       metadata.type = 'module'
       await writeFile(join(host, 'package.json'), JSON.stringify(metadata))

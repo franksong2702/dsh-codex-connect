@@ -3,6 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(ROOT, '..')
@@ -12,7 +13,7 @@ const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 const REQUIRED_DSH_VERSION = '0.1.7-rc.1'
 const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3']
-const REQUIRED_DSH_RANGE = REQUIRED_DSH_VERSIONS.join(' || ')
+const REQUIRED_DSH_RANGE = dshAdmission.range
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
 const SCHEMASTERY_PACKAGE = '@deepseek-ai/schemastery'

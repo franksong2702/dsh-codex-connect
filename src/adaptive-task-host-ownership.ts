@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import { taskHostUsesSubagentOwnership } from './adaptive-task-host-policy.ts'
+import { assertVerifiedTaskHostOwnership, taskHostUsesSubagentOwnership } from './adaptive-task-host-policy.ts'
 import { taskFailure } from './adaptive-task-store.ts'
 
 function services(ctx: Context) {
@@ -27,7 +27,10 @@ export function taskVerifiedRuntimeRoot(ctx: Context, agent: Agent): Agent {
 /** Legacy live roots are authoritative; rc.2/rc.3 use the Host's activation registry. */
 export function taskLiveRoots(ctx: Context): Agent[] {
   const { agents } = services(ctx)
-  if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') return agents.roots()
+  if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') {
+    assertVerifiedTaskHostOwnership()
+    return agents.roots()
+  }
   // Validate the Host/service even for an empty registry. Never infer authority
   // from the absence of an API or from a future version's shape.
   if (!taskHostUsesSubagentOwnership()) taskFailure('TASK_HOST_OWNERSHIP_UNVERIFIED')
@@ -42,7 +45,10 @@ export function taskLiveRoots(ctx: Context): Agent[] {
 /** For rc.2/rc.3 this only establishes tree membership, never permission to create children. */
 export function taskIsOwnedBy(ctx: Context, id: Agent['id'], owner: Agent): boolean {
   const { agents } = services(ctx)
-  if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') return agents.isOwnedBy(id, owner)
+  if (typeof agents.roots === 'function' && typeof agents.isOwnedBy === 'function') {
+    assertVerifiedTaskHostOwnership()
+    return agents.isOwnedBy(id, owner)
+  }
   exactLive(ctx, owner)
   const agent = agents.get(id)
   return agent !== undefined && agent !== owner && taskVerifiedRuntimeRoot(ctx, agent) === owner

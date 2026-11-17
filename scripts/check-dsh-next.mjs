@@ -306,9 +306,13 @@ export async function runCanary(options, dependencies = {}) {
   }
   const distTags = resolved.distTags
   const candidateVersion = distTags[channel]
+  // The registry-only resolve job runs without installing repository dependencies.
+  const { dshAdmission } = await import('../src/dsh-admission.mjs')
   const versionClassification = classifyCandidateVersion(candidateVersion, supportedVersion, supportedVersions)
-  const declaredSupport = versionClassification === 'declared'
+  const hostAdmission = dshAdmission.classify(candidateVersion)
+  const declaredSupport = hostAdmission === 'verified'
   base.declaredSupport = declaredSupport
+  base.hostAdmission = hostAdmission
 
   const duplicateOwner = duplicateCandidateOwner(channel, dedupeAgainst, distTags)
   if (duplicateOwner !== undefined) {
@@ -319,6 +323,18 @@ export async function runCanary(options, dependencies = {}) {
       classification: 'duplicate',
       stage: 'compare-candidate',
       summary: `DSH ${channel} matches ${duplicateOwner} at ${candidateVersion}; the ${duplicateOwner} canary owns this candidate.`,
+    })
+    return 0
+  }
+
+  if (hostAdmission === 'known-bad') {
+    await emitReport(outputPath, {
+      ...base,
+      candidateVersion,
+      status: 'skipped',
+      classification: 'known-bad',
+      stage: 'compare-candidate',
+      summary: `DSH ${candidateVersion} is explicitly excluded by the admission policy. No check was executed.`,
     })
     return 0
   }
@@ -364,7 +380,7 @@ export async function runCanary(options, dependencies = {}) {
     stage: 'isolated-install',
     summary: declaredSupport
       ? `The isolated ${channel} regression passed for declared DSH ${candidateVersion}. Full user acceptance was not assessed by this check.`
-      : `The isolated ${channel} install check passed for undeclared DSH ${candidateVersion}. Declared versions: ${supportedVersions.join(', ')}. Full user acceptance remains separate.`,
+      : `The isolated ${channel} install check passed for DSH ${candidateVersion} (${hostAdmission}). The check does not add a verified pairing.`,
 
   })
   return 0

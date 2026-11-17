@@ -43,5 +43,6 @@ export async function detectCompatibility(options: CompatibilityDetectionOptions
     nodeVersion: options.nodeVersion ?? options.node ?? options.installed?.node ?? process.version,
     packageVersions,
   })
-  return anchoredRootMismatch && report.status === 'compatible' ? { ...report, status: 'unverified' } : report
+  return anchoredRootMismatch && (report.status === 'compatible' || report.status === 'unverified-in-range')
+    ? { ...report, status: 'unverified' } : report
 }

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = '0.1.7-rc.1'
@@ -21,8 +22,8 @@ const DECLARED_RUNTIME_PACKAGES = new Set([
   ...Object.keys(PACKAGE_MANIFEST.dependencies ?? {}),
   ...Object.keys(PACKAGE_MANIFEST.peerDependencies ?? {}),
 ])
-const DECLARED_DSH_VERSIONS = COMPATIBILITY.dshPluginApi.versions
-const DECLARED_DSH_RANGE = DECLARED_DSH_VERSIONS.join(' || ')
+const DECLARED_DSH_VERSIONS = dshAdmission.verifiedVersions
+const DECLARED_DSH_RANGE = dshAdmission.range
 const RUNTIME_CHECK = resolve(REPO_ROOT, 'scripts/check-installed-runtime.mjs')
 const COMMAND_TIMEOUT_MS = 20 * 60 * 1000
 
@@ -127,7 +128,7 @@ function assertDoctorJson(value, dshHome, repoRoot, { allowUndeclaredCanaryVersi
   }
   const compatibility = report['compatibility']
   const expectedPackages = ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction', '@earendil-works/pi-ai']
-  const acceptedStatuses = allowUndeclaredCanaryVersion ? ['compatible', 'unverified'] : ['compatible']
+  const acceptedStatuses = allowUndeclaredCanaryVersion ? ['compatible', 'unverified', 'unverified-in-range'] : ['compatible']
   if (compatibility?.['schemaVersion'] !== JSON_SCHEMA_VERSION || !acceptedStatuses.includes(compatibility?.['status'])) {
     throw new CompatibilityCheckError('doctor JSON did not report schemaVersion 1 and compatible runtime dependencies')
   }
@@ -168,7 +169,7 @@ export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
   const report = parseOneLineJson(result.stdout, 'plugin doctor')
   assertDoctorJson(report, dshHome, repoRoot, options)
   // Only a validated version warning explains the doctor's expected nonzero exit.
-  if (result.status !== 0 && report.compatibility.status !== 'unverified') {
+  if (result.status !== 0 && !['unverified', 'unverified-in-range'].includes(report.compatibility.status)) {
     requireSuccess('plugin doctor', result, 'compatibility')
   }
   return report
@@ -178,6 +179,9 @@ export function validateDoctorResult(result, dshHome, repoRoot, options = {}) {
 export async function checkDshInstall({ pluginManagerCandidate } = {}) {
   const requestedDshVersion = process.env.DSH_VERSION
   const allowUndeclaredCanaryVersion = process.env.DSH_UNDECLARED_CANARY_VERSION === UNDECLARED_CANARY_MODE
+  if (dshAdmission.classify(requestedDshVersion) === 'known-bad') {
+    throw new CompatibilityCheckError('The requested DSH version is excluded by the admission policy')
+  }
   if (requestedDshVersion !== undefined
     && requestedDshVersion !== ''
     && !DECLARED_DSH_VERSIONS.includes(requestedDshVersion)

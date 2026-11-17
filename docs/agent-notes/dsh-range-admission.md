@@ -1,0 +1,11 @@
+# DSH range admission
+
+#445 Step 4 separates install admission from a verified pairing. The source policy preserves the existing exact hosts and admits `>=0.2.2-rc.1 <0.3.0-0`. The declared denylist starts empty. Adding an exact denial removes that version from the generated DSH peer range, even if it also appears among the verified versions. The catalog of published verified pairs keeps its release evidence. [#445](https://github.com/franksong2702/dsh-codex-connect/issues/445)
+
+The stock DSH manager evaluates plugin requirements with prereleases included. Standard npm peer resolution applies npm's prerelease rule. For example, the DSH gate admits a hypothetical `0.2.3-rc.1` under this range while a default npm SemVer check excludes it. Package managers still enforce their own requirements. On 2026-11-17, npm had no published, unverified DSH version within this range. The installation controls exercise stock `0.2.2-rc.3` with an exact entry removed and therefore establish the range gate on an existing host. A separate fixture that excludes rc.3 was refused and its profile was restored by the stock CLI.
+
+Doctor and settings distinguish coherent verified, in-range unverified and explicitly excluded states. They require a consistent DSH root and peer tuple for the first two statuses. Canary still runs checks on new in-range candidates, and a passing candidate does not enter the catalog. An explicitly denied candidate is skipped with `checkExecuted=false` while the denial is active. Existing exact recovery hosts retain their checks. A different DSH version or a mixed tuple cannot establish Task ownership or authorize automated behavior.
+
+## Local verification
+
+The source archive passed normal installation, profile composition and synthetic installed runtime checks on stock rc.1 and rc.3. Both runs prepared 12 models, verified authenticated Task HTTP handling and disposal, passed six retry cases, and recorded zero real network attempts while running. The final rebuild changed only removal of a source coverage comment in two generated files and passed the package inventory gate. This evidence covers isolated command-line installation and synthetic behavior. A newly published in-range host still needs its own installed check.

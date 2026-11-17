@@ -37,6 +37,10 @@ export function OpenAICodexRuntimeIdentity({ t }: { t: Translation }) {
   }, [attempt])
   const report = snapshot.report
   const unknown = t('runtimeUnknownValue')
+  const compatibility = report?.compatibility.status
+  const pairingKey = compatibility === 'compatible' ? 'runtimeDshVerified'
+    : compatibility === 'unverified-in-range' ? 'runtimeDshInRange'
+      : compatibility === 'known-bad' ? 'runtimeDshKnownBad' : undefined
   const stateKey = snapshot.status === 'checking' ? 'runtimeChecking'
     : snapshot.status === 'unavailable' ? 'runtimeUnavailable'
       : snapshot.pluginVersionState === 'match' ? 'runtimeVersionsMatch'
@@ -55,6 +59,7 @@ export function OpenAICodexRuntimeIdentity({ t }: { t: Translation }) {
       <dt>{t('runtimeHostVersion')}</dt><dd style={{ margin: 0 }}>{report?.identity.loadedPluginVersion ?? unknown}</dd>
       <dt>{t('runtimeInstalledVersion')}</dt><dd style={{ margin: 0 }}>{report?.identity.installedPluginVersion ?? unknown}</dd>
       <dt>{t('runtimeDshVersion')}</dt><dd style={{ margin: 0 }}>{report?.currentDshVersion ?? unknown}</dd>
+      {pairingKey === undefined ? null : <><dt>{t('runtimeDshCompatibility')}</dt><dd style={{ margin: 0 }}>{t(pairingKey)}</dd></>}
     </dl>
     {snapshot.pluginVersionState !== 'mismatch' ? null : <p style={textStyle}>{t('runtimeMismatchHelp')}</p>}
     <p style={textStyle}>{t('runtimeEvidenceBoundary')}</p>

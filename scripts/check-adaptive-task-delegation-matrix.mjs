@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { isSubagentRecoveryHost, isRecoveryHost, recoveryRuntimePackages, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
 import { checkRecoveryCrashes } from './check-adaptive-task-recovery-crashes.mjs'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 /** Exact-host Phase 2 synthetic matrix. This is separate from the Phase 1 matrix. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -34,7 +35,7 @@ async function main() {
   const reportPath = argv[1] === undefined ? undefined : resolve(ROOT, argv[1])
   if (reportPath) assert.ok(reportPath.startsWith(join(ROOT, 'docs', 'experiments') + '/') && reportPath.endsWith('.json'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = JSON.parse(await readFile(join(ROOT, 'compatibility.json'), 'utf8')).dshPluginApi.versions
+  const versions = dshAdmission.verifiedVersions
   const require = createRequire(join(ROOT, 'package.json')); const vitest = dirname(require.resolve('vitest/package.json'))
   const root = await mkdtemp(join(tmpdir(), 'dsh-task-delegation-matrix-')); const reports = []
   const registry = cachedTaskRegistry(join(ROOT, 'node_modules/.cache/task-matrix/manifests'))
@@ -62,6 +63,7 @@ async function main() {
       // produce conflicting override sets once the authenticated UI peers enter.
       // Source fixtures must retain the plugin-owned provider version; the host adapter owns its nested dependency.
       metadata.dependencies['@earendil-works/pi-ai'] = pkg.dependencies['@earendil-works/pi-ai']
+      metadata.dependencies.semver = pkg.dependencies.semver
       metadata.dependencies.undici = pkg.dependencies.undici; metadata.type = 'module'
       await writeFile(join(host, 'package.json'), JSON.stringify(metadata))
       const env = { ...scrubCanaryEnvironment(process.env), PATH: dirname(process.execPath) + delimiter + process.env.PATH, DSH_HOME: join(host, 'synthetic-home'),

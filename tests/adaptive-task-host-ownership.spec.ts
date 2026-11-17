@@ -1,10 +1,16 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { Context } from '@deepseek-ai/cordis'
-const { supported } = vi.hoisted(() => ({ supported: vi.fn(() => true) }))
-vi.mock('../src/adaptive-task-host-policy.ts', () => ({ taskHostUsesSubagentOwnership: supported }))
+const { supported, assertVerified } = vi.hoisted(() => ({ supported: vi.fn(() => true), assertVerified: vi.fn() }))
+vi.mock('../src/adaptive-task-host-policy.ts', () => ({
+  assertVerifiedTaskHostOwnership: assertVerified,
+  taskHostUsesSubagentOwnership: supported,
+}))
 import { taskDurableAncestors, taskIsOwnedBy, taskLiveRoots } from '../src/adaptive-task-host-ownership.ts'
-beforeEach(() => { supported.mockReset().mockReturnValue(true) })
+beforeEach(() => {
+  supported.mockReset().mockReturnValue(true)
+  assertVerified.mockReset()
+})
 function fixture() {
   const agents = new Map<string, Agent>(), sessions = new Map<string, Agent['session']>()
   const roots = new Map<Agent, Agent>(), rejected = new Set<Agent>()

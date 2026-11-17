@@ -195,10 +195,20 @@ describe('compatibility contract', () => {
       }
       expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, [name]: undefined } }).status).toBe('unknown')
     }
-    for (const version of ['0.2.2-alpha.1', '0.2.2-alpha.2', '0.2.2-alpha.4', '0.2.2']) {
+    for (const version of ['0.2.2-alpha.1', '0.2.2-alpha.2', '0.2.2-alpha.4', '0.3.0-rc.1']) {
       expect(evaluateCompatibility({ nodeVersion, packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified')
+    }
+    for (const version of ['0.2.2-rc.4', '0.2.2']) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions: {
+        ...packages, ...Object.fromEntries(names.map(name => [name, version])),
+      } }).status).toBe('unverified-in-range')
+      for (const name of names) {
+        expect(evaluateCompatibility({ nodeVersion, packageVersions: {
+          ...packages, [name]: version,
+        } }).status).toBe('unverified')
+      }
     }
     expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, '@earendil-works/pi-ai': '0.85.2' } }).status).toBe('unverified')
   })
