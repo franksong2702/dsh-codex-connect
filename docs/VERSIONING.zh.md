@@ -32,9 +32,11 @@ Alpha、Beta、RC 和不带预发布标识的版本表示插件自身的就绪�
 ## 渠道与安装推荐
 
 - `alpha` 是当前发布工作流写入的移动渠道。
-- `latest` 需要有意、单独推广。首次稳定版之前可指向已验证 Alpha，此后只能指向稳定版。发布 Alpha 不等于授权或执行该推广。
+- `latest` 跟随已验证支持 npm `latest` 当前解析出的精确 DSH 版本、且按 SemVer 排序最新的已发布插件版本。该插件可以是 Alpha 或稳定版；渠道不会改变它的就绪阶段。推广仍由维护者明确授权后单独执行，发布 Alpha 不等于授权或执行推广。
 - 精确安装命令标识插件发布，dist-tag 不能保证兼容性。
 - 准备新候选时，公开 README 继续推荐已确认发布的组合。因此推荐版本可以与 `package.json.version` 不同。
+
+根据 [#445 的决定](https://github.com/franksong2702/dsh-codex-connect/issues/445#issuecomment-6935776620)，这条规则替代“首次稳定版之后 latest 只能指向稳定版”的旧限制。它改变的是渠道政策，不是当前 npm 标签、支持的宿主或发布工作流。如果 DSH `latest` 更新后没有已验证且已发布的组合，保持插件标签不变并报告默认安装缺口；不得推断兼容性或推广未验证候选。其他 DSH 版本的用户仍需选择已验证的精确组合。实时 registry 核对、隔离安装、授权、回读及回退流程见 [latest 推广操作](../RELEASING.md#promoting-latest-short-lived-interactive-authentication)。
 
 项目最新版与适合用户现有 DSH 的最新已验证插件是两个问题。更精确的宿主专属推荐及安装区自动生成属于后续工作；本规则不声称当前更新界面已经从所有历史记录中计算这一选择。
 
