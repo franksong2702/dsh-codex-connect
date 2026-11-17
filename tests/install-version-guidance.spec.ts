@@ -3,21 +3,17 @@ import { describe, expect, it } from 'vitest'
 
 const install = await readFile(new URL('../INSTALL.md', import.meta.url), 'utf8')
 const compatibility = JSON.parse(await readFile(new URL('../verified-compatibility.json', import.meta.url), 'utf8'))
+const releaseHistory = await readFile(new URL('../docs/release-notes/README.md', import.meta.url), 'utf8')
 const firstInstall = install.indexOf('dsh plugin --profile web add ')
 const preflight = install.slice(0, firstInstall)
 const shellBlocks = [...install.matchAll(/```sh\s*\n([\s\S]*?)```/gu)]
   .flatMap(match => (match[1] ?? '').split('\n').map(line => line.trim()))
 
 describe('installation version guidance', () => {
-  it.each(['0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1'])('preserves the first published %s support in historical Alpha 5', async version => {
-    const [english, chinese] = await Promise.all([
-      readFile(new URL('../README.md', import.meta.url), 'utf8'),
-      readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
-    ])
-    expect(english).toContain('**Historical maintenance release:**')
-    expect(chinese).toContain('**历史维护版本：**')
+  it.each(['0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1'])('preserves the first published %s support in historical Alpha 5', version => {
+    expect(releaseHistory).toContain('../../INSTALL.md#020-alpha5-verified-publication')
     expect(install).toContain('Historical Alpha 5')
-    for (const guide of [english, chinese, install]) expect(guide).toContain(`\`${version}\``)
+    expect(install).toContain(`\`${version}\``)
     const firstAlpha5 = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.5')
     expect(firstAlpha5).toBeGreaterThanOrEqual(0)
     expect(compatibility.pluginVersions.slice(0, firstAlpha5)
@@ -25,7 +21,7 @@ describe('installation version guidance', () => {
       !entry.verifiedDshVersions.includes(version))).toBe(true)
   })
 
-  it('preserves historical pairings while recommending published Alpha 15 with exact rc.5', async () => {
+  it('preserves historical pairings including the first rc.5 support', async () => {
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
     const published = ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2',
       '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
@@ -38,7 +34,6 @@ describe('installation version guidance', () => {
       .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
       .toEqual([...published, '0.2.1-rc.2'])
-    expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
     expect(install).toContain('### 0.2.0-alpha.9 verified publication')
     expect(install).toContain('### 0.2.0-alpha.8 verified publication')
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.8')?.verifiedDshVersions)
@@ -49,26 +44,15 @@ describe('installation version guidance', () => {
     expect(install).not.toContain('does not support DSH `0.2.1-rc.2`')
   })
 
-  it('recommends the verified Alpha 15 release without rewriting historical Alpha 10 and Alpha 9 pairings', async () => {
-    const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
-      readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
-    for (const guide of [...guides, install]) {
-      expect(guide).toContain('`0.2.0-alpha.15`')
-      expect(guide).toContain('`0.2.1-rc.5`')
-      expect(guide).toContain('`0.2.0-alpha.10`')
-      expect(guide).toContain('`0.2.1-rc.3`')
-      expect(guide).toContain('dsh-codex-connect@0.2.0-alpha.15')
-      expect(guide).not.toContain('Source candidate (unreleased)')
-      expect(guide).not.toContain('源码候选（尚未发布）')
-    }
+  it('links the historical Alpha 10 and Alpha 9 pairings separately', () => {
+    expect(releaseHistory).toContain('(0.2.0-alpha.10.md)')
+    expect(releaseHistory).toContain('../../INSTALL.md#020-alpha9-verified-publication')
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
       .not.toContain('0.2.1-rc.3')
   })
 
   it('recommends published Alpha 15 while preserving Alpha 12 and earlier host limits', async () => {
-    const guides = await Promise.all([readFile(new URL('../README.md', import.meta.url), 'utf8'),
-      readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8')])
-    for (const guide of [...guides, install]) expect(guide).toContain('0.2.2-alpha.3')
+    expect(install).toContain('0.2.2-alpha.3')
     expect(install).toContain('**Published Alpha 15:**')
     expect(install).not.toContain('Alpha 12 candidate, not yet published')
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
@@ -80,10 +64,8 @@ describe('installation version guidance', () => {
     expect(install).toContain('**Historical Alpha 12:**')
     expect(install).toContain('### 0.2.0-alpha.12 verified publication')
     expect(install).toContain('### 0.2.0-alpha.13 verified publication')
-    for (const guide of [...guides, install]) {
-      expect(guide).toContain('`0.2.2-rc.1`')
-      expect(guide).toContain('https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.12')
-    }
+    expect(install).toContain('https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.12')
+    expect(releaseHistory).toContain('(0.2.0-alpha.12.md)')
     const firstAlpha12 = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.12')
     expect(firstAlpha12).toBeGreaterThanOrEqual(0)
     expect(compatibility.pluginVersions.slice(0, firstAlpha12)
@@ -140,21 +122,21 @@ describe('installation version guidance', () => {
     expect(shellBlocks).toContain(`dsh plugin --profile web add dsh-codex-connect@${plugin}`)
   })
 
-  it('reports the published pairing and default channel without claiming live acceptance', async () => {
+  it('shows the verified default installation before release history in both languages', async () => {
     const [english, chinese] = await Promise.all([
       readFile(new URL('../README.md', import.meta.url), 'utf8'),
       readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
     ])
     for (const guide of [english, chinese]) {
-      expect(guide).toContain('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15')
-      expect(guide).toContain('`latest`')
-      expect(guide).toContain('`0.1.7-rc.1`')
-      expect(guide).toContain('`0.1.7-rc.2`')
-      expect(guide).toContain('`0.2.0-rc.1`')
-      expect(guide).toContain('`0.2.0-rc.2`')
-      expect(guide).toContain('`0.2.1-alpha.1`')
-      expect(guide).toContain('`0.2.1-alpha.2`')
-      expect(guide).toContain('`0.2.1-alpha.3`')
+      const quickStart = guide.slice(0, guide.indexOf('### 2.'))
+      const versionCheck = quickStart.indexOf('dsh --version')
+      const command = quickStart.indexOf('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15')
+      expect(versionCheck).toBeGreaterThan(0)
+      expect(command).toBeGreaterThan(versionCheck)
+      expect(quickStart).toContain('`0.2.2-rc.1`')
+      expect(quickStart).toContain('`dsh-codex-connect@latest`')
+      expect(quickStart).not.toContain('0.2.0-alpha.10')
+      expect(guide).toContain('release-notes/README.md')
     }
     expect(english).toContain('**Luna Reserve has been removed.**')
     expect(english).toContain('Legacy `enableReserveFallback` settings are ignored')
@@ -162,26 +144,13 @@ describe('installation version guidance', () => {
     expect(chinese).toContain('**Luna Reserve 已移除。**')
     expect(chinese).toContain('旧 `enableReserveFallback` 开关会被忽略')
     expect(chinese).toContain('不读取、迁移或删除')
-    expect(install).toContain('Channel snapshot on 2026-11-14: npm `alpha` points to `0.2.0-alpha.15`; `latest` remains `0.2.0-alpha.10`')
-    expect(english).toContain('As of 2026-11-14, npm `alpha` points to `0.2.0-alpha.15`, while `latest` remains `0.2.0-alpha.10`')
-    expect(chinese).toContain('截至 2026-11-14，npm `alpha` 指向 `0.2.0-alpha.15`，`latest` 保持 `0.2.0-alpha.10`')
+    expect(install).toContain('The verified default pair is Codex Connect `0.2.0-alpha.15` with DSH `0.2.2-rc.1`')
     expect(install).toContain('Stock rc.1 keeps Task controls paused')
     expect(install).toContain('Luna Reserve has been removed')
   })
 
-  it('scopes the version-only Desktop comparison to historical alpha.3, not later npm acceptance', async () => {
-    const [english, chinese] = await Promise.all([
-      readFile(new URL('../README.md', import.meta.url), 'utf8'),
-      readFile(new URL('../docs/README.zh.md', import.meta.url), 'utf8'),
-    ])
-    expect(english).toContain('Only the historical `0.2.0-alpha.3` client was compared with that local adaptation and found to differ only by the package-version string')
-    expect(english).toContain('does not establish `0.2.0-alpha.4` Desktop or live-account acceptance')
-    expect(english).toContain('nor acceptance of later npm artifacts')
-    expect(english).not.toContain('The released client differs only by the package-version string')
-    expect(chinese).toContain('仅历史 `0.2.0-alpha.3` 客户端与该本地适配包进行了比较，确认只差包版本字符串')
-    expect(chinese).toContain('不代表 `0.2.0-alpha.4` 的 Desktop 或真实账户验收')
-    expect(chinese).toContain('也不代表后续 npm 安装包的验收')
-    expect(chinese).not.toContain('发布客户端与该客户端仅版本字符串不同')
+  it('keeps the historical Desktop comparison in its acceptance record', () => {
+    expect(releaseHistory).toContain('../../INSTALL.md#official-desktop')
     expect(install).toContain('On 2026-10-10 the maintainer reported successful login and normal use')
     expect(install).toContain('not independent live-account verification of a later npm artifact')
   })
@@ -222,7 +191,6 @@ it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', async () 
   const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
   expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.2' && version !== '0.2.2-rc.3'))
   expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toHaveLength(16)
-  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
 })
 
 it('records published Alpha15 without rewriting earlier artifact support', async () => {
@@ -239,5 +207,4 @@ it('records published Alpha15 without rewriting earlier artifact support', async
   for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
   expect(compatibility.pluginVersions.at(-1)?.version).toBe('0.2.0-alpha.15')
   expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions)
-  expect(install).toContain('The recommended pair is Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`')
 })
