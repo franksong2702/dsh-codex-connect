@@ -285,9 +285,10 @@ assertContract(
     !step.split('\n').some(line => /^(?:      - |        )(?:if|continue-on-error):/.test(line)),
   ),
 )
+const ciWindowsJob = ciWorkflow.match(/^  windows-canary-contract:\s*\n([\s\S]*?)(?=^  \S|(?![\s\S]))/m)?.[1] ?? ''
 assertContract(
-  'CI executes Windows command-script and process-tree contracts',
-  /^  windows-canary-contract:\s*$[\s\S]*?runs-on:\s*windows-latest[\s\S]*?node scripts\/check-dsh-next-contract\.mjs/mu.test(ciWorkflow),
+  'CI executes Windows command-script and process-tree contracts after the frozen install',
+  /^    runs-on: windows-latest\s*$[\s\S]*?^      - run: pnpm --config\.minimum-release-age=0 install --frozen-lockfile\s*$[\s\S]*?^        run: node scripts\/check-dsh-next-contract\.mjs\s*$/mu.test(ciWindowsJob),
 )
 
 if (failures.length > 0) {
