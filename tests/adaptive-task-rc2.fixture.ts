@@ -15,6 +15,64 @@ async function child(f: Awaited<ReturnType<typeof setup>>, id: string, parent = 
   return f.ctx.agents.create({ sessionId: SessionId(id), meta: { parentSession: parent, origin: 'subagent' },
     agentOptions: { provider: 'openai-codex', model } })
 }
+function excludeHostSession(f: Awaited<ReturnType<typeof setup>>, agent: Agent) {
+  const get = f.ctx.sessions.get.bind(f.ctx.sessions)
+  vi.spyOn(f.ctx.sessions, 'get').mockImplementation(id => id === agent.id ? undefined : get(id))
+  expect(f.ctx.agents.get(agent.id)).toBe(agent)
+  expect(f.ctx.sessions.get(agent.id)).toBeUndefined()
+}
+it('rc2 ordinary requests can use a session outside the host store without Task state', async () => {
+  const f = await setup()
+  excludeHostSession(f, f.agent)
+  await send(f.agent)
+  expect(f.calls(), JSON.stringify(f.agent.session.snapshotEvents().findLast(e => e.type === 'turn/end'))).toBe(1)
+  expect(await f.store.read(f.agent.id)).toBeUndefined()
+})
+it('rc2 auxiliary requests can use a session outside the host store without Task state', async () => {
+  const f = await setup()
+  excludeHostSession(f, f.agent)
+  await expect(f.ctx.agents.withInitiator(f.agent, () => f.runtime().reserveAuxiliary())).resolves.toBeUndefined()
+  expect(await f.store.read(f.agent.id)).toBeUndefined()
+})
+it.each(['caller', 'another live agent'])('rc2 missing host session refuses dispatch with v2 state on %s', async scope => {
+  const f = await setup(2)
+  const agent = scope === 'caller' ? f.agent : (await f.ctx.agents.create({
+    sessionId: SessionId('ambiguous-separate-session'), agentOptions: { provider: 'openai-codex', model },
+  })).agent
+  const before = await f.store.read(f.agent.id)
+  excludeHostSession(f, agent)
+  await send(agent)
+  expect(f.calls()).toBe(0)
+  expect(agent.session.snapshotEvents().findLast(e => e.type === 'turn/end')?.data)
+    .toMatchObject({ reason: { kind: 'error', error: { message: 'TASK_LIVE_ROOT_REQUIRED' } } })
+  await expect(f.ctx.agents.withInitiator(agent, () => f.runtime().reserveAuxiliary())).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  expect(await f.store.read(f.agent.id)).toEqual(before)
+})
+it('rc2 a child missing its host session cannot use the ordinary root fallback', async () => {
+  const f = await setup()
+  const { agent } = await child(f, 'separate-session-child')
+  excludeHostSession(f, agent)
+  await send(agent)
+  expect(f.calls()).toBe(0)
+  expect(agent.session.snapshotEvents().findLast(e => e.type === 'turn/end')?.data)
+    .toMatchObject({ reason: { kind: 'error', error: { message: 'TASK_LIVE_ROOT_REQUIRED' } } })
+})
+it('rc2 a separate session must still belong to the initiating agent after Task reads', async () => {
+  const f = await setup()
+  excludeHostSession(f, f.agent)
+  const read = AtomicTaskDocumentStore.prototype.read
+  let replaced = false
+  vi.spyOn(AtomicTaskDocumentStore.prototype, 'read').mockImplementation(async function (this: AtomicTaskDocumentStore<unknown>, id) {
+    if (id === f.agent.id && !replaced) {
+      replaced = true
+      await f.handle.dispose()
+      await f.ctx.agents.create({ sessionId: f.agent.id, agentOptions: { provider: 'openai-codex', model } })
+    }
+    return read.call(this, id)
+  })
+  await expect(f.ctx.agents.withInitiator(f.agent, () => f.runtime().reserveAuxiliary())).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
+  expect(replaced).toBe(true)
+})
 it('rc2 orphan with its own v2 ledger never falls through to the legacy provider', async () => {
   const f = await setup(2)
   const c = await f.ctx.agents.create({ sessionId: SessionId('orphan'), meta: { origin: 'subagent' }, agentOptions: { provider: 'openai-codex', model } })

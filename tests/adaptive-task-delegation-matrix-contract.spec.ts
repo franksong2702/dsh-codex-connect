@@ -68,9 +68,9 @@ function rc2Matrix(version = '0.2.2-rc.2'): any {
 it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('requires all %s functional cases, real identity and crash boundaries in Phase 2', version => {
   const r = rc2Matrix(version)
   expect(assertDelegationMatrix(r, [version], digest)).toBe(r)
-  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 34, numPassedTests: 34,
+  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 40, numPassedTests: 40,
     testResults: [{ assertionResults: r.reports[0].cases.map((title: string) => ({ title, status: 'passed' })) }] }
-  expect(inspectDelegationMatrixReport(data, version)).toHaveLength(34)
+  expect(inspectDelegationMatrixReport(data, version)).toHaveLength(40)
   data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
   expect(() => inspectDelegationMatrixReport(data, version)).toThrow()
 })
