@@ -98,7 +98,7 @@ describe('capability evidence', () => {
     f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.0-rc.7' : '0.1.7-rc.1')
     const report = await f.diagnostics.inspect(f.request)
     expect(report.checks.runtime).toMatchObject({ status: 'rejected', reason: 'declared-version-mismatch' })
-    expect(report.checks.runtime.action).toContain('0.1.7-rc.1')
+    expect(report.checks.runtime.action).toContain('exact verified DSH')
     expect(report.probe.state).toBe('skipped')
     expect(f.read).not.toHaveBeenCalled()
     expect(f.probe).not.toHaveBeenCalled()

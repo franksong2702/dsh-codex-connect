@@ -97,6 +97,26 @@ describe('node-free runtime receipt decoder', () => {
     expect(parseOpenAICodexRuntimeReport(report)).toEqual(report)
   })
 
+  it('requires a coherent Host receipt before showing an in-range pairing', () => {
+    const report = receipt()
+    const version = '0.2.2-rc.4'
+    report.currentDshVersion = version
+    report.compatibility = evaluateCompatibility({ nodeVersion: 'v24.21.0', packageVersions: {
+      '@deepseek-ai/dsh-llm': version,
+      '@deepseek-ai/dsh-llm-pi-ai': version,
+      '@deepseek-ai/dsh-compaction': version,
+      '@earendil-works/pi-ai': '0.85.1',
+    } })
+    expect(parseOpenAICodexRuntimeReport(report)?.compatibility.status).toBe('unverified-in-range')
+    expect(parseOpenAICodexRuntimeReport({
+      ...report, compatibility: { ...report.compatibility, status: 'compatible' },
+    })).toBeUndefined()
+    delete report.currentDshVersion
+    expect(parseOpenAICodexRuntimeReport(report)).toBeUndefined()
+    report.compatibility.status = 'unverified'
+    expect(parseOpenAICodexRuntimeReport(report)?.compatibility.status).toBe('unverified')
+  })
+
   it('preserves truthful incompatible/unverified reports and Node precedence', () => {
     for (const { report } of inconsistentRuntimeReports().slice(0, 4)) {
       report.compatibility = evaluateCompatibility({

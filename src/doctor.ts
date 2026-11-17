@@ -111,7 +111,11 @@ export async function diagnoseOpenAICodex(
   if (state === 'unreadable-metadata') hints.push('Harness could not inspect the OAuth file metadata; check the parent directory and file ownership.')
   if (providerConflict) hints.push(openAICodexConflictMessage())
   if (!providerConflict) hints.push('If Harness reports a duplicate openai-codex adapter, remove the legacy bundle or manual provider row.')
-  if (compatibility.status === 'incompatible') {
+  if (compatibility.status === 'known-bad') {
+    hints.push('This DSH version is explicitly excluded from the installation requirements. See the installation guide for verified pairings.')
+  } else if (compatibility.status === 'unverified-in-range') {
+    hints.push('The DSH version is within the installation range and has no verified runtime pairing. Task automation requires an exact verified Host.')
+  } else if (compatibility.status === 'incompatible') {
     hints.push('The installed Node version does not satisfy the declared engine requirement. This diagnostic does not recommend changing the DSH version.')
   } else if (compatibility.status === 'unverified') {
     hints.push('Dependency versions are outside the declared supported set. This combination is unverified, not proven broken. Keep the current DSH installation; investigate specific failures or consult the maintainer before changing versions.')

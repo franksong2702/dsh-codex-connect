@@ -145,12 +145,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.15.0
-      - name: Validate Windows canary subprocess contracts
-        run: node scripts/check-dsh-next-contract.mjs
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10.30.3
       - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile
+      - name: Validate Windows canary subprocess contracts
+        run: node scripts/check-dsh-next-contract.mjs
       - name: Verify native Windows task flush access and failure propagation
         run: pnpm exec vitest run tests/task-flush-native.spec.ts tests/task-flush-access.spec.ts
       - name: Verify native state read identity and disappearance boundaries

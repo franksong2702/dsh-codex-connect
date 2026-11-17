@@ -34,7 +34,7 @@ The direct `doctor` entry reads public package metadata and uses `lstat` for cre
 
 JSON keeps schema version 1 and adds an `identity` record. `standalone`/`selected-installation` describe the observation context, not a running Host or browser. An explicit anchor selects only the named DSH installation's metadata; an invalid anchor never falls back. Without an anchor, lookup is limited to this plugin's own logical dependency roots, including normal pnpm peer symlinks. Foreign ancestor dependencies are not treated as the active Host. Plugin-owned pi-ai remains separate from Host peers.
 
-Compatibility remains strict: `compatible` means the declared version tuple matches, not a behavior/model-access test; `unverified` includes undeclared/mixed tuples; `unknown` means missing/unreadable metadata; `incompatible` means an unsupported Node engine. Missing credentials alone is not an error. Non-compatible results, unsafe credential metadata, or unknown/mismatched plugin identity return exit 1. No result authorizes a version exemption or changing a user's Host.
+In builds with range admission, `compatible` means the exact version pairing has verified coverage. `unverified-in-range` means the selected DSH root and its peers form one coherent version allowed by the host range, with no exact verified entry. `known-bad` means an explicitly excluded version. Other results include `unverified` for mixed or out-of-range tuples, `unknown` for missing metadata and `incompatible` for unsupported Node engines. These are local metadata checks. Non-compatible results, unsafe credential metadata and unknown or mismatched plugin identity return exit 1. Missing credentials alone allow diagnostics to succeed.
 
 ## 中文
 
@@ -46,7 +46,7 @@ Compatibility remains strict: `compatible` means the declared version tuple matc
 
 回执由用户主动查看，不自动上传；只包含允许输出的版本、状态和浏览器观察时间，不包含凭据、账户标识、路径、原始错误、提示词、工具参数或会话内容。发布版本检查的“已最新”及其缓存，不是实际运行身份的证明。
 
-解码器与 Host 共用不依赖 Node 的纯规则，从版本重新计算兼容性，拒绝矛盾状态标签或被更换的支持范围。即使省略 `currentDshVersion`，混版 peer 仍不能宣称兼容；缺少主清单一致性证据时，兼容的 peer 组合也不能证明所选安装兼容。真实的 incompatible/unverified 回执仍可查看；畸形回执则清除观察并回到未知。
+解码器与 Host 共用不依赖 Node 的规则，从版本重新计算兼容性，拒绝矛盾状态或被更换的支持范围。支持区间准入的构建会区分已验证的精确组合、在范围内但未验证，以及明确排除的版本。范围内的回执也要求主清单和 peer 版本一致。混版、超出范围、缺失元数据与 Node 版本不合要求各自保留相应状态。回执畸形时会清除观察并回到未知。
 
 严格只读的 CLI 诊断应直接执行已经安装的 bin，明确正确 `DSH_HOME` 与 DSH 安装锚点；上面的路径只是占位。**ASAR 成员元数据有意保持未知**，即使 Electron 自身能读 ASAR：普通文件句柄不能证明虚拟成员身份，open 还可能隐式解包写临时文件。因此读取器在打开成员前拒绝 ASAR 路径组件，不解包、不回退无界读取，也不替换成另一安装。运行页面仍可观察 Host 已加载插件的版本声明，但所选 DSH 元数据可保持未知。不得为了变绿替换 Desktop 运行时、另装 Host 或选用无关 CLI。`dsh plugin exec`、`pnpm exec`、`npx` 自身可能核对或安装依赖，不能作为“无写入”的保证。
 

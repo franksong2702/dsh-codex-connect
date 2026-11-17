@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const { read } = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock('node:fs', async original => ({ ...await original<typeof import('node:fs')>(), readFileSync: read }))
-import { assertTaskHostAutomation, taskHostRecoveryOnly, taskHostUsesSubagentOwnership } from '../src/adaptive-task-host-policy.ts'
+import { assertTaskHostAutomation, assertVerifiedTaskHostOwnership, taskHostRecoveryOnly, taskHostUsesSubagentOwnership } from '../src/adaptive-task-host-policy.ts'
 let versions: Record<string, string | undefined>
 beforeEach(() => {
   versions = { 'dsh-agent': '0.1.7-rc.1', 'dsh-agent-loop': '0.1.7-rc.1', 'dsh-tools': '0.1.7-rc.1' }
@@ -96,4 +96,6 @@ it.each(['dsh-agent', 'dsh-agent-loop', 'dsh-tools', 'dsh-subagent'])('rejects m
 it('never admits a future ownership version from matching metadata alone', () => {
   for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.4'
   expect(taskHostUsesSubagentOwnership()).toBe(false)
+  expect(() => assertVerifiedTaskHostOwnership()).toThrow('TASK_HOST_OWNERSHIP_UNVERIFIED')
+  expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_AUTOMATION_UNVERIFIED')
 })

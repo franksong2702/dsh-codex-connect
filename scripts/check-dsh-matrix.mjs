@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { sanitizeSummary } from './check-dsh-next.mjs'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -75,9 +76,8 @@ export function matrixFailureMessage(version, result) {
 }
 
 async function main() {
-  const compatibility = JSON.parse(await readFile(join(ROOT, 'compatibility.json'), 'utf8'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = compatibility.dshPluginApi.versions
+  const versions = dshAdmission.verifiedVersions
   const reports = []
   for (const version of versions) {
     process.stderr.write(`Checking declared DSH ${version}\n`)

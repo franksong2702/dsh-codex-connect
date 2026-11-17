@@ -72,6 +72,13 @@ try {
   assert.ok(tracker.body.includes('`0.1.7-rc.1`'))
   assert.ok(tracker.body.includes('Full user acceptance: not assessed'))
 
+  const admitted = await fixture('0.2.2-rc.4', 1)
+  assert.equal(admitted.report.hostAdmission, 'unverified-in-range')
+  assert.equal(admitted.report.declaredSupport, false)
+  assert.equal(admitted.report.checkExecuted, true)
+  const repeatedAdmitted = await fixture('0.2.2-rc.4', 1)
+  assert.equal(buildCanaryTrackingIssue(admitted.report, repeatedAdmitted.report, metadata).state, 'compatibility-failed')
+
   for (const result of [await fixture('0.1.1-rc.2'), await fixture(versions.at(-1), 0, ['latest'])]) {
     assert.equal(result.status, 0)
     assert.equal(result.child, undefined)

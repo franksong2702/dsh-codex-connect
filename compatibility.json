@@ -25,6 +25,11 @@
       "0.2.2-rc.2",
       "0.2.2-rc.3"
     ],
+    "admission": {
+      "minimum": "0.2.2-rc.1",
+      "before": "0.3.0-0",
+      "denied": []
+    },
     "packages": [
       "@deepseek-ai/dsh-agent",
       "@deepseek-ai/dsh-atomic-write",

@@ -65,7 +65,8 @@ async function detectHostRuntimeReport(ctx: Context): Promise<OpenAICodexRuntime
     nodeVersion: process.version,
     packageVersions: { ...installation?.packageVersions, [PI_AI_PACKAGE]: piAiVersion },
   })
-  if (installation !== undefined && installation.currentDshVersion === undefined && compatibility.status === 'compatible') {
+  if (installation !== undefined && installation.currentDshVersion === undefined
+    && (compatibility.status === 'compatible' || compatibility.status === 'unverified-in-range')) {
     compatibility.status = 'unverified'
   }
   return {
