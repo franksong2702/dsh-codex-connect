@@ -28,6 +28,12 @@ export const RECOVERY_CASES = Object.freeze([
   ...['interrupted', 'manual'].map(mode => `recovery v2 rejects managed non-Codex descendants after ${mode} root binding`),
 ])
 export const RC2_RECOVERY_CASES = Object.freeze([
+  'rc2 ordinary requests can use a session outside the host store without Task state',
+  'rc2 auxiliary requests can use a session outside the host store without Task state',
+  'rc2 missing host session refuses dispatch with v2 state on caller',
+  'rc2 missing host session refuses dispatch with v2 state on another live agent',
+  'rc2 a child missing its host session cannot use the ordinary root fallback',
+  'rc2 a separate session must still belong to the initiating agent after Task reads',
   'rc2 orphan with its own v2 ledger never falls through to the legacy provider',
   'rc2 disposed durable ancestor v2 never becomes an ordinary child request',
   'rc2 missing optional ownership service with no v2 state leaves ordinary requests alone',

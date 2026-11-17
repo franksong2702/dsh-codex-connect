@@ -34,9 +34,9 @@ function rc2Matrix(version = '0.2.2-rc.2'): any {
 it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('requires all %s functional cases plus the real host identity in Phase 1', version => {
   const r = rc2Matrix(version)
   expect(assertTaskMatrix(r, [version], r.bundleDigest)).toBe(r)
-  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 34, numPassedTests: 34,
+  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 40, numPassedTests: 40,
     testResults: [{ assertionResults: [...recoveryCases(version), TASK_IDENTITY_CASE].map(title => ({ title, status: 'passed' })) }] }
-  expect(inspectTaskTestReport(data, version).tests).toBe(34)
+  expect(inspectTaskTestReport(data, version).tests).toBe(40)
   data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
   expect(() => inspectTaskTestReport(data, version)).toThrow()
 })
