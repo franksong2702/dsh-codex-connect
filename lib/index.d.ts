@@ -1,3 +1,8 @@
+/**
+ * ChatGPT OAuth and Codex models for DeepSeek Harness, with opt-in search and
+ * image tooling.
+ * @module dsh-codex-connect
+ */
 import z from "@deepseek-ai/schemastery";
 import { GenerateOptions, RetryPolicyConfig, StreamChunk } from "@deepseek-ai/dsh-llm";
 import { AuthInteraction, Credential, CredentialInfo, CredentialStore, OAuthCredential } from "@earendil-works/pi-ai";

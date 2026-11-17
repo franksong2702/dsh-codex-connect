@@ -11,4 +11,4 @@ autoInstallPeers: true
 # The math extension still requests vulnerable KaTeX ^0.16; reuse our patched renderer.
 # Remove after the upstream consumer accepts a patched line and the regression passes without it.
 overrides:
-  'micromark-extension-math@3.1.0>katex': 0.18.9
+  'micromark-extension-math@3.1.0>katex': 0.19.1
