@@ -51,10 +51,39 @@ not implemented by this procedure.
 
 ## Promoting `latest` (short-lived interactive authentication)
 
-When a maintainer intentionally wants the verified alpha to be the default
-install before a stable release exists, perform this promotion separately and
+`latest` follows the newest published plugin release verified against DSH's npm
+`latest`, under [the channel policy](VERSIONING.md#channels-and-recommendations).
+An Alpha remains an Alpha when selected as the default. This procedure changes
+only a dist-tag on an existing package; it does not publish a package, change a
+Git tag, upgrade a daily Host or certify real-account acceptance. A documentation
+PR or a successful release workflow does not authorize this operation.
+
+Before requesting approval for a concrete promotion:
+
+1. Read `npm view @deepseek-ai/dsh dist-tags.latest` and
+   `npm view dsh-codex-connect dist-tags --json` from the public registry.
+   Record the exact DSH version, previous plugin `latest` and unchanged `alpha`
+   value for readback and possible rollback. Do not use the catalog's dated
+   `latestDshVersion` as a substitute for the current registry value.
+2. Select the highest-precedence published plugin version whose exact DSH pair
+   is recorded in `verified-compatibility.json`. Verify its npm package identity
+   and integrity against the original release artifact and matching Git
+   tag/release. A local build, unpublished candidate or green CI on another
+   commit is not that artifact.
+3. Install that exact public package into a disposable profile of the exact DSH
+   version from step 1, using its stock CLI and normal requirements checks.
+   Verify plugin loading and the applicable keyless runtime checks. Preserve
+   account/device acceptance limits; do not use daily profiles or real accounts.
+   If no published pair qualifies or installation fails, stop and record the
+   default-install gap instead of changing support declarations to pass it.
+4. Obtain explicit authorization for the exact target version and the recorded
+   rollback target. Immediately before writing, re-read both channels and DSH
+   `latest`. If they changed, stop and reassess the candidate and approval rather
+   than overwrite another maintainer's change.
+
+The authorized maintainer then performs the promotion separately and
 interactively. Do not save or paste the OAuth URL or token into logs, issues,
-commits, or notes.
+commits, or notes. Always log out after the attempt, including a failed readback.
 
 ```sh
 npm login --auth-type=web
@@ -63,8 +92,24 @@ npm view dsh-codex-connect dist-tags.latest
 npm logout
 ```
 
-The readback must equal `<version>`. After the first stable release,
-`latest` must point only to stable releases.
+The readback must equal `<version>`, and `alpha` must retain its recorded value.
+In a fresh disposable profile of the same exact DSH version, install
+`dsh-codex-connect@latest` using the stock CLI and normal requirements checks;
+confirm it resolves to `<version>` and loads. Record the old/new channel values,
+exact host/package identities and install result. Only then update current
+installation guidance through a PR. Do not rewrite historical release records
+or republish an immutable package to refresh its README. An isolated pass does
+not close a reporter's separate Desktop/account acceptance.
+
+If readback or default installation fails, do not report promotion complete or
+blindly repeat the write. Check the current tag first. If it still points to the
+candidate and rollback was authorized, restore only the recorded previous
+`latest` with `npm dist-tag add dsh-codex-connect@<previous-version> latest`, then
+read it back and confirm `alpha` is unchanged. Stop if another maintainer moved
+the tag. Restoring an older incompatible default is a rollback, not a fix for
+the installation gap; keep that gap open and give the verified exact-version
+command. If rollback was not authorized, report the failure and request that
+specific action. Never delete or republish either package.
 
 ## npm readback diagnostics
 
