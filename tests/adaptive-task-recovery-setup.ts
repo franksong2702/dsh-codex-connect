@@ -26,7 +26,7 @@ import { taskHostRecoveryOnly } from '../src/adaptive-task-host-policy.ts'
 export const owner = taskIdentity('synthetic-recovery-owner'), model = 'gpt-5.6-sol'
 const contexts: Context[] = [], roots: string[] = []
 
-export async function setup(version: 1 | 2, persisted?: { root: string; compression: 'none' | 'zstd'; readExisting: boolean }) {
+export async function setup(version?: 1 | 2, persisted?: { root: string; compression: 'none' | 'zstd'; readExisting: boolean }) {
   assert.equal(taskHostRecoveryOnly(), true)
   const root = persisted?.root ?? await mkdtemp(join(tmpdir(), 'alpha3-task-recovery-')); if (persisted === undefined) roots.push(root)
   const ctx = new Context(); contexts.push(ctx)
@@ -87,11 +87,13 @@ export async function setup(version: 1 | 2, persisted?: { root: string; compress
     revision: 7, mode: 'auto', route: { model, effort: 'medium' }, capabilities: [{ model, efforts: ['medium'] }],
     reserved: 3, maximumRequests: 12, selectionSeq: -1, portable: false, handoffSeq: -1,
     receipts: [{ id: 'old-operation-0001', digest: taskIdentity('old-input') }] }
-  if (persisted?.readExisting !== true) await store.update(agent.id, () => version === 1 ? base : { ...base, version: 2,
-    delegation: { grant: null, grantRevision: 0, revocationGeneration: 0, runs: [] } } as TaskLedgerDocument)
-  if (persisted?.readExisting !== true) agent.inject(createUserMessage({
-    source: { kind: 'dsh-codex-connect', plugin: 'dsh-codex-connect/task-grant' },
-    content: [{ type: 'text', text: 'Synthetic retained task marker; no new authority.' }] }))
+  if (version !== undefined && persisted?.readExisting !== true) {
+    await store.update(agent.id, () => version === 1 ? base : { ...base, version: 2,
+      delegation: { grant: null, grantRevision: 0, revocationGeneration: 0, runs: [] } } as TaskLedgerDocument)
+    agent.inject(createUserMessage({
+      source: { kind: 'dsh-codex-connect', plugin: 'dsh-codex-connect/task-grant' },
+      content: [{ type: 'text', text: 'Synthetic retained task marker; no new authority.' }] }))
+  }
   const state = () => runtime.state(agent.id, owner)
   const command = (action: Parameters<AdaptiveTaskControlRuntime['command']>[0]['action'], revision: number, extra = {}, principal = owner) =>
     runtime.command({ sessionId: agent.id, action, revision, operationId: randomUUID(), ...extra }, principal)

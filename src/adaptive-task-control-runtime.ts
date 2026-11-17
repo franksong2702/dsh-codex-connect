@@ -87,9 +87,36 @@ export class AdaptiveTaskControlRuntime {
     this.attaching.set(agent, attach)
     try { await attach } finally { this.attaching.delete(agent) }
   }
+  /** A plugin-owned root can be live in the agent registry without being in the Host's session store. */
+  private isSeparateRoot(agent: Agent, session: Agent['session']): boolean {
+    const { agents, sessions } = taskHostServices(this.ctx)
+    return agents.get(agent.id) === agent && agent.session === session && sessions.get(agent.id) === undefined
+      && session.id === agent.id && session.header.id === agent.id
+      && session.header.parentSession === undefined && session.header.origin !== 'subagent'
+  }
+  private recheckLiveAgents(live: readonly Agent[]): void {
+    const current = this.agents.list()
+    if (current.length !== live.length || current.some((candidate, index) => candidate !== live[index])) taskFailure('TASK_CHILD_BINDING_MISMATCH')
+  }
   /** Both durable ancestry and actual live ownership route descendants to the rejecting executor. */
   private async managed(agent: Agent): Promise<boolean> {
     if (typeof this.agents.roots !== 'function' || typeof this.agents.isOwnedBy !== 'function') {
+      const session = agent.session
+      if (this.isSeparateRoot(agent, session)) {
+        // A separate root cannot establish Task ownership. Before ordinary dispatch, exclude
+        // its own saved state and any live v2 owner that could make the relationship ambiguous.
+        const live = this.agents.list()
+        if (!live.includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+        for (const candidate of live) {
+          const state = await this.store.read(candidate.id)
+          if (state?.version === 2 || (candidate === agent && state !== undefined)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+        }
+        if (!this.isSeparateRoot(agent, session) || live.some(candidate => this.bound.has(candidate) || this.attaching.has(candidate))) {
+          taskFailure('TASK_LIVE_ROOT_REQUIRED')
+        }
+        this.recheckLiveAgents(live)
+        return false
+      }
       // Read durable relation only as denial evidence, never as ownership.
       const ancestry = taskDurableAncestors(this.ctx, agent)
       const related = new Set([agent.id, ...ancestry])
@@ -111,8 +138,7 @@ export class AdaptiveTaskControlRuntime {
         const live = this.agents.list()
         for (const candidate of live) if (await retained(candidate.id)) throw error
         recheck()
-        const current = this.agents.list()
-        if (current.length !== live.length || current.some((candidate, index) => candidate !== live[index])) taskFailure('TASK_CHILD_BINDING_MISMATCH')
+        this.recheckLiveAgents(live)
         return false
       }
       related.add(runtimeRoot.id)
