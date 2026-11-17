@@ -32,9 +32,11 @@ Do not replace V1 in place with a version-keyed object or infer a range from a s
 ## Channels and recommendations
 
 - `alpha` is the moving channel written by the current release workflow.
-- `latest` is promoted separately and intentionally. Before the first stable release it may point to a verified Alpha; afterward it must point only to stable releases. Publishing an Alpha does not authorize or perform this promotion.
+- `latest` follows the newest published plugin release, by SemVer precedence, verified against the exact DSH version currently resolved by npm `latest`. That plugin release may be an Alpha or a stable version; the channel does not change its readiness designation. Promotion is a separate, explicitly authorized maintainer action. Publishing an Alpha does not authorize or perform it.
 - Exact installation commands identify a plugin release; dist-tags do not guarantee compatibility.
 - Keep the public README recommendation on a confirmed published pair while preparing a newer candidate. The recommendation may therefore differ from `package.json.version`.
+
+This rule supersedes the former stable-only restriction after the first stable release, as decided in [#445](https://github.com/franksong2702/dsh-codex-connect/issues/445#issuecomment-6935776620). It changes channel policy, not the current npm tag, supported hosts or release workflow. If DSH `latest` advances without a verified published pairing, leave the plugin tag unchanged and report the default-install gap; do not infer compatibility or promote an unverified candidate. Existing users on other DSH versions still need a verified exact pairing. Follow [the promotion procedure](RELEASING.md#promoting-latest-short-lived-interactive-authentication) for fresh registry checks, isolated installation, authorization, readback and rollback.
 
 The project newest version and the newest verified plugin for a user's existing DSH are different questions. More precise host-specific recommendations and generated installation sections are follow-up work; this policy does not claim the current update UI computes that choice from every historical record.
 
