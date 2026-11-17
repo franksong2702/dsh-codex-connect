@@ -1,70 +1,30 @@
 # Codex Connect
 
-**Published Alpha 15:** [`0.2.0-alpha.15`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.15) adds exact DSH `0.2.2-rc.3`, retaining all seventeen previous hosts. Authenticated retained-session recovery now recognizes rc.3 ownership; public Task and automatic delegation remain disabled. The public package matches the original release artifact and the package used by all eighteen isolated host checks byte-for-byte. `latest` remains Alpha 10. See [the release and verification record](docs/release-notes/0.2.0-alpha.15.md). No daily Host upgrade is implied.
-
-**Historical Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining the prior fifteen Hosts and the recovery-only Task restriction below. npm version/alpha, matching Git tag/prerelease and archive integrity have been independently verified. `latest` remains Alpha 10. See the [release and verification record](docs/release-notes/0.2.0-alpha.13.md). This does not request a DSH upgrade; isolated synthetic checks do not establish real-account/model, native GUI or Windows Desktop acceptance.
-
-On exact DSH `0.2.2-alpha.3`, `0.2.2-rc.1`, `0.2.2-rc.2` and `0.2.2-rc.3`, saved Task records are recovery-only: inspect state, stop or take over manually. Automatic routing, resume and evidence-child creation are rejected, including internal direct entry points. Existing safe-disable/archive exits retain their owner, receipt and cleanup checks. The prior fourteen Hosts keep their behavior; Task's public activation gate remains closed everywhere.
-
-[![npm version](https://img.shields.io/npm/v/dsh-codex-connect/alpha?label=npm%20alpha&color=cb3837)](https://www.npmjs.com/package/dsh-codex-connect)
+Use your ChatGPT subscription as an `openai-codex` model provider in DeepSeek Harness. Codex Connect is a community Alpha plugin.
 
 English | [中文](docs/README.zh.md)
 
-Connect your ChatGPT subscription to DeepSeek Harness with OAuth, optional GPT Image generation and editing, user-controlled defaults, Harness-native approvals, diagnostics, and reliable session recovery.
-
-Community Alpha — not affiliated with or endorsed by OpenAI, ChatGPT, Codex, DeepSeek, or DeepSeek Harness.
-
-Codex Connect adds the `openai-codex` model provider to the normal Harness agent loop. Harness continues to manage tools, permissions, approvals, attachments, session persistence, compaction, and recovery. Installing the plugin does not change your default model or search route, and it does not turn a ChatGPT subscription into an OpenAI Platform API key.
-
 ## Quick start
 
-**Historical Alpha 12:** [`0.2.0-alpha.12`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.12) adds exact stock DSH `0.2.2-alpha.3` with the recovery-only restriction below, retires Luna Reserve and fixes the stock Auto review preset's unsupported Codex Responses temperature. It is published on `alpha`; `latest` remains Alpha 10. See the [release and migration notes](docs/release-notes/0.2.0-alpha.12.md). This does not request a DSH upgrade.
-
-**Historical Alpha 11:** [`0.2.0-alpha.11`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.11) delivers GPT-6.1 Terra, the unified speed menu, exact DSH rc.4/rc.5, seeded-fork originals and bounded native bili preflight, with a higher direct Undici minimum. All fourteen exact Hosts passed against one package; npm version/alpha, Git tag, prerelease and archive integrity were independently read back. `latest` remains Alpha 10. See the [release record](docs/release-notes/0.2.0-alpha.11.md); keyless checks do not establish real-account/model or Desktop acceptance, and Computer Use is not included.
-
-**Historical Alpha 10:** [`0.2.0-alpha.10`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.10) adds only exact DSH `0.2.1-rc.3`, retains the eleven previous hosts, and delivers the default-off read-only quota tool and compact speed menu. npm version, alpha tag, Git tag, prerelease and archive hashes were independently verified; `latest` is unchanged. The upstream rc.3 Git-source mapping remains unverified; keyless contracts do not establish real-account/model or Desktop acceptance. See the [release record](docs/release-notes/0.2.0-alpha.10.md).
-
-This guide recommends Codex Connect `0.2.0-alpha.15` / DSH `0.2.1-rc.5`; the other exact supported hosts are listed below. Check `dsh --version` first and use `doctor --json` for local diagnostics; the CLI version alone does not prove which model-runtime packages are installed, and missing metadata is reported as unknown. For other versions, use [Installation and upgrades](INSTALL.md). A moving npm tag such as `alpha` is not a compatibility guarantee.
-
-| Requirement | Verified pairing |
-|---|---|
-| Codex Connect | `0.2.0-alpha.15` |
-| DeepSeek Harness | `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, `0.2.0-rc.2`, `0.2.1-alpha.1`, `0.2.1-alpha.2`, `0.2.1-alpha.3`, `0.2.1-alpha.4`, `0.2.1-alpha.5`, `0.2.1-rc.1`, `0.2.1-rc.2`, `0.2.1-rc.3`, `0.2.1-rc.4`, `0.2.1-rc.5`, `0.2.2-alpha.3`, `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3` (consistent package set) |
-| Node.js | `^22.19.0 \|\| >=24.0.0` |
-| Account | ChatGPT OAuth with access to the requested Codex model; availability is decided by OpenAI |
-
-**Historical maintenance release:** [`0.2.0-alpha.9`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.9) adds an optional reasoning-effort fallback and independent Standard / Fast / Ultrafast defaults for new top-level and ordinary subagent conversations. Explicit request effort and later manual speed choices win; omitted/reset settings retain the corresponding legacy defaults. Existing/resumed sessions remain respected. Ultrafast still requires sign-in and an eligible model/account route; eligibility and actual served tier remain unknown. Finite SSE and Task pause remain unchanged; no measured speed multiplier or real-account/Desktop acceptance is claimed.
-
-**Historical maintenance release:** [`0.2.0-alpha.8`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.8) adds explicit conversation Standard / Fast / Ultrafast selection, preserves the Host retry policy, sets the GPT-6.1 Sol context default to 500,000 tokens, and repairs recovery/file identity and Windows packaging checks. Ultrafast remains opt-in for the two documented Codex model IDs; defaults for new main/subagent conversations are not included. Eligibility and the actual served tier remain unknown; finite SSE and existing opt-in defaults are retained. No measured speed or real-account/Desktop acceptance is claimed.
-
-**Historical image-recovery release:** [`0.2.0-alpha.7`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.7) retains completed, validated originals when Harness preview saving fails, with original download and explicit continued editing. Tool help clarifies that chat can stay on DeepSeek while Codex Connect handles images through its separate ChatGPT OAuth lane. Its eleven original exact host pairings remain verified; the underlying image interface and credentials are unchanged. Synthetic checks do not establish real-account or Desktop acceptance.
-
-`0.2.0-alpha.4` extends exact host support to DSH `0.2.1-alpha.2` and `0.2.1-alpha.3`, retaining the previous five hosts. Existing supported hosts do not require an upgrade; Task remains paused and defaults are unchanged.
-
-**Historical maintenance release:** [`0.2.0-alpha.5`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.5) delivers exact DSH `0.2.1-alpha.4`, `0.2.1-alpha.5` and `0.2.1-rc.1` support plus Host/browser runtime-identity diagnostics, retaining the seven previously published hosts. Diagnostics share one version policy; see the [compatibility record](docs/agent-notes/dsh-021-alpha5-rc1-compatibility.md) and [alpha.4 client-state repair](docs/agent-notes/dsh-021-alpha4-compatibility.md). Publication and keyless verification do not establish new real-account, Desktop or authenticated-browser acceptance; #339 remains open for separate acceptance.
-
-Historical release [`0.2.0-alpha.3`](docs/release-notes/0.2.0-alpha.3.md) adds official Desktop sign-in compatibility and Desktop-specific account diagnostics while preserving the Web flow. Desktop uses its own profile and bundled CLI; follow the [Desktop installation instructions](INSTALL.md#official-desktop). The declared host versions, defaults and account storage are unchanged.
-
-Historical release [`0.2.0-alpha.2`](docs/release-notes/0.2.0-alpha.2.md) publishes exact DSH `0.2.1-alpha.1` compatibility and the cross-route image selection handle repair. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects that host. Existing supported hosts do not require an upgrade.
-
-As of 2026-11-14, npm `alpha` points to `0.2.0-alpha.15`, while `latest` remains `0.2.0-alpha.10`. Default installation still selects Alpha 10. Use the exact version below for these DSH pairings; a moving npm tag is not a compatibility guarantee for other hosts.
-
-Historical release [`0.2.0-alpha.1`](docs/release-notes/0.2.0-alpha.1.md) adds `gpt-6.1-sol` through a model-catalog fallback and begins the shorter independent plugin numbering. The four supported DSH versions are unchanged; no host upgrade is required.
-
-It retains Alpha 4.54's handling of initial system instructions and tool definitions on DSH 0.2.0-rc.2, diagnostics for differing host/plugin provider libraries, and Canary's normal-request checks, along with Alpha 4.53's core maintenance changes, existing-task recovery and safety, and 4.52's [opt-in local request metrics](docs/request-metrics.md). Collection stays off until a private directory is configured; unknown usage is not zero. No Task reopening or model-library/OAuth upgrade is included.
-
-The package passed keyless installation/runtime regression on all eighteen exact DSH versions above. Task controls remain paused: activation is rejected and existing current-host browser regressions show no controls in fresh Sessions. These checks do not establish live OAuth, real-account image editing, authenticated browser acceptance on the new host, or full user acceptance; migration of earlier Task grants across a Harness upgrade is not verified. Older supported pairings and their task behavior are documented in [Installation and upgrades](INSTALL.md).
-
-Historically, on 2026-10-10 the maintainer reported successful login and normal use on Desktop `0.2.0-rc.2` with the identified local adaptation build. Only the historical `0.2.0-alpha.3` client was compared with that local adaptation and found to differ only by the package-version string. This comparison does not establish `0.2.0-alpha.4` Desktop or live-account acceptance, nor acceptance of later npm artifacts; no new real Desktop acceptance was performed. See the [Desktop acceptance record](INSTALL.md#official-desktop).
-
 ### 1. Install
+
+Run `dsh --version` first. For DSH `0.2.2-rc.1`, install into your Web profile:
 
 ```sh
 dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15
 dsh web
 ```
 
-Replace `web` with your existing profile name; use that same profile when starting Harness. From a DSH source checkout, prefix commands with `pnpm`. See [INSTALL.md](INSTALL.md) for other profiles and installation checks.
+| Requirement | Verified default pairing |
+| --- | --- |
+| DeepSeek Harness | `0.2.2-rc.1` (DSH npm `latest` on 2026-11-17, with a consistent host package set) |
+| Codex Connect | `0.2.0-alpha.15` (npm `latest` and `alpha` on 2026-11-17) |
+| Node.js | `^22.19.0 \|\| >=24.0.0` |
+| Account | ChatGPT OAuth with access to the selected Codex model |
+
+On this exact DSH version, `dsh-codex-connect@latest` resolved to Alpha 15 and passed isolated installation and keyless startup checks. For reproducible installs, use the exact version above. Check the full table before installing on another DSH version or in Desktop. [Installation and upgrades](INSTALL.md) · [Alpha 15 release and promotion record](docs/release-notes/0.2.0-alpha.15.md#latest-promotion-on-2026-11-17)
+
+Replace `web` with your existing profile name and start Harness with that same profile. From a DSH source checkout, prefix the commands with `pnpm`.
 
 ### 2. Authorize and select a model
 
@@ -89,6 +49,8 @@ node /absolute/profile/node_modules/dsh-codex-connect/lib/bin.js doctor --json \
 
 ## Core capabilities
 
+Codex Connect supplies the provider. Harness manages tools, permissions, approvals, attachments, sessions, compaction and recovery. Installing the plugin preserves your default model and search route. The plugin is independent of OpenAI and DeepSeek, and uses ChatGPT OAuth rather than an OpenAI Platform API key.
+
 - **Accounts:** save up to 16 accounts on the DSH host and manually select the active account for subsequent requests. Account selection is not a per-session binding. Requests keep their captured account; the plugin does not rotate accounts or silently fail over.
 - **Models and Astra support:** the currently verified DSH and plugin combination supports `gpt-6-astra`. The plugin supplies its missing model definition with Low, Medium, High, Xhigh, and Max reasoning levels; Default preserves the provider default. Saved Off/Minimal selections require an [explicit update](MIGRATION.md#astra-reasoning-selections). When the installed dependency catalog includes Astra, the plugin preserves its native metadata while retaining these five calibrated reasoning choices. A model appearing in the list does not mean the current account has permission to use it; overall compatibility with new dependency versions still requires separate verification.
 - **Fast Mode:** request priority service for one conversation, off by default. Optional, separate profile settings can enable it for newly started top-level or subagent conversations without changing existing conversations. Actual speed and quota consumption depend on the service; no fixed speed multiplier is guaranteed.
@@ -102,8 +64,6 @@ node /absolute/profile/node_modules/dsh-codex-connect/lib/bin.js doctor --json \
 ## Optional capabilities
 
 Development now follows the [core maintenance scope](docs/maintenance-scope.md): maintain connection, compatibility, diagnostics and recovery; freeze Task orchestration and unproven optimization work. Existing published options are not removed or remotely disabled by this decision.
-
-**Earlier Alpha 4.40/4.41 pairings:** task-level model control is off by default. After explicit task authorization, GPT-5.6 Sol/Medium starts the task, and the active model may continue, change effort, or hand off the main task within the granted scope. The task shares one request ledger and budget; stopping, manual takeover, and restart recovery retain the grant boundary. Phase 2 read-only delegation requires separate consent and does not grant workers write access. Stock DSH `0.1.7-rc.1` with Alpha 4.43 keeps these Task controls paused; do not infer they are available from an older pairing. See [Phase 1](docs/experiments/adaptive-task-phase1.md) and [Phase 2 consent](docs/experiments/adaptive-task-phase2-consent.md).
 
 Alpha 4.40 also supplies `gpt-6-sol` and `gpt-6-luna` when older provider catalogs omit them, retaining native metadata when present. Both expose Low through Max (including Xhigh); Default omits an explicit effort. Codex Sol's Ultra orchestration mode is not implemented. New task grants can explicitly include these models, but existing grants and GPT-5.6 Sol/Medium startup remain unchanged; Luna Reserve has subsequently been removed. A catalog entry is not proof of account access. See [compatibility scope and validation](docs/experiments/gpt6-sol-luna-compatibility.md).
 
@@ -120,8 +80,6 @@ All options below are off on a fresh installation. Edit them in **Settings → P
 **Luna Reserve has been removed.** Legacy `enableReserveFallback` settings are ignored; no Reserve negotiation or automatic model switching remains. Select an ordinary model explicitly for an old `gpt-reserve` conversation. If the Host cannot change that conversation’s model, preserve it and start a new conversation with the model you choose. Old return files are not read, migrated or deleted. Account quota UI and the read-only quota tool retain ordinary 60-second caching and failure cooldowns, with no background polling. See [migration guidance](docs/reference.md#luna-reserve-fallback).
 
 Use the image generation capability included with your current GPT subscription. Successful images appear below the conversation answer without opening its processing details; the original tool card remains available there. Generated originals are stored separately from attachment previews; disabling the capability or uninstalling the plugin does not delete them. See [Configuration and recovery](docs/reference.md#search-and-image-tools) for storage and access rules.
-
-Alpha 4.49 fixes the re-uploaded-copy/original confusion and hidden safe failure reasons found in 4.48. Ambiguous inputs require an explicit selection rather than silently changing the target. The original package remains unchanged; Alpha 4.50 retains both repairs and adds exact DSH rc.2 compatibility while preserving rc.1. Do not mix rc.1 and rc.2 packages or bypass the plugin manager's version checks.
 
 Auto-review operates after Harness policy requires approval; it does not bypass that policy. See [Auto-review behavior](docs/auto-review.md) before enabling it.
 
@@ -164,6 +122,7 @@ A missing entry in [verified-compatibility.json](verified-compatibility.json) me
 ## Documentation and development
 
 - [Installation and upgrades](INSTALL.md)
+- [Release history](docs/release-notes/README.md)
 - [Configuration, diagnostics, and recovery](docs/reference.md)
 - [Local request metrics: enable, report, and disable](docs/request-metrics.md)
 - [Explicit, bounded bili preflight activity (source change; default off)](docs/preflight-activity.md)
