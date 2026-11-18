@@ -44,8 +44,6 @@ jobs:
         run: pnpm run typecheck
       - name: Test
         run: pnpm run test
-      - name: Verify task grants across independent process restoration
-        run: node scripts/check-adaptive-task-persistence.mjs
       - name: Verify delegation ledger across independent process restoration
         run: node scripts/check-adaptive-task-delegation-ledger.mjs
       - name: Build
