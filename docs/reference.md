@@ -181,6 +181,7 @@ The main plugin options are:
 | `searchMaxOutputTokens` | `10000` | Positive integer output budget for search |
 | `requestMetricsDirectory` | absent / off | Startup-only private absolute directory for [local request evidence](request-metrics.md); no telemetry upload |
 | `enableQuotaTool` | `false` | Startup-only read-only `codex_connect_quota` tool; reload after editing profile configuration. See [quota observation](quota-tool.md). |
+| `enableLimitResumeReminder` | `false` | Allow one recovery reminder in the affected root session. Available in Plugin configuration → Capabilities on DSH `0.2.2-rc.3` with the optional Schedule service loaded. See [limit recovery reminders](#limit-recovery-reminders). |
 | `requestMetricsMaxBytes` | `16777216` | Startup-only per-process journal cap, integer `4096`–`67108864`; no directory means no collection |
 
 Sol61 (`gpt-6.1-sol`) uses a 500,000-token base default for its missing entry or known stale bundled-static metadata. Explicit provider metadata and then user overrides take precedence; a reset returns to the effective base default. Its 872,000 local override ceiling and output limit are unchanged. This follows the [official Work/Codex product default](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex), not an endpoint capacity measurement. See the [source-calibration boundary](agent-notes/sol61-context-default.md). Host compression policy is unchanged, although its calculated budgets can reflect the larger context input.
@@ -188,6 +189,12 @@ Sol61 (`gpt-6.1-sol`) uses a 500,000-token base default for its missing entry or
 `contextWindowOverrides` changes the client budget, not OpenAI's server capacity. Unknown model ids and values above the plugin's documented configuration ceiling fail explicitly. Use `null` for the whole field to mask inherited overrides, or `null` for one model to restore its catalog default while preserving other entries. Leave room for output and protocol overhead, and treat larger values as deployment-specific experiments rather than entitlement evidence. [Alpha design](design.md) documents the ownership and persistence rules.
 
 ## Diagnostics and recovery
+
+### Limit recovery reminders
+
+Opt in only if the affected session may start a future turn unattended. The new turn can use quota and call tools under the session's existing permissions. Codex Connect keeps the Host's model and account selection and schedules no quota polling. A reminder reports the expected reset time supplied by Codex. Service availability is limited to the verified optional Schedule service on DSH `0.2.2-rc.3`; the setting is disabled by default on all Hosts.
+
+Use the Host's **Automation tasks** page to inspect, pause, or delete pending reminders, including after a restart or before switching accounts outside the running plugin. Turning the option off in the running plugin also attempts to remove its unchanged pending reminders. An input the Host already queued may still run. See the [delivery and cancellation conditions](maintenance-scope.md#bounded-admission--issue-428-2026-11-18).
 
 ### Local installation diagnostics
 

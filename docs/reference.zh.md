@@ -181,6 +181,7 @@ Alpha 4.49 中，完整 `attachment` 选择器匹配到实际用户上传记录�
 | `searchMaxOutputTokens` | `10000` | 搜索使用的正整数输出预算 |
 | `requestMetricsDirectory` | 不设置／关闭 | 启动配置中的私有绝对路径，记录[本地请求计量](request-metrics.zh.md)，不上传遥测 |
 | `enableQuotaTool` | `false` | 启动时注册只读 `codex_connect_quota`；修改 profile 配置后重载插件。见[额度查询](quota-tool.md)。 |
+| `enableLimitResumeReminder` | `false` | 允许在命中限额的根会话中安排一次恢复提醒。需要 DSH `0.2.2-rc.3` 加载可选 Schedule 服务，可在「插件配置 → 能力」中打开。见[限额恢复提醒](#限额恢复提醒)。 |
 | `requestMetricsMaxBytes` | `16777216` | 每进程单日志上限，整数 `4096`–`67108864`；不配置目录则不采集 |
 
 Sol61（`gpt-6.1-sol`）的缺失条目或已知旧内置静态元数据使用 500,000 token 基础默认值。显式提供方元数据及用户覆盖值依次优先；重置恢复有效基础默认值。872,000 本地覆盖上限及输出上限不变。这遵循[官方 Work/Codex 产品默认策略](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex)，不是端点容量实测。详见[来源校准边界](agent-notes/sol61-context-default.md)。宿主压缩策略不变，但计算预算可能随更大的上下文输入而变化。
@@ -188,6 +189,12 @@ Sol61（`gpt-6.1-sol`）的缺失条目或已知旧内置静态元数据使用 5
 `contextWindowOverrides` 修改的是客户端预算，不是 OpenAI 服务端容量。未知模型 ID 或超过插件文档配置上限的值会明确失败。将整个字段设为 `null` 可屏蔽继承的全部覆盖值；将单个模型设为 `null` 可恢复其目录默认值，同时保留其他条目。请为输出和协议开销预留空间，并把更大的数值视为特定部署的实验，不能当作账户权限证据。所有权与持久化规则见 [Alpha 设计](design.zh.md)。
 
 ## 诊断与恢复
+
+### 限额恢复提醒
+
+仅在允许该会话未来无人值守地开始新回合时打开。新回合可消耗额度，并在会话现有权限内调用工具。Codex Connect 沿用宿主的模型和账号选择，无后台额度轮询。提醒按 Codex 报告的预计重置时间安排。目前只有加载可选 Schedule 服务的 DSH `0.2.2-rc.3` 可用，所有宿主上默认关闭。
+
+可在宿主的「自动化任务」页查看、暂停或删除待触发提醒，包括宿主重启后或在插件外切换账号前。在运行中的插件关闭开关也会尝试移除插件创建且状态未变的待触发任务。宿主已入队的输入仍可能执行。见[投递与取消条件](maintenance-scope.md#bounded-admission--issue-428-2026-11-18)。
 
 ### 本地安装诊断
 

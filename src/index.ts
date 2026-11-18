@@ -63,6 +63,7 @@ import { registerImageHandleBridge } from './image-handle-bridge.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
 import { selectOpenAICodexSearchRoute } from './search-route-override.ts'
 import { OpenAICodexQuotaState } from './quota-state.ts'
+import { LimitResumeReminder } from './limit-reminder.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -268,6 +269,8 @@ export interface Config {
   requestMetricsMaxBytes?: number
   /** Startup-only opt-in to read-only, model-callable shared Codex quota observation. */
   enableQuotaTool?: boolean
+  /** Opt in to one host-owned reminder after a terminal Codex limit failure. */
+  enableLimitResumeReminder?: boolean
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number
   /** Model ids advertised in selectors; omitted to advertise the full catalog. */
@@ -344,6 +347,7 @@ const configSchema = z.object({
   requestMetricsDirectory: z.union([z.const(undefined), z.string()]),
   requestMetricsMaxBytes: z.number().step(1).min(4096).max(64 * 1024 * 1024).default(16 * 1024 * 1024),
   enableQuotaTool: z.boolean().default(false).description('Register read-only shared Codex quota observation for models. Reload the plugin after changes. Does not switch models/accounts or schedule work.'),
+  enableLimitResumeReminder: z.boolean().default(false).volatile().description('Allow a one-time unattended turn after a reported Codex quota reset. The session’s current permissions apply.'),
   oauthTimeoutMs: z.number().step(1).min(1_000).max(1_800_000).default(OPENAI_CODEX_AUTHORIZATION_TIMEOUT_MS),
   models: z.union([z.const(undefined), z.array(z.string())]).volatile(),
   enableProxy: z.boolean().default(false).volatile(),
@@ -381,6 +385,7 @@ export interface VolatileConfig {
   requestMetricsDirectory?: string | undefined
   requestMetricsMaxBytes: number
   enableQuotaTool: boolean
+  enableLimitResumeReminder: Volatile<boolean>
   oauthTimeoutMs: number
   models: Volatile<string[] | undefined>
   enableProxy: Volatile<boolean>
@@ -426,6 +431,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     enableImageTool: configValue(config.enableImageTool), enableImageGeneration: configValue(config.enableImageGeneration),
     imageModelHint: configValue(config.imageModelHint), autoReviewDisclosureAcknowledged: configValue(config.autoReviewDisclosureAcknowledged),
     enableAutoReview: configValue(config.enableAutoReview), searchModel: configValue(config.searchModel), searchMode: configValue(config.searchMode),
+    enableLimitResumeReminder: configValue(config.enableLimitResumeReminder),
     searchContextSize: configValue(config.searchContextSize), searchMaxOutputTokens: configValue(config.searchMaxOutputTokens),
   }).filter(([, value]) => value !== undefined)) as OpenAICodexSettingsInput
   const validateSettings = (value: OpenAICodexSettingsInput): void => {
@@ -442,7 +448,9 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   // Also release the journal if a later registration fails before the full teardown is installed.
   ctx.effect(() => () => backendRequests.dispose())
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
-  const credentials = new OpenAICodexCredentialStore()
+  const credentials = new OpenAICodexCredentialStore(undefined, () => limitReminder.accountChanged())
+  const limitReminder = new LimitResumeReminder(ctx, join(dirname(credentials.filename), 'codex-connect-limit-reminders.json'),
+    () => configValue(config.enableLimitResumeReminder) === true)
   const imageAssets = new OpenAICodexImageAssetStore()
   const trustedOrigins = new OpenAICodexTrustedOriginsStore(
     join(dirname(credentials.filename), OPENAI_CODEX_TRUSTED_ORIGINS_FILENAME),
@@ -499,6 +507,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     config.preflightActivity,
     config.retryPolicy,
     () => resolveOpenAICodexSettings(current()).reasoningEffort,
+    limitReminder,
   )
   ctx.llm.registerAdapter([OPENAI_CODEX_PROVIDER], adapter)
   registerImageHandleBridge(ctx, {
@@ -510,7 +519,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   // Public catalog/version metadata does not need access to the operator's account or private resources.
   ctx.inject(['webServer'], webCtx => {
     registerOpenAICodexUpdateRoutes(webCtx, { currentVersion: CODEX_CONNECT_VERSION }, trustedOrigins)
-    registerOpenAICodexModelCatalogRoute(webCtx, () => resolveOpenAICodexModelCatalog(adapter), trustedOrigins)
+    registerOpenAICodexModelCatalogRoute(webCtx, () => resolveOpenAICodexModelCatalog(adapter), trustedOrigins, () => limitReminder.available())
   })
   // Protected routes follow Connection's lifetime as well as WebServer's; no unauthenticated fallback.
   ctx.inject(['webServer', 'connection'], webCtx => {
@@ -662,6 +671,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   }, 'dsh-codex-connect: optional capability lifecycle')
 
   ctx.on('loader/volatile-update', () => {
+    limitReminder.settingsChanged()
     quota.invalidate()
     const proxyIsActive = resolveProviderProxyUrl() !== undefined
     if (proxyWasActive && !proxyIsActive) {

@@ -26,6 +26,7 @@ import type { OpenAICodexProxyManager } from './provider-proxy.ts'
 import type { OpenAICodexBackendRequests } from './backend-request.ts'
 import { streamWithNativeCompactionScope, withOpenAICodexNativeCompaction } from './native-compaction.ts'
 import { streamWithCodexRequestDiagnostics, withCodexDiagnosticFetch } from './request-diagnostics.ts'
+import type { LimitResumeReminder } from './limit-reminder.ts'
 import { imageSelectionHandleText } from './image-input-contract.ts'
 import { OpenAICodexPreflightActivity, OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS } from './preflight-activity.ts'
 import type { OpenAICodexPreflightConfig } from './preflight-activity.ts'
@@ -249,6 +250,7 @@ export function createOpenAICodexAdapter(
   preflightActivity?: OpenAICodexPreflightConfig,
   retryPolicyConfig?: RetryPolicyConfig,
   resolveReasoningEffort?: () => OpenAICodexReasoningEffort | undefined,
+  limitResumeReminder?: LimitResumeReminder,
 ): PiAiAdapter {
   if (retryPolicyConfig === null) throw new TypeError('dsh-codex-connect retryPolicy must be an object or omitted')
   const retryPolicy = resolveRetryPolicy(retryPolicyConfig, 'dsh-codex-connect retryPolicy')
@@ -277,10 +279,13 @@ export function createOpenAICodexAdapter(
       rejectRetiredReserve(options.provider, options.model)
       const dispatch = (request: GenerateOptions) => {
         const projected = imageEditingEnabled?.() === true ? withOpenAICodexImageSelectionHandles(request) : request
-        const observed = (nextOptions: GenerateOptions) => streamWithCodexRequestDiagnostics(next => {
-          const native = (request: GenerateOptions) => streamWithNativeCompactionScope(stream, request, nativeCompactionEnabled?.() === true)
-          return preflight === undefined ? native(next) : preflight.stream(native, next)
-        }, nextOptions)
+        const observed = (nextOptions: GenerateOptions) => {
+          const observeLimit = limitResumeReminder?.observe(nextOptions)
+          return streamWithCodexRequestDiagnostics(next => {
+            const native = (request: GenerateOptions) => streamWithNativeCompactionScope(stream, request, nativeCompactionEnabled?.() === true)
+            return preflight === undefined ? native(next) : preflight.stream(native, next)
+          }, nextOptions, observeLimit === undefined ? undefined : failure => observeLimit(failure, currentSpeedRequestAccount()))
+        }
         return backendRequests?.metrics?.stream(observed, projected) ?? observed(projected)
       }
       const execute = (request: GenerateOptions) => taskDispatch?.stream(request, dispatch) ?? dispatch(request)

@@ -55,14 +55,16 @@ interface CapturedOpenAICodexAccount extends CredentialStore {
 export declare function openAICodexAuthPath(dshHome?: string): string;
 /** File-backed pi-ai store scoped to the single OpenAI Codex provider. */
 export declare class OpenAICodexCredentialStore implements CredentialStore {
+  private readonly onActiveAccountChanged?;
   /** Absolute credential document path. */
   readonly filename: string;
   /** Owner-only version-1 rollback copy, created at the first migration write. */
   readonly version1BackupFilename: string;
   /**
    * @param filename - explicit document path, defaulting under `$DSH_HOME`.
+   * @param onActiveAccountChanged - notify after a committed selection change or sign-out.
    */
-  constructor(filename?: string);
+  constructor(filename?: string, onActiveAccountChanged?: (() => void) | undefined);
   /** Read and validate the current document without acquiring the writer lock. */
   private readDocument;
   private readDocumentAt;
@@ -620,6 +622,8 @@ interface OpenAICodexSettingsConfig {
   enableNewSubagentFastMode: boolean;
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean;
+  /** Create one session-local quota-reset reminder when the Host exposes Schedule. */
+  enableLimitResumeReminder: boolean;
   enableImageTool: boolean;
   enableImageGeneration: boolean;
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -902,6 +906,8 @@ export interface Config {
   requestMetricsMaxBytes?: number;
   /** Startup-only opt-in to read-only, model-callable shared Codex quota observation. */
   enableQuotaTool?: boolean;
+  /** Opt in to one host-owned reminder after a terminal Codex limit failure. */
+  enableLimitResumeReminder?: boolean;
   /** Complete interactive OAuth deadline in milliseconds; applies when the plugin loads. */
   oauthTimeoutMs?: number;
   /** Model ids advertised in selectors; omitted to advertise the full catalog. */
@@ -960,6 +966,7 @@ export interface VolatileConfig {
   requestMetricsDirectory?: string | undefined;
   requestMetricsMaxBytes: number;
   enableQuotaTool: boolean;
+  enableLimitResumeReminder: Volatile<boolean>;
   oauthTimeoutMs: number;
   models: Volatile<string[] | undefined>;
   enableProxy: Volatile<boolean>;

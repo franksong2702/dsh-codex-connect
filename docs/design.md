@@ -12,6 +12,12 @@ The Host registers `llm-openai-codex` as the plugin-owned capability settings na
 
 Fast Mode remains per-session process-local state. Separate default-off profile settings seed newly started top-level and subagent sessions through `agent/created`; resume, setting edits, and repeated startup notifications do not change an existing session's Composer choice. The adapter adds `service_tier: 'priority'` only on Codex requests for an enabled session.
 
+## Limit recovery reminder
+
+`enableLimitResumeReminder` observes the existing provider response only on eligible normal model turns. It collects at most 16 KiB from the body as the provider consumes it and correlates the structured reset with the exact terminal Host turn. A succeeding or retried request, a cancelled call, and input delivered by Schedule cannot arm a reminder. An uncertain reset time leaves the existing failure path alone.
+
+The optional Schedule service owns the absolute occurrence, target validation and inbox receipt. An owner-only local index records the exact returned task ID and revision before it can be updated or cancelled. A reservation suppresses another create if the process exits before it records the returned ID. Revision conflicts preserve user edits, including pause and delete. Stop, successful manual work, model selection, active account changes observed by this plugin and feature disablement request cancellation without blocking the model turn. The Host retains tasks across restart. Read the [admission and acceptance criteria](maintenance-scope.md#bounded-admission--issue-428-2026-11-18) for the delivery and cancellation limits.
+
 ## Saved Task recovery
 
 The plugin handles saved v1 and v2 Task state for verified Hosts. Authenticated owners can read grants, use Stop or manual takeover, disable delegation, and archive a v2 Task after its child cleanup and delivery are verified. Legacy files retain their existing format. Recovery fences stale process state and preserves request counters and saved receipts. Start, resume, upgrade, and delegation enablement are rejected, including when a stale client supplies a matching receipt.

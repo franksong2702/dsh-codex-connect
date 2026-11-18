@@ -1,7 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { describe, expect, it, vi } from 'vitest'
-import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
+import { OPENAI_CODEX_LIMIT_REMINDER_HEADER, OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
 import type { OpenAICodexModelCatalogEntry } from '../src/model-contract.ts'
 import { registerOpenAICodexModelCatalogRoute } from '../src/model-routes.ts'
 import type { OpenAICodexTrustedOriginsStore } from '../src/trusted-origins.ts'
@@ -11,7 +11,7 @@ interface CapturedRoute {
   handler(req: IncomingMessage, res: ServerResponse): Promise<void> | void
 }
 
-function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[] | Promise<readonly OpenAICodexModelCatalogEntry[]>): CapturedRoute {
+function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[] | Promise<readonly OpenAICodexModelCatalogEntry[]>, resolveAvailable?: () => boolean | Promise<boolean>): CapturedRoute {
   let captured: CapturedRoute | undefined
   const ctx = {
     webServer: {
@@ -28,6 +28,7 @@ function capture(resolveCatalog: () => readonly OpenAICodexModelCatalogEntry[] |
     ctx,
     resolveCatalog,
     { has: async () => false } as unknown as OpenAICodexTrustedOriginsStore,
+    resolveAvailable,
   )
   if (captured === undefined) throw new Error('model catalog route was not registered')
   return captured
@@ -41,12 +42,13 @@ function request(method = 'GET', remoteAddress = '127.0.0.1'): IncomingMessage {
   } as unknown as IncomingMessage
 }
 
-function response(): ServerResponse & { observed: { status?: number; body?: string } } {
-  const observed: { status?: number; body?: string } = {}
+function response(): ServerResponse & { observed: { status?: number; body?: string; headers?: Record<string, string> } } {
+  const observed: { status?: number; body?: string; headers?: Record<string, string> } = {}
   return {
     observed,
-    writeHead(status: number) {
+    writeHead(status: number, headers?: Record<string, string>) {
       observed.status = status
+      if (headers !== undefined) observed.headers = headers
       return this
     },
     end(body?: string) {
@@ -76,6 +78,19 @@ describe('Codex Connect model catalog route', () => {
     await capture(async () => catalog).handler(request(), res)
     expect(res.observed.status).toBe(200)
     expect(JSON.parse(res.observed.body!)).toEqual(catalog)
+  })
+
+  it('preserves the array response and advertises only the optional Schedule capability', async () => {
+    const catalog = [{ id: 'synthetic', name: 'Synthetic', contextWindow: 128, maxContextWindow: 128, contextLimitSource: 'catalog-default' as const }]
+    const available = response()
+    await capture(() => catalog, async () => true).handler(request(), available)
+    expect(JSON.parse(available.observed.body!)).toEqual(catalog)
+    expect(available.observed.headers?.[OPENAI_CODEX_LIMIT_REMINDER_HEADER]).toBe('available')
+
+    const unavailable = response()
+    await capture(() => catalog, async () => false).handler(request(), unavailable)
+    expect(JSON.parse(unavailable.observed.body!)).toEqual(catalog)
+    expect(unavailable.observed.headers?.[OPENAI_CODEX_LIMIT_REMINDER_HEADER]).toBeUndefined()
   })
 
   it('rejects mutations and untrusted peers before reading the catalog', async () => {

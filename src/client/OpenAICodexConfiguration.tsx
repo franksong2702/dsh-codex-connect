@@ -16,6 +16,7 @@ import {
   decodeOpenAICodexModelCatalog,
   isValidOpenAICodexContextBudget,
   openAICodexContextLimitSource,
+  OPENAI_CODEX_LIMIT_REMINDER_HEADER,
   OPENAI_CODEX_MODEL_CATALOG_PATH,
 } from '../model-contract.ts'
 import type { OpenAICodexModelCatalogEntry } from '../model-contract.ts'
@@ -111,6 +112,7 @@ const CONFIG_FIELDS = [
   'enableNewSessionFastMode',
   'enableNewSubagentFastMode',
   'enableNativeCompaction',
+  'enableLimitResumeReminder',
   'proxyUrl',
   'enableImageTool',
   'enableImageGeneration',
@@ -208,6 +210,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
   const [feedback, setFeedback] = useState<'idle' | 'saved' | 'error'>('idle')
   const [modelCatalog, setModelCatalog] = useState<OpenAICodexModelCatalogEntry[] | undefined>()
   const [modelCatalogError, setModelCatalogError] = useState(false)
+  const [limitResumeReminderAvailable, setLimitResumeReminderAvailable] = useState<boolean | undefined>()
   const [expandedModels, setExpandedModels] = useState<Readonly<Record<string, boolean>>>({})
   const [proxyDetection, setProxyDetection] = useState<ProxyDetectionState>({ status: 'idle' })
   const [proxyMode, setProxyMode] = useState<'auto' | 'manual'>('auto')
@@ -241,6 +244,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
     const controller = new AbortController()
     setModelCatalog(undefined)
     setModelCatalogError(false)
+    setLimitResumeReminderAvailable(undefined)
     void requestJson(OPENAI_CODEX_MODEL_CATALOG_PATH, {
       method: 'GET',
       credentials: 'same-origin',
@@ -253,6 +257,7 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
       if (catalog === undefined) throw new Error('model catalog response was invalid')
       setModelCatalog(catalog)
       setModelCatalogError(false)
+      setLimitResumeReminderAvailable(response.headers.get(OPENAI_CODEX_LIMIT_REMINDER_HEADER) === 'available')
     }).catch(() => {
       if (!controller.signal.aborted) setModelCatalogError(true)
     })
@@ -774,6 +779,19 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
           </div>
+          <label style={toggleRowStyle}>
+            <input
+              type="checkbox"
+              disabled={!editable || (limitResumeReminderAvailable !== true && !draft.enableLimitResumeReminder)}
+              checked={draft.enableLimitResumeReminder}
+              onChange={event => { update('enableLimitResumeReminder', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span style={labelStyle}>{t('enableLimitResumeReminder')}</span>
+              <span style={bodyStyle}>{t('enableLimitResumeReminderHelp')}</span>
+            </span>
+          </label>
+          {limitResumeReminderAvailable !== true ? <p style={bodyStyle}>{t('limitResumeReminderUnavailable')}</p> : null}
           <label style={toggleRowStyle}>
             <input
               type="checkbox"

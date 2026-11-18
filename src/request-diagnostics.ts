@@ -19,9 +19,19 @@ interface SafeDiagnostic {
   errorType?: string
   retryAfterMs?: number
 }
-interface RequestScope { current?: SafeDiagnostic }
+export interface CodexLimitObservation {
+  resetAt: number
+  diagnosticSuffix: string
+}
+interface RequestScope {
+  current?: SafeDiagnostic
+  observeLimit?: (observation: CodexLimitObservation) => void
+  limit?: { request: SafeDiagnostic; resetAt: number }
+}
 const requestScope = new AsyncLocalStorage<RequestScope>()
 const MAX_FRAME_CHARS = 16 * 1024
+const MIN_LIMIT_RESET_MS = 5 * 60_000
+const MAX_LIMIT_RESET_MS = 6 * 60 * 60_000
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -118,9 +128,43 @@ class ErrorFrameObserver {
   }
 }
 
-function observeResponse(response: Response, diagnostic: SafeDiagnostic): Response {
-  if (response.body === null || !response.headers.get('content-type')?.toLowerCase().includes('text/event-stream')) return response
-  const observer = new ErrorFrameObserver(diagnostic)
+/** Capture a bounded structured 429 during the provider's normal consumption of its body. */
+function limitResponseObserver(onReset: (resetAt: number) => void, receivedAt = Date.now()) {
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let body = ''
+  return {
+    feed(chunk: Uint8Array): void {
+      bytes += chunk.byteLength
+      if (bytes <= MAX_FRAME_CHARS) body += decoder.decode(chunk, { stream: true })
+      else body = ''
+    },
+    finish(): void {
+      if (bytes > MAX_FRAME_CHARS) return
+      let value: unknown
+      try { value = JSON.parse(body + decoder.decode()) } catch { return }
+      if (!record(value) || !record(value['error'])) return
+      const error = value['error']
+      if (error['type'] !== 'usage_limit_reached') return
+      const window = error['window_seconds']
+      if (window !== undefined && window !== 18_000) return
+      const absolute = error['resets_at']
+      const seconds = absolute ?? error['resets_in_seconds']
+      if (typeof seconds !== 'number' || !Number.isSafeInteger(seconds)) return
+      const resetAt = (absolute === undefined || absolute === null ? receivedAt : 0) + seconds * 1000
+      const delay = resetAt - receivedAt
+      if (delay >= MIN_LIMIT_RESET_MS && delay <= MAX_LIMIT_RESET_MS) onReset(resetAt)
+    },
+  }
+}
+
+function observeResponse(response: Response, diagnostic: SafeDiagnostic, scope: RequestScope): Response {
+  if (response.body === null) return response
+  const sse = response.headers.get('content-type')?.toLowerCase().includes('text/event-stream') === true
+  const observer = response.status === 429 && !sse && !response.redirected && scope.observeLimit !== undefined
+    ? limitResponseObserver(resetAt => { if (scope.current === diagnostic) scope.limit = { request: diagnostic, resetAt } })
+    : sse ? new ErrorFrameObserver(diagnostic) : undefined
+  if (observer === undefined) return response
   const reader = response.body.getReader()
   let released = false
   let finished = false
@@ -192,7 +236,7 @@ export function withCodexDiagnosticFetch(
       ...options,
       async fetch(input, init) {
         const response = await governed(input, init)
-        return scope.current === undefined ? response : observeResponse(response, scope.current)
+        return scope.current === undefined ? response : observeResponse(response, scope.current, scope)
       },
     }
   }
@@ -211,7 +255,7 @@ export function withCodexDiagnosticFetch(
       diagnostic.httpStatus = meta.httpStatus
       if (meta.httpRequestId !== undefined) diagnostic.httpRequestId = meta.httpRequestId
       if (meta.retryAfterMs !== undefined) diagnostic.retryAfterMs = meta.retryAfterMs
-      return observeResponse(response, diagnostic)
+      return observeResponse(response, diagnostic, scope)
     },
   }
 }
@@ -219,10 +263,11 @@ export function withCodexDiagnosticFetch(
 /** Append diagnostics after DSH has classified the error; request ids must not affect that classification. */
 export function streamWithCodexRequestDiagnostics(
   stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>, options: GenerateOptions,
+  observeLimit?: (observation: CodexLimitObservation) => void,
 ): AsyncIterable<StreamChunk> {
   return {
     async *[Symbol.asyncIterator]() {
-      const scope: RequestScope = {}
+      const scope: RequestScope = observeLimit === undefined ? {} : { observeLimit }
       const iterator = requestScope.run(scope, () => stream(options)[Symbol.asyncIterator]())
       try {
         while (true) {
@@ -230,14 +275,18 @@ export function streamWithCodexRequestDiagnostics(
           if (next.done) return
           const chunk = next.value
           if (chunk.type === 'finish' && chunk.reason.kind === 'error' && chunk.reason.failure !== undefined && scope.current !== undefined) {
+            const diagnosticSuffix = '\n[Codex diagnostics: ' + JSON.stringify(scope.current) + ']'
+            if (!options.signal?.aborted && scope.limit?.request === scope.current) {
+              scope.observeLimit?.({ resetAt: scope.limit.resetAt, diagnosticSuffix })
+            }
             yield { ...chunk, reason: { ...chunk.reason, failure: {
               ...chunk.reason.failure,
-              message: chunk.reason.failure.message + '\n[Codex diagnostics: ' + JSON.stringify(scope.current) + ']',
+              message: chunk.reason.failure.message + diagnosticSuffix,
             } } }
           } else yield chunk
         }
       } finally {
-        try { await requestScope.run(scope, () => iterator.return?.()) } finally { delete scope.current }
+        try { await requestScope.run(scope, () => iterator.return?.()) } finally { delete scope.current; delete scope.limit }
       }
     },
   }

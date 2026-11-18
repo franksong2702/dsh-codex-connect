@@ -3,6 +3,9 @@
 /** Same-origin endpoint exposing the complete Codex model catalog. */
 export const OPENAI_CODEX_MODEL_CATALOG_PATH = '/plugins/dsh-codex-connect/models'
 
+/** Non-secret capability header returned only when Host Schedule is available. */
+export const OPENAI_CODEX_LIMIT_REMINDER_HEADER = 'x-dsh-codex-limit-reminder'
+
 /** Versioned official-client override policy, not a measured endpoint capacity. */
 export const OPENAI_CODEX_CONTEXT_LIMIT_SOURCE = 'https://github.com/openai/codex/blob/39598ed17885970828acd42a6370131ed0190a98/codex-rs/models-manager/models.json'
 

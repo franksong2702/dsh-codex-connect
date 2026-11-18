@@ -8,6 +8,12 @@ bundle patch 只插入 `llm-openai-codex`，不会写入 `agent-default-model` �
 
 Host 将 `llm-openai-codex` 注册为插件自有的能力 settings namespace。DSH 的 `llm-pi-ai` catalog 持有 `openai-codex` 可配置 provider 目录条目，Codex Connect 只注册实际 adapter，不重复声明该条目。浏览器通过 Harness settings-scope transport 绑定插件 namespace，把账户、额度以及带保存/放弃的能力配置放在现有“插件配置”卡片中。带 revision 防护的逐字段写入不会覆盖无关设置；提交后会即时协调搜索与图片能力的注册状态。插件绝不写入默认模型设置。
 
+## 限额恢复提醒
+
+`enableLimitResumeReminder` 只观察符合条件的普通模型回合。它在 provider 正常读取 429 响应时最多收集 16 KiB，从结构化响应提取重置时间，并与宿主最终结束的回合对应。重试后成功、请求取消或由 Schedule 投递输入的回合都不会安排提醒。缺少可信重置时间时保留原失败处理。
+
+可选 Schedule 服务负责绝对触发时间、目标验证与入队回执。仅本机所有者可读写的索引保存宿主返回的确切任务 ID 和修订号。写入任务 ID 前若进程中断，预留记录可抑制当前窗口内的重复创建。修订冲突保留用户修改、暂停和删除。停止、同一会话后续成功、切换模型、插件观测到的活跃账号变更和关闭开关会尝试取消待触发任务，宿主重启后仍保留已安排任务。见[维护范围与验收条件](maintenance-scope.md#bounded-admission--issue-428-2026-11-18)。
+
 ## Task 开发冻结
 
 普通模型适配器与后端请求管理器不直接导入 Task 策略；产品组装处显式接入旧任务的 provider 包装和请求前计数。此拆分保留旧任务权限、取消与恢复，不等于已删除全部实验运行时。见[拆分记录](agent-notes/core-transport-decoupling.md)。
