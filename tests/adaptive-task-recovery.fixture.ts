@@ -5,7 +5,6 @@ import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import { expect, it, afterEach } from 'vitest'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { taskIdentity } from '../src/adaptive-task-store.ts'
-import { TaskDelegationHost } from '../src/adaptive-task-delegation-host.ts'
 import { publicTaskCommandAllowed } from '../src/adaptive-task-publication.ts'
 import { setup, seedInterrupted, cleanupRecoveryFixtures, owner, model } from './adaptive-task-recovery-setup.ts'
 afterEach(cleanupRecoveryFixtures)
@@ -94,15 +93,6 @@ for (const version of [1, 2] as const) {
     expect((await f.state()).reserved).toBe(3)
   })
 }
-it('alpha3 refuses direct evidence-child creation before removed presentation APIs', async () => {
-  const f = await setup(2)
-  const host = new TaskDelegationHost(f.ctx)
-  await expect(host.create(f.agent, { childSessionId: null, childSessionKey: null } as never, new AbortController().signal,
-    { check() {}, execute() { throw new Error('No tool may execute') } })).rejects.toThrow('TASK_HOST_RECOVERY_ONLY')
-  expect(f.ctx.agents.list()).toHaveLength(1)
-  expect(f.calls()).toBe(0)
-})
-
 it('alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters', async () => {
   const f = await setup(2), s = await f.state()
   await f.command('manual', s.revision); f.hold()

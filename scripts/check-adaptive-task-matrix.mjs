@@ -68,7 +68,7 @@ async function main() {
   try {
     const bundle = join(root, 'bundle')
     const { build } = await import('tsdown')
-    await build({ config: false, entry: { 'adaptive-task-host.spec': join(ROOT, 'tests/adaptive-task-host.spec.ts'), 'adaptive-task-recovery.fixture': join(ROOT, 'tests/adaptive-task-recovery.fixture.ts'), 'adaptive-task-rc2.fixture': join(ROOT, 'tests/adaptive-task-rc2.fixture.ts') },
+    await build({ config: false, entry: { 'adaptive-task-recovery.fixture': join(ROOT, 'tests/adaptive-task-recovery.fixture.ts'), 'adaptive-task-rc2.fixture': join(ROOT, 'tests/adaptive-task-rc2.fixture.ts') },
       outDir: bundle, platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true,
       report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
@@ -126,7 +126,7 @@ async function main() {
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), identitySource)
       await copyFile(join(ROOT, isRecoveryHost(version) ? 'scripts/adaptive-task-delegation-network-guard.mjs' : 'scripts/adaptive-task-matrix-network-guard.mjs'), join(host, 'network-guard.mjs'))
       const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] },
-        test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
+        test: { include: ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false,
           isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       console.error(`Task ${version}: running identical task lifecycle cases`)
@@ -152,7 +152,7 @@ async function main() {
       const network = JSON.parse(await readFile(join(host, 'network.json'), 'utf8'))
       assert.equal(network.pid, actual.pid)
       assert.equal(network.attempts, 0)
-      reports.push({ version, bundleDigest, ...result, pid: actual.pid, node: actual.node,
+      reports.push({ version, profile: 'recovery-only', bundleDigest, ...result, pid: actual.pid, node: actual.node,
         runtimePackages: Object.fromEntries(Object.entries(actual.packages).filter(([name]) => name.startsWith('@deepseek-ai/dsh'))),
         piAiVersion: actual.packages['@earendil-works/pi-ai'], syntheticOnly: true,
         realProviderDispatches: 0, externalNetworkAttempts: network.attempts })
@@ -160,7 +160,7 @@ async function main() {
       await rm(host, { recursive: true, force: true })
     }
     const report = assertTaskMatrix({ schemaVersion: 1, kind: 'adaptive-task-host-matrix', bundleDigest,
-      syntheticOnly: true, adaptiveTaskExercised: true,
+      syntheticOnly: true, adaptiveTaskExercised: false,
       productionDefaultsChanged: false, realProviderDispatches: 0, reports }, versions, bundleDigest)
     if (reportPath) await writeFile(reportPath, JSON.stringify(report, null, 2)+'\n')
     console.log(JSON.stringify(report))

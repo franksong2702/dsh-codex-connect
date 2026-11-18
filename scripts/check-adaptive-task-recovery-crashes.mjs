@@ -1,5 +1,4 @@
 /** Exact alpha.3 recovery boundary profile; never activates Task or sends model requests. */
-import { isRecoveryHost } from './adaptive-task-recovery-contract.mjs'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
@@ -21,8 +20,7 @@ export async function checkRecoveryCrashes(host) {
     const worker = join(host, 'tests', 'recovery-worker.mjs'); await copyFile(source, worker)
     const require = createRequire(join(host, 'package.json'))
     const hostVersion = JSON.parse(await readFile(require.resolve('@deepseek-ai/dsh-agent/package.json'), 'utf8')).version
-    assert.ok(isRecoveryHost(hostVersion))
-    for (const name of ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-tool-executor-native']) {
+    for (const name of ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools']) {
       assert.equal(JSON.parse(await readFile(require.resolve(name + '/package.json'), 'utf8')).version, hostVersion)
     }
     for (const version of [1, 2]) for (const compression of ['none', 'zstd']) for (const cut of ['seed', 'stop', 'manual']) {

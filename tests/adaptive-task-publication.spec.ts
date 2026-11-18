@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AdaptiveTaskCommand, AdaptiveTaskState } from '../src/adaptive-task-contract.ts'
 import { ADAPTIVE_TASK_PATH } from '../src/adaptive-task-contract.ts'
 import { registerAdaptiveTaskHttp } from '../src/adaptive-task-http.ts'
-import { ADAPTIVE_TASK_PUBLIC_RELEASE, ADAPTIVE_TASK_RELEASE_PAUSED, publicTaskCommandAllowed, publicTaskState } from '../src/adaptive-task-publication.ts'
+import { ADAPTIVE_TASK_RELEASE_PAUSED, publicTaskCommandAllowed, publicTaskState } from '../src/adaptive-task-publication.ts'
 
 const exits = ['manual', 'stop', 'delegate-disable', 'downgrade'] as const
 const activations = ['start', 'resume', 'upgrade', 'delegate-enable'] as const
@@ -52,19 +52,15 @@ function harness(rejection?: 401 | 403) {
 }
 
 describe('public task release gate', () => {
-  it('ships paused rather than adding another user opt-in switch', () => { expect(ADAPTIVE_TASK_PUBLIC_RELEASE).toBe(false) })
-  it.each(activations)('rejects %s without public release approval', action => {
+  it.each(activations)('rejects %s while recovery remains explicit-only', action => {
     expect(publicTaskCommandAllowed(action)).toBe(false)
-    expect(publicTaskCommandAllowed(action, true)).toBe(true)
-    expect(publicTaskCommandAllowed(action, 'true' as unknown as boolean)).toBe(false)
   })
   it.each(exits)('retains the %s safety exit', action => { expect(publicTaskCommandAllowed(action)).toBe(true) })
-  it('never admits an unknown command', () => { expect(publicTaskCommandAllowed('unknown', true)).toBe(false) })
+  it('never admits an unknown command', () => { expect(publicTaskCommandAllowed('unknown')).toBe(false) })
   it.each(['off', 'auto', 'manual', 'stopped', 'interrupted', 'limit'] as const)('does not falsify %s or reset accounting', mode => {
     const original = Object.freeze({ ...state, mode, canStart: true })
     expect(publicTaskState(original)).toEqual({ ...original, canStart: false, unavailable: ADAPTIVE_TASK_RELEASE_PAUSED })
     expect(original.canStart).toBe(true)
-    expect(publicTaskState(original, true)).toBe(original)
   })
   it('preserves a more specific recovery condition', () => {
     expect(publicTaskState({ ...state, unavailable: 'TASK_STOPPING' }).unavailable).toBe('TASK_STOPPING')

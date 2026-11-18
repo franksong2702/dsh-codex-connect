@@ -1,59 +1,51 @@
 import { taskDurableAncestors, taskIsOwnedBy, taskLiveRoots, taskVerifiedRuntimeRoot } from './adaptive-task-host-ownership.ts'
-import { assertTaskHostAutomation, taskHostRecoveryOnly, TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
+import { TASK_HOST_RECOVERY_ONLY } from './adaptive-task-host-policy.ts'
 /** Compose v1/v2 safety exits and exact Host ownership for retained Task state. */
 import { randomUUID } from 'node:crypto'
-import { withAdaptiveTaskProvider } from './adaptive-task-scope.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import { allowsTaskRoute, decodeTaskCommand } from './adaptive-task-contract.ts'
+import { decodeTaskCommand } from './adaptive-task-contract.ts'
 import type { AdaptiveTaskCommand, AdaptiveTaskState } from './adaptive-task-contract.ts'
-import { AdaptiveTaskRuntime, hasTaskMarker } from './adaptive-task-runtime.ts'
+import { TaskV1Recovery, hasTaskMarker } from './task-v1-recovery.ts'
 import { publicTaskCommandAllowed } from './adaptive-task-publication.ts'
-import type { TaskRuntimeOptions } from './adaptive-task-runtime.ts'
 import { AdaptiveTaskStore, AtomicTaskDocumentStore, taskFailure, taskIdentity } from './adaptive-task-store.ts'
 import { childUnresolved, parseTaskLedger } from './adaptive-task-delegation-contract.ts'
 import type { TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
 import { AdaptiveTaskDelegationLedger } from './adaptive-task-delegation-ledger.ts'
 import type { LedgerIdentity } from './adaptive-task-delegation-ledger.ts'
-import { AdaptiveTaskDelegation } from './adaptive-task-delegation.ts'
-import { TaskDelegationHost, taskHostServices } from './adaptive-task-delegation-host.ts'
-import { TaskEvidenceManifest } from './adaptive-task-evidence.ts'
+import { TaskV2Recovery } from './task-v2-recovery.ts'
+import { TaskRecoveryHost, taskHostServices } from './task-recovery-host.ts'
+import { restoreTaskEvidenceManifest } from './adaptive-task-evidence.ts'
 import type { TaskDelegationArtifacts } from './adaptive-task-artifacts.ts'
 import { AdaptiveTaskTransitions } from './adaptive-task-transitions.ts'
 
 export interface TaskControlOptions {
   directory: string
-  models?: TaskRuntimeOptions['models']
-  /** Explicitly assembled by synthetic tests of the historical implementation. */
-  mode?: 'legacy-fixture'
   artifacts(identity: LedgerIdentity): TaskDelegationArtifacts
 }
 export class AdaptiveTaskControlRuntime {
-  readonly wrapProvider = withAdaptiveTaskProvider
   private readonly store: AtomicTaskDocumentStore<ReturnType<typeof parseTaskLedger>>
-  private readonly legacy: AdaptiveTaskRuntime
+  private readonly v1: TaskV1Recovery
   private readonly ledger: AdaptiveTaskDelegationLedger
-  private readonly host: TaskDelegationHost
-  private readonly execution: AdaptiveTaskDelegation
+  private readonly host: TaskRecoveryHost
+  private readonly v2: TaskV2Recovery
   private readonly transitions: AdaptiveTaskTransitions
   private readonly bound = new WeakSet<Agent>()
   private readonly attaching = new WeakMap<Agent, Promise<void>>()
   private readonly commands = new Map<string, Promise<unknown>>()
   private stopped = false
-  private readonly recoveryOnly: boolean
   private get agents() { return taskHostServices(this.ctx).agents }
   private get sessions() { return taskHostServices(this.ctx).sessions }
   constructor(private readonly ctx: Context, private readonly options: TaskControlOptions) {
-    this.recoveryOnly = options.mode !== 'legacy-fixture'
     this.store = new AtomicTaskDocumentStore(options.directory, parseTaskLedger)
     this.ledger = new AdaptiveTaskDelegationLedger(options.directory)
-    this.host = new TaskDelegationHost(ctx, this.recoveryOnly)
+    this.host = new TaskRecoveryHost(ctx)
     this.transitions = new AdaptiveTaskTransitions(options.directory)
-    this.legacy = new AdaptiveTaskRuntime(ctx, { store: new AdaptiveTaskStore(options.directory), models: options.models ?? (async () => []), recoveryOnly: this.recoveryOnly,
+    this.v1 = new TaskV1Recovery(ctx, { store: new AdaptiveTaskStore(options.directory),
       ownsRoot: async agent => (await this.store.read(agent.id))?.version !== 2 })
-    this.execution = new AdaptiveTaskDelegation(ctx, { ledger: this.ledger, host: this.host, artifacts: options.artifacts, recoveryOnly: this.recoveryOnly })
+    this.v2 = new TaskV2Recovery(ctx, { ledger: this.ledger, host: this.host, artifacts: options.artifacts })
     ctx.on('agent/request', async ({ agent }, next) => { await this.managed(agent); return next() }, { prepend: true })
     ctx.effect(() => () => { this.stopped = true }, 'Task consent composition lifecycle')
   }
@@ -78,15 +70,14 @@ export class AdaptiveTaskControlRuntime {
     return doc
   }
   private async ensure(agent: Agent): Promise<void> {
-    if (this.bound.has(agent)) { await this.execution.reconcile(agent); return }
+    if (this.bound.has(agent)) { await this.v2.reconcile(agent); return }
     const pending = this.attaching.get(agent)
     if (pending !== undefined) return pending
     const attach = (async () => {
       const doc = await this.store.read(agent.id)
       if (doc?.version !== 2) return
       const identity = this.identity(agent, doc.owner)
-      this.legacy.release(agent)
-      await this.execution.recover(agent, identity, doc.revision, doc.runtime, taskIdentity(randomUUID()))
+      await this.v2.recover(agent, identity, doc.revision, doc.runtime, taskIdentity(randomUUID()))
       this.bound.add(agent)
     })()
     this.attaching.set(agent, attach)
@@ -122,7 +113,7 @@ export class AdaptiveTaskControlRuntime {
   private async managed(agent: Agent): Promise<boolean> {
     const legacyOwnership = typeof this.agents.roots === 'function' && typeof this.agents.isOwnedBy === 'function'
     const session = agent.session
-    if ((this.recoveryOnly || !legacyOwnership) && this.isSeparateRoot(agent, session)) {
+    if (this.isSeparateRoot(agent, session)) {
       // These plugin-owned roots have no Host session and cannot own Task state.
       const live = this.agents.list()
       if (!live.includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
@@ -131,7 +122,7 @@ export class AdaptiveTaskControlRuntime {
         if (state?.version === 2 || (candidate === agent && state !== undefined)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
       }
       if (!this.isSeparateRoot(agent, session) || live.some(candidate => this.bound.has(candidate) || this.attaching.has(candidate))
-        || (this.recoveryOnly && hasTaskMarker(session))) taskFailure('TASK_LIVE_ROOT_REQUIRED')
+        || hasTaskMarker(session)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
       this.recheckLiveAgents(live)
       return false
     }
@@ -150,16 +141,7 @@ export class AdaptiveTaskControlRuntime {
       for (const id of related) await retained(id)
       let runtimeRoot: Agent
       try { runtimeRoot = taskVerifiedRuntimeRoot(this.ctx, agent) } catch (error) {
-        if (this.recoveryOnly) return this.ordinaryWithoutVerifiedOwnership(agent, ancestry, error)
-        // No Task anywhere in the live registry or known durable ancestry:
-        // this plugin has no Task authority to intercept an ordinary request.
-        // Ambiguous ownership with any retained v2 state stays fail-closed.
-        if ([...records.values()].some(Boolean)) throw error
-        const live = this.agents.list()
-        for (const candidate of live) if (await retained(candidate.id)) throw error
-        recheck()
-        this.recheckLiveAgents(live)
-        return false
+        return this.ordinaryWithoutVerifiedOwnership(agent, ancestry, error)
       }
       related.add(runtimeRoot.id)
       let managed = false
@@ -177,13 +159,10 @@ export class AdaptiveTaskControlRuntime {
     const ancestry = taskDurableAncestors(this.ctx, agent)
     let roots: Agent[]
     try { roots = taskLiveRoots(this.ctx) } catch (error) {
-      if (this.recoveryOnly) return this.ordinaryWithoutVerifiedOwnership(agent, ancestry, error)
-      throw error
+      return this.ordinaryWithoutVerifiedOwnership(agent, ancestry, error)
     }
-    if (this.recoveryOnly) {
-      for (const id of ancestry) if (!roots.some(root => root.id === id) && (await this.store.read(id))?.version === 2) {
-        taskFailure('TASK_CHILD_BINDING_MISMATCH')
-      }
+    for (const id of ancestry) if (!roots.some(root => root.id === id) && (await this.store.read(id))?.version === 2) {
+      taskFailure('TASK_CHILD_BINDING_MISMATCH')
     }
     for (const root of roots) {
       const belongs = root === agent || taskIsOwnedBy(this.ctx, agent.id, root) || ancestry.includes(root.id)
@@ -193,32 +172,32 @@ export class AdaptiveTaskControlRuntime {
   }
   async *stream(options: GenerateOptions, delegate: (options: GenerateOptions) => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk> {
     const agent = options.sessionId === undefined ? undefined : this.ctx.get('agents')?.get(options.sessionId)
-    if (this.recoveryOnly && agent === undefined && options.sessionId !== undefined) {
+    if (agent === undefined && options.sessionId !== undefined) {
       const session = this.ctx.get('sessions')?.get(options.sessionId)
       if ((session !== undefined && hasTaskMarker(session)) || await this.store.read(options.sessionId) !== undefined) {
         taskFailure('TASK_LIVE_ROOT_REQUIRED')
       }
     }
-    yield* (agent !== undefined && await this.managed(agent) ? this.execution : this.legacy).stream(options, delegate)
+    yield* (agent !== undefined && await this.managed(agent) ? this.v2 : this.v1).stream(options, delegate)
   }
   async reserveAuxiliary(): Promise<void> {
     const registry = this.ctx.get('agents')
     const agent = typeof registry?.currentInitiator === 'function' && typeof registry.get === 'function'
       ? registry.currentInitiator() : undefined
-    await (agent !== undefined && await this.managed(agent) ? this.execution : this.legacy).reserveAuxiliary()
+    await (agent !== undefined && await this.managed(agent) ? this.v2 : this.v1).reserveAuxiliary()
   }
   async state(sessionId: string, principal: string): Promise<AdaptiveTaskState> {
     const parent = this.root(sessionId)
     const stored = await this.authorized(parent, principal)
     if (stored?.version !== 2) {
-      const state = await this.legacy.state(sessionId, principal)
+      const state = await this.v1.state(sessionId, principal)
       return { ...state, ...(state.mode === 'off' ? {} : { delegation: { version: 1, idle: parent.status === 'idle',
         enabled: false, canDowngrade: false, files: [], routes: [], maxRequests: 6, timeoutMs: 90000, runs: [] } }) }
     }
     await this.ensure(parent)
     const doc = await this.ledger.read(this.identity(parent, principal)) as TaskLedgerDocument
     const grant = doc.delegation.grant
-    const manifest = grant === null ? undefined : TaskEvidenceManifest.restore(await this.options.artifacts(doc).get(grant.sourceManifest), grant.sourceManifest)
+    const manifest = grant === null ? undefined : restoreTaskEvidenceManifest(await this.options.artifacts(doc).get(grant.sourceManifest), grant.sourceManifest)
     const config = parent.session.requestHeader()?.config
     const current = config?.provider === 'openai-codex' && config.reasoningEffort !== undefined
       ? { model: config.model, effort: String(config.reasoningEffort) } : undefined
@@ -226,11 +205,12 @@ export class AdaptiveTaskControlRuntime {
       capabilities: doc.capabilities, canStart: false, eligibility: 'not-probed', ...(current === undefined ? {} : { current }),
       ...(['auto', 'interrupted'].includes(doc.mode) ? { requested: doc.route } : {}),
       ...(doc.mode === 'stopped' && parent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' }
-        : this.recoveryOnly || taskHostRecoveryOnly() ? { unavailable: TASK_HOST_RECOVERY_ONLY } : {}),
+        : { unavailable: TASK_HOST_RECOVERY_ONLY }),
       delegation: { version: 2, idle: parent.status === 'idle', enabled: grant !== null,
         canDowngrade: doc.mode === 'manual' && grant === null && parent.status === 'idle'
-          && doc.delegation.runs.every(run => !childUnresolved(run) && run.delivery === 'recorded'),
-        files: manifest?.sources().map(source => source.path) ?? [], routes: grant?.routes ?? [],
+          && doc.delegation.runs.every(run => !childUnresolved(run) && run.delivery === 'recorded')
+          && !this.host.hasLiveChildren(parent),
+        files: manifest?.entries.map(source => source.path) ?? [], routes: grant?.routes ?? [],
         maxRequests: grant?.maxRequests ?? 6, timeoutMs: grant?.timeoutMs ?? 90000,
         runs: doc.delegation.runs.map(run => ({ id: run.id, state: run.state, cleanup: run.cleanup,
           delivery: run.delivery, reserved: run.attempts.length })) } }
@@ -238,7 +218,7 @@ export class AdaptiveTaskControlRuntime {
   async command(value: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState> {
     const command = structuredClone(value)
     if (decodeTaskCommand(command) === undefined) taskFailure('TASK_COMMAND_INVALID')
-    if (this.recoveryOnly && !publicTaskCommandAllowed(command.action, false)) taskFailure(TASK_HOST_RECOVERY_ONLY)
+    if (!publicTaskCommandAllowed(command.action)) taskFailure(TASK_HOST_RECOVERY_ONLY)
     const previous = this.commands.get(command.sessionId) ?? Promise.resolve()
     const next = previous.catch(() => {}).then(() => this.apply(command, principal))
     this.commands.set(command.sessionId, next)
@@ -247,67 +227,51 @@ export class AdaptiveTaskControlRuntime {
   private async apply(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState> {
     if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED')
     const parent = this.root(command.sessionId), identity = this.identity(parent, principal)
-    let doc = await this.authorized(parent, principal)
-    if (this.recoveryOnly && doc === undefined) taskFailure('TASK_STATE_MISSING')
+    const stored = await this.authorized(parent, principal)
+    if (stored === undefined) taskFailure('TASK_STATE_MISSING')
     const operation = { id: command.operationId, digest: taskIdentity(JSON.stringify(command)) }
-    const receipt = doc?.receipts.find(item => item.id === operation.id)
+    const receipt = stored.receipts.find(item => item.id === operation.id)
     if (receipt !== undefined) {
       if (receipt.digest !== operation.digest) taskFailure('TASK_OPERATION_CONFLICT')
+      if (stored.version === 2 && (command.action === 'stop' || command.action === 'manual')) this.v2.assertRevocationCleanup(parent)
       return this.state(parent.id, principal)
     }
-    if (!['manual', 'stop', 'delegate-disable', 'downgrade'].includes(command.action)) assertTaskHostAutomation(this.recoveryOnly)
-    if (doc?.version !== 2 && command.action !== 'upgrade') {
-      if (!['start', 'resume', 'stop', 'manual'].includes(command.action)) taskFailure('TASK_LEDGER_MIGRATION_REQUIRED')
-      await this.legacy.command(command, principal)
+    if (stored.version !== 2) {
+      if (command.action !== 'stop' && command.action !== 'manual') taskFailure('TASK_LEDGER_MIGRATION_REQUIRED')
+      await this.v1.command(command, principal)
       return this.state(parent.id, principal)
     }
-    if (doc === undefined) taskFailure('TASK_STATE_MISSING')
-    if (doc.version === 2) { await this.ensure(parent); doc = await this.ledger.read(identity) }
+    await this.ensure(parent)
+    const doc = await this.ledger.read(identity)
+    if (doc.version !== 2) taskFailure('TASK_LEDGER_MIGRATION_REQUIRED')
     if (doc.revision !== command.revision) taskFailure('TASK_STALE_REVISION')
     if (command.action === 'manual' || command.action === 'stop') {
-      await this.execution.revoke(parent, command.revision, command.action === 'manual' ? 'manual' : 'stopped', operation)
-    } else if (command.action === 'resume') {
-      await this.execution.resume(parent, identity, command.revision, operation)
+      await this.v2.revoke(parent, command.revision, command.action === 'manual' ? 'manual' : 'stopped', operation)
     } else {
       await parent.runMaintenance(async signal => {
-        const guard = () => { signal.throwIfAborted(); if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED'); this.host.assertRoot(parent, identity); this.host.assertNoChildren(parent) }
+        const guard = () => {
+          signal.throwIfAborted()
+          if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED')
+          this.host.assertRoot(parent, identity)
+          this.host.assertNoChildren(parent)
+        }
         guard()
         if (!await this.sessions.flush(parent.session)) taskFailure('TASK_DURABLE_PARENT_REQUIRED')
         guard()
-        if (command.action === 'upgrade') {
-          await this.transitions.migrate(identity, command.revision, operation, guard, this.options.artifacts(identity))
-          this.legacy.release(parent)
-          await this.ensure(parent)
-          return
-        }
-        const current = await this.ledger.read(identity) as TaskLedgerDocument
+        const current = await this.ledger.read(identity)
         if (current.version !== 2) taskFailure('TASK_LEDGER_MIGRATION_REQUIRED')
         if (command.action === 'downgrade') {
-          await this.execution.reconcile(parent, true)
+          await this.v2.reconcile(parent, true)
           await this.transitions.downgrade(identity, command.revision, current.runtime, operation, guard, this.options.artifacts(identity))
-          this.execution.release(parent); this.bound.delete(parent)
+          this.v2.release(parent)
+          this.bound.delete(parent)
           return
         }
-        if (!['delegate-enable', 'delegate-disable'].includes(command.action)) taskFailure('TASK_COMMAND_INVALID')
-        let manifest: TaskEvidenceManifest | undefined
-        if (command.action === 'delegate-enable') {
-          if (!['auto', 'interrupted'].includes(current.mode)) taskFailure('TASK_REQUIRES_USER_RESUME')
-          const catalog = await this.legacy.capabilities()
-          if (command.routes!.some(route => !allowsTaskRoute(current.capabilities, route) || !allowsTaskRoute(catalog, route))) taskFailure('TASK_MODEL_NOT_ALLOWED')
-          if (parent.session.header.cwd === undefined) taskFailure('TASK_EVIDENCE_MANIFEST_INVALID')
-          manifest = await TaskEvidenceManifest.approve(parent.session.header.cwd, command.files!)
-          if (await this.options.artifacts(identity).put(manifest.serialize()) !== manifest.digest) taskFailure('TASK_EVIDENCE_MANIFEST_INVALID')
-        }
-        guard()
-        const updated = await this.ledger.configure(identity, command.revision, manifest === undefined ? null : {
-          routes: [...command.routes!], sourceManifest: manifest.digest, sourceIds: manifest.sources().map(source => source.id),
-          maxRequests: command.maxChildRequests!, timeoutMs: command.timeoutMs!,
-        }, operation)
-        this.execution.release(parent); this.bound.delete(parent)
-        if (updated.mode === 'auto') {
-          try { await this.execution.install(parent, identity, manifest); this.bound.add(parent) }
-          catch (error) { await this.ledger.revoke(identity, updated.revision, 'stopped'); throw error }
-        } else await this.ensure(parent)
+        if (command.action !== 'delegate-disable') taskFailure('TASK_COMMAND_INVALID')
+        await this.ledger.configure(identity, command.revision, null, operation)
+        this.v2.release(parent)
+        this.bound.delete(parent)
+        await this.ensure(parent)
       })
     }
     return this.state(parent.id, principal)

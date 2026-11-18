@@ -1,7 +1,6 @@
-/** Exact installed-Host policy; no user, model or environment flag can reopen Task. */
+/** Exact installed-Host ownership policy for saved Tasks. */
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import Tools from '@deepseek-ai/dsh-tools'
 import { taskFailure } from './adaptive-task-store.ts'
 import { dshAdmission } from './dsh-admission.mjs'
 
@@ -51,13 +50,4 @@ export function taskHostUsesSubagentOwnership(): boolean {
       && 'version' in metadata && metadata.version === version) return true
   } catch { /* No replacement authority without exact metadata. */ }
   taskFailure('TASK_HOST_VERSION_MISMATCH')
-}
-
-export function assertTaskHostAutomation(recoveryOnly = false): void {
-  if (recoveryOnly) taskFailure(TASK_HOST_RECOVERY_ONLY)
-  const versions = taskHostPackageVersions()
-  if (recoveryVersion(versions) !== undefined) taskFailure(TASK_HOST_RECOVERY_ONLY)
-  if (!verifiedTaskHost(versions) || typeof Reflect.get(Tools.prototype, 'presentAs') !== 'function') {
-    taskFailure('TASK_HOST_AUTOMATION_UNVERIFIED')
-  }
 }

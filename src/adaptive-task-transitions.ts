@@ -1,8 +1,6 @@
 /** Explicit idle transitions. Same root lock; immutable archives retain provenance, not authority. */
-import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { taskRecord } from './adaptive-task-contract.ts'
-import { AtomicTaskDocumentStore, taskFailure, taskIdentity } from './adaptive-task-store.ts'
+import { AtomicTaskDocumentStore, taskFailure } from './adaptive-task-store.ts'
 import type { TaskDocument } from './adaptive-task-store.ts'
 import { childTerminal, ledgerHash, ledgerId, parseTaskLedger } from './adaptive-task-delegation-contract.ts'
 import type { TaskLedgerDocument } from './adaptive-task-delegation-contract.ts'
@@ -39,35 +37,6 @@ async function verifyArtifacts(doc: TaskLedgerDocument, artifacts: TaskDelegatio
 export class AdaptiveTaskTransitions {
   private readonly store: AtomicTaskDocumentStore<Stored>
   constructor(directory: string) { this.store = new AtomicTaskDocumentStore(directory, parseTaskLedger) }
-  async migrate(identity: LedgerIdentity, expectedRevision: number, operation: TaskControlReceipt,
-    guard: () => void, artifacts: TaskDelegationArtifacts): Promise<Stored> {
-    return this.store.update(identity.sessionId, async current => {
-      guard()
-      const existing = identify(current, identity)
-      if (duplicate(existing, operation)) return existing
-      if (existing.revision !== expectedRevision) taskFailure('TASK_STALE_REVISION')
-      if (existing.version !== 1) taskFailure('TASK_ALREADY_MIGRATED')
-      let delegation: TaskLedgerDocument['delegation'] = { grant: null, grantRevision: 0, revocationGeneration: 0, runs: [] }
-      if (existing.mode === 'manual' || existing.mode === 'stopped') {
-        // Old v1 commands preserve runtime in manual/stopped mode even if their receipt ring evicts entries.
-        let archive: unknown
-        try { archive = await artifacts.get(existing.runtime) }
-        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') taskFailure('TASK_ARCHIVE_MISSING'); throw error }
-        if (!taskRecord(archive) || Object.keys(archive).sort().join(',') !== 'document,kind,version'
-          || archive.kind !== 'task-v2-downgrade' || archive.version !== 1) taskFailure('TASK_ARCHIVE_INVALID')
-        const document = parseTaskLedger(archive.document, identity.sessionId)
-        if (document.version !== 2 || document.sessionKey !== existing.sessionKey || document.owner !== existing.owner
-          || document.maximumRequests !== existing.maximumRequests || document.reserved > existing.reserved
-          || !isDeepStrictEqual(document.capabilities, existing.capabilities)) taskFailure('TASK_ARCHIVE_INVALID')
-        canArchive(document); await verifyArtifacts(document, artifacts)
-        delegation = { ...document.delegation, grant: null, revocationGeneration: document.delegation.revocationGeneration + 1 }
-      } else if (!['auto', 'interrupted'].includes(existing.mode)) taskFailure('TASK_MIGRATION_UNAVAILABLE')
-      // Current v1 counters/history fields win; the archived snapshot may be older and must not roll them back.
-      const next: TaskLedgerDocument = { ...existing, version: 2, revision: existing.revision + 1,
-        runtime: taskIdentity(randomUUID()), mode: 'interrupted', delegation }
-      append(next, operation); guard(); return next
-    })
-  }
   async downgrade(identity: LedgerIdentity, expectedRevision: number, expectedEpoch: string, operation: TaskControlReceipt,
     guard: () => void, artifacts: TaskDelegationArtifacts): Promise<Stored> {
     return this.store.update(identity.sessionId, async current => {

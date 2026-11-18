@@ -1,12 +1,10 @@
-import { isRecoveryHost, recoveryCases, recoveryRuntimePackages, inspectRecoveryReport, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
+import { isRecoveryHost, recoveryCases, RECOVERY_CASES, recoveryRuntimePackages, inspectRecoveryReport, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { TASK_RUNTIME_PACKAGES } from './adaptive-task-matrix-contract.mjs'
 
-export const PHASE2_REQUIRED_CASES = Object.freeze([...JSON.parse(readFileSync(new URL('./adaptive-task-delegation-cases.json', import.meta.url), 'utf8')),
-  'uses the exact isolated host without a neighboring runtime'].sort())
-export const PHASE2_RUNTIME_PACKAGES = Object.freeze([...TASK_RUNTIME_PACKAGES,
-  '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'])
+export const PHASE2_REQUIRED_CASES = Object.freeze(['uses the exact isolated host without a neighboring runtime'])
+export const PHASE2_RUNTIME_PACKAGES = TASK_RUNTIME_PACKAGES
+const recoveryCasesForHost = version => isRecoveryHost(version) ? recoveryCases(version) : [...RECOVERY_CASES]
 
 export function inspectDelegationMatrixReport(report, version) {
   if (isRecoveryHost(version)) return inspectRecoveryReport(report, version).cases.concat('uses the exact isolated host without a neighboring runtime').sort()
@@ -15,7 +13,8 @@ export function inspectDelegationMatrixReport(report, version) {
   assert.equal(report.numPendingTests, 0)
   assert.equal(report.numTodoTests, 0)
   const results = report.testResults.flatMap(suite => suite.assertionResults)
-  assert.deepEqual(results.map(result => result.title).sort(), PHASE2_REQUIRED_CASES)
+  const expected = [...recoveryCasesForHost(version), 'uses the exact isolated host without a neighboring runtime'].sort()
+  assert.deepEqual(results.map(result => result.title).sort(), expected)
   assert.ok(results.every(result => result.status === 'passed'))
   assert.equal(report.numTotalTests, results.length)
   assert.equal(report.numPassedTests, results.length)
@@ -33,7 +32,6 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
   assert.ok(/^v(?:22|24)\./u.test(report.node))
   assert.ok(versions.length > 0 && new Set(versions).size === versions.length)
   assert.equal(report.reports.length, versions.length)
-  const expected = PHASE2_REQUIRED_CASES
   const pids = new Set()
   for (const [index, host] of report.reports.entries()) {
     assert.equal(host.version, versions[index])
@@ -43,7 +41,7 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
     assert.equal(host.externalNetworkAttempts, 0)
     assert.equal(host.bundleDigest, bundleDigest)
     assert.equal(host.node, report.node)
-    const hostCases = isRecoveryHost(host.version) ? [...recoveryCases(host.version), 'uses the exact isolated host without a neighboring runtime'].sort() : expected
+    const hostCases = [...recoveryCasesForHost(host.version), 'uses the exact isolated host without a neighboring runtime'].sort()
     assert.deepEqual(host.cases, hostCases)
     assert.equal(host.tests, hostCases.length)
     assert.ok(Number.isSafeInteger(host.pid) && host.pid > 0); pids.add(host.pid)
@@ -52,22 +50,11 @@ export function assertDelegationMatrix(report, versions, bundleDigest) {
     for (const [name, version] of Object.entries(host.runtimePackages)) {
       if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, host.version)
     }
-    if (isRecoveryHost(host.version)) {
-      assert.equal(host.profile, 'recovery-only')
-      for (const name of recoveryRuntimePackages(host.version)) assert.equal(host.runtimePackages[name], host.version)
-      assert.equal(host.crashes.node, report.node); assertRecoveryCrashes(host.crashes)
-      continue
-    }
-    assert.notEqual(host.profile, 'recovery-only')
-    assert.equal(host.crashes.passed, true); assert.equal(host.crashes.node, report.node)
-    assert.equal(host.crashes.cases, 18); assert.equal(host.crashes.freshProcesses, 36)
-    assert.equal(host.crashes.reports.length, 18)
-    for (const run of host.crashes.reports) {
-      assert.equal(run.passed, true); assert.equal(run.recoveryFetches, 0); assert.equal(run.recoveryChildCreates, 0)
-      assert.equal(run.oldEpochRejected, true); assert.equal(run.cleanup, 'verified')
-    }
+    assert.equal(host.profile, 'recovery-only')
+    if (isRecoveryHost(host.version)) for (const name of recoveryRuntimePackages(host.version)) assert.equal(host.runtimePackages[name], host.version)
+    assert.equal(host.crashes.node, report.node); assertRecoveryCrashes(host.crashes)
   }
-  assert.equal(new Set(report.reports.filter(host => !isRecoveryHost(host.version)).map(host => host.crashes.bundleSha256)).size, versions.some(v => !isRecoveryHost(v)) ? 1 : 0)
+  assert.equal(new Set(report.reports.map(host => host.crashes.bundleSha256)).size, 1)
   assert.equal(pids.size, versions.length)
   return report
 }

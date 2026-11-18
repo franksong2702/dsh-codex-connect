@@ -21,7 +21,6 @@ export const RECOVERY_CASES = Object.freeze([
     `alpha3 v${v} preserves ordinary work in another live root`,
     `alpha3 v${v} keeps signed Host HTTP ownership and safety exits`,
   ]),
-  'alpha3 refuses direct evidence-child creation before removed presentation APIs',
   'alpha3 cancellation of ordinary manual work never restores Task authority or refunds counters',
   'alpha3 cold ledger cleanup requires actual absence of live children and keeps delivery unconfirmed',
   'alpha3 never claims cleanup of a still-live owned child',
