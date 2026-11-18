@@ -21,8 +21,8 @@ describe('Codex Connect doctor', () => {
   it('reports defaults and a missing credential without starting OAuth', async () => {
     const report = await diagnoseOpenAICodex({ credentialPath: join(root!, 'missing.json'), compatibilityOptions: {
       nodeVersion: 'v24.21.0', packageVersions: {
-        '@deepseek-ai/dsh-llm': '0.2.0-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.2.0-rc.2',
-        '@deepseek-ai/dsh-compaction': '0.2.0-rc.2', '@earendil-works/pi-ai': '0.85.1',
+        '@deepseek-ai/dsh-llm': '0.2.1-alpha.1', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.1',
+        '@deepseek-ai/dsh-compaction': '0.2.1-alpha.1', '@earendil-works/pi-ai': '0.85.1',
       },
     } })
     expect(report.credentialFile.state).toBe('missing')
@@ -111,7 +111,7 @@ describe('Codex Connect doctor', () => {
     for (const name of ['@deepseek-ai/dsh', ...DSH_METADATA_PACKAGES]) {
       const directory = join(modules, name)
       await mkdir(directory, { recursive: true })
-      await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version: '0.2.0-rc.2' }))
+      await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version: '0.2.1-alpha.1' }))
     }
     const report = await diagnoseOpenAICodex({
       credentialPath: join(root!, 'missing.json'), compatibilityOptions: { installAnchor: anchor, nodeVersion: 'v24.21.0' },

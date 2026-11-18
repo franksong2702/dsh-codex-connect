@@ -17,11 +17,11 @@ function receipt(): OpenAICodexRuntimeReport {
       pluginVersionState: 'match',
       dshMetadataSource: 'host-install-anchor',
     },
-    currentDshVersion: '0.2.0-rc.2',
+    currentDshVersion: '0.2.1-alpha.1',
     compatibility: evaluateCompatibility({ nodeVersion: 'v24.21.0', packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.2.0-rc.2',
-      '@deepseek-ai/dsh-llm-pi-ai': '0.2.0-rc.2',
-      '@deepseek-ai/dsh-compaction': '0.2.0-rc.2',
+      '@deepseek-ai/dsh-llm': '0.2.1-alpha.1',
+      '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.1',
+      '@deepseek-ai/dsh-compaction': '0.2.1-alpha.1',
       '@earendil-works/pi-ai': '0.85.1',
     } }),
   }

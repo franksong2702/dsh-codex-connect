@@ -2,14 +2,12 @@ import assert from 'node:assert/strict'
 import { validateLibArtifactInventory } from './pack-lib-inventory.mjs'
 
 // Synthetic pack-manifest paths only: no npm, build, filesystem, or live provider.
-// Do not derive these from the implementation: this is the nine-file contract.
+// Do not derive these from the implementation: this is the seven-file contract.
 const stable = [
   'lib/bin.js',
   'lib/client.js',
   'lib/index.js',
   'lib/index.d.ts',
-  'lib/invariant.js',
-  'lib/invariant.d.ts',
 ]
 const chunks = [
   'lib/models-Ab12_-xy.js',
@@ -31,8 +29,8 @@ function rejectsWith(names, fragments) {
   })
 }
 
-test('clean nine-file inventory permits non-lib package files', () => {
-  assert.equal(clean.length, 9)
+test('clean seven-file inventory permits non-lib package files', () => {
+  assert.equal(clean.length, 7)
   assert.doesNotThrow(() => validateLibArtifactInventory(['package.json', ...clean, 'docs/reference.md']))
 })
 test('changed hashes and hash lengths do not change the contract', () => {
@@ -43,9 +41,9 @@ test('changed hashes and hash lengths do not change the contract', () => {
     'lib/undici-runtime-123_abc-XYZ.js',
   ]))
 })
-test('all nine Finder-style copies are reported', () => {
+test('all seven Finder-style copies are reported', () => {
   const copies = clean.map(name => name.replace(/(\.[^.]+)$/u, ' 2$1'))
-  assert.equal(copies.length, 9)
+  assert.equal(copies.length, 7)
   rejectsWith([...clean, ...copies], ['unexpected lib artifacts', ...copies])
 })
 for (const chunk of chunks) {
@@ -69,6 +67,8 @@ for (const extra of [
   'lib/nested/models-abc.js',
   'lib/index.old.js',
   'lib/legacy.js',
+  'lib/invariant.js',
+  'lib/invariant.d.ts',
   'lib/new-legitimate-family-abc.js',
   'lib/models-abc.js.map',
   'lib/models-.js',

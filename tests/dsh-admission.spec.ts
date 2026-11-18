@@ -6,8 +6,14 @@ const semver = createRequire(import.meta.url)('semver') as {
   satisfies(version: string, range: string, options?: { includePrerelease: boolean }): boolean
 }
 
-it('admits the range while retaining legacy exact versions and excluding the next minor', () => {
-  expect(dshAdmission.classify('0.1.7-rc.1')).toBe('verified')
+it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2'])('excludes retired DSH %s from admission and npm peers', version => {
+  expect(dshAdmission.classify(version)).toBe('outside-range')
+  expect(dshAdmission.verifiedVersions).not.toContain(version)
+  expect(semver.satisfies(version, dshAdmission.range, { includePrerelease: true })).toBe(false)
+})
+
+it('admits the range while retaining supported exact versions and excluding the next minor', () => {
+  expect(dshAdmission.classify('0.2.1-alpha.1')).toBe('verified')
   expect(dshAdmission.classify('0.2.2-alpha.3')).toBe('verified')
   expect(dshAdmission.classify('0.2.2-alpha.2')).toBe('outside-range')
   expect(dshAdmission.classify('0.2.2-rc.4')).toBe('unverified-in-range')

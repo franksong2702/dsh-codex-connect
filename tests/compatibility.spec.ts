@@ -48,13 +48,13 @@ describe('compatibility contract', () => {
     }
   })
 
-  it('retains the legacy invariant export without requiring its retired host package', async () => {
+  it('omits the invariant companion used exclusively by retired hosts', async () => {
     const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
       peerDependencies: Record<string, string>; devDependencies: Record<string, string>; exports: Record<string, unknown>
     }
     expect(pkg.peerDependencies).not.toHaveProperty('@deepseek-ai/dsh-invariants')
-    expect(pkg.devDependencies['@deepseek-ai/dsh-invariants']).toBe('0.1.7-rc.1')
-    expect(pkg.exports['./invariant']).toBeDefined()
+    expect(pkg.devDependencies).not.toHaveProperty('@deepseek-ai/dsh-invariants')
+    expect(pkg.exports).not.toHaveProperty('./invariant')
     expect(COMPATIBILITY_CONTRACT.dshPluginApi.packages).not.toContain('@deepseek-ai/dsh-invariants')
   })
 
@@ -74,7 +74,7 @@ describe('compatibility contract', () => {
     ]) expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
   })
 
-  it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3'])('accepts exact consistent %s and pi-ai 0.85.1', version => {
+  it.each(['0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3'])('accepts exact consistent %s and pi-ai 0.85.1', version => {
     const packages = { ...compatiblePackages, '@deepseek-ai/dsh-llm': version,
       '@deepseek-ai/dsh-llm-pi-ai': version, '@deepseek-ai/dsh-compaction': version }
     expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('compatible')
@@ -82,9 +82,9 @@ describe('compatibility contract', () => {
 
   it.each(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const)(
     'does not accept mixed rc.1/rc.2 or missing %s metadata', name => {
-      const rc2 = { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.1.7-rc.2',
-        '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2', '@deepseek-ai/dsh-compaction': '0.1.7-rc.2' }
-      expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: { ...rc2, [name]: '0.1.7-rc.1' } }).status).toBe('unverified')
+      const rc2 = { ...compatiblePackages, '@deepseek-ai/dsh-llm': '0.2.1-rc.2',
+        '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-rc.2', '@deepseek-ai/dsh-compaction': '0.2.1-rc.2' }
+      expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: { ...rc2, [name]: '0.2.1-rc.1' } }).status).toBe('unverified')
       expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: { ...rc2, [name]: undefined } }).status).toBe('unknown')
     },
   )
@@ -105,8 +105,8 @@ describe('compatibility contract', () => {
       expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: packages }).status).toBe('unverified')
     }
     expect(evaluateCompatibility({ nodeVersion: 'v24.15.0', packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.1.7-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2',
-      '@deepseek-ai/dsh-compaction': '0.1.7-rc.2', '@earendil-works/pi-ai': '0.85.2',
+      '@deepseek-ai/dsh-llm': '0.2.1-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-rc.2',
+      '@deepseek-ai/dsh-compaction': '0.2.1-rc.2', '@earendil-works/pi-ai': '0.85.2',
     } }).status).toBe('unverified')
   })
 
@@ -302,7 +302,7 @@ describe('compatibility contract', () => {
 
       const llmManifest = join(host, 'node_modules', '@deepseek-ai', 'dsh-llm', 'package.json')
       await writeFile(llmManifest,
-        JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: '0.1.7-rc.2' }))
+        JSON.stringify({ name: '@deepseek-ai/dsh-llm', version: '0.2.1-rc.2' }))
       expect((await detectCompatibility({ nodeVersion: 'v22.19.0', installAnchor: anchor })).status).toBe('unverified')
 
       await rm(llmManifest)

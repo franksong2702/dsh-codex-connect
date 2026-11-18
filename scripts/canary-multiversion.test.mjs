@@ -16,7 +16,7 @@ for (const bad of [null, [], [baseline, baseline], ['invalid'], ['0.1.9'], [base
 assert.throws(() => declaredDshVersions({ dshPluginApi: { version: null, versions } }))
 for (const version of versions) assert.equal(classifyCandidateVersion(version, baseline, versions), 'declared')
 // Holes and future versions never inherit support from a later declared version.
-for (const version of ['0.1.7-rc.3', '0.1.7', '0.1.8', '9.9.9']) {
+for (const version of ['0.2.1-alpha.6', '0.2.1', '0.2.2-alpha.2', '9.9.9']) {
   assert.equal(classifyCandidateVersion(version, baseline, versions), 'newer')
 }
 assert.equal(classifyCandidateVersion('0.1.1-rc.2', baseline, versions), 'not-newer')
@@ -63,14 +63,22 @@ try {
     if (previous === undefined) delete process.env.DSH_UNDECLARED_CANARY_VERSION
     else process.env.DSH_UNDECLARED_CANARY_VERSION = previous
   }
-  const hole = await fixture('0.1.7-rc.3')
+  const hole = await fixture('0.2.1-alpha.6')
   assert.equal(hole.report.classification, 'candidate-compatible')
   assert.equal(hole.report.declaredSupport, false)
-  assert.deepEqual(hole.child, { version: '0.1.7-rc.3', undeclared: '1' })
+  assert.deepEqual(hole.child, { version: '0.2.1-alpha.6', undeclared: '1' })
   const tracker = buildCanaryTrackingIssue(hole.report, undefined, metadata)
   assert.equal(tracker.state, 'passed-needs-full-validation')
-  assert.ok(tracker.body.includes('`0.1.7-rc.1`'))
+  assert.ok(tracker.body.includes('`' + baseline + '`'))
   assert.ok(tracker.body.includes('Full user acceptance: not assessed'))
+
+  for (const version of ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2']) {
+    const result = await fixture(version)
+    assert.equal(result.report.status, 'skipped')
+    assert.equal(result.report.checkExecuted, false)
+    assert.equal(result.report.declaredSupport, false)
+    assert.equal(result.child, undefined)
+  }
 
   const admitted = await fixture('0.2.2-rc.4', 1)
   assert.equal(admitted.report.hostAdmission, 'unverified-in-range')
@@ -102,7 +110,7 @@ try {
   assert.equal(buildCanaryTrackingIssue(failed.report, recovered.report, metadata), undefined)
   const summary = await readFile(summaryPath, 'utf8')
   assert.match(summary, /DSH next: skipped\n\n- Version: 0\.1\.1-rc\.2\n- Check executed: no/u)
-  assert.match(summary, /DSH next: pass\n\n- Version: 0\.1\.7-rc\.1\n- Check executed: yes/u)
+  assert.match(summary, /DSH next: pass\n\n- Version: 0\.2\.1-alpha\.1\n- Check executed: yes/u)
   assert.ok(!Number.isNaN(Date.parse(recovered.report.checkedAt)))
   console.log(`canary multi-version regression: ${fixtureRuns} child-routing scenarios passed`)
 } finally {

@@ -98,8 +98,8 @@ describe('public Host installation fact', () => {
   })
 
   it('does not fall back to local peers when the launch anchor is invalid', async () => {
-    const anchor = await hostInstallation('0.2.0-rc.2')
-    await manifest(anchor, 'not-the-host', '0.2.0-rc.2')
+    const anchor = await hostInstallation('0.2.1-alpha.1')
+    await manifest(anchor, 'not-the-host', '0.2.1-alpha.1')
     const { report } = await readRuntime({ installAnchor: anchor })
     expect(report.compatibility.status).toBe('unknown')
     expect(report.identity.dshMetadataSource).toBe('unknown')
@@ -107,7 +107,7 @@ describe('public Host installation fact', () => {
   })
 
   it('does not mark a supported peer triple compatible with a different selected root version', async () => {
-    const anchor = await hostInstallation('0.2.0-rc.2', '0.1.7-rc.1')
+    const anchor = await hostInstallation('0.2.1-alpha.1', '0.2.1-alpha.2')
     const { report } = await readRuntime({ installAnchor: anchor })
     expect(report.compatibility.status).toBe('unverified')
     expect(report).not.toHaveProperty('currentDshVersion')
@@ -115,7 +115,7 @@ describe('public Host installation fact', () => {
   })
 
   it('keeps missing compaction metadata unknown even when llm and adapter agree', async () => {
-    const anchor = await hostInstallation('0.2.0-rc.2')
+    const anchor = await hostInstallation('0.2.1-alpha.1')
     const modules = dirname(dirname(dirname(anchor)))
     await rm(join(modules, '@deepseek-ai/dsh-compaction', 'package.json'))
     const { report } = await readRuntime({ installAnchor: anchor })

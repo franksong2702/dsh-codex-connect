@@ -4,19 +4,23 @@ vi.mock('node:fs', async original => ({ ...await original<typeof import('node:fs
 import { assertTaskHostAutomation, assertVerifiedTaskHostOwnership, taskHostRecoveryOnly, taskHostUsesSubagentOwnership } from '../src/adaptive-task-host-policy.ts'
 let versions: Record<string, string | undefined>
 beforeEach(() => {
-  versions = { 'dsh-agent': '0.1.7-rc.1', 'dsh-agent-loop': '0.1.7-rc.1', 'dsh-tools': '0.1.7-rc.1' }
+  versions = { 'dsh-agent': '0.2.1-alpha.1', 'dsh-agent-loop': '0.2.1-alpha.1', 'dsh-tools': '0.2.1-alpha.1' }
   read.mockReset().mockImplementation((filename: string) => {
     const name = filename.split('/').at(-2)!
     if (versions[name] === undefined) throw new Error('metadata missing')
     return JSON.stringify({ name: '@deepseek-ai/' + name, version: versions[name] })
   })
 })
-it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2',
-  '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5',
+it.each(['0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5',
   '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])('retains the prior %s Host policy', version => {
   for (const name of Object.keys(versions)) versions[name] = version
   expect(taskHostRecoveryOnly()).toBe(false)
   expect(() => assertTaskHostAutomation()).not.toThrow()
+})
+it.each(['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2'])('denies Task ownership and automation on retired DSH %s', version => {
+  for (const name of Object.keys(versions)) versions[name] = version
+  expect(() => assertVerifiedTaskHostOwnership()).toThrow('TASK_HOST_OWNERSHIP_UNVERIFIED')
+  expect(() => assertTaskHostAutomation()).toThrow('TASK_HOST_AUTOMATION_UNVERIFIED')
 })
 it('allows no automatic admission on exact alpha.3', () => {
   for (const name of Object.keys(versions)) versions[name] = '0.2.2-alpha.3'

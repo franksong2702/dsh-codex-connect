@@ -22,7 +22,7 @@ const manifests = args.filter(arg => arg !== '--phase2' && arg !== '--current-ho
 assert.equal(phase2 && currentHostPaused, false, 'Select one installed Session scenario')
 assert.ok(manifests.length <= 1 && !manifests.some(arg => arg.startsWith('--')))
 const f = manifests[0] ? JSON.parse(await readFile(resolve(manifests[0]), 'utf8'))
-  : await prepareTaskSession(root, currentHostPaused ? '0.1.7-rc.1' : undefined)
+  : await prepareTaskSession(root, currentHostPaused ? '0.2.1-rc.5' : undefined)
 assert.match(f.directory, /\/codex-task-session-[^/]+$/)
 for (const name of ['home', 'workspace', 'install', 'source']) assert.equal(f[name], join(f.directory, name))
 assert.equal(JSON.parse(await readFile(join(f.directory, 'fixture-owner.json'), 'utf8')).kind, 'codex-task-session-offline')

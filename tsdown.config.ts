@@ -34,7 +34,6 @@ export default [
   {
     entry: {
       index: 'src/index.ts',
-      invariant: 'src/invariant.ts',
     },
     outDir: 'lib',
     format: ['esm'],
@@ -61,7 +60,6 @@ export default [
         '@deepseek-ai/dsh-attachment',
         '@deepseek-ai/dsh-fs',
         '@deepseek-ai/dsh-host-webserver',
-        '@deepseek-ai/dsh-invariants',
         '@deepseek-ai/dsh-llm',
         '@deepseek-ai/dsh-llm-pi-ai',
         '@deepseek-ai/dsh-session',

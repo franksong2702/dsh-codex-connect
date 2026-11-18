@@ -1,4 +1,4 @@
-// Publication contract: six stable entries and exactly one chunk per known family.
+// Publication contract: four stable entries and exactly one chunk per known family.
 // Keep this explicit when tsdown.config.ts or its dependency graph changes: a new
 // legitimate chunk requires a reviewed contract/fixture update, not a broad glob.
 const stableEntries = [
@@ -6,8 +6,6 @@ const stableEntries = [
   'lib/client.js',
   'lib/index.js',
   'lib/index.d.ts',
-  'lib/invariant.js',
-  'lib/invariant.d.ts',
 ]
 const chunkFamilies = [
   { name: 'models', pattern: /^lib\/models-[A-Za-z0-9_-]+\.js$/u },

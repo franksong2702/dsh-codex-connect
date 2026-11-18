@@ -11,8 +11,9 @@ const COMPATIBILITY_FILE = join(REPO_ROOT, 'compatibility.json')
 const PACKAGE_FILE = join(REPO_ROOT, 'package.json')
 const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
-const REQUIRED_DSH_VERSION = '0.1.7-rc.1'
-const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3']
+const REQUIRED_DSH_VERSION = '0.2.1-alpha.1'
+const DEV_DSH_VERSION = '0.1.7-rc.1'
+const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3']
 const REQUIRED_DSH_RANGE = dshAdmission.range
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
@@ -76,7 +77,7 @@ function packageEntry(supported, installed) {
     installed: installed ?? null,
     status: installed === undefined || installed === null || installed === ''
       ? 'unknown'
-      : REQUIRED_DSH_VERSIONS.includes(installed) ? 'compatible' : 'incompatible',
+      : installed === supported ? 'compatible' : 'incompatible',
   }
 }
 
@@ -127,16 +128,14 @@ async function main() {
   }
   const installedDeclared = Object.fromEntries(await Promise.all(declaredPackages.map(async name => [name, await installedPackageVersion(name)])))
   const installedDshVersion = installedDeclared['@deepseek-ai/dsh-llm']
-  if (!REQUIRED_DSH_VERSIONS.includes(installedDshVersion)) fail('installed DSH API version is not declared')
+  if (installedDshVersion !== DEV_DSH_VERSION) fail('installed development SDK does not match its exact pin')
   for (const name of declaredPackages) {
+    if (packageJson.devDependencies?.[name] !== DEV_DSH_VERSION) fail(`development SDK ${name} must match ${DEV_DSH_VERSION}`)
     if (installedDeclared[name] !== installedDshVersion) fail(`installed ${name} does not match the other DSH API packages`)
   }
   const installedPiAi = await installedPackageVersion(PI_AI_PACKAGE)
   if (installedPiAi === undefined || piAiStatus(installedPiAi) !== 'compatible') {
     fail(`installed ${PI_AI_PACKAGE} does not match ${REQUIRED_PI_AI_RANGE}`)
-  }
-  if (!REQUIRED_DSH_VERSIONS.includes(installedDshVersion) || installedPiAi !== REQUIRED_PI_AI_RANGE) {
-    fail('installed DSH and pi-ai versions do not form a declared pair')
   }
 
   const node = {
@@ -145,9 +144,9 @@ async function main() {
     status: nodeStatus(process.version),
   }
   const packages = Object.fromEntries([
-    ['@deepseek-ai/dsh-llm', packageEntry(REQUIRED_DSH_RANGE, installedDeclared['@deepseek-ai/dsh-llm'])],
-    ['@deepseek-ai/dsh-llm-pi-ai', packageEntry(REQUIRED_DSH_RANGE, installedDeclared['@deepseek-ai/dsh-llm-pi-ai'])],
-    ['@deepseek-ai/dsh-compaction', packageEntry(REQUIRED_DSH_RANGE, installedDeclared['@deepseek-ai/dsh-compaction'])],
+    ['@deepseek-ai/dsh-llm', packageEntry(DEV_DSH_VERSION, installedDeclared['@deepseek-ai/dsh-llm'])],
+    ['@deepseek-ai/dsh-llm-pi-ai', packageEntry(DEV_DSH_VERSION, installedDeclared['@deepseek-ai/dsh-llm-pi-ai'])],
+    ['@deepseek-ai/dsh-compaction', packageEntry(DEV_DSH_VERSION, installedDeclared['@deepseek-ai/dsh-compaction'])],
     [PI_AI_PACKAGE, { supported: REQUIRED_PI_AI_RANGE, installed: installedPiAi, status: piAiStatus(installedPiAi) }],
   ])
   const report = {

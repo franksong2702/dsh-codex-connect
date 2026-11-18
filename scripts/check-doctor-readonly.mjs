@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { runBoundedCommand } from './bounded-command.mjs'
+import { dshPluginApi } from '../src/dsh-admission.mjs'
 
 export async function checkReadonlyDoctor(fixture, pluginRoot, inheritedEnvironment) {
   fixture = await realpath(fixture)
@@ -87,11 +88,13 @@ syncBuiltinESMExports();
       || await readFile(credential, 'utf8') !== sentinel) throw new Error('direct doctor receipt violated its allowlist')
     return report
   }
-  const standalone = await run(undefined, 0)
-  if (standalone.identity.scope !== 'standalone' || standalone.compatibility?.status !== 'compatible') throw new Error('standalone scope was not retained')
+  const standalone = await run(undefined, 1)
+  if (standalone.identity.scope !== 'standalone' || standalone.compatibility?.status !== 'unverified') {
+    throw new Error('standalone scope must report the development SDK as unverified')
+  }
   const anchor = join(fixture, 'selected-host/node_modules/@deepseek-ai/dsh/package.json')
   const modules = join(fixture, 'selected-host/node_modules')
-  const version = standalone.compatibility.packages['@deepseek-ai/dsh-llm'].installed
+  const version = dshPluginApi.version
   const writeHostMetadata = async modules => {
     for (const name of ['@deepseek-ai/dsh', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction']) {
       const path = join(modules, name, 'package.json')
@@ -101,7 +104,8 @@ syncBuiltinESMExports();
   }
   await writeHostMetadata(modules)
   const selected = await run(anchor, 0)
-  if (selected.identity.scope !== 'selected-installation' || selected.identity.dshMetadataSource !== 'explicit-install-anchor') throw new Error('selected metadata was mistaken for a running Host')
+  if (selected.identity.scope !== 'selected-installation' || selected.identity.dshMetadataSource !== 'explicit-install-anchor'
+    || selected.compatibility?.status !== 'compatible') throw new Error('selected metadata was mistaken for a running Host')
   const invalid = await run(join(fixture, 'absent/package.json'), 1)
   if (invalid.compatibility?.status !== 'unknown' || invalid.identity.dshMetadataSource !== 'unknown') throw new Error('invalid anchor fell back to ambient metadata')
   const virtualModules = join(virtualArchive, 'node_modules')

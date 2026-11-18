@@ -74,7 +74,7 @@ for (const dependencies of [{}, { '@deepseek-ai/dsh-code-runtime': 'fixture', '@
 
 assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
 assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
-const matrixVersions = ['0.1.7-rc.1', '0.1.7-rc.2']
+const matrixVersions = ['0.2.1-alpha.1', '0.2.1-alpha.2']
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.43',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
@@ -188,9 +188,9 @@ const trackingMetadata = {
 const candidateReport = overrides => ({
   status: 'pass',
   classification: 'candidate-compatible',
-  channel: 'alpha',
-  supportedVersion: '0.1.7-rc.1',
-  candidateVersion: '0.1.7-alpha.3',
+  channel: 'next',
+  supportedVersion: '0.2.1-alpha.1',
+  candidateVersion: '0.2.2-rc.4',
   stage: 'isolated-install',
   nodeVersion: 'v24.15.0',
   pluginCommit: null,
@@ -201,7 +201,7 @@ const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, tr
 assertContract(
   'a passing newer candidate becomes a preliminary validation tracker',
   passedTracking?.state === 'passed-needs-full-validation'
-    && passedTracking.marker === '<!-- dsh-canary:0.1.7-alpha.3 -->'
+    && passedTracking.marker === '<!-- dsh-canary:0.2.2-rc.4 -->'
     && passedTracking.label === 'enhancement'
     && passedTracking.body.includes('preliminary evidence only'),
 )
