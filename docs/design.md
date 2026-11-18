@@ -12,17 +12,13 @@ The Host registers `llm-openai-codex` as the plugin-owned capability settings na
 
 Fast Mode remains per-session process-local state. Separate default-off profile settings seed newly started top-level and subagent sessions through `agent/created`; resume, setting edits, and repeated startup notifications do not change an existing session's Composer choice. The adapter adds `service_tier: 'priority'` only on Codex requests for an enabled session.
 
-## Task-level model selection: frozen
+## Saved Task recovery
 
-Phase 1 #236 and Phase 2 #239 were merged. The [maintenance scope](maintenance-scope.md) freezes further orchestration development. The product runtime handles saved v1 and v2 Task state for verified Hosts. Authenticated owners can read grants, use Stop or manual takeover, and use the existing checked delegation-disable and archive exits. Archived activation receipts confer no new authority. Recovery fences stale process state, preserves spent requests, and records cleanup and delivery only after checking live ownership and durable evidence.
+The plugin handles saved v1 and v2 Task state for verified Hosts. Authenticated owners can read grants, use Stop or manual takeover, disable delegation, and archive a v2 Task after its child cleanup and delivery are verified. Legacy files retain their existing format. Recovery fences stale process state and preserves request counters and saved receipts. Start, resume, upgrade, and delegation enablement are rejected, including when a stale client supplies a matching receipt.
 
 Ordinary requests pass through with the Host's route. A related saved task requires verified ownership. Missing state recorded by a session marker, ambiguous ownership, or unresolved child cleanup can block dispatch. A manual takeover preserves the existing portable-history projection for the next ordinary Codex request.
 
-The following descriptions record the historical architecture.
-
-The optional conversation control grants a bounded main-model/effort scope to one task, initially Sol/Medium. The task runtime, adapter dispatch wrapper and existing backend governor share durable request accounting. There is no separate Think, Split or Remember product selector. Host-owned permissions, session history and compaction remain their existing owners; model choice grants no new tool authority. See [the consolidated contract and migration](experiments/adaptive-task-phase1.md) for source selection from #232–#235, cancellation, recovery and acceptance limits.
-
-The local unreleased Phase 2 candidate implements [task-scoped read-only delegation](experiments/adaptive-task-phase2-design.md), tracked in #198. A single composition preserves v1 grants until an explicit idle upgrade; child model/effort and evidence-file consent are separate from the main-task grant. Every root has an owner/session-bound private artifact namespace. Ordinary standalone adapters still need only `llm`; task controls require live agent and session services. New sessions remain off. See [Phase 2 exact-host and installed acceptance](experiments/adaptive-task-phase2-acceptance.md) for current verification, failures and remaining gates. [Phase 1 acceptance](experiments/adaptive-task-phase1-acceptance.md), local implementation, remote CI and release authority remain separate.
+The product and synthetic host checks use saved-state recovery. The Task model-selection tool, delegation tools, child launcher, provider request scopes, and live evidence capture have been removed. Historical Phase 1 and Phase 2 behavior is recorded in [the Phase 1 contract](experiments/adaptive-task-phase1.md) and [the Phase 2 design](experiments/adaptive-task-phase2-design.md).
 
 ## OAuth persistence
 

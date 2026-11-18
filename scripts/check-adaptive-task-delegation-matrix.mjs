@@ -22,12 +22,11 @@ import { taskMatrixFailureSummary } from './task-matrix-failure-summary.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
-const entries = ['adaptive-task-consent.spec', 'adaptive-task-delegation.spec', 'adaptive-task-transitions.spec',
-  'adaptive-task-delegation-host.spec', 'adaptive-task-delegation-ledger.spec', 'adaptive-task-evidence.spec']
-// Phase 2 reaches the authenticated HTTP and host bridge seams that the Phase 1
-// matrix intentionally does not import.
-const PHASE2_RUNTIME_PACKAGES = Object.freeze([...TASK_RUNTIME_PACKAGES,
-  '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-api-session-controller'])
+// Phase 2 now validates saved-Task recovery only.  Orchestration fixtures are
+// intentionally excluded: start/resume, provider wrapping, scope ownership and
+// child creation are no longer supported product behavior.
+const entries = []
+const PHASE2_RUNTIME_PACKAGES = TASK_RUNTIME_PACKAGES
 
 async function main() {
   const argv = process.argv.slice(2)
@@ -41,11 +40,11 @@ async function main() {
   const registry = cachedTaskRegistry(join(ROOT, 'node_modules/.cache/task-matrix/manifests'))
   try {
     const bundle = join(root, 'bundle'); await build({ config: false,
-      entry: Object.fromEntries([...entries.map(name => [name, join(ROOT, 'tests', `${name}.ts`)]), ['adaptive-task-recovery.fixture', join(ROOT, 'tests/adaptive-task-recovery.fixture.ts')], ['adaptive-task-rc2.fixture', join(ROOT, 'tests/adaptive-task-rc2.fixture.ts')]]), outDir: bundle,
+      entry: Object.fromEntries([['adaptive-task-recovery.fixture', join(ROOT, 'tests/adaptive-task-recovery.fixture.ts')], ['adaptive-task-rc2.fixture', join(ROOT, 'tests/adaptive-task-rc2.fixture.ts')]]), outDir: bundle,
       platform: 'node', target: 'es2024', format: 'esm', dts: false, clean: true, report: false, logLevel: 'silent', deps: { neverBundle: true },
       define: { __CODEX_CONNECT_VERSION__: JSON.stringify(pkg.version) } })
     const files = (await readdir(bundle)).filter(name => name.endsWith('.mjs')).sort()
-    for (const entry of entries) assert.ok(files.includes(`${entry}.mjs`), `missing bundle entry ${entry}`)
+    assert.ok(files.includes('adaptive-task-recovery.fixture.mjs'), 'missing recovery bundle entry')
     const manifest = await Promise.all(files.map(async name => [name, hash(await readFile(join(bundle, name)))]))
     const bundleDigest = hash(JSON.stringify(manifest))
     for (const version of versions) {
@@ -82,23 +81,11 @@ async function main() {
         throw new Error(`Task ${version} install failed: ${install.error?.message ?? install.cleanupError?.message ?? install.stderr}`)
       }
       const identity = await readTaskHostIdentity(host, version, [...PHASE2_RUNTIME_PACKAGES, '@earendil-works/pi-ai', ...(isRecoveryHost(version) ? recoveryRuntimePackages(version) : [])])
-      if (version === versions[0]) {
-        const persistence = await runBoundedCommand(process.execPath,
-          [join(ROOT, 'scripts/check-adaptive-task-persistence.mjs'), '--host', host],
-          { cwd: ROOT, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
-        assert.equal(persistence.error, undefined)
-        assert.equal(persistence.cleanupError, undefined)
-        assert.equal(persistence.status, 0, 'Task grant cold restoration failed: ' + persistence.stderr)
-        const report = JSON.parse(persistence.stdout.trim().split('\n').at(-1))
-        assert.equal(report.passed, true)
-        assert.equal(report.freshProcesses, 4)
-        console.error(`Phase 2 ${process.version} / ${version}: Task grant restoration passed in four fresh processes`)
-      }
       for (const name of files) await copyFile(join(bundle, name), join(host, 'tests', name))
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), `import {it,expect} from 'vitest'; import {writeFileSync} from 'node:fs';\nit('uses the exact isolated host without a neighboring runtime', async()=>{ const entries=${JSON.stringify(identity.entries)}; for(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(path));} writeFileSync(${JSON.stringify(join(host, 'identity.json'))}, JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}})); });\n`)
       await copyFile(join(ROOT, 'scripts/adaptive-task-delegation-network-guard.mjs'), join(host, 'network-guard.mjs'))
-      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: isRecoveryHost(version) ? ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'] : ['tests/*.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
+      const config = { root: host, resolve: { alias: [{ find: 'vitest', replacement: join(vitest, 'dist/index.js') }] }, test: { include: ['tests/adaptive-task-recovery.fixture.mjs', ...(isSubagentRecoveryHost(version) ? ['tests/adaptive-task-rc2.fixture.mjs'] : []), 'tests/task-host-identity.spec.mjs'], setupFiles: [join(host, 'network-guard.mjs')], pool: 'forks', maxWorkers: 1, fileParallelism: false, isolate: false, testTimeout: 30000, hookTimeout: 30000 } }
       await writeFile(join(host, 'vitest.config.mjs'), `export default ${JSON.stringify(config)}\n`)
       const test = await runBoundedCommand(process.execPath, [join(vitest, 'vitest.mjs'), 'run', '--config', join(host, 'vitest.config.mjs'), '--reporter=json', '--outputFile', join(host, 'tests.json')], { cwd: host, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
       if (test.error || test.cleanupError || test.status !== 0) {
@@ -113,30 +100,13 @@ async function main() {
       const actual = JSON.parse(await readFile(join(host, 'identity.json'), 'utf8'))
       assert.deepEqual(actual.packages, identity.packages); assert.equal(actual.node, process.version)
       const network = JSON.parse(await readFile(join(host, 'network.json'), 'utf8')); assert.equal(network.pid, actual.pid); assert.equal(network.attempts, 0)
-      console.error(`Phase 2 ${process.version} / ${version}: ${cases.length} tests passed; verifying crash boundaries`)
-      if (isRecoveryHost(version)) {
-        const crashes = await checkRecoveryCrashes(host); assertRecoveryCrashes(crashes)
-        reports.push({ version, profile: 'recovery-only', bundleDigest, cases, tests: result.numTotalTests,
-          pid: actual.pid, node: actual.node, installer: { npm: manager.stdout.trim(), peerChecks: true },
-          runtimePackages: actual.packages, crashes, syntheticOnly: true, realProviderDispatches: 0,
-          externalNetworkAttempts: network.attempts })
-        await rm(host, { recursive: true, force: true }); continue
-      }
-      const crash = await runBoundedCommand(process.execPath, [join(ROOT, 'scripts/check-adaptive-task-delegation-crashes.mjs'), '--host', host],
-        { cwd: ROOT, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
-      if (crash.error || crash.cleanupError || crash.status !== 0) {
-        const failure = join(ROOT, 'node_modules/.cache/task-matrix/phase2-failures', version)
-        await mkdir(failure, { recursive: true }); await writeFile(join(failure, 'crash.stderr'), crash.stderr)
-        await writeFile(join(failure, 'crash.stdout'), crash.stdout)
-        throw new Error(`Phase 2 crash ${version}: ${crash.error?.message ?? crash.cleanupError?.message ?? crash.stderr}`)
-      }
-      const crashes = JSON.parse(crash.stdout.trim().split('\n').at(-1))
-      assert.equal(crashes.passed, true); assert.equal(crashes.cases, 18); assert.equal(crashes.freshProcesses, 36)
-      assert.equal(crashes.node, actual.node)
-      for (const [name, version] of Object.entries(crashes.packages)) assert.equal(version, actual.packages[name])
-      reports.push({ version, bundleDigest, cases, tests: result.numTotalTests, pid: actual.pid, node: actual.node, installer: { npm: manager.stdout.trim(), peerChecks: true }, runtimePackages: actual.packages,
-        crashes, syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: network.attempts })
-      console.error(`Phase 2 ${process.version} / ${version}: passed including 18 crash cases / 36 processes`)
+      console.error(`Phase 2 ${process.version} / ${version}: ${cases.length} recovery tests passed; verifying crash boundaries`)
+      const crashes = await checkRecoveryCrashes(host); assertRecoveryCrashes(crashes)
+      reports.push({ version, profile: 'recovery-only', bundleDigest, cases, tests: result.numTotalTests,
+        pid: actual.pid, node: actual.node, installer: { npm: manager.stdout.trim(), peerChecks: true },
+        runtimePackages: actual.packages, crashes, syntheticOnly: true, realProviderDispatches: 0,
+        externalNetworkAttempts: network.attempts })
+      console.error(`Phase 2 ${process.version} / ${version}: passed recovery tests and cold crash boundaries`)
       await rm(host, { recursive: true, force: true })
     }
     const report = assertDelegationMatrix({ schemaVersion: 1, kind: 'adaptive-task-delegation-host-matrix', node: process.version, bundleDigest, syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0, reports }, versions, bundleDigest)

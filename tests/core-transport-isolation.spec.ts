@@ -4,8 +4,6 @@ import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-code
 import { createOpenAICodexProfile } from '../src/adapter.ts'
 import { OpenAICodexBackendRequests } from '../src/backend-request.ts'
 
-vi.mock('../src/adaptive-task-scope.ts', () => { throw new Error('Core transport imported retired task policy') })
-
 const endpoint = 'https://chatgpt.com/backend-api/codex/responses'
 
 it('dispatches an ordinary profile without task services or rewriting its retry/session policy', () => {

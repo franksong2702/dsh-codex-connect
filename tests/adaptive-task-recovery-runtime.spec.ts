@@ -4,7 +4,6 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
 import { taskIdentity } from '../src/adaptive-task-store.ts'
-import { inAdaptiveTaskDispatch } from '../src/adaptive-task-scope.ts'
 import { setupRecoverySource as setup, cleanupRecoveryFixtures, model, owner } from './adaptive-task-recovery-setup.ts'
 
 afterEach(cleanupRecoveryFixtures)
@@ -29,13 +28,6 @@ describe('recovery-only Task control', () => {
         }))] }
       })
       for (const command of commands) await expect(f.runtime().command(command, owner)).rejects.toThrow('TASK_HOST_RECOVERY_ONLY')
-      let reserved = 0
-      const legacyScope = { route: { model, effort: 'medium' }, cacheKey: 'old-synthetic-scope',
-        signal: new AbortController().signal, async reserve() { reserved++ } }
-      await expect(f.ctx.agents.withInitiator(f.agent, () =>
-        inAdaptiveTaskDispatch(legacyScope, () => f.runtime().reserveAuxiliary()),
-      )).rejects.toThrow('TASK_HOST_RECOVERY_ONLY')
-      expect(reserved).toBe(0)
       expect(await f.store.read(f.agent.id)).toEqual(before)
       expect(f.calls()).toBe(0)
     })
@@ -56,6 +48,28 @@ describe('recovery-only Task control', () => {
       expect(f.calls()).toBe(0)
     })
   }
+
+  it.each(['stop', 'manual'] as const)('persists v2 %s while refusing to confirm cleanup of a live child', async action => {
+    const f = await setup(2)
+    const before = await f.state()
+    const input: Parameters<typeof f.ctx.agents.create>[0] & { parentAgent: typeof f.agent } = {
+      sessionId: SessionId('live-recovery-child'), parentAgent: f.agent,
+      meta: { parentSession: f.agent.id, origin: 'subagent', delegationDepth: 1 },
+      agentOptions: { provider: 'openai-codex', model },
+    }
+    const child = await f.agent.ctx.agents.create(input)
+    const expectedMode = action === 'stop' ? 'stopped' : 'manual'
+    const command = () => f.command(action, before.revision, { operationId: 'live-child-' + action + '-0001' })
+    try {
+      await expect(command()).rejects.toThrow('TASK_CHILD_CLEANUP_UNVERIFIED')
+      expect(await f.state()).toMatchObject({ mode: expectedMode, reserved: 3, delegation: { canDowngrade: false } })
+      const stored = await f.store.read(f.agent.id)
+      await expect(command()).rejects.toThrow('TASK_CHILD_CLEANUP_UNVERIFIED')
+      expect(await f.store.read(f.agent.id)).toEqual(stored)
+    } finally { await child.dispose() }
+    expect(await command()).toMatchObject({ mode: expectedMode, reserved: 3 })
+    expect(f.calls()).toBe(0)
+  })
 
   it('allows an explicit manual ordinary request without restoring Task authority', async () => {
     const f = await setup(2)

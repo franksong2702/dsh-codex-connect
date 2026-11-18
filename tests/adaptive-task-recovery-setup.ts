@@ -21,7 +21,7 @@ import type { TaskDocument } from '../src/adaptive-task-store.ts'
 import { parseTaskLedger } from '../src/adaptive-task-delegation-contract.ts'
 import type { TaskLedgerDocument } from '../src/adaptive-task-delegation-contract.ts'
 import { TaskDelegationArtifacts } from '../src/adaptive-task-artifacts.ts'
-import { taskHostRecoveryOnly } from '../src/adaptive-task-host-policy.ts'
+import { assertVerifiedTaskHostOwnership, taskHostRecoveryOnly } from '../src/adaptive-task-host-policy.ts'
 
 export const owner = taskIdentity('synthetic-recovery-owner'), model = 'gpt-5.6-sol'
 const contexts: Context[] = [], roots: string[] = []
@@ -29,8 +29,8 @@ const contexts: Context[] = [], roots: string[] = []
 interface PersistedFixture { root: string; compression: 'none' | 'zstd'; readExisting: boolean }
 
 export function setup(version?: 1 | 2, persisted?: PersistedFixture) {
-  assert.equal(taskHostRecoveryOnly(), true)
-  return prepareRecoveryFixture(true, version, persisted)
+  assertVerifiedTaskHostOwnership()
+  return prepareRecoveryFixture(taskHostRecoveryOnly(), version, persisted)
 }
 
 export function setupRecoverySource(version?: 1 | 2) {
@@ -82,7 +82,7 @@ async function prepareRecoveryFixture(exactRecoveryHost: boolean, version?: 1 | 
   const artifacts = new TaskDelegationArtifacts(join(root, 'artifacts'))
   const load = async () => {
     const fiber = await ctx.plugin(function Recovery(scope: Context) {
-      runtime = new AdaptiveTaskControlRuntime(scope, { directory, models: async () => [info], artifacts: () => artifacts })
+      runtime = new AdaptiveTaskControlRuntime(scope, { directory, artifacts: () => artifacts })
     })
     return fiber
   }

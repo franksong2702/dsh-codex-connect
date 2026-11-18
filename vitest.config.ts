@@ -7,10 +7,6 @@ const packageVersion = (JSON.parse(
 
 // These source integration fixtures use the pinned compilation SDK.
 const developmentSdkFixtures = [
-  'tests/adaptive-task-consent.spec.ts',
-  'tests/adaptive-task-delegation-host.spec.ts',
-  'tests/adaptive-task-delegation.spec.ts',
-  'tests/adaptive-task-host.spec.ts',
   'tests/adaptive-task-http.spec.ts',
   'tests/adaptive-task-recovery-runtime.spec.ts',
   'tests/image-edit-session.spec.ts',

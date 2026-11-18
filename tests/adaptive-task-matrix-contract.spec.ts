@@ -1,16 +1,16 @@
 import { expect, it } from 'vitest'
-import { recoveryCases, recoveryRuntimePackages, RC2_RECOVERY_RUNTIME_PACKAGES } from '../scripts/adaptive-task-recovery-contract.mjs'
+import { recoveryCases, RECOVERY_CASES, recoveryRuntimePackages, RC2_RECOVERY_RUNTIME_PACKAGES } from '../scripts/adaptive-task-recovery-contract.mjs'
 // @ts-expect-error Plain Node matrix helper is outside the source build.
-import { assertTaskMatrix, inspectTaskTestReport, TASK_HOST_CASES, TASK_IDENTITY_CASE, TASK_RUNTIME_PACKAGES } from '../scripts/adaptive-task-matrix-contract.mjs'
+import { assertTaskMatrix, inspectTaskTestReport, TASK_IDENTITY_CASE, TASK_RUNTIME_PACKAGES } from '../scripts/adaptive-task-matrix-contract.mjs'
 
 function report() {
-  const cases = [...TASK_HOST_CASES, TASK_IDENTITY_CASE]
+  const cases = [...RECOVERY_CASES, TASK_IDENTITY_CASE]
   return { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0,
     numTotalTests: cases.length, numPassedTests: cases.length,
     testResults: [{ assertionResults: cases.map(title => ({ title, status: 'passed' })) }] }
 }
 it('requires the independent task contract including every host behavior and identity', () => {
-  expect(inspectTaskTestReport(report()).tests).toBe(TASK_HOST_CASES.length + 1)
+  expect(inspectTaskTestReport(report()).tests).toBe(RECOVERY_CASES.length + 1)
 })
 it.each(['missing', 'renamed', 'duplicated', 'skipped', 'failed'])('rejects %s task-matrix evidence even when the runner reports success', kind => {
   const data = report(); const cases = data.testResults[0]!.assertionResults
@@ -25,7 +25,7 @@ it.each(['missing', 'renamed', 'duplicated', 'skipped', 'failed'])('rejects %s t
 function rc2Matrix(version = '0.2.2-rc.2'): any {
   const bundleDigest = 'a'.repeat(64), cases = recoveryCases(version)
   return { schemaVersion: 1, kind: 'adaptive-task-host-matrix', bundleDigest, syntheticOnly: true,
-    adaptiveTaskExercised: true, productionDefaultsChanged: false, realProviderDispatches: 0,
+    adaptiveTaskExercised: false, productionDefaultsChanged: false, realProviderDispatches: 0,
     reports: [{ version, bundleDigest, syntheticOnly: true, realProviderDispatches: 0, externalNetworkAttempts: 0,
       pid: 123, profile: 'recovery-only', automationExercised: false, cases, tests: cases.length + 1,
       runtimePackages: Object.fromEntries([...TASK_RUNTIME_PACKAGES, ...recoveryRuntimePackages(version)].map(name => [name, version])),
@@ -34,9 +34,9 @@ function rc2Matrix(version = '0.2.2-rc.2'): any {
 it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('requires all %s functional cases plus the real host identity in Phase 1', version => {
   const r = rc2Matrix(version)
   expect(assertTaskMatrix(r, [version], r.bundleDigest)).toBe(r)
-  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: 40, numPassedTests: 40,
+  const data = { success: true, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, numTotalTests: recoveryCases(version).length + 1, numPassedTests: recoveryCases(version).length + 1,
     testResults: [{ assertionResults: [...recoveryCases(version), TASK_IDENTITY_CASE].map(title => ({ title, status: 'passed' })) }] }
-  expect(inspectTaskTestReport(data, version).tests).toBe(40)
+  expect(inspectTaskTestReport(data, version).tests).toBe(recoveryCases(version).length + 1)
   data.testResults[0]!.assertionResults.pop(); data.numTotalTests--; data.numPassedTests--
   expect(() => inspectTaskTestReport(data, version)).toThrow()
 })
