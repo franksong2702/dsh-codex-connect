@@ -53,7 +53,8 @@ export function taskHostUsesSubagentOwnership(): boolean {
   taskFailure('TASK_HOST_VERSION_MISMATCH')
 }
 
-export function assertTaskHostAutomation(): void {
+export function assertTaskHostAutomation(recoveryOnly = false): void {
+  if (recoveryOnly) taskFailure(TASK_HOST_RECOVERY_ONLY)
   const versions = taskHostPackageVersions()
   if (recoveryVersion(versions) !== undefined) taskFailure(TASK_HOST_RECOVERY_ONLY)
   if (!verifiedTaskHost(versions) || typeof Reflect.get(Tools.prototype, 'presentAs') !== 'function') {

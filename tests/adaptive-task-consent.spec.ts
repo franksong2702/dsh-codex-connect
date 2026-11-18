@@ -36,7 +36,7 @@ it('keeps standalone streams and auxiliary work ordinary without optional task s
   const ctx = new Context(); contexts.push(ctx)
   let runtime!: AdaptiveTaskControlRuntime
   await ctx.plugin((scope: Context) => {
-    runtime = new AdaptiveTaskControlRuntime(scope, { directory: join(root, 'tasks'), models: async () => [],
+    runtime = new AdaptiveTaskControlRuntime(scope, { mode: 'legacy-fixture', directory: join(root, 'tasks'), models: async () => [],
       artifacts: () => { throw new Error('No artifact access without a task') } })
   })
   const options = { sessionId: SessionId('ordinary') } as Parameters<AdaptiveTaskControlRuntime['stream']>[0]
@@ -54,7 +54,7 @@ it('rejects live task control and dispatch when the session service is missing',
   const ctx = new Context(); contexts.push(ctx)
   const agent = { id: SessionId('incomplete') }
   ctx.provide('agents', { get: () => agent, roots: () => [agent], currentInitiator: () => agent } as never)
-  const runtime = new AdaptiveTaskControlRuntime(ctx, { directory: join(root, 'tasks'), models: async () => [],
+  const runtime = new AdaptiveTaskControlRuntime(ctx, { mode: 'legacy-fixture', directory: join(root, 'tasks'), models: async () => [],
     artifacts: () => { throw new Error('No artifact access with an incomplete host') } })
   await expect(runtime.state(agent.id, owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
   await expect(runtime.command({ sessionId: agent.id, action: 'manual', revision: 0, operationId: randomUUID() }, owner)).rejects.toThrow('TASK_LIVE_ROOT_REQUIRED')
@@ -102,7 +102,7 @@ async function setup(selectedChild = child, catalogModels = [main, selectedChild
   let runtime!: AdaptiveTaskControlRuntime
   // Match the product's llm-only dependency contract, not a privileged root context.
   await ctx.plugin({ inject: ['llm'], apply(pluginCtx: Context) {
-    runtime = new AdaptiveTaskControlRuntime(pluginCtx, { directory: join(root, 'tasks'), artifacts: () => artifacts,
+    runtime = new AdaptiveTaskControlRuntime(pluginCtx, { mode: 'legacy-fixture', directory: join(root, 'tasks'), artifacts: () => artifacts,
       models: async () => Promise.all(catalogModels.map(model => pluginCtx.llm.resolveModelInfo('openai-codex', model))) })
   } })
   const governor = new OpenAICodexBackendRequests(undefined, undefined, 8, () => runtime.reserveAuxiliary(), undefined, reserveAdaptiveTaskAttempt)

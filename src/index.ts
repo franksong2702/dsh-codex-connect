@@ -55,11 +55,9 @@ import { OpenAICodexProxyManager } from './provider-proxy.ts'
 import { OpenAICodexBackendRequests } from './backend-request.ts'
 import { RequestMetrics } from './request-metrics.ts'
 import { AdaptiveTaskControlRuntime } from './adaptive-task-control-runtime.ts'
-import { reserveAdaptiveTaskAttempt } from './adaptive-task-scope.ts'
 import { TaskDelegationArtifacts } from './adaptive-task-artifacts.ts'
 import { taskIdentity } from './adaptive-task-store.ts'
 import { registerAdaptiveTaskHttp } from './adaptive-task-http.ts'
-import { ADAPTIVE_TASK_MODELS } from './adaptive-task-contract.ts'
 import { OpenAICodexImageAssetStore } from './image-assets.ts'
 import { registerImageHandleBridge } from './image-handle-bridge.ts'
 import { registerOpenAICodexAutoReview } from './auto-review.ts'
@@ -440,8 +438,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   let taskRuntime: AdaptiveTaskControlRuntime | undefined
   const backendRequests = new OpenAICodexBackendRequests(proxyManager, resolveProviderProxyUrl, undefined,
     async () => { await taskRuntime?.reserveAuxiliary() },
-    config.requestMetricsDirectory === undefined ? undefined : new RequestMetrics(config.requestMetricsDirectory, config.requestMetricsMaxBytes),
-    reserveAdaptiveTaskAttempt)
+    config.requestMetricsDirectory === undefined ? undefined : new RequestMetrics(config.requestMetricsDirectory, config.requestMetricsMaxBytes))
   // Also release the journal if a later registration fails before the full teardown is installed.
   ctx.effect(() => () => backendRequests.dispose())
   let proxyWasActive = resolveProviderProxyUrl() !== undefined
@@ -454,16 +451,12 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
   registerOpenAICodexFastModeDefaults(ctx, fastMode, () => resolveOpenAICodexSettings(current()),
     async () => (await credentials.accounts()).find(account => account.active)?.accountKey)
   const taskDirectory = join(dirname(credentials.filename), 'codex-connect-tasks')
-  taskRuntime = new AdaptiveTaskControlRuntime(ctx, {
+  const tasks = new AdaptiveTaskControlRuntime(ctx, {
     directory: taskDirectory,
     artifacts: identity => new TaskDelegationArtifacts(join(taskDirectory,
       taskIdentity(JSON.stringify([identity.owner, identity.sessionKey])) + '-artifacts')),
-    models: async () => {
-      const models = await ctx.llm.listModels(OPENAI_CODEX_PROVIDER)
-      return Promise.all(models.filter(model => ADAPTIVE_TASK_MODELS.some(id => id === model.id))
-        .map(model => ctx.llm.resolveModelInfo(OPENAI_CODEX_PROVIDER, model.id)))
-    },
   })
+  taskRuntime = tasks
   const quota = new OpenAICodexQuotaState({
     credentials,
     proxyManager,
@@ -501,7 +494,7 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     undefined, // Inert retired slot; no Reserve object or authority is created.
     () => resolveOpenAICodexSettings(current()).enableNativeCompaction,
     backendRequests,
-    taskRuntime,
+    { stream: (options, delegate) => tasks.stream(options, delegate) },
     () => resolveOpenAICodexSettings(current()).enableImageGeneration,
     config.preflightActivity,
     config.retryPolicy,
@@ -527,7 +520,6 @@ export function apply(ctx: Context, config: Config | VolatileConfig): void {
     registerOpenAICodexOriginalImageRoute(webCtx, trustedOrigins, imageAssets)
   })
 
-  const tasks = taskRuntime
   ctx.inject(['webServer', 'connection'], webCtx => { registerAdaptiveTaskHttp(webCtx, tasks) })
 
   let stopped = false

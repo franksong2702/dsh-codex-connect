@@ -39,7 +39,7 @@ Task Phase 1/2 are merged implementations, not merely unshipped drafts. Alpha 4.
 
 | Candidate for a later removal change | Connections that must be separated first | Required preservation/verification |
 | --- | --- | --- |
-| `adaptive-task-*` runtime/delegation/artifact modules | `src/index.ts` constructs the runtime, passes it to the adapter and attaches auxiliary request accounting; HTTP routes and client components consume its state | Normal model/auxiliary requests without Task; old grant readback, authorized exits, cancellation, counters and restart safety |
+| `adaptive-task-*` runtime/delegation/artifact modules | `src/index.ts` supplies recovery guards to the adapter and auxiliary requests. The authenticated HTTP route and client use saved state. | Normal model and auxiliary requests, old grant readback, authorized exits, cancellation, counters and restart safety |
 | Full Task controls and research recovery UI | Published recovery-only component, authenticated HTTP commands, owner binding, existing task state | Fresh sessions remain entry-free; stale clients cannot activate; do not weaken owner checks to simplify recovery |
 | Research `evals/autonomy/`, restricted runner and research-only tests | Local package/test imports, docs, private evidence and reproduction metadata | Preserve snapshot first; remove only experiment-exclusive dependencies; retain core metrics/governor tests |
 | Native compaction creation experiments | Checkpoint representation and adapter replay also serve existing saved sessions | Keep old checkpoint readability, fallback and recovery; separate creation policy from persisted-data support |
@@ -56,7 +56,7 @@ This is a reviewed starting inventory, not proof that the dependency graph is fu
 - [x] Synchronize trackers: #195 and #194 closed as not planned; #65 remains open for two historical failure observations, not a broad experiment campaign. Core-defect monitoring and Canary follow-up now respect the freeze; the original October 3 closeout deadline is unchanged.
 - [x] Separate implicit Task policy imports from core transport, with explicit legacy accounting retained (#289).
 - [x] Remove activation-only browser forms and their exclusive tests after dependency inspection; retain recovery-only UI and regression coverage.
-- [ ] Before any further server removal, replace legacy orchestration with verified recovery-only ownership, missing-state, replay, counters and child cleanup handling. Until then retain the existing server implementation; this is not a commitment to new experiments or Task reopening.
+- [x] Use recovery-only Task control in the product. Bind saved v1/v2 state to verified owners, reject missing state, preserve replay and counters for authorized exits, and reconcile child cleanup after restart. Synthetic regression fixtures retain the legacy orchestration pending its removal.
 
 Local research preservation has a separate private archive manifest; do not commit machine paths or private experiment evidence into the public repository. A local archive is not a merged product change and does not stop another running task. Existing scheduled jobs must not be assumed updated by this document.
 

@@ -40,6 +40,7 @@ export interface TaskDelegationReceipt {
   findings?: TaskFindings
 }
 export interface TaskDelegationOptions {
+  readonly recoveryOnly?: boolean
   ledger: AdaptiveTaskDelegationLedger
   host: TaskDelegationHost
   artifacts(identity: LedgerIdentity): TaskDelegationArtifacts
@@ -73,7 +74,7 @@ export class AdaptiveTaskDelegation {
         // Task fence simply by selecting an adapter without our stream wrapper.
         const active = [...this.active.values()].find(value => value.owned?.agent === agent)
         if (active !== undefined) {
-          assertTaskHostAutomation()
+          assertTaskHostAutomation(this.options.recoveryOnly)
           this.check(active)
           if (config.provider !== 'openai-codex' || config.model !== active.run.route.model
             || config.reasoningEffort !== active.run.route.effort) taskFailure('TASK_CHILD_ROUTE_DENIED')
@@ -82,7 +83,7 @@ export class AdaptiveTaskDelegation {
       }
       const doc = await this.document(root)
       if (doc.mode === 'manual') return config
-      assertTaskHostAutomation()
+      assertTaskHostAutomation(this.options.recoveryOnly)
       if (this.stopped || doc.mode !== 'auto') taskFailure('TASK_REQUIRES_USER_RESUME')
       signal.throwIfAborted()
       await this.available(doc.route, signal)
@@ -119,7 +120,7 @@ export class AdaptiveTaskDelegation {
   }
   /** Trusted future consent integration only. Calling this never migrates or enables a grant. */
   async install(parent: Agent, identity: LedgerIdentity, manifest?: TaskEvidenceManifest): Promise<void> {
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.options.recoveryOnly)
     if (this.stopped || this.roots.get(parent)?.removeModel !== undefined || this.active.has(parent)) taskFailure('TASK_DELEGATION_UNAVAILABLE')
     const root: RootBinding = { parent, identity: structuredClone(identity), life: new AbortController(), stopThrough: -1,
       ...(manifest === undefined ? {} : { manifest }) }
@@ -346,7 +347,7 @@ export class AdaptiveTaskDelegation {
             { afterSeq: doc.handoffSeq, model: options.model }) } : options)
           return
         }
-        assertTaskHostAutomation()
+        assertTaskHostAutomation(this.options.recoveryOnly)
         const auxiliary = options.purpose === 'compaction' || options.purpose === 'session-title'
         const hostDefault = auxiliary && options.reasoningEffort === undefined
         if (this.stopped || doc.mode !== 'auto' || options.provider !== 'openai-codex' || options.model !== doc.route.model
@@ -373,7 +374,7 @@ export class AdaptiveTaskDelegation {
       }
       yield* delegate(options); return
     }
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.options.recoveryOnly)
     this.check(active)
     if (options.provider !== 'openai-codex' || options.model !== active.run.route.model
       || options.reasoningEffort !== active.run.route.effort || options.purpose !== undefined) taskFailure('TASK_CHILD_ROUTE_DENIED')
@@ -394,10 +395,10 @@ export class AdaptiveTaskDelegation {
   }
   async reserveAuxiliary(): Promise<void> {
     const agent = this.agents.currentInitiator()
-    const scope = currentAdaptiveTaskDispatch()
+    const scope = this.options.recoveryOnly ? undefined : currentAdaptiveTaskDispatch()
     const active = agent === undefined ? undefined : [...this.active.values()].find(value => value.owned?.agent === agent)
     if (active !== undefined) {
-      assertTaskHostAutomation()
+      assertTaskHostAutomation(this.options.recoveryOnly)
       this.check(active)
       if (scope === undefined || scope.cacheKey !== taskIdentity(active.run.id + active.owned!.sessionKey)) taskFailure('TASK_CHILD_AUXILIARY_DENIED')
       return // The matching child scope already debited through the same governor.
@@ -408,7 +409,7 @@ export class AdaptiveTaskDelegation {
     if (root !== undefined) {
       const doc = await this.document(root)
       if (doc.mode === 'manual') return
-      assertTaskHostAutomation()
+      assertTaskHostAutomation(this.options.recoveryOnly)
       if (this.stopped) taskFailure('TASK_RUNTIME_DISPOSED')
       root.life.signal.throwIfAborted()
       await this.options.ledger.reserveRoot(root.identity, doc.runtime, doc.route, 'auxiliary', selectionSeq(root.parent))
@@ -428,7 +429,7 @@ export class AdaptiveTaskDelegation {
   }
   /** Same-owner explicit idle resume. Never called by recovery or by a model tool. */
   async resume(parent: Agent, identity: LedgerIdentity, expectedRevision: number, operation?: TaskControlReceipt): Promise<void> {
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.options.recoveryOnly)
     const root = this.roots.get(parent)
     if (root === undefined || root.identity.owner !== identity.owner || root.identity.sessionKey !== identity.sessionKey
       || root.identity.sessionId !== identity.sessionId) taskFailure('TASK_OWNER_MISMATCH')

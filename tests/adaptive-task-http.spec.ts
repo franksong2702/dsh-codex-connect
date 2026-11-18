@@ -28,6 +28,7 @@ import { createHash } from 'node:crypto'
 import { OPENAI_CODEX_AUTH_ACCOUNTS_PATH } from '../src/auth-paths.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from '../src/model-contract.ts'
 import { OPENAI_CODEX_RUNTIME_PATH, OPENAI_CODEX_UPDATE_PATH } from '../src/update-paths.ts'
+import { dshAdmission } from '../src/dsh-admission.mjs'
 
 let ctx: Context | undefined
 let directory: string | undefined
@@ -172,6 +173,25 @@ it('keeps signed public task activation closed while ordinary manual model reque
   expect(f.wires[0].tools?.some((tool: any) => tool.name === ADAPTIVE_TASK_TOOL)).not.toBe(true)
   expect(JSON.parse((await f.read()).text).mode).toBe('off')
 })
+it('lets ordinary requests proceed on an unverified Host while refusing saved Task authority', async () => {
+  const f = await fixture()
+  vi.spyOn(dshAdmission, 'classify').mockReturnValue('unverified-in-range')
+  const send = async (text: string) => {
+    f.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }))
+    await f.agent.whenIdle()
+  }
+  await send('Ordinary request before loading retained state.')
+  expect(f.wires).toHaveLength(1)
+  expect(f.wires[0].model).toBe('gpt-5.6-terra')
+  await f.seedLegacy()
+  const read = await f.read()
+  expect(read.status).toBe(409)
+  expect(JSON.parse(read.text)).toEqual({ error: 'TASK_HOST_OWNERSHIP_UNVERIFIED' })
+  expect((await f.post(f.body('manual', 5))).status).toBe(409)
+  await send('Cannot run the retained task without verified ownership.')
+  expect(f.wires).toHaveLength(1)
+})
+
 it('rejects missing cookie, forged cookie and cross-origin mutation before creating a task', async () => {
   const f = await fixture()
   for (const override of [{ cookie: '' }, { cookie: f.cookie + 'tampered' }, { origin: 'https://not-this-host.example' }, { 'sec-fetch-site': 'cross-site' }]) {
