@@ -127,6 +127,8 @@ export interface OpenAICodexSettingsConfig {
   enableNewSubagentFastMode: boolean
   /** Use provider-native Responses V2 compaction when DSH requests compaction. */
   enableNativeCompaction: boolean
+  /** Create one session-local quota-reset reminder when the Host exposes Schedule. */
+  enableLimitResumeReminder: boolean
   enableImageTool: boolean
   enableImageGeneration: boolean
   /** Optional profile-scoped model hint for image generation; empty uses the route default. */
@@ -154,6 +156,7 @@ export const DEFAULT_OPENAI_CODEX_SETTINGS: Readonly<OpenAICodexSettingsConfig> 
   newSubagentSpeedMode: undefined,
   enableNewSubagentFastMode: false,
   enableNativeCompaction: false,
+  enableLimitResumeReminder: false,
   enableImageTool: false,
   enableImageGeneration: false,
   imageModelHint: DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,
@@ -186,6 +189,9 @@ export function resolveOpenAICodexSettings(
   }
   if (typeof resolved.enableNativeCompaction !== 'boolean') {
     throw new TypeError('OpenAI Codex enableNativeCompaction must be a boolean')
+  }
+  if (typeof resolved.enableLimitResumeReminder !== 'boolean') {
+    throw new TypeError('OpenAI Codex enableLimitResumeReminder must be a boolean')
   }
   if (!isValidOpenAICodexProxyUrl(resolved.proxyUrl)) {
     throw new TypeError('OpenAI Codex proxyUrl must be an HTTP(S) origin without credentials or a path')
@@ -226,6 +232,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   const enableNewSessionFastMode = value['enableNewSessionFastMode']
   const enableNewSubagentFastMode = value['enableNewSubagentFastMode']
   const enableNativeCompaction = value['enableNativeCompaction']
+  const enableLimitResumeReminder = value['enableLimitResumeReminder']
   const enableImageTool = value['enableImageTool']
   const enableImageGeneration = value['enableImageGeneration']
   const imageModelHint = value['imageModelHint']
@@ -244,6 +251,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
   if (enableNewSessionFastMode !== undefined && typeof enableNewSessionFastMode !== 'boolean') return undefined
   if (enableNewSubagentFastMode !== undefined && typeof enableNewSubagentFastMode !== 'boolean') return undefined
   if (enableNativeCompaction !== undefined && typeof enableNativeCompaction !== 'boolean') return undefined
+  if (enableLimitResumeReminder !== undefined && typeof enableLimitResumeReminder !== 'boolean') return undefined
   // Older Host snapshots predate image generation; absence maps to its safe default.
   if (enableImageGeneration !== undefined && typeof enableImageGeneration !== 'boolean') return undefined
   if (imageModelHint !== undefined && !isValidOpenAICodexImageModelHint(imageModelHint)) return undefined
@@ -269,6 +277,7 @@ export function decodeOpenAICodexSettings(value: unknown): OpenAICodexSettingsCo
     enableNewSessionFastMode: enableNewSessionFastMode ?? false,
     enableNewSubagentFastMode: enableNewSubagentFastMode ?? false,
     enableNativeCompaction: enableNativeCompaction ?? false,
+    enableLimitResumeReminder: enableLimitResumeReminder ?? false,
     enableImageTool,
     enableImageGeneration: enableImageGeneration ?? false,
     imageModelHint: imageModelHint ?? DEFAULT_OPENAI_CODEX_IMAGE_MODEL_HINT,

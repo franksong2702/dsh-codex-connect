@@ -78,7 +78,7 @@ const matrixVersions = ['0.2.1-alpha.1', '0.2.1-alpha.2']
 const matrixReports = matrixVersions.map(dshVersion => ({
   schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.43',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
-  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
+  capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false, enableLimitResumeReminder: false },
   runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveRetirement: { syntheticOnly: true, retiredModelBlocked: true, explicitOrdinarySelectionVerified: true, legacyFlagIgnored: true, returnFilePreserved: true, quotaNegotiations: 0, toolExecutions: 0, realProviderRequests: 0 },
     preflightActivity: { syntheticOnly: true, cases: 6, publicProviderCallback: true, lateHeadersFullBudget: true,
       finiteTotalDeadline: true, ordinaryIdlePreserved: true, callerCancellationUnchanged: true, realProviderRequests: 0 },

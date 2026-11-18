@@ -11,3 +11,4 @@
         enableImageTool: false
         enableImageGeneration: false
         enableAutoReview: false
+        enableLimitResumeReminder: false

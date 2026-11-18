@@ -211,8 +211,9 @@ export class OpenAICodexCredentialStore implements CredentialStore {
 
   /**
    * @param filename - explicit document path, defaulting under `$DSH_HOME`.
+   * @param onActiveAccountChanged - notify after a committed selection change or sign-out.
    */
-  constructor(filename: string = openAICodexAuthPath()) {
+  constructor(filename: string = openAICodexAuthPath(), private readonly onActiveAccountChanged?: () => void) {
     this.filename = resolve(filename)
     this.version1BackupFilename = join(dirname(this.filename), `${basename(this.filename)}${OPENAI_CODEX_AUTH_V1_BACKUP_SUFFIX}`)
   }
@@ -367,6 +368,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         activeAccountId: selected.accountId,
         credentials: credentials.map(cloneCredential),
       }, document)
+      if (activeCredential(document).accountId !== selected.accountId) this.onActiveAccountChanged?.()
       return cloneCredential(selected)
     })
   }
@@ -397,6 +399,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
       await rm(this.version1BackupFilename, { force: true })
       if (remaining.length === 0) {
         await rm(this.filename, { force: true })
+        this.onActiveAccountChanged?.()
         return
       }
       await this.writeDocument({
@@ -404,6 +407,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         activeAccountId: nextActive,
         credentials: remaining.map(cloneCredential),
       })
+      if (nextActive !== active.accountId) this.onActiveAccountChanged?.()
     })
   }
 
@@ -438,6 +442,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
         activeAccountId: validated.accountId,
         credentials: credentials.map(cloneCredential),
       }, currentDocument)
+      if (current?.accountId !== validated.accountId) this.onActiveAccountChanged?.()
       return cloneCredential(validated)
     })
   }
@@ -448,6 +453,7 @@ export class OpenAICodexCredentialStore implements CredentialStore {
     await mkdir(dirname(this.filename), { recursive: true, mode: 0o700 })
     await this.withWriterLock(async () => {
       await rm(this.filename, { force: true })
+      this.onActiveAccountChanged?.()
       await rm(this.version1BackupFilename, { force: true })
     })
   }
