@@ -11,9 +11,9 @@ import { runBoundedCommand } from './bounded-command.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const args = process.argv.slice(2)
-assert.ok(args.length === 0 || (args.length === 2 && args[0] === '--host'), 'usage: check-adaptive-task-delegation-crashes [--host isolated-host]')
-const runtimeRoot = args[1] === undefined ? root : await realpath(args[1])
-if (args[1] !== undefined) assert.equal(JSON.parse(await readFile(join(runtimeRoot, 'package.json'), 'utf8')).private, true, 'Requires a private disposable host')
+assert.ok(args.length === 2 && args[0] === '--host', 'usage: check-adaptive-task-delegation-crashes --host isolated-host')
+const runtimeRoot = await realpath(args[1])
+assert.equal(JSON.parse(await readFile(join(runtimeRoot, 'package.json'), 'utf8')).private, true, 'Requires a private disposable host')
 const cache = join(runtimeRoot, 'node_modules/.cache')
 await mkdir(cache, { recursive: true })
 const directory = await realpath(await mkdtemp(join(cache, 'task-crash-matrix-')))

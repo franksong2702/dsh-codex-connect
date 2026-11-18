@@ -8,6 +8,14 @@ const firstInstall = install.indexOf('dsh plugin --profile web add ')
 const preflight = install.slice(0, firstInstall)
 const shellBlocks = [...install.matchAll(/```sh\s*\n([\s\S]*?)```/gu)]
   .flatMap(match => (match[1] ?? '').split('\n').map(line => line.trim()))
+const retiredDshVersions = ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2']
+const alpha5Hosts = [...retiredDshVersions,
+  '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
+const alpha11Hosts = [...alpha5Hosts, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5']
+const alpha12Hosts = [...alpha11Hosts, '0.2.2-alpha.3']
+const alpha13Hosts = [...alpha12Hosts, '0.2.2-rc.1']
+const alpha14Hosts = [...alpha13Hosts, '0.2.2-rc.2']
+const alpha15Hosts = [...alpha14Hosts, '0.2.2-rc.3']
 
 describe('installation version guidance', () => {
   it.each(['0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1'])('preserves the first published %s support in historical Alpha 5', version => {
@@ -21,26 +29,27 @@ describe('installation version guidance', () => {
       !entry.verifiedDshVersions.includes(version))).toBe(true)
   })
 
-  it('preserves historical pairings including the first rc.5 support', async () => {
+  it('retires the four oldest source pairings', async () => {
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
-    const published = ['0.1.7-rc.1', '0.1.7-rc.2', '0.2.0-rc.1', '0.2.0-rc.2',
-      '0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1']
+    expect(declared.dshPluginApi.versions).toEqual(alpha15Hosts.slice(retiredDshVersions.length))
+  })
+
+  it('preserves historical pairings including the first rc.5 support', () => {
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.5')?.verifiedDshVersions)
-      .toEqual(published)
-    expect(declared.dshPluginApi.versions).toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3'])
+      .toEqual(alpha5Hosts)
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.10')?.verifiedDshVersions)
-      .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3'])
+      .toEqual([...alpha5Hosts, '0.2.1-rc.2', '0.2.1-rc.3'])
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.11')?.verifiedDshVersions)
-      .toEqual([...published, '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5'])
+      .toEqual(alpha11Hosts)
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.9')?.verifiedDshVersions)
-      .toEqual([...published, '0.2.1-rc.2'])
+      .toEqual([...alpha5Hosts, '0.2.1-rc.2'])
     expect(install).toContain('### 0.2.0-alpha.9 verified publication')
     expect(install).toContain('### 0.2.0-alpha.8 verified publication')
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.8')?.verifiedDshVersions)
-      .toEqual([...published, '0.2.1-rc.2'])
+      .toEqual([...alpha5Hosts, '0.2.1-rc.2'])
     expect(install).toContain('### 0.2.0-alpha.7 verified publication')
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.7')?.verifiedDshVersions)
-      .toEqual([...published, '0.2.1-rc.2'])
+      .toEqual([...alpha5Hosts, '0.2.1-rc.2'])
     expect(install).not.toContain('does not support DSH `0.2.1-rc.2`')
   })
 
@@ -51,16 +60,12 @@ describe('installation version guidance', () => {
       .not.toContain('0.2.1-rc.3')
   })
 
-  it('recommends published Alpha 15 while preserving Alpha 12 and earlier host limits', async () => {
+  it('recommends published Alpha 15 while preserving Alpha 12 and earlier host limits', () => {
     expect(install).toContain('0.2.2-alpha.3')
     expect(install).toContain('**Published Alpha 15:**')
     expect(install).not.toContain('Alpha 12 candidate, not yet published')
-    const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
     expect(compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.12')?.verifiedDshVersions)
-      .toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.1' && version !== '0.2.2-rc.2' && version !== '0.2.2-rc.3'))
-    const alpha12Hosts = compatibility.pluginVersions.find((entry: { version: string }) => entry.version === '0.2.0-alpha.12')?.verifiedDshVersions
-    expect(alpha12Hosts).toHaveLength(15)
-    expect(alpha12Hosts).not.toContain('0.2.2-rc.1')
+      .toEqual(alpha12Hosts)
     expect(install).toContain('**Historical Alpha 12:**')
     expect(install).toContain('### 0.2.0-alpha.12 verified publication')
     expect(install).toContain('### 0.2.0-alpha.13 verified publication')
@@ -92,10 +97,6 @@ describe('installation version guidance', () => {
     ['0.1.5-alpha.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.1', '0.1.0-alpha.4.41'],
     ['0.1.5-rc.2', '0.1.0-alpha.4.41'],
-    ['0.1.7-rc.1', '0.2.0-alpha.15'],
-    ['0.1.7-rc.2', '0.2.0-alpha.15'],
-    ['0.2.0-rc.1', '0.2.0-alpha.15'],
-    ['0.2.0-rc.2', '0.2.0-alpha.15'],
     ['0.2.1-alpha.1', '0.2.0-alpha.15'],
     ['0.2.1-alpha.2', '0.2.0-alpha.15'],
     ['0.2.1-alpha.3', '0.2.0-alpha.15'],
@@ -183,28 +184,30 @@ describe('installation version guidance', () => {
   })
 })
 
-it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', async () => {
+it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', () => {
   const firstAlpha13 = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.13')
   expect(firstAlpha13).toBeGreaterThanOrEqual(0)
   expect(compatibility.pluginVersions.slice(0, firstAlpha13).every((entry: { verifiedDshVersions: string[] }) =>
     !entry.verifiedDshVersions.includes('0.2.2-rc.1'))).toBe(true)
-  const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
-  expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.2' && version !== '0.2.2-rc.3'))
-  expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toHaveLength(16)
+  expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toEqual(alpha13Hosts)
 })
 
-it('records published Alpha15 without rewriting earlier artifact support', async () => {
-  const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
-  expect(declared.dshPluginApi.versions).toHaveLength(18)
-  expect(declared.dshPluginApi.versions.at(-1)).toBe('0.2.2-rc.3')
+it('records published Alpha15 without rewriting earlier artifact support', () => {
   const candidateIndex = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.14')
   expect(candidateIndex).toBe(compatibility.pluginVersions.length - 2)
   const published = compatibility.pluginVersions.slice(0, candidateIndex)
   expect(published.at(-1)?.version).toBe('0.2.0-alpha.13')
   for (const entry of published) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.2')
-  expect(compatibility.pluginVersions[candidateIndex]?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions.filter((version: string) => version !== '0.2.2-rc.3'))
-  expect(compatibility.pluginVersions[candidateIndex]?.verifiedDshVersions).toHaveLength(17)
+  expect(compatibility.pluginVersions[candidateIndex]?.verifiedDshVersions).toEqual(alpha14Hosts)
   for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
   expect(compatibility.pluginVersions.at(-1)?.version).toBe('0.2.0-alpha.15')
-  expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(declared.dshPluginApi.versions)
+  expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(alpha15Hosts)
+})
+
+it.each(retiredDshVersions)('preserves published Alpha15 fallback guidance for retired DSH %s', async version => {
+  const migration = await readFile(new URL('../MIGRATION.md', import.meta.url), 'utf8')
+  expect(install).toContain('| `' + version + '` | `0.2.0-alpha.15` |')
+  expect(install).toContain('MIGRATION.md#dsh-support-window')
+  expect(migration).toContain('`' + version + '`')
+  expect(migration).toContain('Cross-host recovery of active Task state remains unverified.')
 })

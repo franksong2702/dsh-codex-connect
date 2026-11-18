@@ -18,7 +18,7 @@ describe('assembled capability CLI', () => {
     await writeFile(join(root, '.openai-codex-auth.json'), 'invalid-private-credential', { mode: 0o600 })
     let output = ''
     vi.spyOn(process.stdout, 'write').mockImplementation(chunk => { output += String(chunk); return true })
-    expect(await run(['capabilities', '--model', 'gpt-5.6-sol'])).toBe(2)
+    expect(await run(['capabilities', '--model', 'gpt-5.6-sol'])).toBe(1)
     expect(output).toMatchSnapshot()
     expect(output).not.toContain(root)
     expect(output).not.toContain('invalid-private-credential')

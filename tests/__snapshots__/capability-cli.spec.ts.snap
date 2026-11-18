@@ -4,8 +4,8 @@ exports[`assembled capability CLI > snapshots the actual offline command with un
 "Codex Connect 0.2.0-alpha.15: standalone route diagnostics
 Scope: local host versions and the selected standalone route; not the active Harness profile.
 Model: gpt-5.6-sol; network: direct; probe: not-requested
-runtime: supported (declared-host-versions-match)
-  Host package versions satisfy the declared requirements; this is not a live profile or browser compatibility test.
+runtime: rejected (declared-version-mismatch)
+  A live probe requires one exact verified DSH plugin API version across all declared DSH packages, and plugin-owned pi-ai 0.85.1. See the installation guide for verified pairings.
 oauth: unknown (credential-metadata-only)
   A private credential file does not prove authorization; use an explicit probe.
 responses: unknown (not-probed)

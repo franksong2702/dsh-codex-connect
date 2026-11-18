@@ -29,7 +29,7 @@ async function manifest(path: string, name: string, version: unknown): Promise<v
   await writeFile(path, JSON.stringify({ name, version, exports: { import: './must-not-be-loaded.js' } }))
 }
 
-async function peers(modules: string, version = '0.2.0-rc.2'): Promise<void> {
+async function peers(modules: string, version = '0.2.1-alpha.1'): Promise<void> {
   for (const name of DSH_METADATA_PACKAGES) await manifest(join(modules, name, 'package.json'), name, version)
 }
 
@@ -62,9 +62,9 @@ describe('bounded installation metadata', () => {
     await peers(modules)
     await manifest(join(dirname(plugin), 'node_modules', '@earendil-works/pi-ai', 'package.json'), '@earendil-works/pi-ai', '0.85.1')
     expect((await detectCompatibility({ nodeVersion: 'v24.21.0', pluginManifestPath: plugin })).status).toBe('compatible')
-    await manifest(join(dirname(plugin), 'node_modules', '@deepseek-ai/dsh-llm', 'package.json'), '@deepseek-ai/dsh-llm', '0.1.7-rc.1')
-    expect(await readPluginDependencyVersion('@deepseek-ai/dsh-llm', plugin)).toBe('0.1.7-rc.1')
-    await manifest(join(dirname(plugin), 'node_modules', '@deepseek-ai/dsh-llm', 'package.json'), 'wrong-package', '0.1.7-rc.1')
+    await manifest(join(dirname(plugin), 'node_modules', '@deepseek-ai/dsh-llm', 'package.json'), '@deepseek-ai/dsh-llm', '0.2.1-alpha.1')
+    expect(await readPluginDependencyVersion('@deepseek-ai/dsh-llm', plugin)).toBe('0.2.1-alpha.1')
+    await manifest(join(dirname(plugin), 'node_modules', '@deepseek-ai/dsh-llm', 'package.json'), 'wrong-package', '0.2.1-alpha.1')
     expect(await readPluginDependencyVersion('@deepseek-ai/dsh-llm', plugin)).toBeUndefined()
   })
 
@@ -74,7 +74,7 @@ describe('bounded installation metadata', () => {
     const plugin = join(peerModules, 'dsh-codex-connect', 'package.json')
     await manifest(plugin, 'dsh-codex-connect', '0.2.0-alpha.4')
     for (const name of [...DSH_METADATA_PACKAGES, '@earendil-works/pi-ai']) {
-      const version = name === '@earendil-works/pi-ai' ? '0.85.1' : '0.2.0-rc.2'
+      const version = name === '@earendil-works/pi-ai' ? '0.85.1' : '0.2.1-alpha.1'
       const directory = join(root, 'node_modules', '.pnpm', `${name.replace('/', '+')}@${version}`, 'node_modules', name)
       await manifest(join(directory, 'package.json'), name, version)
       const link = join(peerModules, name)
@@ -86,7 +86,7 @@ describe('bounded installation metadata', () => {
     await symlink(dirname(plugin), logicalPlugin, process.platform === 'win32' ? 'junction' : 'dir')
     const report = await detectCompatibility({ nodeVersion: 'v24.21.0', pluginManifestPath: join(logicalPlugin, 'package.json') })
     expect(report.status).toBe('compatible')
-    expect(report.packages['@deepseek-ai/dsh-llm'].installed).toBe('0.2.0-rc.2')
+    expect(report.packages['@deepseek-ai/dsh-llm'].installed).toBe('0.2.1-alpha.1')
   })
 
   it('requires exact package names and valid versions, never arbitrary paths or text', async () => {
@@ -107,10 +107,10 @@ describe('bounded installation metadata', () => {
     const root = await fixture()
     const modules = join(root, 'host', 'node_modules')
     const anchor = join(modules, '@deepseek-ai', 'dsh', 'package.json')
-    await manifest(anchor, '@deepseek-ai/dsh', '0.2.0-rc.2')
+    await manifest(anchor, '@deepseek-ai/dsh', '0.2.1-alpha.1')
     await peers(modules)
-    expect(await readDshInstallationMetadata(anchor)).toMatchObject({ version: '0.2.0-rc.2', currentDshVersion: '0.2.0-rc.2' })
-    await manifest(join(modules, '@deepseek-ai/dsh-compaction', 'package.json'), '@deepseek-ai/dsh-compaction', '0.1.7-rc.2')
+    expect(await readDshInstallationMetadata(anchor)).toMatchObject({ version: '0.2.1-alpha.1', currentDshVersion: '0.2.1-alpha.1' })
+    await manifest(join(modules, '@deepseek-ai/dsh-compaction', 'package.json'), '@deepseek-ai/dsh-compaction', '0.2.1-alpha.2')
     expect(await readDshInstallationMetadata(anchor)).not.toHaveProperty('currentDshVersion')
     const removedPeer = join(modules, '@deepseek-ai/dsh-compaction', 'package.json')
     expect(await realpath(removedPeer)).toBe(removedPeer)
@@ -118,7 +118,7 @@ describe('bounded installation metadata', () => {
     const unrelated = join(root, 'node_modules')
     await peers(unrelated)
     expect((await readDshInstallationMetadata(anchor))?.packageVersions['@deepseek-ai/dsh-compaction']).toBeUndefined()
-    await manifest(anchor, 'not-dsh', '0.2.0-rc.2')
+    await manifest(anchor, 'not-dsh', '0.2.1-alpha.1')
     expect(await readDshInstallationMetadata(anchor)).toBeUndefined()
     expect(await readDshInstallationMetadata('relative/package.json')).toBeUndefined()
   })
@@ -131,12 +131,12 @@ describe('bounded installation metadata', () => {
     await manifest(join(dirname(plugin), 'node_modules', '@earendil-works/pi-ai', 'package.json'), '@earendil-works/pi-ai', '0.85.1')
     const modules = join(root, 'host', 'node_modules')
     const anchor = join(modules, '@deepseek-ai/dsh', 'package.json')
-    await manifest(anchor, 'wrong-dsh', '0.2.0-rc.2')
+    await manifest(anchor, 'wrong-dsh', '0.2.1-alpha.1')
     const unknown = await detectCompatibility({ installAnchor: anchor, pluginManifestPath: plugin, nodeVersion: 'v24.21.0' })
     expect(unknown.status).toBe('unknown')
     expect(unknown.packages['@deepseek-ai/dsh-llm'].installed).toBeNull()
     expect(unknown.packages['@earendil-works/pi-ai'].installed).toBe('0.85.1')
-    await manifest(anchor, '@deepseek-ai/dsh', '0.2.0-rc.2')
+    await manifest(anchor, '@deepseek-ai/dsh', '0.2.1-alpha.1')
     await peers(modules)
     await manifest(join(modules, '@earendil-works/pi-ai', 'package.json'), '@earendil-works/pi-ai', '0.87.1')
     const selected = await detectCompatibility({ installAnchor: anchor, pluginManifestPath: plugin, nodeVersion: 'v24.21.0' })

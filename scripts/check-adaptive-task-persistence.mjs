@@ -2,13 +2,17 @@
 /** Task authorization/accounting survives actual process replacement, not just a new JS object. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, readFile, realpath } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'tsdown'
 import { runBoundedCommand } from './bounded-command.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const cache = join(root, 'node_modules/.cache'); await mkdir(cache, { recursive: true })
+const args = process.argv.slice(2)
+assert.ok(args.length === 2 && args[0] === '--host', 'usage: check-adaptive-task-persistence --host isolated-host')
+const runtimeRoot = await realpath(args[1])
+assert.equal(JSON.parse(await readFile(join(runtimeRoot, 'package.json'), 'utf8')).private, true, 'Requires a private disposable host')
+const cache = join(runtimeRoot, 'node_modules/.cache'); await mkdir(cache, { recursive: true })
 const workspace = await mkdtemp(join(cache, 'adaptive-task-persistence-'))
 const reports = []
 try {

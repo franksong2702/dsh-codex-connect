@@ -42,7 +42,7 @@ describe('runtime identity in Chromium', () => {
     expect(region.element().querySelector('dl')?.textContent).toContain(locale.runtimeClientVersion)
     expect(region.element().querySelector('dl')?.textContent).toContain(locale.runtimeHostVersion)
     expect(region.element().querySelector('dl')?.textContent).toContain(locale.runtimeInstalledVersion)
-    expect(region.element().querySelector('dl')?.textContent).toContain('0.2.0-rc.2')
+    expect(region.element().querySelector('dl')?.textContent).toContain('0.2.1-alpha.1')
     expect(region.element().textContent).toContain(locale.runtimeEvidenceBoundary)
     await page.viewport(360, 800)
     await vi.waitFor(() => {
@@ -68,7 +68,7 @@ describe('runtime identity in Chromium', () => {
     await vi.waitFor(() => expect(region.element().textContent).toContain(en.runtimeUnavailable))
     expect(region.element().querySelector('[data-runtime-version-state]')?.getAttribute('data-runtime-version-state')).toBe('unknown')
     expect(region.element().querySelector('dl')?.textContent).toContain(CODEX_CONNECT_VERSION)
-    expect(region.element().querySelector('dl')?.textContent).not.toContain('0.2.0-rc.2')
+    expect(region.element().querySelector('dl')?.textContent).not.toContain('0.2.1-alpha.1')
     const receipt = JSON.parse(region.element().querySelector('pre')!.textContent!)
     expect(receipt.observation).toBe('host-not-observed')
     expect(receipt).not.toHaveProperty('host')

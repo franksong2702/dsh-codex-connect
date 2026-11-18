@@ -82,6 +82,18 @@ async function main() {
         throw new Error(`Task ${version} install failed: ${install.error?.message ?? install.cleanupError?.message ?? install.stderr}`)
       }
       const identity = await readTaskHostIdentity(host, version, [...PHASE2_RUNTIME_PACKAGES, '@earendil-works/pi-ai', ...(isRecoveryHost(version) ? recoveryRuntimePackages(version) : [])])
+      if (version === versions[0]) {
+        const persistence = await runBoundedCommand(process.execPath,
+          [join(ROOT, 'scripts/check-adaptive-task-persistence.mjs'), '--host', host],
+          { cwd: ROOT, env, timeoutMs: 180000, maxBuffer: 4 * 1024 * 1024 })
+        assert.equal(persistence.error, undefined)
+        assert.equal(persistence.cleanupError, undefined)
+        assert.equal(persistence.status, 0, 'Task grant cold restoration failed: ' + persistence.stderr)
+        const report = JSON.parse(persistence.stdout.trim().split('\n').at(-1))
+        assert.equal(report.passed, true)
+        assert.equal(report.freshProcesses, 4)
+        console.error(`Phase 2 ${process.version} / ${version}: Task grant restoration passed in four fresh processes`)
+      }
       for (const name of files) await copyFile(join(bundle, name), join(host, 'tests', name))
       for (const [name, digest] of manifest) assert.equal(hash(await readFile(join(host, 'tests', name))), digest)
       await writeFile(join(host, 'tests/task-host-identity.spec.mjs'), `import {it,expect} from 'vitest'; import {writeFileSync} from 'node:fs';\nit('uses the exact isolated host without a neighboring runtime', async()=>{ const entries=${JSON.stringify(identity.entries)}; for(const [name,path] of Object.entries(entries)){expect(await import(name)).toEqual(await import(path));} writeFileSync(${JSON.stringify(join(host, 'identity.json'))}, JSON.stringify({pid:process.pid,node:process.version,packages:${JSON.stringify(identity.packages)}})); });\n`)

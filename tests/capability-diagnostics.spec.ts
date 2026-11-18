@@ -18,14 +18,14 @@ function fixture() {
     capabilities: { modelProvider: true, search: false, imageTool: false, imageGeneration: false, changesHarnessDefaultModel: false, changesHarnessSearchRoute: false },
     providerConflict: false, hints: [],
     compatibility: evaluateCompatibility({ nodeVersion: 'v22.19.0', packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.1.7-rc.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.1',
-      '@deepseek-ai/dsh-compaction': '0.1.7-rc.1', '@earendil-works/pi-ai': '0.85.1',
+      '@deepseek-ai/dsh-llm': '0.2.1-alpha.1', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.1',
+      '@deepseek-ai/dsh-compaction': '0.2.1-alpha.1', '@earendil-works/pi-ai': '0.85.1',
     } }),
   }
   const credential = { type: 'oauth' as const, access: secrets[0]!, accountId: secrets[1]!, refresh: secrets[2]!, expires: 1_000_000 }
   const probe = vi.fn(async (): Promise<ResponsesProbeEvidence> => ({ outcome: 'completed', httpStatus: 200 }))
   const read = vi.fn(async () => credential)
-  const readVersion = vi.fn(async (_name: string): Promise<string | undefined> => '0.1.7-rc.1')
+  const readVersion = vi.fn(async (_name: string): Promise<string | undefined> => '0.2.1-alpha.1')
   const deps: CapabilityDiagnosticDependencies = {
     diagnose: async () => local, readVersion, catalog: () => modelCatalogFixture([{ id: model, name: model }]),
     credentials: { read }, probe, now: () => now,
@@ -38,12 +38,12 @@ describe('capability evidence', () => {
   it('allows the latest complete host set but blocks mixed host versions before credential reads', async () => {
     const f = fixture()
     f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.1.7-rc.1', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.1',
-      '@deepseek-ai/dsh-compaction': '0.1.7-rc.1', '@earendil-works/pi-ai': '0.85.1',
+      '@deepseek-ai/dsh-llm': '0.2.1-alpha.1', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.1',
+      '@deepseek-ai/dsh-compaction': '0.2.1-alpha.1', '@earendil-works/pi-ai': '0.85.1',
     } })
-    f.readVersion.mockResolvedValue('0.1.7-rc.1')
+    f.readVersion.mockResolvedValue('0.2.1-alpha.1')
     expect((await f.diagnostics.inspect({ ...f.request, probe: false })).checks.runtime.status).toBe('supported')
-    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.2-rc.1' : '0.1.7-rc.1')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.2.1-alpha.1' : '0.2.1-alpha.2')
     expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
     expect(f.read).not.toHaveBeenCalled()
     expect(f.probe).not.toHaveBeenCalled()
@@ -52,14 +52,14 @@ describe('capability evidence', () => {
   it('accepts a complete rc.2 set and rejects mixed or missing host peers without reading credentials', async () => {
     const f = fixture()
     f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.1.7-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2',
-      '@deepseek-ai/dsh-compaction': '0.1.7-rc.2', '@earendil-works/pi-ai': '0.85.1',
+      '@deepseek-ai/dsh-llm': '0.2.1-alpha.2', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.2',
+      '@deepseek-ai/dsh-compaction': '0.2.1-alpha.2', '@earendil-works/pi-ai': '0.85.1',
     } })
-    f.readVersion.mockResolvedValue('0.1.7-rc.2')
+    f.readVersion.mockResolvedValue('0.2.1-alpha.2')
     expect((await f.diagnostics.inspect({ ...f.request, probe: false })).checks.runtime.status).toBe('supported')
-    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.7-rc.1' : '0.1.7-rc.2')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.2.1-alpha.1' : '0.2.1-alpha.2')
     expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
-    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? undefined : '0.1.7-rc.2')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? undefined : '0.2.1-alpha.2')
     expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('unknown')
     expect(f.read).not.toHaveBeenCalled()
     expect(f.probe).not.toHaveBeenCalled()
@@ -69,13 +69,13 @@ describe('capability evidence', () => {
     'rejects mixed or missing required UI peer %s before credential access', async peer => {
       const f = fixture()
       f.local.compatibility = evaluateCompatibility({ nodeVersion: f.local.node, packageVersions: {
-        '@deepseek-ai/dsh-llm': '0.1.7-rc.2', '@deepseek-ai/dsh-llm-pi-ai': '0.1.7-rc.2',
-        '@deepseek-ai/dsh-compaction': '0.1.7-rc.2', '@earendil-works/pi-ai': '0.85.1',
+        '@deepseek-ai/dsh-llm': '0.2.1-alpha.2', '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.2',
+        '@deepseek-ai/dsh-compaction': '0.2.1-alpha.2', '@earendil-works/pi-ai': '0.85.1',
       } })
       const name = `@deepseek-ai/${peer}`
-      f.readVersion.mockImplementation(async key => key === name ? '0.1.7-rc.1' : '0.1.7-rc.2')
+      f.readVersion.mockImplementation(async key => key === name ? '0.2.1-alpha.1' : '0.2.1-alpha.2')
       expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('rejected')
-      f.readVersion.mockImplementation(async key => key === name ? undefined : '0.1.7-rc.2')
+      f.readVersion.mockImplementation(async key => key === name ? undefined : '0.2.1-alpha.2')
       expect((await f.diagnostics.inspect(f.request)).checks.runtime.status).toBe('unknown')
       expect(f.read).not.toHaveBeenCalled()
       expect(f.probe).not.toHaveBeenCalled()
@@ -95,7 +95,7 @@ describe('capability evidence', () => {
 
   it('gates network work on the complete declared host package set, including session', async () => {
     const f = fixture()
-    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.0-rc.7' : '0.1.7-rc.1')
+    f.readVersion.mockImplementation(async name => name === '@deepseek-ai/dsh-session' ? '0.1.0-rc.7' : '0.2.1-alpha.1')
     const report = await f.diagnostics.inspect(f.request)
     expect(report.checks.runtime).toMatchObject({ status: 'rejected', reason: 'declared-version-mismatch' })
     expect(report.checks.runtime.action).toContain('exact verified DSH')
@@ -215,7 +215,7 @@ describe('capability evidence', () => {
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('fresh')
     f.readVersion.mockResolvedValue('0.1.0-rc.7')
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('skipped')
-    f.readVersion.mockResolvedValue('0.1.7-rc.1')
+    f.readVersion.mockResolvedValue('0.2.1-alpha.1')
     expect((await f.diagnostics.inspect(f.request)).probe.state).toBe('fresh')
     expect(f.probe).toHaveBeenCalledTimes(4)
   })

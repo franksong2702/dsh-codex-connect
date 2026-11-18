@@ -8,6 +8,16 @@ Only on exact DSH `0.2.2-alpha.3`, old Task state is recovery-only: authenticate
 
 Alpha 12 已发布到原有 alpha 渠道。[双语发行说明](docs/release-notes/0.2.0-alpha.12.md#中文)列出迁移和验证边界。所有 Host 上旧 `enableReserveFallback` 配置不再生效；遗留 `gpt-reserve` 在读取账户或联网前返回 `MODEL_RETIRED`，需要明确选择普通模型，无法修改旧选择时保留会话另开一个。不猜测替代模型或账户，不因迁移读取或删除旧 return 文件、会话或 OAuth 凭据。仅在精确的 DSH `0.2.2-alpha.3` 上，旧 Task 保留经过身份校验的查看、停止／转手动和原有严格的安全退出，拒绝自动路由、续跑及委派恢复；计数、回执、ledger fencing、取消和真实清理义务不变。原十四个 Host 行为保留，所有版本公共激活入口仍关闭。本迁移不包含升级日常 Host 或重新授权。
 
+## DSH support window
+
+New source builds retain fourteen exact verified DSH releases starting at `0.2.1-alpha.1`, plus the existing current-minor admission range. DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, and `0.2.0-rc.2` are retired for new builds. The [published Alpha 15 package](INSTALL.md#020-alpha15-verified-publication) still supports all four. Pin `dsh-codex-connect@0.2.0-alpha.15` when keeping one of those hosts.
+
+To move to a retained pairing, finish active tasks or use authenticated Stop or manual takeover on the original host. Wait for cleanup before changing the host. Keep the profile configuration, OAuth store, session files, and Task ledger intact. With explicit approval to upgrade the host, install exact DSH `0.2.2-rc.1` and the published `dsh-codex-connect@0.2.0-alpha.15` in the selected profile, then follow the [configuration and doctor checks](INSTALL.md). Cross-host recovery of active Task state remains unverified.
+
+新源码构建保留从 `0.2.1-alpha.1` 开始的 14 个已验证 DSH 精确版本，以及已有的当前次版本准入范围。新构建退役 DSH `0.1.7-rc.1`、`0.1.7-rc.2`、`0.2.0-rc.1` 和 `0.2.0-rc.2`。仍需使用这些宿主时，固定安装已发布的 `dsh-codex-connect@0.2.0-alpha.15`。
+
+迁移前在原宿主完成活动任务，或经身份校验停止任务、转为手动并等待清理完成。保留 profile 配置、OAuth 存储、会话文件和 Task ledger。经用户批准升级宿主后，在指定 profile 配对使用 DSH `0.2.2-rc.1` 与已发布的 `dsh-codex-connect@0.2.0-alpha.15`，按[安装手册](INSTALL.md)检查配置与 doctor。活动 Task 的跨宿主恢复仍未验证。
+
 ## Alpha 4.43 candidate: upgrade the Harness together
 
 This candidate targets DeepSeek Harness `0.1.7-rc.1` only. Upgrade the Harness
