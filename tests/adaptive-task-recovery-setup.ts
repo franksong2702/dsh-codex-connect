@@ -1,5 +1,6 @@
-/** Exact alpha.3 recovery contract. Only synthetic state, tools and model output. */
+/** Recovery fixtures use synthetic state, tools and model output. */
 import { randomUUID } from 'node:crypto'
+import assert from 'node:assert/strict'
 import { mkdtemp, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -14,7 +15,6 @@ import Prompt from '@deepseek-ai/dsh-system-prompt'
 import Tools from '@deepseek-ai/dsh-tools'
 import * as Persistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { selectPersistencePlugin } from '../scripts/persistence-plugin-fixture.mjs'
-import assert from 'node:assert/strict'
 import { AdaptiveTaskControlRuntime } from '../src/adaptive-task-control-runtime.ts'
 import { AtomicTaskDocumentStore, taskIdentity } from '../src/adaptive-task-store.ts'
 import type { TaskDocument } from '../src/adaptive-task-store.ts'
@@ -26,8 +26,18 @@ import { taskHostRecoveryOnly } from '../src/adaptive-task-host-policy.ts'
 export const owner = taskIdentity('synthetic-recovery-owner'), model = 'gpt-5.6-sol'
 const contexts: Context[] = [], roots: string[] = []
 
-export async function setup(version?: 1 | 2, persisted?: { root: string; compression: 'none' | 'zstd'; readExisting: boolean }) {
+interface PersistedFixture { root: string; compression: 'none' | 'zstd'; readExisting: boolean }
+
+export function setup(version?: 1 | 2, persisted?: PersistedFixture) {
   assert.equal(taskHostRecoveryOnly(), true)
+  return prepareRecoveryFixture(true, version, persisted)
+}
+
+export function setupRecoverySource(version?: 1 | 2) {
+  return prepareRecoveryFixture(false, version)
+}
+
+async function prepareRecoveryFixture(exactRecoveryHost: boolean, version?: 1 | 2, persisted?: PersistedFixture) {
   const root = persisted?.root ?? await mkdtemp(join(tmpdir(), 'alpha3-task-recovery-')); if (persisted === undefined) roots.push(root)
   const ctx = new Context(); contexts.push(ctx)
   for (const p of [Llm, Sessions, Projection, AgentRegistry, Prompt, Tools]) await ctx.plugin(p)
@@ -40,9 +50,10 @@ export async function setup(version?: 1 | 2, persisted?: { root: string; compres
     await ctx.plugin((await import(directoryName)).default)
     ownershipFiber = await ctx.plugin((await import(subagentName)).default)
   }
-  // Use the actual published root executor, never a fake execute()/success adapter.
-  const nativeName = '@deepseek-ai/dsh-tool-executor-native'
-  await ctx.plugin(await import(nativeName))
+  if (exactRecoveryHost) {
+    const nativeName = '@deepseek-ai/dsh-tool-executor-native'
+    await ctx.plugin(await import(nativeName))
+  }
   await ctx.plugin(Loop, { agents: [] })
   if (persisted !== undefined) await ctx.plugin(selectPersistencePlugin(Persistence), { root: join(root, 'sessions'), compression: persisted.compression })
   let calls = 0, hold = false, runtime!: AdaptiveTaskControlRuntime

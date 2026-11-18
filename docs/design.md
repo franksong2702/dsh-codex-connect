@@ -14,7 +14,11 @@ Fast Mode remains per-session process-local state. Separate default-off profile 
 
 ## Task-level model selection: frozen
 
-Phase 1 #236 and Phase 2 #239 were merged; #248 subsequently paused public activation, which remains paused in Alpha 4.52. The [maintenance scope](maintenance-scope.md) freezes further orchestration development. Retain old-state readback and authorized safety exits. The two candidate descriptions below are historical architecture context, not current release status or instructions to finish acceptance.
+Phase 1 #236 and Phase 2 #239 were merged. The [maintenance scope](maintenance-scope.md) freezes further orchestration development. The product runtime handles saved v1 and v2 Task state for verified Hosts. Authenticated owners can read grants, use Stop or manual takeover, and use the existing checked delegation-disable and archive exits. Archived activation receipts confer no new authority. Recovery fences stale process state, preserves spent requests, and records cleanup and delivery only after checking live ownership and durable evidence.
+
+Ordinary requests pass through with the Host's route. A related saved task requires verified ownership. Missing state recorded by a session marker, ambiguous ownership, or unresolved child cleanup can block dispatch. A manual takeover preserves the existing portable-history projection for the next ordinary Codex request.
+
+The following descriptions record the historical architecture.
 
 The optional conversation control grants a bounded main-model/effort scope to one task, initially Sol/Medium. The task runtime, adapter dispatch wrapper and existing backend governor share durable request accounting. There is no separate Think, Split or Remember product selector. Host-owned permissions, session history and compaction remain their existing owners; model choice grants no new tool authority. See [the consolidated contract and migration](experiments/adaptive-task-phase1.md) for source selection from #232–#235, cancellation, recovery and acceptance limits.
 
@@ -32,7 +36,7 @@ Browser account and update requests have a 45-second deadline covering response 
 
 ## Backend request governance
 
-Ordinary adapter profiles and the backend governor do not import Task policy. The composition root explicitly supplies provider wrapping and pre-fetch accounting for retained legacy tasks; see [core transport separation](agent-notes/core-transport-decoupling.md). Removing experimental execution must preserve these historical-task safety obligations.
+The composition root supplies the Task recovery guards for adapter streaming and auxiliary requests. Ordinary requests use the existing backend governor and provider retry policy. Recovery preserves the counters stored by earlier releases and does not create Task dispatch scopes.
 
 Authenticated runtime traffic to `https://chatgpt.com/backend-api/` passes through one plugin-owned request governor before network dispatch. The governor fail-closes on any other origin/path, composes caller and route deadlines, keeps the existing Codex-only proxy scope alive for the complete logical direct request or provider stream, assigns a fresh `x-client-request-id` to every HTTP attempt, and bounds one plugin instance to eight concurrent backend requests. Concurrency is counted per HTTP attempt, not during authentication; even parallel fetches within one logical operation share that limit. Requests queued behind that limit remain cancellable and within route deadlines. Cancelling unread/paused bodies, response-hook failures and scope disposal releases resources; scope disposal runs before other plugin teardown waits. URL/header inputs are snapshotted before queue waits and authenticated requests never automatically follow redirects. HTTP `429` or `503` responses with a valid `Retry-After` create a lane-local cooldown that is rechecked on admission, never occupies a network slot while waiting, and honors longer service delays using timer slices of at most 15 minutes; the governor does not invent an account-block verdict or replay a failed model turn. Route-specific protocol retries remain with their existing owners, such as pi-ai model retry semantics and native-compaction's bounded retry loop.
 

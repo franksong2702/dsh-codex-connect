@@ -87,7 +87,7 @@ const submitFindings = (controls: TaskDelegationControls, markSubmitted: () => v
  * integration boundary.
  */
 export class TaskDelegationHost {
-  constructor(private readonly ctx: Context) {}
+  constructor(private readonly ctx: Context, private readonly recoveryOnly = false) {}
   private get agents() { return taskHostServices(this.ctx).agents }
   private get sessions() { return taskHostServices(this.ctx).sessions }
 
@@ -112,7 +112,7 @@ export class TaskDelegationHost {
     if (this.agents.get(parent.id) !== parent) throw new Error('TASK_PARENT_NOT_LIVE')
     controls.check()
     if (childRun.childSessionId !== null || childRun.childSessionKey !== null) throw new Error('TASK_CHILD_ALREADY_BOUND')
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.recoveryOnly)
     const sessionId = SessionId(`task-child-${childRun.id}`)
     let submitted = false
     let violation = false

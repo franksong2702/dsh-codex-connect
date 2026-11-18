@@ -12,6 +12,7 @@ const developmentSdkFixtures = [
   'tests/adaptive-task-delegation.spec.ts',
   'tests/adaptive-task-host.spec.ts',
   'tests/adaptive-task-http.spec.ts',
+  'tests/adaptive-task-recovery-runtime.spec.ts',
   'tests/image-edit-session.spec.ts',
   'tests/native-compaction-automatic.spec.ts',
   'tests/native-compaction-lifecycle.spec.ts',

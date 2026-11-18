@@ -19,6 +19,7 @@ import type { TaskDispatchScope } from './adaptive-task-scope.ts'
 import { portableTaskMessages } from './adaptive-task-context.ts'
 
 export interface TaskRuntimeOptions {
+  readonly recoveryOnly?: boolean
   readonly store: AdaptiveTaskStore
   readonly models: () => Promise<readonly LlmResolvedModelInfo[]>
   /** Explicit v2 composition only; absent in the Phase 1 product. */
@@ -44,9 +45,9 @@ function isFresh(agent: Agent): boolean {
       || (event.type === 'user/message' && event.data.source.kind === 'user'))
 }
 const TASK_MARKER = 'dsh-codex-connect/task-grant'
-function hasTaskMarker(agent: Agent): boolean {
+export function hasTaskMarker(session: Agent['session']): boolean {
   const marked = (message: { source: { kind: string; plugin?: string } }) => message.source.kind === 'dsh-codex-connect' && message.source.plugin === TASK_MARKER
-  return agent.session.snapshotEvents().some(event => (event.type === 'user/message' && marked(event.data))
+  return session.snapshotEvents().some(event => (event.type === 'user/message' && marked(event.data))
     || (event.type === 'agent/inbox/spliced' && event.data.inserted.some(marked)))
 }
 function userStopped(agent: Agent): boolean {
@@ -61,10 +62,15 @@ export class AdaptiveTaskRuntime {
   private stopped = false
   constructor(private readonly ctx: Context, private readonly options: TaskRuntimeOptions) {
     ctx.on('agent/request', async ({ agent, signal }, next) => {
+      if (options.recoveryOnly) {
+        const task = await this.load(agent)
+        if (task !== undefined && task.mode !== 'manual') taskFailure(TASK_HOST_RECOVERY_ONLY)
+        return next()
+      }
       const config = await next()
       const task = await this.load(agent)
       if (task === undefined || task.mode === 'manual') return config
-      assertTaskHostAutomation()
+      assertTaskHostAutomation(this.options.recoveryOnly)
       signal.throwIfAborted()
       if (task.mode !== 'auto') taskFailure('TASK_REQUIRES_USER_RESUME')
       if (selectionSeq(agent) !== task.selectionSeq) {
@@ -100,10 +106,11 @@ export class AdaptiveTaskRuntime {
     if (this.options.ownsRoot !== undefined && !await this.options.ownsRoot(agent)) { this.withdraw(agent); return undefined }
     const task = await this.options.store.read(agent.id)
     if (task === undefined) {
-      if (hasTaskMarker(agent) || this.lifetimes.has(agent)) taskFailure('TASK_STATE_MISSING')
+      if (hasTaskMarker(agent.session) || this.lifetimes.has(agent)) taskFailure('TASK_STATE_MISSING')
       return undefined
     }
     this.verify(agent, task)
+    if (this.options.recoveryOnly && !taskLiveRoots(this.ctx).includes(agent)) taskFailure('TASK_LIVE_ROOT_REQUIRED')
     // The ordinary Session stop button is also a revocation, including while a tool runs.
     // Read the host's durable cancellation before any new request or resume can be admitted.
     if (task.mode === 'auto' && userStopped(agent)) {
@@ -136,16 +143,16 @@ export class AdaptiveTaskRuntime {
     if (stored !== undefined && stored.owner !== principal) taskFailure('TASK_OWNER_MISMATCH')
     const task = await this.load(agent)
     if (task !== undefined && task.owner !== principal) taskFailure('TASK_OWNER_MISMATCH')
-    const capabilities = task?.capabilities ?? await this.capabilities()
+    const capabilities = task?.capabilities ?? (this.options.recoveryOnly ? [] : await this.capabilities())
     const current = currentRoute(agent)
     return { mode: task?.mode ?? 'off', revision: task?.revision ?? 0,
       ...(current === undefined ? {} : { current }),
       ...(task?.mode === 'auto' || task?.mode === 'interrupted' ? { requested: task.route } : {}),
       reserved: task?.reserved ?? 0, maximumRequests: task?.maximumRequests ?? ADAPTIVE_TASK_REQUEST_LIMIT,
-      capabilities: task?.capabilities ?? capabilities, eligibility: 'not-probed', canStart: task === undefined && isFresh(agent)
+      capabilities: task?.capabilities ?? capabilities, eligibility: 'not-probed', canStart: !this.options.recoveryOnly && task === undefined && isFresh(agent)
         && allowsTaskRoute(capabilities, ADAPTIVE_TASK_START),
       ...(task?.mode === 'stopped' && agent.status !== 'idle' ? { unavailable: 'TASK_STOPPING' }
-        : task !== undefined && taskHostRecoveryOnly() ? { unavailable: TASK_HOST_RECOVERY_ONLY } : {}) }
+        : task !== undefined && (this.options.recoveryOnly || taskHostRecoveryOnly()) ? { unavailable: TASK_HOST_RECOVERY_ONLY } : {}) }
   }
   async command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState> {
     if (decodeTaskCommand(command) === undefined) taskFailure('TASK_COMMAND_INVALID')
@@ -164,7 +171,7 @@ export class AdaptiveTaskRuntime {
         return this.state(agent.id, principal)
       }
     }
-    if (command.action === 'start' || command.action === 'resume') assertTaskHostAutomation()
+    if (command.action === 'start' || command.action === 'resume') assertTaskHostAutomation(this.options.recoveryOnly)
     // Revocation must remain available when catalog discovery/provider availability fails.
     const capabilities = command.action === 'start' || command.action === 'resume' ? await this.capabilities() : []
     const apply = async (signal?: AbortSignal) => {
@@ -202,7 +209,7 @@ export class AdaptiveTaskRuntime {
           capabilities: allowed, maximumRequests: command.maximumRequests!, reserved: 0,
           selectionSeq: selectionSeq(agent), portable: false, handoffSeq: -1, receipts: [{ id: command.operationId, digest }] }
       })
-      if ((command.action === 'start' || command.action === 'resume') && !hasTaskMarker(agent)) {
+      if ((command.action === 'start' || command.action === 'resume') && !hasTaskMarker(agent.session)) {
         agent.inject(createUserMessage({ source: { kind: 'dsh-codex-connect', plugin: TASK_MARKER },
           content: [{ type: 'text', text: 'This task has an explicit model-selection grant held by the host. This notice is not permission; the stored grant and live checks govern every change.' }] }))
       }
@@ -233,7 +240,7 @@ export class AdaptiveTaskRuntime {
     return this.state(agent.id, principal)
   }
   private install(agent: Agent, task: TaskDocument): void {
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.options.recoveryOnly)
     if (this.stopped || this.tools.has(agent)) return
     const life = this.lifetimes.get(agent)
     if (life === undefined || life.signal.aborted) this.lifetimes.set(agent, new AbortController())
@@ -294,7 +301,7 @@ export class AdaptiveTaskRuntime {
   }
   /** Attribute auxiliary backend work only to the actual live initiating root. Never fabricate a task from an id. */
   async reserveAuxiliary(): Promise<void> {
-    if (currentAdaptiveTaskDispatch() !== undefined) return
+    if (!this.options.recoveryOnly && currentAdaptiveTaskDispatch() !== undefined) return
     const registry = this.ctx.get('agents')
     // Standalone adapters may expose only attribution, not a live Agent registry.
     if (typeof registry?.currentInitiator !== 'function' || typeof registry.get !== 'function') return
@@ -306,7 +313,7 @@ export class AdaptiveTaskRuntime {
       if (parentTask !== undefined && parentTask.mode !== 'manual') taskFailure('TASK_DELEGATION_NOT_INCLUDED')
     }
     const task = await this.load(agent)
-    if (task !== undefined && task.mode !== 'manual') assertTaskHostAutomation()
+    if (task !== undefined && task.mode !== 'manual') assertTaskHostAutomation(this.options.recoveryOnly)
     if (task?.mode === 'auto') await this.reserve(agent)
     else if (task !== undefined && task.mode !== 'manual') taskFailure('TASK_NOT_AUTHORIZED')
   }
@@ -327,7 +334,7 @@ export class AdaptiveTaskRuntime {
         ? { ...options, messages: portableTaskMessages(agent.session, options.messages, { afterSeq: task.handoffSeq, model: options.model }) } : options)
       return
     }
-    assertTaskHostAutomation()
+    assertTaskHostAutomation(this.options.recoveryOnly)
     if (task.mode !== 'auto' || this.stopped) taskFailure('TASK_REQUIRES_USER_RESUME')
     const hostDefault = options.purpose === 'compaction' && options.reasoningEffort === undefined
     const route = { model: options.model, effort: hostDefault ? task.route.effort : String(options.reasoningEffort) }
