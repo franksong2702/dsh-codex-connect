@@ -57,6 +57,7 @@ This is a reviewed starting inventory, not proof that the dependency graph is fu
 - [x] Remove activation-only browser forms and their exclusive tests after dependency inspection; retain recovery-only UI and regression coverage.
 - [x] Use recovery-only Task control in the product. Bind saved v1/v2 state to verified owners, reject missing state, preserve replay and counters for authorized exits, and reconcile child cleanup after restart.
 - [x] Remove the Task tool registration, child launcher, automatic model routing, provider dispatch scopes, and live evidence capture. Keep the authenticated recovery UI, historical document codecs, archive verification, and saved-state recovery checks.
+- [x] Archive superseded verification records in the Alpha 15 source snapshot. The [agent notes index](agent-notes/README.md) lists those files and points to the retained working notes.
 
 Local research preservation has a separate private archive manifest; do not commit machine paths or private experiment evidence into the public repository. A local archive is not a merged product change and does not stop another running task. Existing scheduled jobs must not be assumed updated by this document.
 
