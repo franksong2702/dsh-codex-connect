@@ -12,13 +12,19 @@ export const OPENAI_CODEX_SOL61_CONTEXT_LIMIT_SOURCE = 'https://github.com/opena
 /** Terra61 default and override policy from the official Codex client, not API limits. */
 export const OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE = 'https://github.com/openai/codex/blob/e8e6a922c0008bc08bacc69dd2ce9b6c3c12944c/codex-rs/models-manager/models.json'
 
+/** GPT-6.2 defaults and override policy from the official Codex client, not API limits. */
+export const OPENAI_CODEX_GPT62_CONTEXT_LIMIT_SOURCE = 'https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json'
+
 /** Preserve historical provenance for existing models. */
 export function openAICodexContextLimitSource(id: string): string {
+  if (id === 'gpt-6.2-astra' || id === 'gpt-6.2-sol') return OPENAI_CODEX_GPT62_CONTEXT_LIMIT_SOURCE
   if (id === 'gpt-6.1-terra') return OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE
   return id === 'gpt-6.1-sol' ? OPENAI_CODEX_SOL61_CONTEXT_LIMIT_SOURCE : OPENAI_CODEX_CONTEXT_LIMIT_SOURCE
 }
 
 const CONFIGURATION_LIMITS: Readonly<Record<string, number>> = Object.freeze({
+  'gpt-6.2-astra': 872_000,
+  'gpt-6.2-sol': 872_000,
   'gpt-6.1-sol': 872_000,
   'gpt-6.1-terra': 872_000,
   'gpt-6-astra': 872_000,
