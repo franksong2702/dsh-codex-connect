@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "version": "0.2.0-alpha.15",
+      "commit": "16c7b3e99acd194c2ec0b5d5431930d6f7314b94",
+      "sha256": "87ea5a79461922fdf989246c5754b329a4fd37157bec83a81f3792f011039e20"
+    },
+    {
+      "version": "0.2.0-alpha.16",
+      "commit": "ada191aa960b80a1c26472d37a64438c66173e07",
+      "sha256": "fef8fd07a1e83d6ea01591788c99d618ebf6a9024159f96cd02c666b1f18f43c"
+    }
+  ]
+}

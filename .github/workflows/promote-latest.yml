@@ -1,0 +1,91 @@
+name: Promote verified npm latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Move latest after verification (false is a dry run)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - latest-release-evidence.json
+      - verified-compatibility.json
+  workflow_run:
+    workflows: [Publish alpha release, Recover published alpha release]
+    types: [completed]
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.repository == 'franksong2702/dsh-codex-connect' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (vars.LATEST_PROMOTION_ENABLED == 'true' &&
+        (github.event_name == 'push' ||
+         (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'workflow_dispatch' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    outputs:
+      plan: ${{ steps.preflight.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.15.0
+      - run: pnpm --config.minimum-release-age=0 install --frozen-lockfile --ignore-scripts
+      - name: Verify the exact public package in stock DSH
+        id: preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/promote-latest.mjs prepare
+
+  promote:
+    if: >-
+      needs.verify.outputs.plan != '' &&
+      github.repository == 'franksong2702/dsh-codex-connect' &&
+      github.ref == 'refs/heads/main' &&
+      vars.LATEST_PROMOTION_ENABLED == 'true' &&
+      (github.event_name != 'workflow_dispatch' || inputs.apply == true)
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    environment: npm-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.15.0
+      - name: Pin npm with dist-tag Trusted Publishing support
+        run: |
+          npm install --global npm@11.21.0 --ignore-scripts --no-fund --no-audit --registry=https://registry.npmjs.org/
+          test "$(npm --version)" = "11.21.0"
+      - name: Recheck promotion inputs and update latest only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_PLAN: ${{ needs.verify.outputs.plan }}
+          LATEST_PROMOTION_ENABLED: ${{ vars.LATEST_PROMOTION_ENABLED }}
+        run: node scripts/promote-latest.mjs apply

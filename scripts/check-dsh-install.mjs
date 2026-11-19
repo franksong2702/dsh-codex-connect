@@ -3,10 +3,12 @@ import { validRetiredReserveReport } from './retired-reserve-report.mjs'
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { isAlphaReleaseVersion } from './release-metadata.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
@@ -196,11 +198,19 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
   }
   const repair = pluginManagerCandidate === undefined ? undefined
     : await (await import('./issue-211-repair.mjs')).validateRepairCandidate(pluginManagerCandidate, dshVersion, allowUndeclaredCanaryVersion)
-  const inheritedEnvironment = allowUndeclaredCanaryVersion
+  const promotionArchive = process.env.DSH_PROMOTION_ARTIFACT
+  const promotionVersion = process.env.DSH_PROMOTION_VERSION
+  if (promotionArchive !== undefined && (repair !== undefined || allowUndeclaredCanaryVersion
+    || !isAlphaReleaseVersion(promotionVersion) || !promotionArchive.endsWith('/latest-candidate.tgz'))) {
+    throw new Error('Published check requires one verified Alpha archive and the stock declared host')
+  }
+  const inheritedEnvironment = allowUndeclaredCanaryVersion || promotionArchive !== undefined
     ? scrubCanaryEnvironment(process.env)
     : process.env
-  const build = await runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: inheritedEnvironment })
-  requireSuccess('local build', build)
+  if (promotionArchive === undefined) {
+    const build = await runCommand('pnpm', ['run', 'build'], { cwd: REPO_ROOT, env: inheritedEnvironment })
+    requireSuccess('local build', build)
+  }
 
   const tempRoot = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-install-'))
   const dshHome = join(tempRoot, 'dsh-home')
@@ -214,22 +224,27 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
   }
 
   try {
-    const pack = await runCommand('npm', [
-      'pack',
-      '--json',
-      '--ignore-scripts',
-      '--pack-destination', tempRoot,
-    ], { cwd: REPO_ROOT, env })
-    requireSuccess('npm pack', pack)
-    const [manifest] = JSON.parse(pack.stdout)
-    if (typeof manifest?.filename !== 'string'
-      || manifest.filename.length === 0
-      || basename(manifest.filename) !== manifest.filename) {
-      throw new Error('npm pack did not report one package filename')
+    let archive = promotionArchive
+    let pluginVersion = promotionVersion
+    if (archive === undefined) {
+      const pack = await runCommand('npm', [
+        'pack',
+        '--json',
+        '--ignore-scripts',
+        '--pack-destination', tempRoot,
+      ], { cwd: REPO_ROOT, env })
+      requireSuccess('npm pack', pack)
+      const [manifest] = JSON.parse(pack.stdout)
+      if (typeof manifest?.filename !== 'string'
+        || manifest.filename.length === 0
+        || basename(manifest.filename) !== manifest.filename) {
+        throw new Error('npm pack did not report one package filename')
+      }
+      archive = join(tempRoot, manifest.filename)
+      pluginVersion = manifest.version
     }
-    const pluginSpec = `file:${join(tempRoot, manifest.filename)}`
-    const pluginArtifactSha256 = createHash('sha256').update(await readFile(join(tempRoot, manifest.filename))).digest('hex')
-    const pluginVersion = manifest.version
+    const pluginSpec = `file:${archive}`
+    const pluginArtifactSha256 = createHash('sha256').update(await readFile(archive)).digest('hex')
 
     let resolution
     try {
@@ -316,6 +331,14 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
       '--install-anchor', join(installRoot, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
     ], { cwd: workspace, env })
     validateDoctorResult(doctor, dshHome, REPO_ROOT, { allowUndeclaredCanaryVersion, dshVersion })
+
+    if (promotionArchive !== undefined) {
+      const installed = JSON.parse(await readFile(
+        createRequire(join(dshHome, 'profiles', 'web', 'package.json')).resolve('dsh-codex-connect/package.json'), 'utf8'))
+      if (installed.name !== 'dsh-codex-connect' || installed.version !== pluginVersion) {
+        throw new CompatibilityCheckError('Installed plugin does not match the exact public release')
+      }
+    }
 
     const runtime = await runCommand(process.execPath, [
       RUNTIME_CHECK,
