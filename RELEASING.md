@@ -35,8 +35,7 @@ It is not a Beta/stable promotion or a requirement to upgrade DSH.
    `main` branch. Enter the exact package version and type `PUBLISH` in the
    confirmation field.
 
-The workflow requires completed successful main CI for the exact release SHA, including both Node versions, browser UI regression and the Windows contract. Missing, incomplete, skipped or failed jobs block publishing. A read-only job installs the frozen dependencies, runs `pnpm run check`, and uploads a SHA-256-identified tarball. The `npm-release` job rechecks CI after environment approval, verifies the tarball digest, and publishes that artifact with lifecycle scripts disabled. Only this job has contents-write and OIDC permissions; it does not install project dependencies or run tests. It retries the npm version and `alpha` dist-tag readback and creates the matching GitHub prerelease. It intentionally does not run
-`npm dist-tag add` because npm Trusted Publishing does not support that command.
+The workflow requires completed successful main CI for the exact release SHA, including both Node versions, browser UI regression and the Windows contract. Missing, incomplete, skipped or failed jobs block publishing. A read-only job installs the frozen dependencies, runs `pnpm run check`, and uploads a SHA-256-identified tarball. The `npm-release` job rechecks CI after environment approval, verifies the tarball digest, and publishes that artifact with lifecycle scripts disabled. Only this job has contents-write and OIDC permissions; it does not install project dependencies or run tests. It retries the npm version and `alpha` dist-tag readback and creates the matching GitHub prerelease. This Alpha workflow intentionally does not run `npm dist-tag add`. The separate `latest` workflow below handles that tag with a supported npm version and its own opt-in Trusted Publisher configuration.
 
 ## After publication
 
@@ -49,7 +48,65 @@ recommendation. Record the new exact installation command in its release notes.
 Recommendation generation and automatic post-publish documentation updates are
 not implemented by this procedure.
 
+## Automating the npm `latest` channel (off until configured)
+
+[Promote verified npm latest](.github/workflows/promote-latest.yml) is separate
+from Alpha publication. It cannot publish a version, change `alpha`, write
+GitHub releases, change a daily DSH profile, or certify real-account acceptance.
+
+One-time setup, after approving the repository change:
+
+1. Create a separate GitHub environment `npm-latest`, allow the protected
+   `main` branch only, and do not attach manual reviewers to this environment.
+   Leave the existing `npm-release` environment and publisher untouched.
+2. In npm package settings, add a separate [Trusted Publisher
+   configuration](https://docs.npmjs.com/trusted-publishers/#managing-dist-tags-with-trusted-publishing)
+   for `franksong2702/dsh-codex-connect`, workflow `promote-latest.yml`,
+   environment `npm-latest`. Enable **Allow npm dist-tag** and disable direct
+   **npm publish**. npm grants dist-tag management for the entire package,
+   not just `latest`; this workflow code restricts its own write to `latest`.
+   npm also always permits staged submissions for a Trusted Publisher; this
+   workflow does not stage packages. Do not create an npm token.
+3. Before enabling, ensure changes to this workflow, its helper and runtime
+   checks, and both evidence catalogs are independently reviewed. Use
+   enforceable path-scoped branch rules and required code-owner review where
+   available; otherwise establish the independent review as an explicit
+   release operating control. Do not enable unattended promotion where the
+   same actor can unilaterally change these controls and turn them into a
+   registry write. The default-off patch does not change branch policies or
+   grant this permission.
+4. Leave repository variable `LATEST_PROMOTION_ENABLED` unset until a dry run
+   on current main passes. A manual dispatch with the default `apply=false`
+   never starts the OIDC job. Once validated, set the variable to `true` to
+   allow automatic runs after a successful canonical Alpha publish/recovery, or
+   after reviewed compatibility/release evidence changes reach main. This is
+   standing authorization for the narrowly scoped forward promotion, not a
+   blanket authorization to change a package or channel.
+
+Add the published version's exact tag commit and the original verified public
+tarball SHA-256 to `latest-release-evidence.json` through a reviewed PR. Do not
+record a local build or a failed publication as evidence. An already published
+version alone is not eligible: its exact pairing with the current DSH npm default
+must also appear in `verified-compatibility.json`. Missing evidence for the
+highest eligible candidate stops the workflow rather than quietly selecting
+another. A tag that already points to the correct version is a no-op.
+
+The read-only job identifies the current public DSH default, confirms the npm
+archive's integrity and exact GitHub release identity, and installs those exact
+bytes into an isolated stock profile to check startup and keyless runtime
+behavior. If verification fails it never starts the OIDC job. The OIDC job
+does not run DSH or install repository dependencies; it requires the same
+current protected main head, DSH version, package, evidence digest and both
+npm tags immediately before the single write, then rechecks both tags and
+the upstream DSH version. npm does not offer an atomic compare-and-set for
+dist-tags. After an ambiguous write or a concurrent external change, inspect
+registry state before any retry or rollback. The workflow never automatically
+downgrades or rolls back `latest`. Manual remediation below retains explicit
+scope and authorization.
+
 ## Promoting `latest` (short-lived interactive authentication)
+
+Use this manual fallback only when the automated promotion path is unavailable.
 
 `latest` follows the newest published plugin release verified against DSH's npm
 `latest`, under [the channel policy](VERSIONING.md#channels-and-recommendations).

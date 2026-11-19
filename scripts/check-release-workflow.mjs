@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import './verify-release-ci.test.mjs'
 import './verify-npm-readback.test.mjs'
 import './recover-release.test.mjs'
+import './promote-latest.test.mjs'
 
 const workflowPath = fileURLToPath(new URL('../.github/workflows/release.yml', import.meta.url))
 const ciWorkflowPath = fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url))

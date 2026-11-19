@@ -4,6 +4,7 @@ For a new install, start with the [installation guide](../../INSTALL.md). It lis
 
 | Codex Connect | Release and verification records / 发布与验证记录 |
 | --- | --- |
+| Alpha 16 | [Published archive and exact isolated DSH 0.2.2-rc.5 verification / 已发布包及精确宿主验收](0.2.0-alpha.16.md) |
 | Alpha 15 | [Exact DSH 0.2.2-rc.3 and latest promotion / 精确支持及渠道晋升](0.2.0-alpha.15.md) |
 | Alpha 14 | [DSH 0.2.2-rc.2 verification / 兼容性验证](../agent-notes/alpha14-install-matrix.json) · [GitHub release](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.14) |
 | Alpha 13 | [Exact DSH 0.2.2-rc.1 / 精确支持](0.2.0-alpha.13.md) |
