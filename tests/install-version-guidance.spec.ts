@@ -111,6 +111,7 @@ describe('installation version guidance', () => {
     ['0.2.2-rc.1', '0.2.0-alpha.15'],
     ['0.2.2-rc.2', '0.2.0-alpha.15'],
     ['0.2.2-rc.3', '0.2.0-alpha.15'],
+    ['0.2.2-rc.5', '0.2.0-alpha.16'],
   ])('selects the recorded DSH %s / Codex Connect %s pair before installation', (dsh, plugin) => {
     expect(firstInstall).toBeGreaterThan(0)
     expect(compatibility.pluginVersions).toContainEqual(expect.objectContaining({
@@ -131,10 +132,13 @@ describe('installation version guidance', () => {
     for (const guide of [english, chinese]) {
       const quickStart = guide.slice(0, guide.indexOf('### 2.'))
       const versionCheck = quickStart.indexOf('dsh --version')
-      const command = quickStart.indexOf('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15')
+      const command = quickStart.indexOf('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.16')
       expect(versionCheck).toBeGreaterThan(0)
       expect(command).toBeGreaterThan(versionCheck)
-      expect(quickStart).toContain('`0.2.2-rc.1`')
+      expect(quickStart).toContain('`0.2.2-rc.5`')
+      expect(quickStart).toContain('`>=24.9.0`')
+      expect(quickStart).toContain('`~4.1.0`')
+      expect(quickStart).toContain('0.2.0-alpha.16.md#latest-promotion-on-2026-11-19')
       expect(quickStart).toContain('`dsh-codex-connect@latest`')
       expect(quickStart).not.toContain('0.2.0-alpha.10')
       expect(guide).toContain('release-notes/README.md')
@@ -145,7 +149,9 @@ describe('installation version guidance', () => {
     expect(chinese).toContain('**Luna Reserve 已移除。**')
     expect(chinese).toContain('旧 `enableReserveFallback` 开关会被忽略')
     expect(chinese).toContain('不读取、迁移或删除')
-    expect(install).toContain('The verified default pair is Codex Connect `0.2.0-alpha.15` with DSH `0.2.2-rc.1`')
+    expect(install).toContain('The verified default pair is Codex Connect `0.2.0-alpha.16` with DSH `0.2.2-rc.5`')
+    expect(install.slice(firstInstall).split('\n')[0]).toBe('dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.16')
+    expect(preflight).toContain('0.2.0-alpha.16.md#latest-promotion-on-2026-11-19')
     expect(install).toContain('Stock rc.1 keeps Task controls paused')
     expect(install).toContain('Luna Reserve has been removed')
   })
