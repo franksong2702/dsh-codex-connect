@@ -7,7 +7,7 @@ import {
 } from '../src/runtime-identity.ts'
 import type { OpenAICodexRuntimeReport } from '../src/runtime-identity.ts'
 
-function receipt(): OpenAICodexRuntimeReport {
+function receipt(dshVersion = '0.2.1-alpha.1', nodeVersion = 'v24.21.0'): OpenAICodexRuntimeReport {
   return {
     schemaVersion: 1,
     identity: {
@@ -17,11 +17,11 @@ function receipt(): OpenAICodexRuntimeReport {
       pluginVersionState: 'match',
       dshMetadataSource: 'host-install-anchor',
     },
-    currentDshVersion: '0.2.1-alpha.1',
-    compatibility: evaluateCompatibility({ nodeVersion: 'v24.21.0', packageVersions: {
-      '@deepseek-ai/dsh-llm': '0.2.1-alpha.1',
-      '@deepseek-ai/dsh-llm-pi-ai': '0.2.1-alpha.1',
-      '@deepseek-ai/dsh-compaction': '0.2.1-alpha.1',
+    currentDshVersion: dshVersion,
+    compatibility: evaluateCompatibility({ nodeVersion, packageVersions: {
+      '@deepseek-ai/dsh-llm': dshVersion,
+      '@deepseek-ai/dsh-llm-pi-ai': dshVersion,
+      '@deepseek-ai/dsh-compaction': dshVersion,
       '@earendil-works/pi-ai': '0.85.1',
     } }),
   }
@@ -89,12 +89,17 @@ describe('node-free runtime receipt decoder', () => {
   })
 
   it.each(SUPPORTED_DSH_PLUGIN_API_VERSIONS)('preserves the exact coherent %s policy', version => {
-    const report = receipt()
-    report.currentDshVersion = version
-    for (const name of ['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction'] as const) {
-      report.compatibility.packages[name].installed = version
-    }
+    const report = receipt(version)
     expect(parseOpenAICodexRuntimeReport(report)).toEqual(report)
+  })
+
+  it.each(['0.2.2-rc.4', '0.2.2-rc.5'])('rejects a compatible receipt for %s on Node 22', version => {
+    const report = receipt(version, 'v22.19.0')
+    expect(parseOpenAICodexRuntimeReport(report)?.compatibility.status).toBe('incompatible')
+    report.compatibility.node = receipt().compatibility.node
+    report.compatibility.node.installed = 'v22.19.0'
+    report.compatibility.status = 'compatible'
+    expect(parseOpenAICodexRuntimeReport(report)).toBeUndefined()
   })
 
   it('requires a coherent Host receipt before showing an in-range pairing', () => {

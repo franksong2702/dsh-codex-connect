@@ -76,7 +76,7 @@ describe('Codex Connect doctor', () => {
     })
     expect(report.compatibility.status).toBe('incompatible')
     expect(report.hints.join('\n')).toMatch(/Node version does not satisfy/)
-    expect(report.hints.join('\n')).toMatch(/does not recommend changing the DSH version/)
+    expect(report.hints.join('\n')).toContain('Keep the current DSH version')
   })
 
   it('reports DSH and pi-ai mismatches as unverified', async () => {

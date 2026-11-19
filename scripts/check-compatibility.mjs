@@ -110,6 +110,9 @@ async function main() {
   if (packageJson.engines?.node !== REQUIRED_NODE_RANGE) fail('package.json Node engine mismatch')
 
   const peers = packageJson.peerDependencies ?? {}
+  const hostNode = compatibility.dshPluginApi.node
+  if (hostNode?.range !== '>=24.9.0' || JSON.stringify(hostNode.dshVersions) !== JSON.stringify(NEW_DSH_VERSIONS)
+    || !semver.subset(hostNode.range, REQUIRED_NODE_RANGE)) fail('Node engine requirements must match the new DSH Hosts')
   const cordis = compatibility.dshPluginApi.cordis
   if (cordis?.range !== '^4.1.0' || JSON.stringify(cordis.dshVersions) !== JSON.stringify(NEW_DSH_VERSIONS)
     || typeof peers['@deepseek-ai/cordis'] !== 'string'

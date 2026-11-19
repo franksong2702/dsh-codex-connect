@@ -479,6 +479,10 @@ export declare const COMPATIBILITY_CONTRACT: {
   readonly dshPluginApi: {
     readonly version: string;
     readonly versions: readonly string[];
+    readonly node: {
+      readonly range: string;
+      readonly dshVersions: readonly string[];
+    };
     readonly cordis: {
       readonly range: string;
       readonly dshVersions: readonly string[];
