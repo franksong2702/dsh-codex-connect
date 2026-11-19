@@ -192,16 +192,21 @@ it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', () => {
   expect(compatibility.pluginVersions[firstAlpha13]?.verifiedDshVersions).toEqual(alpha13Hosts)
 })
 
-it('records published Alpha15 without rewriting earlier artifact support', () => {
+it('records published Alpha15 and the exact Alpha16 and rc.5 pairing', () => {
   const candidateIndex = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.14')
-  expect(candidateIndex).toBe(compatibility.pluginVersions.length - 2)
+  expect(candidateIndex).toBe(compatibility.pluginVersions.length - 3)
   const published = compatibility.pluginVersions.slice(0, candidateIndex)
   expect(published.at(-1)?.version).toBe('0.2.0-alpha.13')
   for (const entry of published) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.2')
   expect(compatibility.pluginVersions[candidateIndex]?.verifiedDshVersions).toEqual(alpha14Hosts)
-  for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
-  expect(compatibility.pluginVersions.at(-1)?.version).toBe('0.2.0-alpha.15')
-  expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(alpha15Hosts)
+  for (const entry of compatibility.pluginVersions.slice(0, candidateIndex + 1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
+  expect(compatibility.pluginVersions[candidateIndex + 1]).toEqual({
+    version: '0.2.0-alpha.15', verifiedDshVersions: alpha15Hosts,
+  })
+  for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.5')
+  expect(compatibility.pluginVersions.at(-1)).toEqual({
+    version: '0.2.0-alpha.16', verifiedDshVersions: ['0.2.2-rc.5'],
+  })
 })
 
 it.each(retiredDshVersions)('preserves published Alpha15 fallback guidance for retired DSH %s', async version => {
