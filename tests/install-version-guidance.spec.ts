@@ -193,15 +193,26 @@ it('records published Alpha 13 as the first exact 0.2.2-rc.1 support', () => {
 })
 
 it('records published Alpha15 without rewriting earlier artifact support', () => {
-  const candidateIndex = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.14')
-  expect(candidateIndex).toBe(compatibility.pluginVersions.length - 2)
-  const published = compatibility.pluginVersions.slice(0, candidateIndex)
-  expect(published.at(-1)?.version).toBe('0.2.0-alpha.13')
-  for (const entry of published) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.2')
-  expect(compatibility.pluginVersions[candidateIndex]?.verifiedDshVersions).toEqual(alpha14Hosts)
-  for (const entry of compatibility.pluginVersions.slice(0, -1)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
-  expect(compatibility.pluginVersions.at(-1)?.version).toBe('0.2.0-alpha.15')
-  expect(compatibility.pluginVersions.at(-1)?.verifiedDshVersions).toEqual(alpha15Hosts)
+  const alpha14Index = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.14')
+  const alpha15Index = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.15')
+  expect(alpha14Index).toBeGreaterThanOrEqual(1)
+  expect(alpha15Index).toBe(alpha14Index + 1)
+  const earlier = compatibility.pluginVersions.slice(0, alpha14Index)
+  expect(earlier.at(-1)?.version).toBe('0.2.0-alpha.13')
+  for (const entry of earlier) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.2')
+  expect(compatibility.pluginVersions[alpha14Index]?.verifiedDshVersions).toEqual(alpha14Hosts)
+  for (const entry of compatibility.pluginVersions.slice(0, alpha15Index)) expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.3')
+  expect(compatibility.pluginVersions[alpha15Index]?.verifiedDshVersions).toEqual(alpha15Hosts)
+})
+
+it('records published Alpha16 only on the verified stock rc.5 pair', () => {
+  const alpha16Index = compatibility.pluginVersions.findIndex((entry: { version: string }) => entry.version === '0.2.0-alpha.16')
+  expect(alpha16Index).toBeGreaterThanOrEqual(1)
+  expect(compatibility.pluginVersions[alpha16Index - 1]?.version).toBe('0.2.0-alpha.15')
+  for (const entry of compatibility.pluginVersions.slice(0, alpha16Index)) {
+    expect(entry.verifiedDshVersions).not.toContain('0.2.2-rc.5')
+  }
+  expect(compatibility.pluginVersions[alpha16Index]?.verifiedDshVersions).toEqual(['0.2.2-rc.5'])
 })
 
 it.each(retiredDshVersions)('preserves published Alpha15 fallback guidance for retired DSH %s', async version => {
