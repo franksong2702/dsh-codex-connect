@@ -4,10 +4,11 @@ import { validRetiredReserveReport } from './retired-reserve-report.mjs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import semver from 'semver'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { sanitizeSummary } from './check-dsh-next.mjs'
-import { dshAdmission } from '../src/dsh-admission.mjs'
+import { dshAdmission, dshHostNodeRange, dshHostSupportsNode, dshPluginApi } from '../src/dsh-admission.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -19,6 +20,9 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
   for (const [index, report] of reports.entries()) {
     if (report?.schemaVersion !== 1 || report.dshVersion !== versions[index]
       || report.hostPackageCandidate !== undefined
+      || !dshHostSupportsNode(report.dshVersion, report.nodeVersion)
+      || (dshPluginApi.cordis.dshVersions.includes(report.dshVersion)
+        && !semver.satisfies(report.runtime?.cordis ?? '', dshPluginApi.cordis.range))
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true
@@ -77,7 +81,11 @@ export function matrixFailureMessage(version, result) {
 
 async function main() {
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = dshAdmission.verifiedVersions
+  const versions = dshAdmission.verifiedVersions.filter(version => {
+    if (dshHostSupportsNode(version, process.version)) return true
+    console.error(`Skipping DSH ${version} on Node ${process.version} (requires Node ${dshHostNodeRange(version)})`)
+    return false
+  })
   const reports = []
   for (const version of versions) {
     process.stderr.write(`Checking declared DSH ${version}\n`)

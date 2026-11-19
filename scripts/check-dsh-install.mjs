@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
-import { dshAdmission, dshPluginApi } from '../src/dsh-admission.mjs'
+import { dshAdmission, dshHostNodeRange, dshHostSupportsNode, dshPluginApi } from '../src/dsh-admission.mjs'
 
 const JSON_SCHEMA_VERSION = 1
 const DEFAULT_DSH_VERSION = dshPluginApi.version
@@ -191,6 +191,9 @@ export async function checkDshInstall({ pluginManagerCandidate } = {}) {
   const dshVersion = requestedDshVersion === undefined || requestedDshVersion === ''
     ? DEFAULT_DSH_VERSION
     : requestedDshVersion
+  if (!dshHostSupportsNode(dshVersion, process.version)) {
+    throw new CompatibilityCheckError(`DSH ${dshVersion} requires Node ${dshHostNodeRange(dshVersion)} (running ${process.version})`)
+  }
   const repair = pluginManagerCandidate === undefined ? undefined
     : await (await import('./issue-211-repair.mjs')).validateRepairCandidate(pluginManagerCandidate, dshVersion, allowUndeclaredCanaryVersion)
   const inheritedEnvironment = allowUndeclaredCanaryVersion

@@ -17,7 +17,11 @@ export function createDshAdmission(verified: readonly string[], config: DshAdmis
 export const dshPluginApi: {
   readonly version: string
   readonly versions: readonly string[]
+  readonly node: { readonly range: string; readonly dshVersions: readonly string[] }
+  readonly cordis: { readonly range: string; readonly dshVersions: readonly string[] }
   readonly admission: DshAdmissionConfig
   readonly packages: readonly string[]
 }
 export const dshAdmission: DshAdmission
+export function dshHostNodeRange(version: string | null | undefined): string | undefined
+export function dshHostSupportsNode(version: string | null | undefined, nodeVersion: string): boolean

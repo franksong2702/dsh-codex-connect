@@ -72,14 +72,14 @@ for (const dependencies of [{}, { '@deepseek-ai/dsh-code-runtime': 'fixture', '@
   assertContract('image fixture rejects missing or ambiguous runtime identity', rejected)
 }
 
-assertContract('declared canary checks the full same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
+assertContract('declared canary runs the same-artifact matrix without a stale version override', /run: pnpm --silent run check:dsh-matrix/u.test(declaredWorkflow) && !/DSH_VERSION:/u.test(declaredWorkflow))
 assertContract('package exposes the declared matrix check', packageJson.scripts?.['check:dsh-matrix'] === 'node scripts/check-dsh-matrix.mjs')
-const matrixVersions = ['0.2.1-alpha.1', '0.2.1-alpha.2']
+const matrixVersions = ['0.2.1-alpha.1', '0.2.2-rc.4']
 const matrixReports = matrixVersions.map(dshVersion => ({
-  schemaVersion: 1, dshVersion, plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.43',
+  schemaVersion: 1, dshVersion, nodeVersion: 'v24.13.0', plugin: 'dsh-codex-connect', pluginVersion: '0.1.0-alpha.4.43',
   pluginArtifactSha256: 'a'.repeat(64), defaultsUnchanged: true,
   capabilities: { enableProxy: false, enableSearch: false, enableReserveFallback: false, enableNativeCompaction: false, enableImageTool: false, enableImageGeneration: false, enableAutoReview: false },
-  runtime: { schemaVersion: 1, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveRetirement: { syntheticOnly: true, retiredModelBlocked: true, explicitOrdinarySelectionVerified: true, legacyFlagIgnored: true, returnFilePreserved: true, quotaNegotiations: 0, toolExecutions: 0, realProviderRequests: 0 },
+  runtime: { schemaVersion: 1, cordis: dshVersion === '0.2.2-rc.4' ? '4.1.0' : undefined, provider: 'openai-codex', modelCount: 8, reasoningModelCount: 8, preparedModelCount: 8, disposalVerified: true, reserveRetirement: { syntheticOnly: true, retiredModelBlocked: true, explicitOrdinarySelectionVerified: true, legacyFlagIgnored: true, returnFilePreserved: true, quotaNegotiations: 0, toolExecutions: 0, realProviderRequests: 0 },
     preflightActivity: { syntheticOnly: true, cases: 6, publicProviderCallback: true, lateHeadersFullBudget: true,
       finiteTotalDeadline: true, ordinaryIdlePreserved: true, callerCancellationUnchanged: true, realProviderRequests: 0 },
     retryPolicy: { syntheticOnly: true, cases: 6, preparedPolicyVerified: true, omittedDefaultsPreserved: true,
@@ -91,6 +91,8 @@ const matrixReports = matrixVersions.map(dshVersion => ({
 validateDshMatrix(matrixReports, matrixVersions, '0.1.0-alpha.4.43')
 for (const [name, change] of [
   ['missing host', reports => reports.pop()],
+  ['new host under Node 22', reports => { reports[1].nodeVersion = 'v22.19.0' }],
+  ['new host with old Cordis', reports => { reports[1].runtime.cordis = '4.0.2' }],
   ['patched host represented as stock', reports => { reports[0].hostPackageCandidate = { package: '@deepseek-ai/dsh-plugin-manager' } }],
   ['missing enabled image proof', reports => { delete reports[0].runtime.images }],
   ['missing fork denial', reports => { reports[0].runtime.images.earlierForkDenied = false }],
@@ -190,7 +192,7 @@ const candidateReport = overrides => ({
   classification: 'candidate-compatible',
   channel: 'next',
   supportedVersion: '0.2.1-alpha.1',
-  candidateVersion: '0.2.2-rc.4',
+  candidateVersion: '0.2.2-rc.6',
   stage: 'isolated-install',
   nodeVersion: 'v24.15.0',
   pluginCommit: null,
@@ -201,7 +203,7 @@ const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, tr
 assertContract(
   'a passing newer candidate becomes a preliminary validation tracker',
   passedTracking?.state === 'passed-needs-full-validation'
-    && passedTracking.marker === '<!-- dsh-canary:0.2.2-rc.4 -->'
+    && passedTracking.marker === '<!-- dsh-canary:0.2.2-rc.6 -->'
     && passedTracking.label === 'enhancement'
     && passedTracking.body.includes('preliminary evidence only'),
 )
@@ -272,7 +274,7 @@ assertContract('full check includes the canary workflow contract', /(?:^|&&)\s*p
 const ciValidateJob = ciWorkflow.match(/^  validate:\s*\n([\s\S]*?)(?=^  \S|(?![\s\S]))/m)?.[1] ?? ''
 const ciValidateSteps = [...ciValidateJob.matchAll(/^      - [\s\S]*?(?=^      - |(?![\s\S]))/gm)]
 assertContract(
-  'PR CI checks every declared host with the same packed artifact',
+  'PR CI requires the same-artifact matrix on each supported Node line',
   ciValidateSteps.some(([step]) =>
     /^        run: pnpm --silent run check:dsh-matrix[ \t]*$/m.test(step) &&
     !step.split('\n').some(line => /^(?:      - |        )(?:if|continue-on-error):/.test(line)),

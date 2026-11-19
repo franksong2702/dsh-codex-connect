@@ -80,11 +80,11 @@ try {
     assert.equal(result.child, undefined)
   }
 
-  const admitted = await fixture('0.2.2-rc.4', 1)
+  const admitted = await fixture('0.2.2-rc.6', 1)
   assert.equal(admitted.report.hostAdmission, 'unverified-in-range')
   assert.equal(admitted.report.declaredSupport, false)
   assert.equal(admitted.report.checkExecuted, true)
-  const repeatedAdmitted = await fixture('0.2.2-rc.4', 1)
+  const repeatedAdmitted = await fixture('0.2.2-rc.6', 1)
   assert.equal(buildCanaryTrackingIssue(admitted.report, repeatedAdmitted.report, metadata).state, 'compatibility-failed')
 
   for (const result of [await fixture('0.1.1-rc.2'), await fixture(versions.at(-1), 0, ['latest'])]) {

@@ -78,9 +78,9 @@ it.each(['0.2.2-rc.2', '0.2.2-rc.3'])('rejects a foreign %s subagent manifest an
 })
 
 
-it('admits exact rc3 ownership for recovery while keeping automation closed', () => {
-  for (const name of Object.keys(versions)) versions[name] = '0.2.2-rc.3'
-  versions['dsh-subagent'] = '0.2.2-rc.3'
+it.each(['0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5'])('admits exact %s ownership for recovery and keeps automation closed', version => {
+  for (const name of Object.keys(versions)) versions[name] = version
+  versions['dsh-subagent'] = version
   expect(taskHostRecoveryOnly()).toBe(true)
   expect(taskHostUsesSubagentOwnership()).toBe(true)
 })
@@ -92,7 +92,7 @@ it.each(['dsh-agent', 'dsh-agent-loop', 'dsh-tools', 'dsh-subagent'])('rejects m
   }
 })
 it('never admits a future ownership version from matching metadata alone', () => {
-  for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.4'
+  for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.6'
   expect(taskHostUsesSubagentOwnership()).toBe(false)
   expect(() => assertVerifiedTaskHostOwnership()).toThrow('TASK_HOST_OWNERSHIP_UNVERIFIED')
 })

@@ -41,3 +41,14 @@ export function createDshAdmission(verified, { minimum, before, denied }) {
 
 export const dshPluginApi = compatibility.dshPluginApi
 export const dshAdmission = createDshAdmission(dshPluginApi.versions, dshPluginApi.admission)
+
+/** Additional Node.js requirement for an exact DSH host, when declared. */
+export function dshHostNodeRange(version) {
+  return dshPluginApi.node.dshVersions.includes(version) ? dshPluginApi.node.range : undefined
+}
+
+/** Whether the Node.js version satisfies the host-specific requirement. */
+export function dshHostSupportsNode(version, nodeVersion) {
+  const range = dshHostNodeRange(version)
+  return range === undefined || semver.satisfies(nodeVersion, range)
+}

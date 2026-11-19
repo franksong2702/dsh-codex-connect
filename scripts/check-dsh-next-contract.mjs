@@ -229,12 +229,12 @@ const candidateDoctor = {
     node: { status: 'compatible' },
     packages: Object.fromEntries(['@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-llm-pi-ai', '@deepseek-ai/dsh-compaction', '@earendil-works/pi-ai'].map(name => [name, {
       supported: name === '@earendil-works/pi-ai' ? '0.85.1' : dshAdmission.range,
-      installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.2.2-rc.4',
+      installed: name === '@earendil-works/pi-ai' ? '0.85.1' : '0.2.2-rc.6',
       status: 'unverified',
     }])),
   },
 }
-const candidateDoctorOptions = { allowUndeclaredCanaryVersion: true, dshVersion: '0.2.2-rc.4' }
+const candidateDoctorOptions = { allowUndeclaredCanaryVersion: true, dshVersion: '0.2.2-rc.6' }
 function doctorOutcome(report, options = candidateDoctorOptions, status = 1, stderr = '') {
   try {
     validateDoctorResult({ status, stdout: JSON.stringify(report), stderr }, '/fixture-home', '/fixture-repo', options)

@@ -7,7 +7,7 @@ import type { OpenAICodexCredentialStore } from '../src/store.ts'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
-it.each(['gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-astra', 'gpt-5.6-luna', 'gpt-5.6-sol'].flatMap(model => [undefined, 0, 0.75].map(temperature => ({ model, temperature }))))('omits unsupported temperature on the real Codex request for %j', async ({ model, temperature }) => {
+it.each(['gpt-6.2-astra', 'gpt-6.2-sol', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-astra', 'gpt-5.6-luna', 'gpt-5.6-sol'].flatMap(model => [undefined, 0, 0.75].map(temperature => ({ model, temperature }))))('omits unsupported temperature on the real Codex request for %j', async ({ model, temperature }) => {
   const token = 'header.' + Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'synthetic' } })).toString('base64url') + '.signature'
   const credentials = { captureActiveAccount: async () => credentials,
     read: async () => ({ type: 'oauth', accountId: 'synthetic', access: token, refresh: 'synthetic', expires: Date.now() + 3600000 }),

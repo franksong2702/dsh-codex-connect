@@ -116,7 +116,7 @@ export async function diagnoseOpenAICodex(
   } else if (compatibility.status === 'unverified-in-range') {
     hints.push('The DSH version is within the installation range and has no verified runtime pairing. Task automation requires an exact verified Host.')
   } else if (compatibility.status === 'incompatible') {
-    hints.push('The installed Node version does not satisfy the declared engine requirement. This diagnostic does not recommend changing the DSH version.')
+    hints.push(`This Node version does not satisfy ${compatibility.node.supported} for the selected pairing. Keep the current DSH version while diagnosing Node compatibility.`)
   } else if (compatibility.status === 'unverified') {
     hints.push('Dependency versions are outside the declared supported set. This combination is unverified, not proven broken. Keep the current DSH installation; investigate specific failures or consult the maintainer before changing versions.')
   } else if (compatibility.status === 'unknown') {

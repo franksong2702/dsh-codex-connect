@@ -1,5 +1,5 @@
 /** Shared deterministic policy for Host and browser; no filesystem, process or runtime imports. */
-import { dshAdmission, dshPluginApi } from './dsh-admission.mjs'
+import { dshAdmission, dshHostNodeRange, dshHostSupportsNode, dshPluginApi } from './dsh-admission.mjs'
 
 export const COMPATIBILITY_SCHEMA_VERSION = 1 as const
 export const SUPPORTED_NODE_RANGE = '^22.19.0 || >=24.0.0'
@@ -78,6 +78,8 @@ export const COMPATIBILITY_CONTRACT = {
   dshPluginApi: {
     version: SUPPORTED_DSH_PLUGIN_API_VERSION,
     versions: dshPluginApi.versions,
+    node: dshPluginApi.node,
+    cordis: dshPluginApi.cordis,
     admission: dshPluginApi.admission,
     packages: DSH_PLUGIN_API_PACKAGES,
   },
@@ -133,11 +135,14 @@ function packageEntry(
   }
 }
 
-function nodeEntry(installed: string | null | undefined): CompatibilityEntry {
+function nodeEntry(installed: string | null | undefined, dshVersion: string | null): CompatibilityEntry {
+  const status = nodeStatus(installed)
   return {
-    supported: SUPPORTED_NODE_RANGE,
+    supported: dshHostNodeRange(dshVersion) ?? SUPPORTED_NODE_RANGE,
     installed: installed ?? null,
-    status: nodeStatus(installed),
+    status: installed != null && status === 'compatible' && !dshHostSupportsNode(dshVersion, installed)
+      ? 'incompatible'
+      : status,
   }
 }
 
@@ -160,14 +165,13 @@ export function evaluateCompatibility(input: CompatibilityEvaluationInput = {}):
     '@deepseek-ai/dsh-compaction': packageEntry(SUPPORTED_DSH_PLUGIN_API_RANGE, suppliedPackages['@deepseek-ai/dsh-compaction'], dshVersionStatus),
     [PI_AI_PACKAGE]: packageEntry(SUPPORTED_PI_AI_RANGE, suppliedPackages[PI_AI_PACKAGE], piAiVersionStatus),
   } as Record<CompatibilityPackageName, CompatibilityEntry>
-  const node = nodeEntry(installedNode)
-  const status = aggregateStatus([node, ...Object.values(packages)])
   const dshVersion = packages['@deepseek-ai/dsh-llm'].installed
-  const piVersion = packages[PI_AI_PACKAGE].installed
-  const matchedPair = dshVersion === packages['@deepseek-ai/dsh-llm-pi-ai'].installed
+  const matchedHost = dshVersion !== null
+    && dshVersion === packages['@deepseek-ai/dsh-llm-pi-ai'].installed
     && dshVersion === packages['@deepseek-ai/dsh-compaction'].installed
-    && typeof dshVersion === 'string'
-    && piVersion === SUPPORTED_PI_AI_RANGE
+  const matchedPair = matchedHost && packages[PI_AI_PACKAGE].installed === SUPPORTED_PI_AI_RANGE
+  const node = nodeEntry(installedNode, matchedHost ? dshVersion : null)
+  const status = aggregateStatus([node, ...Object.values(packages)])
   return {
     schemaVersion: COMPATIBILITY_SCHEMA_VERSION,
     status: (status === 'compatible' || status === 'unverified-in-range') && !matchedPair ? 'unverified' : status,

@@ -200,7 +200,7 @@ describe('compatibility contract', () => {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified')
     }
-    for (const version of ['0.2.2-rc.4', '0.2.2']) {
+    for (const version of ['0.2.2-rc.6', '0.2.2']) {
       expect(evaluateCompatibility({ nodeVersion, packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified-in-range')
@@ -211,6 +211,27 @@ describe('compatibility contract', () => {
       }
     }
     expect(evaluateCompatibility({ nodeVersion, packageVersions: { ...packages, '@earendil-works/pi-ai': '0.85.2' } }).status).toBe('unverified')
+  })
+
+  it.each(['0.2.2-rc.4', '0.2.2-rc.5'])('reports the exact Node requirement for DSH %s', version => {
+    const packageVersions = {
+      ...compatiblePackages,
+      '@deepseek-ai/dsh-llm': version,
+      '@deepseek-ai/dsh-llm-pi-ai': version,
+      '@deepseek-ai/dsh-compaction': version,
+    }
+    for (const nodeVersion of ['v22.19.0', 'v24.8.9', 'v24.9.0-rc.1']) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions })).toMatchObject({
+        status: 'incompatible', node: { installed: nodeVersion, supported: '>=24.9.0', status: 'incompatible' },
+      })
+    }
+    expect(evaluateCompatibility({ nodeVersion: 'v24.9.0', packageVersions })).toMatchObject({
+      status: 'compatible', node: { supported: '>=24.9.0', status: 'compatible' },
+    })
+    expect(evaluateCompatibility({ nodeVersion: 'unknown', packageVersions }).status).toBe('unknown')
+    expect(evaluateCompatibility({ nodeVersion: 'v22.19.0', packageVersions: {
+      ...packageVersions, '@deepseek-ai/dsh-compaction': '0.2.2-rc.3',
+    } })).toMatchObject({ status: 'unverified', node: { supported: SUPPORTED_NODE_RANGE, status: 'compatible' } })
   })
 
   it('marks a declared package mismatch unverified rather than incompatible', () => {

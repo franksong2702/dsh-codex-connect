@@ -4,6 +4,8 @@ import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import semver from 'semver'
+import { dshPluginApi } from '../src/dsh-admission.mjs'
 import { checkInstalledRetiredReserve } from './check-installed-retired-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
 import { checkInstalledImages } from './check-installed-images.mjs'
@@ -86,6 +88,9 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
         throw new Error(`runtime is missing calibrated GPT-6 compatibility for ${id}`)
       }
     }
+    for (const id of ['gpt-6.2-astra', 'gpt-6.2-sol']) {
+      if (!models.some(model => model.id === id)) throw new Error(`runtime did not list ${id}`)
+    }
     for (const model of models) {
       const prepared = await ctx.llm.prepareCall({ provider: PROVIDER_ID, model: model.id })
       if (prepared.config.provider !== PROVIDER_ID || prepared.config.model !== model.id) {
@@ -106,6 +111,11 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const reserveRetirement = await checkInstalledRetiredReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
+    const cordis = dshPluginApi.cordis.dshVersions.includes(toolsManifest.version)
+      ? JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/cordis/package.json'), 'utf8')).version : undefined
+    if (cordis !== undefined && !semver.satisfies(cordis, dshPluginApi.cordis.range)) {
+      throw new Error(`DSH ${toolsManifest.version} requires Cordis ${dshPluginApi.cordis.range}`)
+    }
     if (toolsManifest.version === '0.2.1-rc.5') await checkInstalledStockReview(importHost, OpenAICodex)
     const toolsModule = await importHost('@deepseek-ai/dsh-tools')
     const separateExecutor = typeof toolsModule.default.prototype.setExecutor === 'function'
@@ -118,6 +128,7 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       ...projection,
       preparedModelCount: models.length,
       disposalVerified: true,
+      ...(cordis === undefined ? {} : { cordis }),
       reserveRetirement,
       nativeCompactionLifecycle,
       images,

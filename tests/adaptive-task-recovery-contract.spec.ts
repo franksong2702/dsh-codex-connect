@@ -48,12 +48,14 @@ it.each(['missing-case', 'duplicate-pid', 'wrong-cut', 'no-crash', 'v2-no-epoch-
   expect(() => assertRecoveryCrashes(r)).toThrow()
 })
 
-it('selects recovery only for the four exact recovery contract candidates', () => {
+it('selects recovery only for the exact recovery contract candidates', () => {
   expect(isRecoveryHost('0.2.2-rc.1')).toBe(true)
   expect(isRecoveryHost('0.2.2-alpha.3')).toBe(true)
   expect(isRecoveryHost('0.2.2-rc.2')).toBe(true)
   expect(isRecoveryHost('0.2.2-rc.3')).toBe(true)
-  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.4', '0.2.3', undefined]) {
+  expect(isRecoveryHost('0.2.2-rc.4')).toBe(true)
+  expect(isRecoveryHost('0.2.2-rc.5')).toBe(true)
+  for (const version of ['0.2.2-alpha.2', '0.2.2-rc.6', '0.2.3', undefined]) {
     expect(isRecoveryHost(version)).toBe(false)
     expect(() => recoveryCordisVersion(version as string)).toThrow()
   }
@@ -69,8 +71,8 @@ it('requires all rc2 ownership and separate-session cases in addition to prior r
   expect(() => inspectRecoveryReport(report(), '0.2.2-rc.2')).toThrow()
   expect(inspectRecoveryReport(report('0.2.2-rc.3'), '0.2.2-rc.3').tests).toBe(39)
   expect(() => inspectRecoveryReport(report('0.2.2-rc.1'), '0.2.2-rc.3')).toThrow()
-  expect(() => recoveryCases('0.2.2-rc.4')).toThrow()
-  expect(() => recoveryRuntimePackages('0.2.2-rc.4')).toThrow()
+  expect(() => recoveryCases('0.2.2-rc.6')).toThrow()
+  expect(() => recoveryRuntimePackages('0.2.2-rc.6')).toThrow()
 })
 it.each(RC2_RECOVERY_CASES)('rejects rc2 evidence omitting %s even with adjusted passing totals', title => {
   const r = report('0.2.2-rc.2')
