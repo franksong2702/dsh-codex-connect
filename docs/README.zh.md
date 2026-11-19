@@ -8,21 +8,22 @@
 
 ### 1. 安装
 
-先运行 `dsh --version`。如果版本是 DSH `0.2.2-rc.1`，可以装入 Web profile：
+先运行 `dsh --version`。如果版本是 DSH `0.2.2-rc.5`，请将下方的精确版本安装到 Web profile。
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.16
 dsh web
 ```
 
 | 要求 | 已验证的默认组合 |
 | --- | --- |
-| DeepSeek Harness | `0.2.2-rc.1`（2026-11-17 的 DSH npm `latest`，宿主包版本须一致） |
-| Codex Connect | `0.2.0-alpha.15`（2026-11-17 的 npm `latest` 和 `alpha`） |
-| Node.js | `^22.19.0 \|\| >=24.0.0` |
+| DeepSeek Harness | `0.2.2-rc.5`（2026-11-19 的 DSH npm `latest`，宿主包版本须一致） |
+| Codex Connect | `0.2.0-alpha.16`（2026-11-19 的 npm `latest` 和 `alpha`） |
+| Node.js | 此宿主要求 `>=24.9.0` |
+| Cordis | `~4.1.0`（实测原版随附的 `4.1.0`） |
 | 账户 | 支持所选 Codex 模型的 ChatGPT OAuth 账户 |
 
-在这个精确的 DSH 版本上，`dsh-codex-connect@latest` 解析为 Alpha 15，已通过隔离安装和无凭据启动检查。需要可重复安装时，请使用上方的精确版本。其他 DSH 版本和 Desktop 请先查完整版本表和安装说明。[安装与升级](../INSTALL.md) · [Alpha 15 发布与晋升记录](release-notes/0.2.0-alpha.15.md#latest-promotion-on-2026-11-17)
+在原版 DSH `0.2.2-rc.5` 的全新 Web profile 中，`dsh-codex-connect@latest` 解析为 Alpha 16，已通过隔离安装和无凭据运行检查。需要可重复安装时，请使用上方的精确版本。其他 DSH 版本和 Desktop 请先查安装指南，选择精确配对。[安装与升级](../INSTALL.md) · [Alpha 16 晋升和验证记录](release-notes/0.2.0-alpha.16.md#latest-promotion-on-2026-11-19)
 
 将 `web` 替换为现有 profile 名，启动 Harness 时也使用同一个 profile。从 DSH 源码目录执行时，请在命令前加 `pnpm`。
 
@@ -150,4 +151,4 @@ Alpha 5 能力校准：[来源对照](agent-notes/gpt61-capability-calibration.m
 
 Alpha 11 已发布：手动模型目录与配置选择器新增 `gpt-6.1-terra`，保留文字/图片输入和既有 Responses 工具。官方 Codex 回退默认 500,000 tokens，本地可选上限 872,000、输出上限 128,000；上游原生元数据优先，但与 Sol61 一样仍套用 effort 遮罩。提供 Low、Medium、High、Xhigh、Max；Default 不发送 effort。锁定的 OAuth 目录未列出 API 的 `none`，Ultra 客户端编排不受支持。本轮不新增桌面 Computer Use 执行器、不扩大 Ultrafast 范围。[来源、范围及合成验证](agent-notes/gpt61-terra-support.md)；真实账户可用性尚未验证。
 
-未发布的源码候选：手动模型目录与配置选择器新增 `gpt-6.2-sol` 和 `gpt-6.2-astra`，保留文字/图片输入和既有 Responses 工具。两者的官方 Codex 回退默认值分别为 500,000 和 272,000 tokens，本地可选上限均为 872,000、输出上限为 128,000；上游原生元数据优先，同时仍套用既有 effort 遮罩。提供 Low、Medium、High、Xhigh、Max；Default 不发送 effort。Ultra 客户端编排不受支持，既有 Ultrafast 范围不变。[官方 Codex 模型目录](https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json)；真实账户可用性尚未验证。
+Alpha 16 在手动模型目录和配置选择器中新增 `gpt-6.2-sol` 和 `gpt-6.2-astra`，保留文字/图片输入和既有 Responses 工具。两者的官方 Codex 回退默认值分别为 500,000 和 272,000 tokens，本地可选上限均为 872,000、输出上限为 128,000。上游原生元数据优先，同时沿用既有 effort 遮罩。提供 Low、Medium、High、Xhigh 和 Max。Default 省略 effort 参数。Ultra 客户端编排不受支持，既有 Ultrafast 范围不变。真实账户可用性尚未验证。[官方 Codex 模型目录](https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json)

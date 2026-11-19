@@ -8,21 +8,22 @@ English | [中文](docs/README.zh.md)
 
 ### 1. Install
 
-Run `dsh --version` first. For DSH `0.2.2-rc.1`, install into your Web profile:
+Run `dsh --version` first. For DSH `0.2.2-rc.5`, install the exact plugin version into your Web profile.
 
 ```sh
-dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.15
+dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.16
 dsh web
 ```
 
 | Requirement | Verified default pairing |
 | --- | --- |
-| DeepSeek Harness | `0.2.2-rc.1` (DSH npm `latest` on 2026-11-17, with a consistent host package set) |
-| Codex Connect | `0.2.0-alpha.15` (npm `latest` and `alpha` on 2026-11-17) |
-| Node.js | `^22.19.0 \|\| >=24.0.0` |
+| DeepSeek Harness | `0.2.2-rc.5` (DSH npm `latest` on 2026-11-19, with a consistent host package set) |
+| Codex Connect | `0.2.0-alpha.16` (npm `latest` and `alpha` on 2026-11-19) |
+| Node.js | `>=24.9.0` for this host |
+| Cordis | `~4.1.0` (verified with stock `4.1.0`) |
 | Account | ChatGPT OAuth with access to the selected Codex model |
 
-On this exact DSH version, `dsh-codex-connect@latest` resolved to Alpha 15 and passed isolated installation and keyless startup checks. For reproducible installs, use the exact version above. Check the full table before installing on another DSH version or in Desktop. [Installation and upgrades](INSTALL.md) · [Alpha 15 release and promotion record](docs/release-notes/0.2.0-alpha.15.md#latest-promotion-on-2026-11-17)
+On stock DSH `0.2.2-rc.5`, `dsh-codex-connect@latest` resolved to Alpha 16 and passed installation and keyless runtime checks in a fresh Web profile. Pin the version above for reproducible installs. For other DSH versions and Desktop, select the exact pairing from the installation guide. [Installation and upgrades](INSTALL.md) · [Alpha 16 promotion and verification](docs/release-notes/0.2.0-alpha.16.md#latest-promotion-on-2026-11-19)
 
 Replace `web` with your existing profile name and start Harness with that same profile. From a DSH source checkout, prefix the commands with `pnpm`.
 
@@ -152,4 +153,4 @@ Published base-default follow-up for #338: Sol61 now uses a dedicated **500,000-
 
 Published in Alpha 11: `gpt-6.1-terra` is available through the manual catalog and configuration selector, with text/image input and existing Responses tools. Its official Codex fallback is 500,000 tokens with an optional 872,000 local ceiling and 128,000 output limit; native provider metadata wins, with the same effort mask as Sol61. Low, Medium, High, Xhigh and Max are exposed; Default omits effort. API `none` is not advertised by the pinned OAuth catalog, and Ultra orchestration is unsupported. This does not add a desktop Computer Use executor or expand Ultrafast eligibility. [Sources, scope and synthetic validation](docs/agent-notes/gpt61-terra-support.md); real-account access remains unverified.
 
-Unpublished source candidate: `gpt-6.2-sol` and `gpt-6.2-astra` are available through the manual catalog and configuration selector, with text/image input and existing Responses tools. Their official Codex fallbacks are respectively 500,000 and 272,000 tokens, with an optional 872,000 local ceiling and 128,000 output limit; native provider metadata wins, with the existing effort mask. Low, Medium, High, Xhigh and Max are exposed; Default omits effort. Ultra orchestration is unsupported, and existing Ultrafast eligibility is unchanged. [Official Codex catalog](https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json); real-account access remains unverified.
+Alpha 16 adds `gpt-6.2-sol` and `gpt-6.2-astra` to the manual catalog and configuration selector, with text/image input and existing Responses tools. Their official Codex fallbacks are respectively 500,000 and 272,000 tokens, with an optional 872,000 local ceiling and 128,000 output limit. Native provider metadata takes precedence with the existing effort mask. Low, Medium, High, Xhigh and Max are exposed; Default omits effort. Ultra orchestration is unsupported, and existing Ultrafast eligibility is unchanged. Real-account access remains unverified. [Official Codex catalog](https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json)

@@ -1,5 +1,9 @@
 # Installation Runbook for CLI Agents
 
+The verified default pair is Codex Connect `0.2.0-alpha.16` with DSH `0.2.2-rc.5`. This host requires Node.js `>=24.9.0` and Cordis `~4.1.0`. Select the exact version for the installed host from the table below.
+
+On 2026-11-19, npm `latest` moved from `0.2.0-alpha.15` to `0.2.0-alpha.16`. npm `alpha` also points to Alpha 16. A fresh stock `0.2.2-rc.5` Web profile installed `dsh-codex-connect@latest` and passed keyless checks. All 74 installed files matched the published archive. The npm archive retains the README from its original publication. [Alpha 16 promotion and verification](docs/release-notes/0.2.0-alpha.16.md#latest-promotion-on-2026-11-19)
+
 **Published Alpha 15:** [`0.2.0-alpha.15`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.15) adds exact DSH `0.2.2-rc.3`, retaining all seventeen previous hosts. Authenticated retained-session recovery now recognizes rc.3 ownership; public Task and automatic delegation remain disabled. The public package matches the original release artifact and the package used by all eighteen isolated host checks byte-for-byte. See [the release and verification record](docs/release-notes/0.2.0-alpha.15.md). No daily Host upgrade is implied.
 
 **Historical Alpha 13:** [`0.2.0-alpha.13`](https://github.com/franksong2702/dsh-codex-connect/releases/tag/v0.2.0-alpha.13) adds only exact stock DSH `0.2.2-rc.1`, retaining all fifteen prior Hosts. Registry version/alpha, matching source tag/prerelease and archive integrity have been independently verified. At publication, `latest` was Alpha 10. See the bilingual [release and verification record](docs/release-notes/0.2.0-alpha.13.md). No daily Host upgrade is implied.
@@ -12,13 +16,9 @@ The published Alpha 13 pairings on exact DSH `0.2.2-alpha.3` and `0.2.2-rc.1` re
 
 **Historical Alpha 10:** `0.2.0-alpha.10` adds only exact DSH `0.2.1-rc.3`, retaining the eleven previous pairings. Alpha 9 is not an rc.3 pairing. Public npm version/alpha, archive integrity and exact Git tag/prerelease have been independently verified; see the [publication record](#020-alpha10-verified-publication). The rc.3 upstream Git-source mapping remains unverified. Keyless checks do not establish real-account or Desktop acceptance.
 
-The verified default pair is Codex Connect `0.2.0-alpha.15` with DSH `0.2.2-rc.1`. The table lists verified pairs for published packages, including older hosts. For a new source build, use the support window in [the migration guide](MIGRATION.md#dsh-support-window).
-
 The exact DSH `0.2.1-alpha.1` adaptation is published in `0.2.0-alpha.2`. The earlier `0.2.0-alpha.1` artifact remains unchanged and rejects this host. See the [release notes](docs/release-notes/0.2.0-alpha.2.md) for scope and verification limits; keyless compatibility does not establish live-account acceptance.
 
 Install `dsh-codex-connect` into one requested DeepSeek Harness profile without changing its current default model, search route, global configuration, or OAuth state.
-
-On 2026-11-17, npm `latest` moved to `0.2.0-alpha.15`, and `alpha` still pointed to the same package. A fresh profile on DSH `0.2.2-rc.1` passed default installation and keyless runtime checks. Use the table and pin the exact plugin version for reproducible installs. [Promotion and verification record](docs/release-notes/0.2.0-alpha.15.md#latest-promotion-on-2026-11-17)
 
 ## Safety requirements
 
@@ -62,14 +62,15 @@ Check `dsh --version` before changing the requested profile. Use `dsh --help` to
 | `0.2.2-rc.1` | `0.2.0-alpha.15` |
 | `0.2.2-rc.2` | `0.2.0-alpha.15` |
 | `0.2.2-rc.3` | `0.2.0-alpha.15` |
+| `0.2.2-rc.5` | `0.2.0-alpha.16` |
 
-If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record does not prove incompatibility, and the catalog's latest verified DSH version is not the latest upstream release. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
+If your exact DSH version is unknown or not listed, preserve the installed host, report that the combination is unverified, and verify it before making installation changes. A missing record leaves compatibility unknown. Check registry tags independently of the dated verification catalog. Do not recommend upgrading or downgrading DSH merely to match a row. Investigate any specific failure and seek verification of the installed combination. Do not blindly install `dsh-codex-connect@alpha`: `alpha` is a moving tag, not a compatibility guarantee. Do not infer support for newer DSH versions from these rows.
 
 Historical Alpha 5 includes exact DSH `0.2.1-alpha.4`, `0.2.1-alpha.5` and `0.2.1-rc.1` support, the [client-state repair](docs/agent-notes/dsh-021-alpha4-compatibility.md) and [runtime-identity diagnostics](docs/runtime-identity.md). The immutable npm `0.2.0-alpha.4` package still supports only its original seven hosts. The [candidate verification record](docs/agent-notes/dsh-021-alpha5-rc1-compatibility.md) and publication evidence below describe separate stages; #339 remains open for real acceptance. Host upgrades or service restarts are separate operations.
 
-`0.2.0-alpha.15` requires one consistent DSH plugin API version from the eighteen modern rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.15` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
+`0.2.0-alpha.15` requires one consistent DSH plugin API version from the eighteen Alpha 15 rows above; its direct runtime imports include `@deepseek-ai/schemastery` `3.18.4` and plugin-owned `@earendil-works/pi-ai` `0.85.1` so an isolated profile need not already provide them. The host adapter can own a different nested pi-ai version, as verified on DSH 0.2.0-rc.2. Node.js remains `^22.19.0 || >=24.0.0`. `0.2.0-alpha.15` does not support the older DSH rows. Alpha 4.41 remains the choice for DSH `0.1.2-rc.1` with pi-ai `^0.84.2`, or `0.1.5-alpha.1`, `0.1.5-rc.1`, and `0.1.5-rc.2` with pi-ai `0.85.1`. Mixed host versions and other DSH/pi-ai combinations remain unverified. Alpha 4.25 remains the verified choice for DSH `0.1.2-alpha.5`, Alpha 4.23 for DSH `0.1.2-alpha.2`, Alpha 4.21 for DSH `0.1.1-rc.2`, and Alpha 4.14 for DSH `0.1.0-rc.7`. Changing DSH is a separate operation requiring the user's explicit request; a plugin update request does not authorize it. The repository's `pnpm --silent run check:compatibility` remains a strict development/release dependency gate, not a recommendation to change a user's host.
 
-The local Alpha 16 candidate adds exact DSH `0.2.2-rc.4` and `0.2.2-rc.5`, with Cordis `^4.1.0` compatibility. The published DSH manifests for these two hosts require Node.js `>=24.9.0` and Cordis `~4.1.0`. Mount the built archive with `dsh plugin --profile web add file:/absolute/path/to/dsh-codex-connect-0.2.0-alpha.16.tgz` in the intended isolated profile. The table above lists published packages.
+The Alpha 16 source and CI cover exact DSH `0.2.2-rc.4` and `0.2.2-rc.5`. The published-package check recorded in the table covers exact `0.2.2-rc.5`. Both DSH releases require Node.js `>=24.9.0` and Cordis `~4.1.0`. To test a local build in an isolated profile, replace the package spec in the install command with `file:/absolute/path/to/dsh-codex-connect-0.2.0-alpha.16.tgz`.
 
 Current source builds retain sixteen exact DSH entries in `compatibility.json` and allow `>=0.2.2-rc.1 <0.3.0-0`, except for versions explicitly excluded in `compatibility.json`. Host and package-manager requirements still apply. Standard npm peer resolution can exclude a different patch's prerelease even when the DSH requirement admits it. A coherent in-range host without an exact verified entry can report `unverified-in-range`. An excluded host reports `known-bad`. Task ownership and recovery require exact verified host identities. The four retired source pairings remain valid with the published Alpha 15 package. See [the DSH support-window migration](MIGRATION.md#dsh-support-window) for the upgrade path. [Compatibility evidence](docs/agent-notes/dsh-range-admission.md)
 
@@ -202,7 +203,13 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 ### Install the selected version and validate
 
 1. Complete the version selection above. The commands below use `web`; substitute only the requested profile.
-2. Install the selected exact version. For DSH `0.1.0-rc.7`:
+2. Install the selected exact version. For DSH `0.2.2-rc.5`, pin Alpha 16.
+
+   ```sh
+   dsh plugin --profile web add dsh-codex-connect@0.2.0-alpha.16
+   ```
+
+   For DSH `0.1.0-rc.7`:
 
    ```sh
    dsh plugin --profile web add dsh-codex-connect@0.1.0-alpha.4.14
@@ -264,7 +271,7 @@ Alpha 4.33 omits the `modelErrors` profile field required by RC model packages, 
 
 Desktop uses the same plugin package, but owns a separate `desktop` profile and its bundled runtime. Check the installed Desktop version against the exact host table above; a Web installation does not enable the plugin in Desktop. Do not replace Desktop's runtime or copy a Web profile over it.
 
-Install the exact published version using Desktop's own **Plugins** page or its bundled CLI. On macOS the bundled CLI is:
+Install the exact published version using Desktop's own **Plugins** page or its bundled CLI. The macOS example uses Alpha 15 for a bundled DSH version listed in the Alpha 15 rows.
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
