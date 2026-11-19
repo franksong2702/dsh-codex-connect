@@ -10,7 +10,7 @@ Alpha 12 已发布到原有 alpha 渠道。[双语发行说明](docs/release-not
 
 ## DSH support window
 
-New source builds retain fourteen exact verified DSH releases starting at `0.2.1-alpha.1`, plus the existing current-minor admission range. DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, and `0.2.0-rc.2` are retired for new builds. The [published Alpha 15 package](INSTALL.md#020-alpha15-verified-publication) still supports all four. Pin `dsh-codex-connect@0.2.0-alpha.15` when keeping one of those hosts.
+New source builds declare sixteen exact DSH releases starting at `0.2.1-alpha.1`, plus the existing current-minor admission range. The Alpha 16 candidate adds `0.2.2-rc.4` and `0.2.2-rc.5` with Cordis `^4.1.0` compatibility. DSH `0.1.7-rc.1`, `0.1.7-rc.2`, `0.2.0-rc.1`, and `0.2.0-rc.2` are retired for new builds. The [published Alpha 15 package](INSTALL.md#020-alpha15-verified-publication) still supports all four. Pin `dsh-codex-connect@0.2.0-alpha.15` when keeping one of those hosts.
 
 To move to a retained pairing, finish active tasks or use authenticated Stop or manual takeover on the original host. Wait for cleanup before changing the host. Keep the profile configuration, OAuth store, session files, and Task ledger intact. With explicit approval to upgrade the host, install exact DSH `0.2.2-rc.1` and the published `dsh-codex-connect@0.2.0-alpha.15` in the selected profile, then follow the [configuration and doctor checks](INSTALL.md). Cross-host recovery of active Task state remains unverified.
 

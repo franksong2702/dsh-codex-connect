@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex'
 import { assertOpenAICodexContextWindowOverrides, openAICodexModelCatalog, withOpenAICodexContextWindowOverrides, withOpenAICodexModels } from '../src/adapter.ts'
-import { decodeOpenAICodexModelCatalog, isValidOpenAICodexContextBudget, openAICodexContextLimit, openAICodexContextLimitSource, OPENAI_CODEX_SOL61_CONTEXT_LIMIT_SOURCE, OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE, OPENAI_CODEX_CONTEXT_LIMIT_SOURCE } from '../src/model-contract.ts'
+import { decodeOpenAICodexModelCatalog, isValidOpenAICodexContextBudget, openAICodexContextLimit, openAICodexContextLimitSource, OPENAI_CODEX_SOL61_CONTEXT_LIMIT_SOURCE, OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE, OPENAI_CODEX_GPT62_CONTEXT_LIMIT_SOURCE, OPENAI_CODEX_CONTEXT_LIMIT_SOURCE } from '../src/model-contract.ts'
 
 describe('model-specific configuration ceilings', () => {
   it('keeps model-specific policy links pinned without changing old provenance', () => {
@@ -10,11 +10,15 @@ describe('model-specific configuration ceilings', () => {
     expect(openAICodexContextLimitSource('gpt-6.1-sol')).toBe(OPENAI_CODEX_SOL61_CONTEXT_LIMIT_SOURCE)
     expect(OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE).toBe('https://github.com/openai/codex/blob/e8e6a922c0008bc08bacc69dd2ce9b6c3c12944c/codex-rs/models-manager/models.json')
     expect(openAICodexContextLimitSource('gpt-6.1-terra')).toBe(OPENAI_CODEX_TERRA61_CONTEXT_LIMIT_SOURCE)
+    expect(OPENAI_CODEX_GPT62_CONTEXT_LIMIT_SOURCE).toBe('https://github.com/openai/codex/blob/6c0cee502d215e5df2dd9a303cf2e252229c9e12/codex-rs/models-manager/models.json')
+    for (const id of ['gpt-6.2-astra', 'gpt-6.2-sol']) expect(openAICodexContextLimitSource(id)).toBe(OPENAI_CODEX_GPT62_CONTEXT_LIMIT_SOURCE)
     for (const id of ['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-sol', 'gpt-5.6-luna']) {
       expect(openAICodexContextLimitSource(id)).toBe(OPENAI_CODEX_CONTEXT_LIMIT_SOURCE)
     }
   })
   it.each([
+    ['gpt-6.2-sol', 500_000, 872_000],
+    ['gpt-6.2-astra', 272_000, 872_000],
     ['gpt-6-astra', 272_000, 872_000],
     ['gpt-6.1-sol', 500_000, 872_000],
     ['gpt-6.1-terra', 500_000, 872_000],

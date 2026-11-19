@@ -78,6 +78,7 @@ export const COMPATIBILITY_CONTRACT = {
   dshPluginApi: {
     version: SUPPORTED_DSH_PLUGIN_API_VERSION,
     versions: dshPluginApi.versions,
+    cordis: dshPluginApi.cordis,
     admission: dshPluginApi.admission,
     packages: DSH_PLUGIN_API_PACKAGES,
   },

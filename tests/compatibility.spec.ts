@@ -200,7 +200,7 @@ describe('compatibility contract', () => {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified')
     }
-    for (const version of ['0.2.2-rc.4', '0.2.2']) {
+    for (const version of ['0.2.2-rc.6', '0.2.2']) {
       expect(evaluateCompatibility({ nodeVersion, packageVersions: {
         ...packages, ...Object.fromEntries(names.map(name => [name, version])),
       } }).status).toBe('unverified-in-range')

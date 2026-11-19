@@ -190,7 +190,7 @@ const candidateReport = overrides => ({
   classification: 'candidate-compatible',
   channel: 'next',
   supportedVersion: '0.2.1-alpha.1',
-  candidateVersion: '0.2.2-rc.4',
+  candidateVersion: '0.2.2-rc.6',
   stage: 'isolated-install',
   nodeVersion: 'v24.15.0',
   pluginCommit: null,
@@ -201,7 +201,7 @@ const passedTracking = buildCanaryTrackingIssue(candidateReport(), undefined, tr
 assertContract(
   'a passing newer candidate becomes a preliminary validation tracker',
   passedTracking?.state === 'passed-needs-full-validation'
-    && passedTracking.marker === '<!-- dsh-canary:0.2.2-rc.4 -->'
+    && passedTracking.marker === '<!-- dsh-canary:0.2.2-rc.6 -->'
     && passedTracking.label === 'enhancement'
     && passedTracking.body.includes('preliminary evidence only'),
 )

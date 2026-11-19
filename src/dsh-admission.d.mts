@@ -17,6 +17,7 @@ export function createDshAdmission(verified: readonly string[], config: DshAdmis
 export const dshPluginApi: {
   readonly version: string
   readonly versions: readonly string[]
+  readonly cordis: { readonly range: string; readonly dshVersions: readonly string[] }
   readonly admission: DshAdmissionConfig
   readonly packages: readonly string[]
 }

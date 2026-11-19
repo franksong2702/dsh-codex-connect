@@ -479,6 +479,10 @@ export declare const COMPATIBILITY_CONTRACT: {
   readonly dshPluginApi: {
     readonly version: string;
     readonly versions: readonly string[];
+    readonly cordis: {
+      readonly range: string;
+      readonly dshVersions: readonly string[];
+    };
     readonly admission: DshAdmissionConfig;
     readonly packages: readonly ["@deepseek-ai/dsh-agent", "@deepseek-ai/dsh-atomic-write", "@deepseek-ai/dsh-attachment", "@deepseek-ai/dsh-client-ui-chat", "@deepseek-ai/dsh-client-ui-layout", "@deepseek-ai/dsh-client-ui-primitives", "@deepseek-ai/dsh-client-ui-tool", "@deepseek-ai/dsh-compaction", "@deepseek-ai/dsh-home-paths", "@deepseek-ai/dsh-host-webserver", "@deepseek-ai/dsh-llm", "@deepseek-ai/dsh-llm-pi-ai", "@deepseek-ai/dsh-fs", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-settings", "@deepseek-ai/dsh-timeout", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-util-values", "@deepseek-ai/dsh-web"];
   };

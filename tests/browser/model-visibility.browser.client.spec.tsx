@@ -311,6 +311,8 @@ describe('Codex model visibility in Chromium', () => {
 
   it('shows the full catalog, saves a subset, and stays inside a narrow viewport', async () => {
     const models = [
+      { id: 'gpt-6.2-sol', name: 'GPT-6.2-Sol' },
+      { id: 'gpt-6.2-astra', name: 'GPT-6.2-Astra' },
       { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },
       { id: 'gpt-6.1-sol', name: 'GPT-6.1-Sol' },
       { id: 'gpt-6.1-terra', name: 'GPT-6.1 Terra' },
@@ -329,7 +331,7 @@ describe('Codex model visibility in Chromium', () => {
     await terra.click()
     await page.getByRole('button', { name: en.save }).click()
     await vi.waitFor(() => {
-      expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['models'], value: ['gpt-5.6-luna', 'gpt-6.1-sol', 'gpt-5.6-terra'] }]), expect.any(Number))
+      expect(mutate).toHaveBeenCalledWith(expect.arrayContaining([{ op: 'set', path: ['models'], value: ['gpt-6.2-sol', 'gpt-6.2-astra', 'gpt-5.6-luna', 'gpt-6.1-sol', 'gpt-5.6-terra'] }]), expect.any(Number))
     })
 
     await page.viewport(360, 800)

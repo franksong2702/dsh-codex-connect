@@ -7,6 +7,7 @@ import { dshAdmission } from './dsh-admission.mjs'
 export const TASK_HOST_RECOVERY_ONLY = 'TASK_HOST_RECOVERY_ONLY'
 const require = createRequire(import.meta.url)
 const packages = ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop', '@deepseek-ai/dsh-tools'] as const
+const subagentRecoveryVersions = new Set(['0.2.2-rc.2', '0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5'])
 
 function taskHostPackageVersions(): (string | undefined)[] {
   return packages.map(name => {
@@ -21,7 +22,8 @@ function taskHostPackageVersions(): (string | undefined)[] {
 
 /** Read package metadata only; exact recovery Hosts retain safety exits. */
 function recoveryVersion(versions = taskHostPackageVersions()): string | undefined {
-  const recovery = versions.find(version => version === '0.2.2-alpha.3' || version === '0.2.2-rc.1' || version === '0.2.2-rc.2' || version === '0.2.2-rc.3')
+  const recovery = versions.find(version => version !== undefined
+    && (version === '0.2.2-alpha.3' || version === '0.2.2-rc.1' || subagentRecoveryVersions.has(version)))
   if (recovery === undefined) return undefined
   if (!versions.every(version => version === recovery)) taskFailure('TASK_HOST_VERSION_MISMATCH')
   return recovery
@@ -42,7 +44,7 @@ export function taskHostRecoveryOnly(): boolean { return recoveryVersion() !== u
 /** The new ownership query is admitted only with its exact published package. */
 export function taskHostUsesSubagentOwnership(): boolean {
   const version = recoveryVersion()
-  if (version !== '0.2.2-rc.2' && version !== '0.2.2-rc.3') return false
+  if (version === undefined || !subagentRecoveryVersions.has(version)) return false
   if (dshAdmission.classify(version) !== 'verified') return false
   try {
     const metadata: unknown = JSON.parse(readFileSync(require.resolve('@deepseek-ai/dsh-subagent/package.json'), 'utf8'))

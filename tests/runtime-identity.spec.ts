@@ -99,7 +99,7 @@ describe('node-free runtime receipt decoder', () => {
 
   it('requires a coherent Host receipt before showing an in-range pairing', () => {
     const report = receipt()
-    const version = '0.2.2-rc.4'
+    const version = '0.2.2-rc.6'
     report.currentDshVersion = version
     report.compatibility = evaluateCompatibility({ nodeVersion: 'v24.21.0', packageVersions: {
       '@deepseek-ai/dsh-llm': version,
