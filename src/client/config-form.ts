@@ -29,7 +29,12 @@ export class OpenAICodexConfigForm implements ConfigForm<OpenAICodexSettingsConf
     if (form.status !== 'loading') return (this.projected = form)
     // Older Hosts report unavailable here; newer mirror types omit that state.
     const mirrorStatus: string = mirror.status
-    if (mirror.view === undefined) return (this.projected = mirrorStatus === 'unavailable' ? { ...form, status: 'unavailable' } : form)
+    if (mirror.view === undefined) {
+      // A failed first describe read can return to idle with an error, not an
+      // unavailable status. Do not leave recovery waiting on settings forever.
+      const unavailable = mirrorStatus === 'unavailable' || mirror.error !== null
+      return (this.projected = unavailable ? { ...form, status: 'unavailable' } : form)
+    }
     const view = mirror.view.namespaces.find(candidate => candidate.ns === OPENAI_CODEX_SETTINGS_NAMESPACE)
     if (view === undefined) return (this.projected = { ...form, status: 'unavailable' })
     const value = decodeOpenAICodexSettings(view.value)

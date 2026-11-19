@@ -19,6 +19,32 @@ function configSettings(config: ReturnType<typeof Config>): OpenAICodexSettingsI
   return values as OpenAICodexSettingsInput
 }
 
+describe('task recovery visibility settings', () => {
+  it('defaults task recovery visibility for legacy settings', () => {
+    const { showTaskRecoveryControls: _omitted, ...legacy } = DEFAULT_OPENAI_CODEX_SETTINGS
+    expect(Config({}).showTaskRecoveryControls.get()).toBe(true)
+    expect(resolveOpenAICodexSettings({}).showTaskRecoveryControls).toBe(true)
+    expect(decodeOpenAICodexSettings(legacy)?.showTaskRecoveryControls).toBe(true)
+    expect(Config({ showTaskRecoveryControls: undefined } as never).showTaskRecoveryControls.get()).toBe(true)
+    expect(decodeOpenAICodexSettings({ ...legacy, showTaskRecoveryControls: undefined })?.showTaskRecoveryControls).toBe(true)
+    expect(() => resolveOpenAICodexSettings({ showTaskRecoveryControls: undefined } as never)).toThrow()
+  })
+
+  it.each([true, false])('preserves explicit task recovery visibility: %s', showTaskRecoveryControls => {
+    expect(Config({ showTaskRecoveryControls }).showTaskRecoveryControls.get()).toBe(showTaskRecoveryControls)
+    expect(resolveOpenAICodexSettings({ showTaskRecoveryControls }).showTaskRecoveryControls).toBe(showTaskRecoveryControls)
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, showTaskRecoveryControls })?.showTaskRecoveryControls).toBe(showTaskRecoveryControls)
+  })
+
+  it.each([null, 'false', 0, {}, []].map(value => ({ value })))('rejects malformed task recovery visibility: $value', ({ value: showTaskRecoveryControls }) => {
+    // Schemastery treats null as resetting a field to its schema default.
+    if (showTaskRecoveryControls === null) expect(Config({ showTaskRecoveryControls } as never).showTaskRecoveryControls.get()).toBe(true)
+    else expect(() => Config({ showTaskRecoveryControls } as never)).toThrow()
+    expect(() => resolveOpenAICodexSettings({ showTaskRecoveryControls } as never)).toThrow()
+    expect(decodeOpenAICodexSettings({ ...DEFAULT_OPENAI_CODEX_SETTINGS, showTaskRecoveryControls })).toBeUndefined()
+  })
+})
+
 describe('OpenAI Codex proxy settings contract', () => {
   it.each(['gpt-image-2\n', 'gpt-image-2\r', 'gpt-image-2\u2028', 'gpt-image-2\u2029', 'a'.repeat(129), 'model\tname'])('rejects padded or oversized image hints on Host and browser: %j', imageModelHint => {
     expect(isValidOpenAICodexImageModelHint(imageModelHint)).toBe(false)

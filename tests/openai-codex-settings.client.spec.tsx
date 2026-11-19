@@ -141,6 +141,53 @@ afterEach(() => {
 })
 
 describe('OpenAI Codex Plugin configuration card', () => {
+  it('stages and discards task visibility before saving without changing capability counts', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
+      ? json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }])) : json({ status: 'signed-out' })))
+    const { scope, mutate } = settingsScopeFixture()
+    render(<OpenAICodexSettings t={t} configScope={scope} embedded />)
+    const tab = screen.getByRole('tab', { name: en.capabilitiesModule })
+    fireEvent.click(tab)
+    const toggle = screen.getByRole('checkbox', { name: 'Show existing task recovery controls' })
+    expect(toggle).toHaveProperty('checked', true)
+    fireEvent.click(toggle)
+    expect(scope.getSnapshot().value?.showTaskRecoveryControls).toBe(true)
+    expect(mutate).not.toHaveBeenCalled()
+    expect(within(tab).getByText(t('capabilitiesModuleEnabled', { count: 0 }))).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: en.discard }))
+    expect(toggle).toHaveProperty('checked', true)
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaved)
+    expect(mutate).toHaveBeenCalledExactlyOnceWith([{ op: 'set', path: ['showTaskRecoveryControls'], value: false }], 0)
+    expect(scope.getSnapshot().value?.showTaskRecoveryControls).toBe(false)
+    expect(within(tab).getByText(t('capabilitiesModuleEnabled', { count: 0 }))).toBeTruthy()
+  })
+
+  it.each(['refused', 'throws'] as const)('retains accepted recovery visibility when Save %s', async failure => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([{ id: 'gpt-6.1-sol', name: 'GPT Sol' }]))))
+    const { scope, mutate } = settingsScopeFixture()
+    if (failure === 'refused') mutate.mockResolvedValueOnce(false)
+    else mutate.mockRejectedValueOnce(new Error('fixture persistence failure'))
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const toggle = screen.getByRole('checkbox', { name: 'Show existing task recovery controls' })
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await screen.findByText(en.settingsSaveFailed)
+    expect(scope.getSnapshot().value?.showTaskRecoveryControls).toBe(true)
+    expect(toggle).toHaveProperty('checked', false)
+    expect(screen.queryByText(en.settingsSaved)).toBeNull()
+  })
+
+  it('disables task visibility editing for a read-only Host form', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(modelCatalogFixture([]))))
+    const { scope, mutate } = settingsScopeFixture(false)
+    render(<OpenAICodexConfiguration scope={scope} t={t} activeModule="capabilities" />)
+    const toggle = screen.getByRole('checkbox', { name: 'Show existing task recovery controls' })
+    expect(toggle.matches(':disabled')).toBe(true)
+    expect(mutate).not.toHaveBeenCalled()
+  })
+
   it('ignores retired Reserve in capability counts and does not count an unsaved draft', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => requestPath(input) === OPENAI_CODEX_MODEL_CATALOG_PATH
       ? json(modelCatalogFixture([{ id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }])) : json({ status: 'signed-out' })))

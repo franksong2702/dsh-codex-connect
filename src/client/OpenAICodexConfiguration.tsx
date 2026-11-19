@@ -102,6 +102,7 @@ const UNAVAILABLE_SNAPSHOT = {
 }
 
 const CONFIG_FIELDS = [
+  'showTaskRecoveryControls',
   'models',
   'newSessionSpeedMode',
   'newSubagentSpeedMode',
@@ -774,6 +775,18 @@ export function OpenAICodexConfiguration({ scope, t, activeModule, panelIdPrefix
             <h3 style={headingStyle}>{t('capabilitiesHeading')}</h3>
             <p style={{ ...bodyStyle, marginTop: 4 }}>{t('capabilitiesIntro')}</p>
           </div>
+          <label style={toggleRowStyle}>
+            <input type="checkbox"
+              aria-labelledby={`${panelPrefix}-task-recovery-label`}
+              aria-describedby={`${panelPrefix}-task-recovery-help`}
+              checked={draft.showTaskRecoveryControls}
+              onChange={event => { update('showTaskRecoveryControls', event.currentTarget.checked) }}
+            />
+            <span style={toggleCopyStyle}>
+              <span id={`${panelPrefix}-task-recovery-label`} style={labelStyle}>{t('showTaskRecoveryControls')}</span>
+              <span id={`${panelPrefix}-task-recovery-help`} style={bodyStyle}>{t('showTaskRecoveryControlsHelp')}</span>
+            </span>
+          </label>
           <label style={toggleRowStyle}>
             <input
               type="checkbox"

@@ -28,6 +28,27 @@ afterEach(async () => {
 })
 
 describe('OpenAI Codex Host settings integration', () => {
+  it('retains task recovery visibility through Host settings reload', async () => {
+    root = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-recovery-settings-'))
+    vi.stubEnv('DSH_HOME', root)
+    const ctx = new Context()
+    context = ctx
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(PiAiRuntime, {})
+    const { entry } = await loadSettingsPlugin(ctx, root, 'dsh-codex-connect', OpenAICodex, { imageModelHint: 'preserved-route' })
+    const value = () => ctx.settings.describe().find(section => section.ns === OpenAICodex.OPENAI_CODEX_SETTINGS_NS)?.value
+    expect(value()).toMatchObject({ showTaskRecoveryControls: true, imageModelHint: 'preserved-route' })
+    await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, { showTaskRecoveryControls: false })
+    expect(value()).toMatchObject({ showTaskRecoveryControls: false, imageModelHint: 'preserved-route' })
+    expect(entry.options.config).toMatchObject({ showTaskRecoveryControls: false, imageModelHint: 'preserved-route' })
+    await expect(ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, { showTaskRecoveryControls: 'false' })).rejects.toThrow()
+    expect(value()).toMatchObject({ showTaskRecoveryControls: false })
+    await entry.update({ config: entry.options.config }, false, true)
+    expect(value()).toMatchObject({ showTaskRecoveryControls: false, imageModelHint: 'preserved-route' })
+    await ctx.settings.update(OpenAICodex.OPENAI_CODEX_SETTINGS_NS, { showTaskRecoveryControls: true })
+    expect(value()).toMatchObject({ showTaskRecoveryControls: true, imageModelHint: 'preserved-route' })
+  })
+
   it('uses saved image hints on the next request and preserves a cleared override after plugin reload', async () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-codex-connect-image-settings-'))
     vi.stubEnv('DSH_HOME', root)
