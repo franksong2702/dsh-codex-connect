@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { issueInstalledBrowserCookie } from './installed-browser-auth.mjs'
 import { ensureNativeToolExecution } from './installed-host-context.mjs'
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64')
@@ -28,11 +29,10 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
   const runtimeKey = imageRuntimeService(toolsManifest, separateExecutor)
   const [{ Context }, llm, { default: Sessions, SessionId },
     { default: Projections }, { default: Prompt }, { default: Tools, defineTool },
-    { default: Agents }, { default: Loop }, Connection] = await Promise.all([
+    { default: Agents }, { default: Loop }] = await Promise.all([
     '@deepseek-ai/cordis', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-session',
     '@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-system-prompt',
     '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-agent-loop',
-    '@deepseek-ai/dsh-client-connection',
   ].map(importHost))
   const { default: Llm, LlmAdapter, createUserMessage, ToolCallId } = llm
   const directory = await mkdtemp(join(tmpdir(), 'codex-installed-images-'))
@@ -53,25 +53,13 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
       signal?.throwIfAborted()
       return directory
     } })
-    ctx.provide('webServer', { register(route) {
+    ctx.provide('webServer', { protocol: 'http:', register(route) {
       assert.ok(!routes.has(route.path), 'synthetic WebServer must reject duplicate routes')
       routes.set(route.path, route)
       return () => routes.delete(route.path)
     } })
-    // Real Host authentication, with credential records held only in this synthetic fixture's memory.
-    const records = new Map()
-    ctx.provide('credentials', { async modifyRecord(key, mutate) {
-      const next = await mutate(records.get(key))
-      if (next !== undefined) records.set(key, next)
-      return records.get(key)
-    } })
-    await ctx.plugin(Connection)
-    const index = { writeHead(status, headers) { this.status = status; this.headers = headers }, end() {} }
-    const authenticatedUrl = new URL(ctx.connection.authenticatedUrl('http://127.0.0.1:3081'))
-    assert.equal(ctx.connection.authorizeIndex({ method: 'GET', url: authenticatedUrl.pathname + authenticatedUrl.search,
-      headers: { host: authenticatedUrl.host } }, index), false)
-    assert.equal(index.status, 303)
-    const cookie = index.headers['set-cookie'].split(';')[0]
+    const origin = 'http://127.0.0.1'
+    const { cookie } = await issueInstalledBrowserCookie(ctx, importHost, origin)
     ctx.provide('attachments', {
       imageLimits: { maxImageBytes: 1_000_000, maxImagesPerMessage: 4, maxMessageImageBytes: 4_000_000, maxImagePixels: 1_000_000, maxImageDimension: 2048, mediaTypes: ['image/png'] },
       async validateImage(input) {
@@ -95,7 +83,7 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
         if (args !== editArgs) assert.equal(request.program, 'return await tools.codex_connect_image_generate({prompt: "fixture"});')
         const tools = request.bindings.find(binding => binding.global === 'tools')
         assert.ok(tools)
-        return { value: await tools.functions.codex_connect_image_generate(args), logs: [] }
+        return { value: await tools.functions.codex_connect_image_generate(args), logs: [], output: [] }
       },
     })
     for (const plugin of [Llm, Sessions, Projections, Prompt]) await ctx.plugin(plugin)
@@ -180,7 +168,7 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
     const download = async (sessionId, assetId, authenticated = true) => {
       const response = { writeHead(status, headers) { this.status = status; this.headers = headers }, end(body) { this.body = body } }
       await route.handler({ method: 'GET', url: `${route.path}?${new URLSearchParams({ sessionId, assetId })}`,
-        headers: { host: '127.0.0.1:3081', ...(authenticated ? { cookie } : {}) }, socket: { remoteAddress: '127.0.0.1' } }, response)
+        headers: { host: new URL(origin).host, ...(authenticated ? { cookie } : {}) }, socket: { remoteAddress: '127.0.0.1' } }, response)
       return response
     }
     const unauthenticated = await download(agent.session.id, image.original.assetId, false)

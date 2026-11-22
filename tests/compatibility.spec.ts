@@ -234,6 +234,27 @@ describe('compatibility contract', () => {
     } })).toMatchObject({ status: 'unverified', node: { supported: SUPPORTED_NODE_RANGE, status: 'compatible' } })
   })
 
+  it('applies the DSH 0.2.3-alpha.2 Node engines to a coherent installed host', () => {
+    const version = '0.2.3-alpha.2'
+    const packageVersions = {
+      ...compatiblePackages,
+      '@deepseek-ai/dsh-llm': version,
+      '@deepseek-ai/dsh-llm-pi-ai': version,
+      '@deepseek-ai/dsh-compaction': version,
+    }
+    for (const nodeVersion of ['v24.22.2', 'v25.9.0', 'v26.13.0']) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions })).toMatchObject({
+        status: 'incompatible', node: { supported: '^24.22.3 || >=26.13.1', status: 'incompatible' },
+      })
+    }
+    for (const nodeVersion of ['v24.22.3', 'v26.13.1']) {
+      expect(evaluateCompatibility({ nodeVersion, packageVersions }).status).toBe('compatible')
+    }
+    expect(evaluateCompatibility({ nodeVersion: 'v24.22.3', packageVersions: {
+      ...packageVersions, '@deepseek-ai/dsh-compaction': '0.2.2-rc.5',
+    } }).status).toBe('unverified')
+  })
+
   it('marks a declared package mismatch unverified rather than incompatible', () => {
     const report = evaluateCompatibility({
       nodeVersion: 'v24.0.0',

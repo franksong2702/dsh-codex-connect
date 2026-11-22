@@ -80,6 +80,7 @@ export const COMPATIBILITY_CONTRACT = {
     versions: dshPluginApi.versions,
     node: dshPluginApi.node,
     cordis: dshPluginApi.cordis,
+    hostRequirements: dshPluginApi.hostRequirements,
     admission: dshPluginApi.admission,
     packages: DSH_PLUGIN_API_PACKAGES,
   },

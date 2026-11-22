@@ -16,11 +16,14 @@ it('admits the range while retaining supported exact versions and excluding the 
   expect(dshAdmission.classify('0.2.1-alpha.1')).toBe('verified')
   expect(dshAdmission.classify('0.2.2-alpha.3')).toBe('verified')
   expect(dshAdmission.classify('0.2.2-alpha.2')).toBe('outside-range')
-  for (const version of ['0.2.2-rc.4', '0.2.2-rc.5']) {
+  for (const version of ['0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.2']) {
     expect(dshAdmission.classify(version)).toBe('verified')
     expect(semver.satisfies(version, dshAdmission.range)).toBe(true)
   }
   expect(dshAdmission.classify('0.2.2-rc.6')).toBe('unverified-in-range')
+  expect(dshAdmission.classify('0.2.3-alpha.1')).toBe('unverified-in-range')
+  expect(dshAdmission.classify('0.2.3-alpha.3')).toBe('unverified-in-range')
+  expect(semver.satisfies('0.2.3-alpha.3', dshAdmission.range)).toBe(false)
   expect(dshAdmission.classify('0.2.3')).toBe('unverified-in-range')
   expect(dshAdmission.classify('0.3.0-rc.1')).toBe('outside-range')
 })

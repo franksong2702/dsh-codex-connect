@@ -93,7 +93,7 @@ describe('node-free runtime receipt decoder', () => {
     expect(parseOpenAICodexRuntimeReport(report)).toEqual(report)
   })
 
-  it.each(['0.2.2-rc.4', '0.2.2-rc.5'])('rejects a compatible receipt for %s on Node 22', version => {
+  it.each(['0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.2'])('rejects a compatible receipt for %s on Node 22', version => {
     const report = receipt(version, 'v22.19.0')
     expect(parseOpenAICodexRuntimeReport(report)?.compatibility.status).toBe('incompatible')
     report.compatibility.node = receipt().compatibility.node

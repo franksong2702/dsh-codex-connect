@@ -12,7 +12,8 @@ import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { exactDshFixtureManifest, readDshRegistryManifest, resolveExactDshOverrides } from './exact-dsh-fixture.mjs'
 import { assertTaskMatrix, inspectTaskTestReport, TASK_IDENTITY_CASE, TASK_RUNTIME_PACKAGES } from './adaptive-task-matrix-contract.mjs'
-import { dshAdmission, dshHostNodeRange, dshHostSupportsNode } from '../src/dsh-admission.mjs'
+import { verifiedTaskHostVersions } from '../src/adaptive-task-host-versions.mjs'
+import { dshHostNodeRange, dshHostSupportsNode } from '../src/dsh-admission.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
@@ -60,7 +61,7 @@ async function main() {
   const reportPath = argv[1] === undefined ? undefined : resolve(ROOT, argv[1])
   if (reportPath) assert.ok(inside(join(ROOT, 'docs/experiments'), reportPath) && reportPath.endsWith('.json'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = dshAdmission.verifiedVersions.filter(version => {
+  const versions = verifiedTaskHostVersions.filter(version => {
     if (dshHostSupportsNode(version, process.version)) return true
     console.error(`Skipping DSH ${version} on Node ${process.version} (requires Node ${dshHostNodeRange(version)})`)
     return false

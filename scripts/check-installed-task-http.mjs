@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { request } from 'node:http'
+import { issueInstalledBrowserCookie } from './installed-browser-auth.mjs'
 
 const TASK_PATH = '/plugins/dsh-codex-connect/task?sessionId=installed-task-fixture'
 
@@ -22,28 +23,16 @@ function get(url, headers = {}) {
 
 /** Verify packed route teardown using this exact host's WebServer and signed synthetic cookies. */
 export async function checkInstalledTaskHttp(importHost, CodexConnect) {
-  const [{ Context }, { default: Llm }, { WebServer }, Connection] = await Promise.all([
+  const [{ Context }, { default: Llm }, { WebServer }] = await Promise.all([
     '@deepseek-ai/cordis', '@deepseek-ai/dsh-llm',
-    '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-client-connection',
+    '@deepseek-ai/dsh-host-webserver',
   ].map(importHost))
   const ctx = new Context()
-  const records = new Map()
   try {
-    ctx.provide('credentials', { async modifyRecord(key, mutate) {
-      const next = await mutate(records.get(key))
-      if (next !== undefined) records.set(key, next)
-      return records.get(key)
-    } })
     await ctx.plugin(Llm)
     await ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
-    await ctx.plugin(Connection)
-    ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/', handler(req, res) {
-      if (ctx.connection.authorizeIndex(req, res)) { res.writeHead(200); res.end('Synthetic task fixture') }
-    } }))
     const origin = `http://127.0.0.1:${ctx.webServer.port}`
-    const issued = await get(ctx.connection.authenticatedUrl(origin))
-    assert.equal(issued.status, 303)
-    const cookie = issued.headers['set-cookie'][0].split(';')[0]
+    const { cookie, webServerAuthorizes } = await issueInstalledBrowserCookie(ctx, importHost, origin, get)
     const url = origin + TASK_PATH
     for (let cycle = 0; cycle < 2; cycle++) {
       const plugin = await ctx.plugin(CodexConnect, {})
@@ -55,8 +44,13 @@ export async function checkInstalledTaskHttp(importHost, CodexConnect) {
       ]) {
         const response = await get(url, headers)
         assert.equal(response.status, status)
-        assert.match(response.headers['content-type'], /application\/json/u)
-        assert.deepEqual(JSON.parse(response.text), { error })
+        if (webServerAuthorizes && (status === 401 || status === 403)) {
+          // New WebServer rejects unauthenticated requests before the packed route runs.
+          assert.equal(response.text, status === 401 ? 'unauthorized' : 'forbidden')
+        } else {
+          assert.match(response.headers['content-type'], /application\/json/u)
+          assert.deepEqual(JSON.parse(response.text), { error })
+        }
       }
       await plugin.dispose()
       assert.equal((await get(url, { cookie })).status, 404)

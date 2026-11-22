@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import semver from 'semver'
-import { dshPluginApi } from '../src/dsh-admission.mjs'
+import { dshHostCordisRange } from '../src/dsh-admission.mjs'
 import { checkInstalledRetiredReserve } from './check-installed-retired-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
 import { checkInstalledImages } from './check-installed-images.mjs'
@@ -111,10 +111,11 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const reserveRetirement = await checkInstalledRetiredReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
-    const cordis = dshPluginApi.cordis.dshVersions.includes(toolsManifest.version)
-      ? JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/cordis/package.json'), 'utf8')).version : undefined
-    if (cordis !== undefined && !semver.satisfies(cordis, dshPluginApi.cordis.range)) {
-      throw new Error(`DSH ${toolsManifest.version} requires Cordis ${dshPluginApi.cordis.range}`)
+    const cordisRange = dshHostCordisRange(toolsManifest.version)
+    const cordis = cordisRange === undefined ? undefined
+      : JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/cordis/package.json'), 'utf8')).version
+    if (cordisRange !== undefined && !semver.satisfies(cordis, cordisRange)) {
+      throw new Error(`DSH ${toolsManifest.version} requires Cordis ${cordisRange}`)
     }
     if (toolsManifest.version === '0.2.1-rc.5') await checkInstalledStockReview(importHost, OpenAICodex)
     const toolsModule = await importHost('@deepseek-ai/dsh-tools')

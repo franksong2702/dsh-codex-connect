@@ -31,7 +31,7 @@ describe('installation version guidance', () => {
 
   it('retires the four oldest source pairings', async () => {
     const declared = JSON.parse(await readFile(new URL('../compatibility.json', import.meta.url), 'utf8'))
-    expect(declared.dshPluginApi.versions).toEqual([...alpha15Hosts.slice(retiredDshVersions.length), '0.2.2-rc.4', '0.2.2-rc.5'])
+    expect(declared.dshPluginApi.versions).toEqual([...alpha15Hosts.slice(retiredDshVersions.length), '0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.2'])
   })
 
   it('preserves historical pairings including the first rc.5 support', () => {

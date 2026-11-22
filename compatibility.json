@@ -21,7 +21,8 @@
       "0.2.2-rc.2",
       "0.2.2-rc.3",
       "0.2.2-rc.4",
-      "0.2.2-rc.5"
+      "0.2.2-rc.5",
+      "0.2.3-alpha.2"
     ],
     "node": {
       "range": ">=24.9.0",
@@ -30,6 +31,9 @@
     "cordis": {
       "range": "^4.1.0",
       "dshVersions": ["0.2.2-rc.4", "0.2.2-rc.5"]
+    },
+    "hostRequirements": {
+      "0.2.3-alpha.2": { "node": "^24.22.3 || >=26.13.1", "cordis": "4.2.0-alpha.1" }
     },
     "admission": {
       "minimum": "0.2.2-rc.1",
