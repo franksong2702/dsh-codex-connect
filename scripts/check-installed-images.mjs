@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { issueInstalledBrowserCookie } from './installed-browser-auth.mjs'
+import { getInstalledBrowserResponse as get, issueInstalledBrowserCookie } from './installed-browser-auth.mjs'
 import { ensureNativeToolExecution } from './installed-host-context.mjs'
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', 'base64')
@@ -47,19 +47,15 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
   let networkAttempts = 0
   process.env.DSH_HOME = directory
   globalThis.fetch = async () => { networkAttempts++; throw new Error('Unexpected image fixture network request') }
-  const routes = new Map()
   try {
     ctx.provide('workingDirectory', { async ensure(_agent, signal) {
       signal?.throwIfAborted()
       return directory
     } })
-    ctx.provide('webServer', { protocol: 'http:', register(route) {
-      assert.ok(!routes.has(route.path), 'synthetic WebServer must reject duplicate routes')
-      routes.set(route.path, route)
-      return () => routes.delete(route.path)
-    } })
-    const origin = 'http://127.0.0.1'
-    const { cookie } = await issueInstalledBrowserCookie(ctx, importHost, origin)
+    const { WebServer } = await importHost('@deepseek-ai/dsh-host-webserver')
+    await ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
+    const origin = `http://127.0.0.1:${ctx.webServer.port}`
+    const { cookie, webServerAuthorizes } = await issueInstalledBrowserCookie(ctx, importHost, origin)
     ctx.provide('attachments', {
       imageLimits: { maxImageBytes: 1_000_000, maxImagesPerMessage: 4, maxMessageImageBytes: 4_000_000, maxImagePixels: 1_000_000, maxImageDimension: 2048, mediaTypes: ['image/png'] },
       async validateImage(input) {
@@ -163,17 +159,14 @@ export async function checkInstalledImages(importHost, CodexConnect, toolsManife
     const [image] = JSON.parse(envelope[0].text.slice(PREFIX.length))
     assert.deepEqual(content.find(block => block.type === 'image').attachment, image.preview)
     assert.equal(image.original.bytes, PNG.length)
-    const route = routes.get('/plugins/dsh-codex-connect/images/original')
-    assert.ok(route, 'original image download route must be registered')
     const download = async (sessionId, assetId, authenticated = true) => {
-      const response = { writeHead(status, headers) { this.status = status; this.headers = headers }, end(body) { this.body = body } }
-      await route.handler({ method: 'GET', url: `${route.path}?${new URLSearchParams({ sessionId, assetId })}`,
-        headers: { host: new URL(origin).host, ...(authenticated ? { cookie } : {}) }, socket: { remoteAddress: '127.0.0.1' } }, response)
-      return response
+      return get(`${origin}/plugins/dsh-codex-connect/images/original?${new URLSearchParams({ sessionId, assetId })}`,
+        authenticated ? { cookie } : {})
     }
     const unauthenticated = await download(agent.session.id, image.original.assetId, false)
     assert.equal(unauthenticated.status, 401)
-    assert.equal(JSON.parse(unauthenticated.body).error, 'DSH_BROWSER_AUTH_REQUIRED')
+    if (webServerAuthorizes) assert.equal(unauthenticated.text, 'unauthorized')
+    else assert.deepEqual(JSON.parse(unauthenticated.text), { error: 'DSH_BROWSER_AUTH_REQUIRED' })
     const original = await download(agent.session.id, image.original.assetId)
     assert.equal(original.status, 200)
     assert.deepEqual(original.body, PNG)

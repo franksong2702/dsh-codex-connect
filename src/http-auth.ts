@@ -8,19 +8,19 @@ export interface HarnessHttpRejection {
   error: 'DSH_BROWSER_AUTH_REQUIRED' | 'forbidden' | 'DSH_CONNECTION_UNAVAILABLE'
 }
 
-type WebAdmissionRequest = Pick<IncomingMessage, 'headers' | 'method' | 'socket'> & {
-  url: URL
-  transport: 'http'
+/** The new WebServer defaults to required authentication; older hosts ignore this field. */
+export const ANONYMOUS_WEB_ROUTE = { auth: 'anonymous' } as const
+
+function ownerPeerRejection(peer: unknown): 401 | 403 | 503 | undefined {
+  if (typeof peer !== 'object' || peer === null || !('signal' in peer) || !(peer.signal instanceof AbortSignal)
+    || !('principal' in peer) || typeof peer.principal !== 'object' || peer.principal === null
+    || !('kind' in peer.principal) || typeof peer.principal.kind !== 'string') return 503
+  if (peer.signal.aborted) return 401
+  return peer.principal.kind === 'owner' ? undefined : 403
 }
 
-declare module '@deepseek-ai/cordis' {
-  interface Events {
-    'webserver/authorize'(request: WebAdmissionRequest, policy: 'required'): unknown
-  }
-}
-
-/** Resolve the current Connection on each request; never retain a stale authentication service. */
-export function harnessHttpRejection(ctx: Context, request: IncomingMessage): HarnessHttpRejection | undefined {
+/** Use the WebServer's admitted owner Peer or the legacy Connection verifier. */
+export function harnessHttpRejection(ctx: Context, request: IncomingMessage, peer?: unknown): HarnessHttpRejection | undefined {
   try {
     const connection = ctx.get('connection')
     if (connection !== undefined) {
@@ -28,21 +28,7 @@ export function harnessHttpRejection(ctx: Context, request: IncomingMessage): Ha
       if (typeof connection.requestRejection === 'function') {
         rejected = connection.requestRejection(request)
       } else if ('admit' in connection && typeof connection.admit === 'function') {
-        // Let the Host verifier resolve its authentication service in its own scope.
-        const admission = ctx.bail(ctx.webServer, 'webserver/authorize', {
-          headers: request.headers,
-          method: request.method,
-          socket: request.socket,
-          url: new URL(request.url ?? '/', 'http://dsh.invalid'),
-          transport: 'http',
-        }, 'required')
-        if (typeof admission === 'object' && admission !== null && 'kind' in admission) {
-          if (admission.kind === 'deny' && 'status' in admission) rejected = admission.status ?? 503
-          if (admission.kind === 'allow' && 'peer' in admission && typeof admission.peer === 'object'
-            && admission.peer !== null && 'signal' in admission.peer && admission.peer.signal instanceof AbortSignal) {
-            rejected = admission.peer.signal.aborted ? 401 : undefined
-          }
-        }
+        rejected = ownerPeerRejection(peer)
       }
       if (rejected === undefined) return undefined
       if (rejected === 401 || rejected === 403) {
