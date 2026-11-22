@@ -87,7 +87,7 @@
     "@deepseek-ai/schemastery": "3.18.4",
     "@earendil-works/pi-ai": "0.85.1",
     "undici": "^8.12.4",
-    "semver": "7.8.5"
+    "semver": "7.8.6"
   },
   "license": "Apache-2.0",
   "dsh": {
