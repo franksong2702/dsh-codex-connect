@@ -53,9 +53,9 @@ export function registerAdaptiveTaskHttp(ctx: Context, runtime: {
   state(sessionId: string, principal: string): Promise<AdaptiveTaskState>
   command(command: AdaptiveTaskCommand, principal: string): Promise<AdaptiveTaskState>
 }): void {
-  ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: ADAPTIVE_TASK_PATH, async handler(req, res) {
+  ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: ADAPTIVE_TASK_PATH, async handler(req, res, admitted?: unknown) {
     try {
-      const rejected = harnessHttpRejection(ctx, req)
+      const rejected = harnessHttpRejection(ctx, req, admitted)
       if (rejected !== undefined) {
         reply(res, rejected.status, { error: rejected.status === 503 ? 'TASK_OPERATION_FAILED' : 'TASK_BROWSER_AUTH_REQUIRED' })
         return

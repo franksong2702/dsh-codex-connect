@@ -22,7 +22,7 @@ function command(action: AdaptiveTaskCommand['action']): AdaptiveTaskCommand {
 function harness(rejection?: 401 | 403) {
   let handler!: (req: IncomingMessage, res: ServerResponse) => Promise<void>
   const runtime = { state: vi.fn(async () => state), command: vi.fn(async () => state) }
-  const connection = { requestRejection: vi.fn(() => rejection) }
+  const connection = { admit: vi.fn(() => rejection === undefined ? { peer: {} } : { rejection }) }
   let currentConnection: typeof connection | undefined = connection
   const get = vi.fn((name: string) => { expect(name).toBe('connection'); return currentConnection })
   const readBody = vi.fn()
@@ -96,7 +96,7 @@ describe('public HTTP admission while paused', () => {
     const host = harness()
     if (failure === 'missing') host.setConnection(undefined)
     else if (failure === 'lookup throws') host.get.mockImplementation(() => { throw new Error('Synthetic service lookup failure') })
-    else host.connection.requestRejection.mockImplementation(() => { throw new Error('Synthetic verifier failure') })
+    else host.connection.admit.mockImplementation(() => { throw new Error('Synthetic verifier failure') })
     for (const value of [undefined, command('manual')]) {
       expect(await host.send(value)).toEqual({ status: 503, body: { error: 'TASK_OPERATION_FAILED' } })
     }
@@ -107,10 +107,10 @@ describe('public HTTP admission while paused', () => {
   it('consults the current Connection for every request instead of retaining a prior verifier', async () => {
     const host = harness()
     expect((await host.send()).status).toBe(200)
-    const replacement = { requestRejection: vi.fn((): 401 | 403 | undefined => 401) }
+    const replacement = { admit: vi.fn((): { rejection: 401 } => ({ rejection: 401 })) }
     host.setConnection(replacement)
     expect(await host.send(command('manual'))).toEqual({ status: 401, body: { error: 'TASK_BROWSER_AUTH_REQUIRED' } })
-    expect(replacement.requestRejection).toHaveBeenCalledTimes(1)
+    expect(replacement.admit).toHaveBeenCalledTimes(1)
     host.setConnection(undefined)
     expect(await host.send(command('manual'))).toEqual({ status: 503, body: { error: 'TASK_OPERATION_FAILED' } })
     expect(host.readBody).not.toHaveBeenCalled()
@@ -118,7 +118,7 @@ describe('public HTTP admission while paused', () => {
     host.setConnection(host.connection)
     expect((await host.send(command('manual'))).status).toBe(200)
     expect(host.get).toHaveBeenCalledTimes(4)
-    expect(host.connection.requestRejection).toHaveBeenCalledTimes(2)
+    expect(host.connection.admit).toHaveBeenCalledTimes(2)
     expect(host.readBody).toHaveBeenCalledTimes(1)
     expect(host.runtime.command).toHaveBeenCalledTimes(1)
   })

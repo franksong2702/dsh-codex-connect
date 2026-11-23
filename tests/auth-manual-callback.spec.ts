@@ -179,7 +179,7 @@ function routes(trusted = false) {
   const ctx = new Context()
   ctx.provide('webServer', { register: (route: Route) => { result.push(route); return () => undefined } } as never)
   // These are OAuth state/body unit tests; Host cookie admission has separate real-Connection coverage.
-  ctx.provide('connection', { requestRejection: () => undefined } as never)
+  ctx.provide('connection', { admit: () => ({ peer: {} }) } as never)
   cleanups.push(() => ctx.fiber.dispose())
   registerOpenAICodexAuthRoutes(ctx, store, { has: async () => trusted } as unknown as OpenAICodexTrustedOriginsStore)
   return {

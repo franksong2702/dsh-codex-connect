@@ -187,7 +187,7 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     const fixture = httpRouteTestContext()
     registerOpenAICodexAuthRoutes(fixture.ctx, store, emptyTrustedOrigins)
     const route = fixture.routes.get(`exact:${OPENAI_CODEX_AUTH_STATUS_PATH}`)!
-    fixture.requestRejection.mockReturnValueOnce(401)
+    fixture.admit.mockReturnValueOnce({ rejection: 401 })
     const denied = response()
     await route.handler(request({}), denied)
     expect(denied.observed.status).toBe(401)
@@ -200,6 +200,17 @@ describe('OpenAI Codex Web OAuth boundary', () => {
     const unavailable = response()
     await route.handler(request({}), unavailable)
     expect(unavailable.observed.status).toBe(503)
+    expect(storeMethods.captureActiveAccount).toHaveBeenCalledOnce()
+  })
+
+  it('serves a Host-admitted request without reading the plugin Connection again', async () => {
+    // DSH 0.2.3-alpha.2 admits handler routes itself and passes the Peer as the third argument.
+    const fixture = httpRouteTestContext({ admission: 'missing' })
+    registerOpenAICodexAuthRoutes(fixture.ctx, store, emptyTrustedOrigins)
+    const route = fixture.routes.get(`exact:${OPENAI_CODEX_AUTH_STATUS_PATH}`)!
+    const allowed = response()
+    await route.handler(request({}), allowed, { id: 'admitted-peer' })
+    expect(allowed.observed.status).toBe(200)
     expect(storeMethods.captureActiveAccount).toHaveBeenCalledOnce()
   })
 

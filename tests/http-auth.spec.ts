@@ -10,28 +10,29 @@ function context(get: (name: string) => unknown): Context {
 
 describe('Harness admission for protected plugin HTTP routes', () => {
   it('requires the current Connection to admit the original request', () => {
-    const requestRejection = vi.fn(() => undefined)
-    const get = vi.fn(() => ({ requestRejection }))
+    const admit = vi.fn(() => ({ peer: {} }))
+    const get = vi.fn(() => ({ admit }))
     expect(harnessHttpRejection(context(get), request)).toBeUndefined()
     expect(get).toHaveBeenCalledWith('connection')
-    expect(requestRejection).toHaveBeenCalledExactlyOnceWith(request)
+    expect(admit).toHaveBeenCalledExactlyOnceWith(request)
   })
 
   it.each([401, 403] as const)('preserves a Host rejection %s', status => {
-    const requestRejection = vi.fn(() => status)
-    expect(harnessHttpRejection(context(() => ({ requestRejection })), request)).toEqual({
+    const admit = vi.fn(() => ({ rejection: status }))
+    expect(harnessHttpRejection(context(() => ({ admit })), request)).toEqual({
       status, error: status === 401 ? 'DSH_BROWSER_AUTH_REQUIRED' : 'forbidden',
     })
   })
 
-  it.each(['missing', 'lookup-error', 'validation-error', 'invalid-result'] as const)(
+  it.each(['missing', 'lookup-error', 'validation-error', 'invalid-result', 'rejection-503'] as const)(
     'fails closed without exposing private errors when Connection is %s', failure => {
       const privateError = new Error('fixture-private-cookie-must-not-leak')
       const ctx = context(() => {
         if (failure === 'lookup-error') throw privateError
         if (failure === 'missing') return undefined
-        return { requestRejection() {
+        return { admit() {
           if (failure === 'validation-error') throw privateError
+          if (failure === 'rejection-503') return { rejection: 503 }
           return 500
         } }
       })
@@ -39,15 +40,23 @@ describe('Harness admission for protected plugin HTTP routes', () => {
     },
   )
 
+  it('trusts the Host route admission that already produced a Peer', () => {
+    const get = vi.fn(() => {
+      throw new Error('an admitted request must not read Connection again')
+    })
+    expect(harnessHttpRejection(context(get), request, { id: 'admitted-peer' })).toBeUndefined()
+    expect(get).not.toHaveBeenCalled()
+  })
+
   it('does not retain a removed or replaced authentication service', () => {
-    let connection: { requestRejection: () => 401 | undefined } | undefined = {
-      requestRejection: () => undefined,
+    let connection: { admit: () => { peer: {} } | { rejection: 401 } } | undefined = {
+      admit: () => ({ peer: {} }),
     }
     const ctx = context(() => connection)
     expect(harnessHttpRejection(ctx, request)).toBeUndefined()
     connection = undefined
     expect(harnessHttpRejection(ctx, request)?.status).toBe(503)
-    connection = { requestRejection: () => 401 }
+    connection = { admit: () => ({ rejection: 401 }) }
     expect(harnessHttpRejection(ctx, request)?.status).toBe(401)
   })
 })

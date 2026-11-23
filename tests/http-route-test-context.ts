@@ -5,7 +5,7 @@ import { afterEach, vi } from 'vitest'
 export interface CapturedHttpRoute {
   kind: 'exact' | 'prefix'
   path: string
-  handler(req: IncomingMessage, res: ServerResponse): Promise<void> | void
+  handler(req: IncomingMessage, res: ServerResponse, admitted?: unknown): Promise<void> | void
 }
 
 export const rejectedHttpAdmissions = [
@@ -48,17 +48,17 @@ export function httpRouteTestContext(options: {
     },
   }
   ctx.provide('webServer', webServer as unknown as Context['webServer'])
-  const requestRejection = vi.fn((_request: IncomingMessage): 401 | 403 | undefined => {
+  const admit = vi.fn((_request: IncomingMessage): { peer: {} } | { rejection: 401 | 403 } => {
     switch (options.admission ?? 'allow') {
-      case 'unauthenticated': return 401
-      case 'forbidden': return 403
+      case 'unauthenticated': return { rejection: 401 }
+      case 'forbidden': return { rejection: 403 }
       case 'throws': throw new Error('synthetic Connection admission failure')
-      default: return undefined
+      default: return { peer: {} }
     }
   })
   if (options.admission !== 'missing') {
-    ctx.provide('connection', { requestRejection } as unknown as Context['connection'])
+    ctx.provide('connection', { admit } as unknown as Context['connection'])
   }
   if (options.sessions !== undefined) ctx.provide('sessions', options.sessions as Context['sessions'])
-  return { ctx, routes, disposedPaths, webServer, requestRejection }
+  return { ctx, routes, disposedPaths, webServer, admit }
 }

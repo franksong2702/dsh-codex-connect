@@ -46,9 +46,9 @@ export function registerOpenAICodexOriginalImageRoute(
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: OPENAI_CODEX_ORIGINAL_IMAGE_PATH,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
+    handler: async (req: IncomingMessage, res: ServerResponse, admitted?: unknown) => {
       if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
-      const rejection = harnessHttpRejection(ctx, req)
+      const rejection = harnessHttpRejection(ctx, req, admitted)
       if (rejection !== undefined) return json(res, rejection.status, { error: rejection.error })
       const decision = await trustedRequestDecision(req, trustedOrigins)
       if (!decision.trusted) return json(res, 403, { error: decision.error })
