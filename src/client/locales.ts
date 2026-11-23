@@ -1,4 +1,4 @@
-/** English copy for the OpenAI Codex Plugin configuration card. */
+/** English copy for the OpenAI Codex account settings section. */
 export const en = {
   speedStandard: 'Standard',
   speedFast: 'Fast',
@@ -381,7 +381,7 @@ export const en = {
 /** Keys shared by both dictionaries. */
 export type OpenAICodexSettingsKey = keyof typeof en
 
-/** Chinese copy for the OpenAI Codex Plugin configuration card. */
+/** Chinese copy for the OpenAI Codex account settings section. */
 export const zh: { [Key in OpenAICodexSettingsKey]: string } = {
   speedStandard: '标准',
   speedFast: 'Fast',

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 describe('OpenAI Codex browser contribution', () => {
-  it('adds an optional Models footer using the same account owner as Plugins', async () => {
+  it('adds an optional Models footer using the same account owner as the Settings section', async () => {
     const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
     expect(client).toContain("ctx.slots.inject('settings.models.footer'")
     expect(client).toContain("id: 'dsh-codex-connect-account'")
@@ -13,16 +13,19 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client.match(/new OpenAICodexAccountStore\(\)/g)).toHaveLength(1)
     expect(client).not.toContain("ctx.slots.inject('settings.models.provider-card'")
   })
-  it('registers a Plugin settings tab only while the Host serves Codex Connect settings', async () => {
+  it('registers a top-level Settings section only while the Host serves Codex Connect settings', async () => {
     const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
     expect(client).toContain('ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE]')
-    expect(client).toContain("name: 'settings.plugins.tab'")
+    expect(client).toContain("ctx.slots.inject('settings.section'")
+    expect(client).toContain("name: 'settings.section'")
     expect(client).toContain("id: 'codex-connect'")
+    expect(client).toContain("label: () => t('title')")
     expect(client).toContain("ctx.configForms.get<OpenAICodexSettingsConfig>(OPENAI_CODEX_SETTINGS_NAMESPACE)")
     expect(client).toContain('OPENAI_CODEX_SETTINGS_NAMESPACE')
+    expect(client).not.toContain("name: 'settings.plugins.tab'")
     expect(client).not.toContain("namespace: 'web'")
     expect(client).not.toContain("settings.plugin.item")
-    expect(client).not.toContain("ctx.slots.inject('settings.section'")
+    expect(client).not.toContain('@deepseek-ai/dsh-client-ui-settings-plugins')
   })
 
   it('registers the weekly quota in the additive right-side Composer list slot', async () => {
@@ -59,7 +62,7 @@ describe('OpenAI Codex browser contribution', () => {
     expect(parsed.dsh.client.inject).toContain('@deepseek-ai/dsh-client-ui-layout')
   })
 
-  it('renders the dedicated Codex Connect settings tab and uses OpenAI Codex for the Composer provider', async () => {
+  it('renders the dedicated Codex Connect settings section and uses OpenAI Codex for the Composer provider', async () => {
     const [clientCard, settings, locales, adapter] = await Promise.all([
       readFile(new URL('../src/client/OpenAICodexPluginCard.tsx', import.meta.url), 'utf8'),
       readFile(new URL('../src/client/OpenAICodexSettings.tsx', import.meta.url), 'utf8'),
