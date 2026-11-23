@@ -11,10 +11,11 @@ vi.mock('../src/client/OpenAICodexSettings.tsx', () => ({
 
 afterEach(cleanup)
 
-it('renders the settings page directly inside its dedicated Plugins tab', () => {
+it('renders the settings page inside its top-level Settings section', () => {
   render(<OpenAICodexPluginCard
     t={key => en[key]}
     configScope={undefined as never}
+    close={vi.fn()}
     useSessions={vi.fn() as never}
     useSessionStatus={vi.fn() as never}
     useSessionRetainInfo={vi.fn() as never}

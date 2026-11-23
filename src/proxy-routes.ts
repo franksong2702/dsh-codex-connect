@@ -41,8 +41,8 @@ export function registerOpenAICodexProxyRoutes(
   manager: OpenAICodexProxyManager,
 ): void {
   ctx.effect(function* () {
-    const authorize = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
-      const rejection = harnessHttpRejection(ctx, req)
+    const authorize = async (req: IncomingMessage, res: ServerResponse, admitted?: unknown): Promise<boolean> => {
+      const rejection = harnessHttpRejection(ctx, req, admitted)
       if (rejection !== undefined) {
         json(res, rejection.status, { error: rejection.error })
         return false
@@ -55,9 +55,9 @@ export function registerOpenAICodexProxyRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_PROXY_DETECT_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, admitted?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, admitted)) return
         const results = await detectOpenAICodexProxies(manager)
         return json(res, 200, {
           candidates: results.filter(result => result.reachable),
@@ -68,9 +68,9 @@ export function registerOpenAICodexProxyRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_PROXY_TEST_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, admitted?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, admitted)) return
         const proxyUrl = proxyUrlFromQuery(req)
         if (proxyUrl === undefined) return json(res, 400, { error: 'invalid proxy URL' })
         return json(res, 200, await manager.probe(proxyUrl))

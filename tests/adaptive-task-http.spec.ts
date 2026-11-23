@@ -102,8 +102,8 @@ async function fixture() {
     if (host.connection.authorizeIndex(req, res)) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html) }
   } })
   host.webServer.register({ kind: 'prefix', path: '/fixture/assets', handler(req, res) {
-    const rejected = host.connection.requestRejection(req)
-    if (rejected !== undefined) { res.writeHead(rejected); res.end(); return }
+    const admission = host.connection.admit(req)
+    if (!('peer' in admission)) { res.writeHead(admission.rejection); res.end(); return }
     const data = assets.get(req.url!.slice('/fixture/assets/'.length))
     res.writeHead(data === undefined ? 404 : 200, { 'content-type': 'text/javascript' }); res.end(data)
   } })
@@ -230,7 +230,7 @@ it('rejects oversize, wrong-content-type, extra authority and stale mutation req
 it('removes and remounts exactly one product Task route when Connection is replaced on the same WebServer', async () => {
   const f = await fixture(); await f.seedLegacy()
   const port = f.host.webServer.port
-  const oldVerifier = vi.spyOn(f.host.connection, 'requestRejection')
+  const oldVerifier = vi.spyOn(f.host.connection, 'admit')
   const initial = await f.read()
   expect(initial.status).toBe(200)
   expect(JSON.parse(initial.text)).toMatchObject({ mode: 'interrupted', reserved: 3, maximumRequests: 10 })
@@ -265,7 +265,7 @@ it('removes and remounts exactly one product Task route when Connection is repla
     const runtime = await http(f.origin + OPENAI_CODEX_RUNTIME_PATH, { headers: f.headers })
     expect(runtime.status).toBe(200)
     expect(JSON.parse(runtime.text)).toMatchObject({ schemaVersion: 1, identity: { scope: 'host' } })
-    const verifier = vi.spyOn(f.host.connection, 'requestRejection')
+    const verifier = vi.spyOn(f.host.connection, 'admit')
     const read = await f.read()
     expect(read.status).toBe(200)
     expect(JSON.parse(read.text)).toMatchObject({ mode: 'interrupted', reserved: 3, maximumRequests: 10, canStart: false })
@@ -323,7 +323,7 @@ it('owns Task route cleanup across Task and Product reloads without reopening ac
 
 it('returns a structured unavailable response when the live Connection verifier throws', async () => {
   const f = await fixture()
-  const verifier = vi.spyOn(f.host.connection, 'requestRejection').mockImplementation(() => { throw new Error('Synthetic verifier failure') })
+  const verifier = vi.spyOn(f.host.connection, 'admit').mockImplementation(() => { throw new Error('Synthetic verifier failure') })
   for (const result of [await f.read(), await f.post(f.body('manual'))]) {
     expect(result.status).toBe(503)
     expect(result.headers['content-type']).toBe('application/json; charset=utf-8')
@@ -351,8 +351,8 @@ if (process.env.ADAPTIVE_TASK_UI === '1') it('runs the paused public control ove
     + '<p id="task-result"></p><script type="module" src="/fixture/assets/' + entry + '"></script>',
   await Promise.all(names.map(async name => [name, await readFile(join(output, name))] as [string, Buffer])))
   f.host.webServer.register({ kind: 'exact', path: '/fixture/task', async handler(req, res) {
-    const rejected = f.host.connection.requestRejection(req)
-    if (rejected !== undefined) { res.writeHead(rejected); res.end(); return }
+    const admission = f.host.connection.admit(req)
+    if (!('peer' in admission)) { res.writeHead(admission.rejection); res.end(); return }
     let body = ''
     for await (const bytes of req) { body += String(bytes); if (body.length > 4096) { res.writeHead(400); res.end(); return } }
     const value = JSON.parse(body)

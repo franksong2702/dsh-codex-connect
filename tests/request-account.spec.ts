@@ -94,7 +94,7 @@ it('returns account labels from the same snapshot as quota during a concurrent s
     const routes: Array<{ path: string; handler(req: IncomingMessage, res: ServerResponse): void | Promise<void> }> = []
     ctx.provide('webServer', { register: (route: typeof routes[number]) => { routes.push(route); return () => {} } } as never)
     // This fixture isolates quota/account snapshot consistency, not Host authentication.
-    ctx.provide('connection', { requestRejection: () => undefined } as never)
+    ctx.provide('connection', { admit: () => ({ peer: {} }) } as never)
     registerOpenAICodexAuthRoutes(ctx, store)
     let body = ''
     const res = { writeHead: () => res, end: (value: string) => { body = value } } as unknown as ServerResponse

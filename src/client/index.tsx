@@ -1,11 +1,10 @@
-/** Browser half: OpenAI Codex account management inside Plugin configuration. */
+/** Browser half: OpenAI Codex account management inside the Settings panel. */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-models/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
@@ -49,10 +48,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Stable browser-plugin name. */
 export const name = 'dsh-codex-connect-client'
-/** Client services required by the Plugin configuration contribution. */
+/** Client services required by the Settings contribution. */
 export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.session', 'configForms', 'sessions']
 
-/** Register account copy and the OpenAI Codex card under Plugin configuration. */
+/** Register account copy and the OpenAI Codex section inside the Settings panel. */
 export function apply(ctx: ClientContext): void {
   const namespace = 'settings.openai-codex'
   const updater = new OpenAICodexUpdateStore(CODEX_CONNECT_VERSION)
@@ -68,16 +67,18 @@ export function apply(ctx: ClientContext): void {
     ctx.configForms.get<OpenAICodexSettingsConfig>(OPENAI_CODEX_SETTINGS_NAMESPACE),
     ctx.configForms.describe(),
   )
-  ctx.effect(() => ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE], () => {
-    return ctx.slots.register({
-      name: 'settings.plugins.tab',
+  // `settings.section` is declared at runtime by the settings shell, so wait for
+  // that declaration instead of registering against a not-yet-declared slot.
+  ctx.effect(() => ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE], () =>
+    ctx.slots.inject('settings.section', () => ctx.slots.register({
+      name: 'settings.section',
       id: 'codex-connect',
       order: 40,
       locale: namespace,
       label: () => t('title'),
       inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
-    }, OpenAICodexPluginCard)
-  }), 'dsh-codex-connect: settings page while served')
+    }, OpenAICodexPluginCard)),
+  ), 'dsh-codex-connect: settings section while served')
 
   ctx.slots.inject('settings.models.footer', () => ctx.slots.register({
     name: 'settings.models.footer',

@@ -20,7 +20,7 @@ it.each(['switch', 'login-commit'])('keeps cancel quota and labels together afte
     const routes: Array<{ path: string; handler(req: IncomingMessage, res: ServerResponse): void | Promise<void> }> = []
     context.provide('webServer', { register: (route: typeof routes[number]) => { routes.push(route); return () => {} } } as never)
     // Isolate cross-view account/quota snapshots; real Cookie admission is tested over Host HTTP.
-    context.provide('connection', { requestRejection: () => undefined } as never)
+    context.provide('connection', { admit: () => ({ peer: {} }) } as never)
     registerOpenAICodexAuthRoutes(context, store)
     vi.stubGlobal('fetch', async (path: string, init?: RequestInit) => {
       const route = routes.find(candidate => candidate.path === String(path))

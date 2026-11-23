@@ -6,7 +6,7 @@ For installation and the verified release pairing, start with the [user guide](.
 
 ## Accounts, models, and quota
 
-OAuth credentials are stored on the DSH host and used there to authenticate and send requests to OpenAI. The Models card and the Plugin configuration page share the same account state; selecting an account is not a per-session binding. **Manage accounts** can add, select, or remove accounts. Browser responses expose only plugin-generated account keys and masked labels, never OAuth tokens or raw OpenAI account ids.
+OAuth credentials are stored on the DSH host and used there to authenticate and send requests to OpenAI. The Models card and the Codex Connect Settings section share the same account state; selecting an account is not a per-session binding. **Manage accounts** can add, select, or remove accounts. Browser responses expose only plugin-generated account keys and masked labels, never OAuth tokens or raw OpenAI account ids.
 
 Choose an `openai-codex` model in the normal Harness model picker. Model names remain canonical in every UI language. **More settings → Models** controls which models appear in discovery; hiding a model does not disable routing by its exact id.
 
@@ -92,7 +92,7 @@ Fresh installations register the model provider and leave every additional capab
     enableAutoReview: false
 ```
 
-Edit these options under **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Saving commits edited fields together and preserves concurrent changes to untouched fields. A conflicting edit or failed save keeps your draft; discard it to reload the latest settings. Most settings affect only this plugin; enabling Codex Search also selects it as the active profile-wide search route.
+Edit these options under **Settings → Codex Connect** or **Settings → Models → Openai-Codex → More settings**. Changes are staged until **Save changes**. Saving commits edited fields together and preserves concurrent changes to untouched fields. A conflicting edit or failed save keeps your draft; discard it to reload the latest settings. Most settings affect only this plugin; enabling Codex Search also selects it as the active profile-wide search route.
 
 ### Proxy
 
@@ -114,7 +114,7 @@ The shared quota service, account UI and read-only quota tool retain account/cre
 - Search has a 30-second total deadline covering authentication, response headers and body reading. Responses larger than 1 MiB are rejected, and unfinished response bodies are cancelled on failure. Caller cancellation can end a search sooner.
 - `enableImageTool: true` registers `view_image` on vision-capable models. Remote reads accept credential-free public HTTP(S) only and revalidate DNS and redirects.
 - `enableImageGeneration: true` registers GPT Image generation and, in Alpha 4.48 builds, editing of explicitly selected session images. Prompt-only generation remains supported. Availability, dimensions, and quota remain account- and service-controlled.
-- `imageModelHint` is an optional profile-scoped setting in Plugin configuration or the profile config. Empty uses `gpt-image-2`; a custom value accepts 1–128 ASCII letters, digits, dots, underscores, or hyphens and must start with a letter or digit. Saving changes the `model` field of subsequent requests to the fixed generation or edit endpoint; clearing restores the default. Alpha 4.47 accepts only `prompt`; Alpha 4.48 also accepts explicit editing inputs. This is an unverified route hint: the service may ignore or reject it, and it does not guarantee the returned model.
+- `imageModelHint` is an optional profile-scoped setting in the Codex Connect Settings section or the profile config. Empty uses `gpt-image-2`; a custom value accepts 1–128 ASCII letters, digits, dots, underscores, or hyphens and must start with a letter or digit. Saving changes the `model` field of subsequent requests to the fixed generation or edit endpoint; clearing restores the default. Alpha 4.47 accepts only `prompt`; Alpha 4.48 also accepts explicit editing inputs. This is an unverified route hint: the service may ignore or reject it, and it does not guarantee the returned model.
 
 Generated originals are stored under `$DSH_HOME/dsh-codex-connect/images/v1`; the conversation receives a separate DSH attachment preview. The result card reports dimensions and file sizes and can download either representation. Originals are owner-only, integrity-checked, and available only to the creating session and forks that inherited the result. Disabling or uninstalling the plugin does not delete those files automatically.
 

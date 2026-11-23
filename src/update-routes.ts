@@ -102,9 +102,9 @@ export function registerOpenAICodexUpdateRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_RUNTIME_PATH,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
+      handler: async (req: IncomingMessage, res: ServerResponse, admitted?: unknown) => {
         if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
-        const rejected = harnessHttpRejection(ctx, req)
+        const rejected = harnessHttpRejection(ctx, req, admitted)
         if (rejected !== undefined) return json(res, rejected.status, { error: rejected.error })
         const decision = await trustedRequestDecision(req, trustedOrigins)
         if (!decision.trusted) return json(res, 403, { error: decision.error })

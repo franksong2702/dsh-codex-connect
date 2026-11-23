@@ -102,7 +102,7 @@ describe('Codex Connect update route', () => {
     expect(res.observed.status).toBe(200)
     expect(resolveRuntimeReport).not.toHaveBeenCalled()
     expect(fetchImpl).toHaveBeenCalled()
-    expect(fixture.requestRejection).not.toHaveBeenCalled()
+    expect(fixture.admit).not.toHaveBeenCalled()
   })
 
   it.each([1, 2])('rolls back failed update registration %s and preserves unrelated routes', async nth => {

@@ -1,4 +1,4 @@
-/** Plugin-owned OpenAI Codex account controls used inside Plugin configuration. */
+/** Plugin-owned OpenAI Codex account controls used inside the Codex Connect Settings section. */
 
 import { useCallback, useEffect, useState, useSyncExternalStore, useId } from 'react'
 import type { CSSProperties } from 'react'
@@ -29,9 +29,9 @@ export interface OpenAICodexSettingsInjected {
 
 /** Props delivered by the settings slot renderer. */
 export type OpenAICodexSettingsProps = Partial<OpenAICodexSettingsInjected> & {
-  /** Omit the page heading and outer card chrome inside Plugin configuration. */
+  /** Omit the page heading and outer card chrome inside a Settings section. */
   embedded?: boolean
-  /** Models exposes account controls only; advanced options remain under Plugins. */
+  /** Models exposes account controls only; advanced options remain in the Codex Connect section. */
   accountOnly?: boolean
 }
 

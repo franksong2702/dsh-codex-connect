@@ -67,7 +67,7 @@ Development now follows the [core maintenance scope](docs/maintenance-scope.md):
 
 Alpha 4.40 also supplies `gpt-6-sol` and `gpt-6-luna` when older provider catalogs omit them, retaining native metadata when present. Both expose Low through Max (including Xhigh); Default omits an explicit effort. Codex Sol's Ultra orchestration mode is not implemented. New task grants can explicitly include these models, but existing grants and GPT-5.6 Sol/Medium startup remain unchanged; Luna Reserve has subsequently been removed. A catalog entry is not proof of account access. See [compatibility scope and validation](docs/experiments/gpt6-sol-luna-compatibility.md).
 
-All options below are off on a fresh installation. Edit them in **Settings → Plugins → Plugin configuration → Codex Connect** or **Settings → Models → Openai-Codex → More settings**, then select **Save changes**. A conflict or failed save preserves your draft.
+All options below are off on a fresh installation. Edit them in **Settings → Codex Connect** (its own top-level Settings section) or **Settings → Models → Openai-Codex → More settings**, then select **Save changes**. A conflict or failed save preserves your draft.
 
 | Capability | Enable with | Important behavior |
 |---|---|---|
