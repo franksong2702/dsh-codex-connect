@@ -26,14 +26,23 @@ export class OpenAICodexConfigForm implements ConfigForm<OpenAICodexSettingsConf
     if (form === this.formSnapshot && mirror === this.mirrorSnapshot && this.projected !== undefined) return this.projected
     this.formSnapshot = form
     this.mirrorSnapshot = mirror
-    if (form.status !== 'loading') return (this.projected = form)
-    // Older Hosts report unavailable here; newer mirror types omit that state.
+    if (form.status === 'ready') return (this.projected = form)
+    // Older Hosts report unavailable on the mirror; newer mirror types omit that state.
     const mirrorStatus: string = mirror.status
-    if (mirror.view === undefined) return (this.projected = mirrorStatus === 'unavailable' ? { ...form, status: 'unavailable' } : form)
+    if (mirror.view === undefined) {
+      return (this.projected = mirrorStatus === 'unavailable' ? { ...form, status: 'unavailable' } : form)
+    }
     const view = mirror.view.namespaces.find(candidate => candidate.ns === OPENAI_CODEX_SETTINGS_NAMESPACE)
     if (view === undefined) return (this.projected = { ...form, status: 'unavailable' })
+    // A served section is decoded here even when the generic form already
+    // reports a terminal status: the Host form cannot run these Host-only
+    // schema transforms, so it stays `loading` for a served namespace, and it
+    // keeps the `unavailable` it reported while a Host plugin reload left the
+    // namespace unserved. Decoding the shared mirror first lets both states
+    // recover as soon as the Host serves the section again.
     const value = decodeOpenAICodexSettings(view.value)
-    this.projected = value === undefined ? { ...form, status: 'unavailable' } : {
+    if (value === undefined) return (this.projected = { ...form, status: 'unavailable' })
+    this.projected = {
       ...form, status: 'ready', value, base: view.base, user: view.user,
       revision: view.revision, writable: mirror.view.writable,
     }
