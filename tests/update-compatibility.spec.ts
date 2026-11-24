@@ -100,6 +100,11 @@ describe('Codex Connect verified DSH compatibility', () => {
       }, {
         version: '0.2.0-alpha.16',
         verifiedDshVersions: ['0.2.2-rc.5'],
+      }, {
+        version: '0.2.0-alpha.17',
+        verifiedDshVersions: ['0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5',
+          '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5',
+          '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.2'],
       }],
     })
   })
