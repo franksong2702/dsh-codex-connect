@@ -2,7 +2,7 @@
   "name": "dsh-codex-connect",
   "displayName": "Codex Connect",
   "description": "ChatGPT OAuth and Codex models for DeepSeek Harness.",
-  "version": "0.2.0-alpha.16",
+  "version": "0.2.0-alpha.17",
   "author": "Frank Song",
   "contributors": [
     "Yan-Zero (original dsh-codex author)"
@@ -104,7 +104,6 @@
         "@deepseek-ai/dsh-client-ui-chat",
         "@deepseek-ai/dsh-client-ui-model-selection",
         "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-client-ui-settings-plugins",
         "@deepseek-ai/dsh-client-ui-tool",
         "@deepseek-ai/dsh-client-locale"
       ],

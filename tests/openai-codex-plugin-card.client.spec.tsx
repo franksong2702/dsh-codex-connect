@@ -11,16 +11,12 @@ vi.mock('../src/client/OpenAICodexSettings.tsx', () => ({
 
 afterEach(cleanup)
 
-it('renders the settings page directly inside its dedicated Plugins tab', () => {
+it.each([true, false])('renders the settings page with embedded chrome mode %s', embedded => {
   render(<OpenAICodexPluginCard
     t={key => en[key]}
     configScope={undefined as never}
-    useSessions={vi.fn() as never}
-    useSessionStatus={vi.fn() as never}
-    useSessionRetainInfo={vi.fn() as never}
-    useWorkspaces={vi.fn() as never}
-    usePanelInfo={vi.fn() as never}
+    embedded={embedded}
   />)
 
-  expect(screen.getByTestId('codex-settings-page').getAttribute('data-embedded')).toBe('true')
+  expect(screen.getByTestId('codex-settings-page').getAttribute('data-embedded')).toBe(String(embedded))
 })
