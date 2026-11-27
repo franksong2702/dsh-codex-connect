@@ -96,6 +96,25 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       if (prepared.config.provider !== PROVIDER_ID || prepared.config.model !== model.id) {
         throw new Error(`runtime prepared the wrong model for ${model.id}`)
       }
+      if (typeof ctx.llm.imageRequestTarget === 'function') {
+        const target = ctx.llm.imageRequestTarget(PROVIDER_ID, model.id, {
+          attachmentId: 'runtime-image-target',
+          mediaType: 'image/png',
+          width: 2048,
+          height: 2048,
+          bytes: 2048,
+        })
+        const byteFields = ['maxBytes', 'maxImageBytes', 'imageTargetBytes'].filter(field => field in target)
+        if (!Number.isSafeInteger(target?.width) || target.width <= 0
+          || !Number.isSafeInteger(target?.height) || target.height <= 0
+          || byteFields.length === 0
+          || byteFields.some(field => !Number.isSafeInteger(target[field]) || target[field] <= 0)) {
+          throw new Error(`runtime resolved an invalid image request target for ${model.id}`)
+        }
+        if ('imageTargetBytes' in target && 'maxImageBytes' in target && target.imageTargetBytes > target.maxImageBytes) {
+          throw new Error(`runtime imageTargetBytes exceeded maxImageBytes for ${model.id}`)
+        }
+      }
     }
 
     await plugin.dispose()

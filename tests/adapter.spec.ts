@@ -6,6 +6,7 @@ import {
   createOpenAICodexProfile,
   openAICodexModelCatalog,
   OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
+  OPENAI_CODEX_REQUEST_IMAGE_BUDGET_COUNT,
   OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
   OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
   OPENAI_CODEX_TRANSPORT,
@@ -75,11 +76,21 @@ describe('OpenAI Codex rc.2 adapter profile', () => {
     const profile = createOpenAICodexProfile(openaiCodexProvider())
 
     expect(profile.maxRequestImageBytes).toBe(OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES)
+    expect(profile.requestImageBudgetCount).toBe(OPENAI_CODEX_REQUEST_IMAGE_BUDGET_COUNT)
     expect(profile.requestImagePixelBudget).toBe(OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET)
     expect(profile.requestImageMaxBytes).toBe(OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES)
+    expect(profile.maxImageBytes).toBe(OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES)
     expect(profile.maxRequestImageBytes).toBe(20 * 1024 * 1024)
+    expect(profile.requestImageBudgetCount).toBe(20)
     expect(profile.requestImagePixelBudget).toBe(2048 * 2048)
     expect(profile.requestImageMaxBytes).toBe(1024 * 1024)
+    expect(profile.maxImageBytes).toBe(1024 * 1024)
+    // DSH 0.2.3-alpha.2 resolves the effective per-image byte cap from
+    // maxRequestImageBytes / requestImageBudgetCount and profile.maxImageBytes.
+    const allocatedBytes = Math.floor(profile.maxRequestImageBytes / profile.requestImageBudgetCount / 4) * 3
+    const resolvedMaxImageBytes = Math.min(allocatedBytes, profile.maxImageBytes)
+    expect(Number.isSafeInteger(resolvedMaxImageBytes)).toBe(true)
+    expect(resolvedMaxImageBytes).toBeGreaterThan(0)
   })
 
   it('uses the finite SSE transport for completed one-shot requests', () => {
