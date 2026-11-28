@@ -75,7 +75,12 @@ describe('public Host installation fact', () => {
       pluginVersionState: 'match', dshMetadataSource: 'host-install-anchor',
     })
     expect(report.currentDshVersion).toBe(version)
-    const nodeRange = ['0.2.2-rc.4', '0.2.2-rc.5'].includes(version) ? '>=24.9.0' : SUPPORTED_NODE_RANGE
+    const requirements: Record<string, string> = {
+      '0.2.2-rc.4': '>=24.9.0',
+      '0.2.2-rc.5': '>=24.9.0',
+      '0.2.3-alpha.2': '^24.22.3 || >=26.13.1',
+    }
+    const nodeRange = requirements[version] ?? SUPPORTED_NODE_RANGE
     const status = semver.satisfies(process.version, nodeRange) ? 'compatible' : 'incompatible'
     expect(report.compatibility.node).toEqual({ installed: process.version, supported: nodeRange, status })
     expect(report.compatibility.status).toBe(status)

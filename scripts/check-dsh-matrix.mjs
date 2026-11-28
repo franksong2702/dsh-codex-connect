@@ -8,7 +8,7 @@ import semver from 'semver'
 import { runBoundedCommand } from './bounded-command.mjs'
 import { scrubCanaryEnvironment } from './canary-environment.mjs'
 import { sanitizeSummary } from './check-dsh-next.mjs'
-import { dshAdmission, dshHostNodeRange, dshHostSupportsNode, dshPluginApi } from '../src/dsh-admission.mjs'
+import { dshAdmission, dshHostCordisRange, dshHostNodeRange, dshHostSupportsNode } from '../src/dsh-admission.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -18,11 +18,11 @@ export function validateDshMatrix(reports, versions, pluginVersion) {
     throw new Error('DSH matrix must contain exactly one report for every target')
   }
   for (const [index, report] of reports.entries()) {
+    const cordisRange = dshHostCordisRange(versions[index])
     if (report?.schemaVersion !== 1 || report.dshVersion !== versions[index]
       || report.hostPackageCandidate !== undefined
       || !dshHostSupportsNode(report.dshVersion, report.nodeVersion)
-      || (dshPluginApi.cordis.dshVersions.includes(report.dshVersion)
-        && !semver.satisfies(report.runtime?.cordis ?? '', dshPluginApi.cordis.range))
+      || (cordisRange !== undefined && !semver.satisfies(report.runtime?.cordis ?? '', cordisRange))
       || report.plugin !== 'dsh-codex-connect' || report.pluginVersion !== pluginVersion
       || !/^[a-f0-9]{64}$/u.test(report.pluginArtifactSha256 ?? '')
       || report.defaultsUnchanged !== true || report.runtime?.disposalVerified !== true

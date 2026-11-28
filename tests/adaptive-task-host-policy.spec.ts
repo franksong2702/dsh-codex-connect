@@ -91,6 +91,11 @@ it.each(['dsh-agent', 'dsh-agent-loop', 'dsh-tools', 'dsh-subagent'])('rejects m
     expect(() => taskHostUsesSubagentOwnership()).toThrow('TASK_HOST_VERSION_MISMATCH')
   }
 })
+it('keeps Task ownership unavailable after general DSH 0.2.3-alpha.2 admission', () => {
+  for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.3-alpha.2'
+  expect(taskHostUsesSubagentOwnership()).toBe(false)
+  expect(() => assertVerifiedTaskHostOwnership()).toThrow('TASK_HOST_OWNERSHIP_UNVERIFIED')
+})
 it('never admits a future ownership version from matching metadata alone', () => {
   for (const key of [...Object.keys(versions), 'dsh-subagent']) versions[key] = '0.2.2-rc.6'
   expect(taskHostUsesSubagentOwnership()).toBe(false)

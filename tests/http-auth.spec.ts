@@ -24,6 +24,28 @@ describe('Harness admission for protected plugin HTTP routes', () => {
     })
   })
 
+  it('accepts the live owner admitted by WebServer without calling the verifier again', () => {
+    const admit = vi.fn(() => ({ rejection: 401 }))
+    const bail = vi.fn()
+    const ctx = { get: () => ({ admit }), bail } as unknown as Context
+    const peer = { signal: new AbortController().signal, principal: { kind: 'owner' } }
+    expect(harnessHttpRejection(ctx, request, peer)).toBeUndefined()
+    expect(admit).not.toHaveBeenCalled()
+    expect(bail).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [undefined, 503, 'DSH_CONNECTION_UNAVAILABLE'],
+    [{ signal: new AbortController().signal }, 503, 'DSH_CONNECTION_UNAVAILABLE'],
+    [{ signal: new AbortController().signal, principal: {} }, 503, 'DSH_CONNECTION_UNAVAILABLE'],
+    [{ signal: { aborted: false }, principal: { kind: 'owner' } }, 503, 'DSH_CONNECTION_UNAVAILABLE'],
+    [{ signal: AbortSignal.abort(), principal: { kind: 'owner' } }, 401, 'DSH_BROWSER_AUTH_REQUIRED'],
+    [{ signal: new AbortController().signal, principal: { kind: 'guest' } }, 403, 'forbidden'],
+  ] as const)('requires a live WebServer owner peer %j', (peer, status, error) => {
+    const ctx = context(() => ({ admit() {} }))
+    expect(harnessHttpRejection(ctx, request, peer)).toEqual({ status, error })
+  })
+
   it.each(['missing', 'lookup-error', 'validation-error', 'invalid-result'] as const)(
     'fails closed without exposing private errors when Connection is %s', failure => {
       const privateError = new Error('fixture-private-cookie-must-not-leak')

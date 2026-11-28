@@ -43,6 +43,8 @@ export { OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS } from './preflight-activity.ts'
 
 /** rc.2 default maximum base64 image payload retained in one request. */
 export const OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
+/** 0.2.3-alpha.2 default per-request image count used to allocate per-image byte caps. */
+export const OPENAI_CODEX_REQUEST_IMAGE_BUDGET_COUNT = 20
 /** rc.2 default total-pixel budget for one deterministic inline image version. */
 export const OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET = 2048 * 2048
 /** rc.2 default raw encoded-byte cap for one deterministic inline image version. */
@@ -150,7 +152,11 @@ export function createOpenAICodexProfile(
   preflight?: OpenAICodexPreflightActivity,
   retryPolicy: ResolvedRetryPolicy = resolveRetryPolicy(undefined, 'dsh-codex-connect retryPolicy'),
   reasoningEffort?: OpenAICodexReasoningEffort,
-): ResolvedPiAiProviderProfile & { piProvider: Provider } {
+): ResolvedPiAiProviderProfile & {
+  piProvider: Provider
+  requestImageBudgetCount: number
+  maxImageBytes: number
+} {
   const effectiveProvider = contextWindowOverrides === undefined
     ? provider
     : withOpenAICodexContextWindowOverrides(provider, contextWindowOverrides)
@@ -160,8 +166,10 @@ export function createOpenAICodexProfile(
     transport: OPENAI_CODEX_TRANSPORT,
     streamIdleTimeoutMs: preflight?.hostIdleTimeoutMs ?? OPENAI_CODEX_STREAM_IDLE_TIMEOUT_MS,
     maxRequestImageBytes: OPENAI_CODEX_MAX_REQUEST_IMAGE_BYTES,
+    requestImageBudgetCount: OPENAI_CODEX_REQUEST_IMAGE_BUDGET_COUNT,
     requestImagePixelBudget: OPENAI_CODEX_REQUEST_IMAGE_PIXEL_BUDGET,
     requestImageMaxBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
+    maxImageBytes: OPENAI_CODEX_REQUEST_IMAGE_MAX_BYTES,
     retryPolicy,
     ...(reasoningEffort === undefined ? {} : { reasoning: reasoningEffort }),
     configuredMaxTokens: new Map(),

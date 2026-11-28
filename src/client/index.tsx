@@ -52,7 +52,7 @@ export const name = 'dsh-codex-connect-client'
 /** Client services required by the Plugin configuration contribution. */
 export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.session', 'configForms', 'sessions']
 
-/** Register account copy and the OpenAI Codex card under Plugin configuration. */
+/** Register account copy and the OpenAI Codex settings page. */
 export function apply(ctx: ClientContext): void {
   const namespace = 'settings.openai-codex'
   const updater = new OpenAICodexUpdateStore(CODEX_CONNECT_VERSION)
@@ -69,14 +69,27 @@ export function apply(ctx: ClientContext): void {
     ctx.configForms.describe(),
   )
   ctx.effect(() => ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE], () => {
-    return ctx.slots.register({
+    const stopLegacy = ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
       name: 'settings.plugins.tab',
       id: 'codex-connect',
       order: 40,
       locale: namespace,
       label: () => t('title'),
-      inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account }),
-    }, OpenAICodexPluginCard)
+      inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account, embedded: true }),
+    }, OpenAICodexPluginCard))
+    const stopSection = ctx.slots.inject('settings.section', () => {
+      // DSH 0.2.3 declares this slot through the factory shared by Settings and Plugins.
+      if (ctx.slots.snapshot('factory:settings.section.view').length === 0) return []
+      return ctx.slots.register({
+        name: 'settings.section',
+        id: 'codex-connect',
+        order: 40,
+        locale: namespace,
+        label: () => t('title'),
+        inject: (): OpenAICodexPluginCardInjected => ({ t, configScope, updater, account, embedded: false }),
+      }, OpenAICodexPluginCard)
+    })
+    return () => { stopSection(); stopLegacy() }
   }), 'dsh-codex-connect: settings page while served')
 
   ctx.slots.inject('settings.models.footer', () => ctx.slots.register({

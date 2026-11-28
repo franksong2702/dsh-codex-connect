@@ -5,7 +5,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import { evaluateCompatibility, PI_AI_PACKAGE } from './compatibility.ts'
 import { trustedRequestDecision } from './auth-routes.ts'
-import { harnessHttpRejection } from './http-auth.ts'
+import { ANONYMOUS_WEB_ROUTE, harnessHttpRejection } from './http-auth.ts'
 import { isInstallationAnchor, readDshInstallationMetadata, readInstalledPluginVersion, readPluginDependencyVersion } from './installation-metadata.ts'
 import { openAICodexPluginVersionState, parseOpenAICodexRuntimeReport } from './runtime-identity.ts'
 import type { OpenAICodexRuntimeReport } from './runtime-identity.ts'
@@ -102,9 +102,9 @@ export function registerOpenAICodexUpdateRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_RUNTIME_PATH,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
+      handler: async (req: IncomingMessage, res: ServerResponse, peer?: unknown) => {
         if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
-        const rejected = harnessHttpRejection(ctx, req)
+        const rejected = harnessHttpRejection(ctx, req, peer)
         if (rejected !== undefined) return json(res, rejected.status, { error: rejected.error })
         const decision = await trustedRequestDecision(req, trustedOrigins)
         if (!decision.trusted) return json(res, 403, { error: decision.error })
@@ -121,6 +121,7 @@ export function registerOpenAICodexUpdateRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_UPDATE_PATH,
+      ...ANONYMOUS_WEB_ROUTE,
       handler: async (req: IncomingMessage, res: ServerResponse) => {
         if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
         const decision = await trustedRequestDecision(req, trustedOrigins)

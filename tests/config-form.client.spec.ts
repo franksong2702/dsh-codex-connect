@@ -58,6 +58,10 @@ function fixture(mode: 'host' | 'memory' | 'absent' = 'host') {
       formSnapshot = { ...formSnapshot, status: 'ready', value: DEFAULT_OPENAI_CODEX_SETTINGS, revision: 8, writable: true }
       for (const listener of formListeners) listener()
     },
+    markFormUnavailable() {
+      formSnapshot = { ...formSnapshot, status: 'unavailable', value: undefined, revision: undefined, writable: false }
+      for (const listener of formListeners) listener()
+    },
   }
 }
 
@@ -117,6 +121,23 @@ describe('Codex Connect Host configuration form', () => {
   it('ends loading with unavailable when the ready mirror has no Codex Connect namespace', () => {
     const { scope, publishWithoutNamespace } = fixture()
     publishWithoutNamespace()
+    expect(scope.getSnapshot().status).toBe('unavailable')
+  })
+
+  it('recovers after a Host plugin reload once the Host serves the section again', () => {
+    const { scope, publish, markFormUnavailable } = fixture()
+    markFormUnavailable()
+    expect(scope.getSnapshot().status).toBe('unavailable')
+    publish({ ...DEFAULT_OPENAI_CODEX_SETTINGS })
+    const recovered = scope.getSnapshot()
+    expect(recovered).toMatchObject({ status: 'ready', revision: 7, writable: true })
+    expect(recovered.value).toMatchObject({ enableProxy: false, searchModel: 'gpt-5.6-sol' })
+  })
+
+  it('keeps unavailable after a Host plugin reload while the served section stays invalid', () => {
+    const { scope, publish, markFormUnavailable } = fixture()
+    markFormUnavailable()
+    publish({ ...DEFAULT_OPENAI_CODEX_SETTINGS, imageModelHint: 'bad value' })
     expect(scope.getSnapshot().status).toBe('unavailable')
   })
 

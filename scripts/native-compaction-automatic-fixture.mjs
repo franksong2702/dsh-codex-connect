@@ -92,6 +92,7 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
     if (pressure && scenario !== 'below-threshold') assert.ok(measured >= capacity * 0.8, 'real meter must see pressure before the next step')
     else assert.ok(measured < capacity * 0.8, 'overflow/below-threshold cases must not be pressure-triggered')
     const continuationBoundary = agent.session.snapshotEvents().length
+    const originalReplaceGeneration = agent.session.surface.replaceGeneration
     const originalSurface = [...agent.session.surface.nodes]
     phase = 'continue'
     await send('Continue the work.')
@@ -100,7 +101,13 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
     assert.equal(nativeCount, expectedNative)
     const success = ['pressure', 'overflow', 'repeated-pressure'].includes(scenario)
     const replaced = success || scenario === 'overflow-bounded'
-    assert.equal(agent.session.surface.replaceGeneration, replaced ? expectedNative : 0)
+    const events = agent.session.snapshotEvents()
+    // The Host can refresh its system prompt after committing a checkpoint.
+    const promptRefreshes = events.slice(continuationBoundary).filter(event => event.type === 'system/message'
+      && event.data.message.source?.kind === 'system-prompt' && event.surfaceOp?.op === 'replace'
+      && event.surfaceOp.startSeq === event.surfaceOp.endSeq).length
+    const surfaceReplacements = agent.session.surface.replaceGeneration - originalReplaceGeneration - promptRefreshes
+    assert.equal(surfaceReplacements, replaced ? expectedNative : 0)
     if (replaced) {
       assert.ok(checkpoint(agent.session), 'automatic transaction must create a real checkpoint')
       const finalInput = wires.at(-1).input
@@ -128,7 +135,6 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
       assert.equal(ordinaryCount, 2)
       assert.match(JSON.stringify(agent.session.snapshotEvents().filter(event => event.type === 'compaction/end')), /summary is not smaller/u)
     }
-    const events = agent.session.snapshotEvents()
     const lastTurn = events.findLast(event => event.type === 'turn/end')
     const failedTurn = ['other-error', 'overflow-bounded', 'overflow-no-progress'].includes(scenario)
     assert.ok(lastTurn && lastTurn.seq >= continuationBoundary, 'continuation must finish a new turn')
@@ -142,7 +148,7 @@ export async function runNativeAutomaticScenario(scenario, { root, importHost, p
     const files = await readdir(join(root, scenario, 'sessions'), { recursive: true })
     assert.ok(files.some(file => /\.jsonl(?:\.zstd)?$/u.test(file)), 'the real JSONL writer must persist the session')
     // Checkpoint contents are fixture-only. Keep output restricted to measured control-flow facts.
-    return { scenario, syntheticOnly: true, trigger: pressure ? 'agent/pre-step' : 'agent/request-error', nativeRequests: nativeCount, ordinaryRequests: ordinaryCount, surfaceReplacements: agent.session.surface.replaceGeneration, failureCodes: failures, measuredTokensBefore: measured }
+    return { scenario, syntheticOnly: true, trigger: pressure ? 'agent/pre-step' : 'agent/request-error', nativeRequests: nativeCount, ordinaryRequests: ordinaryCount, surfaceReplacements, failureCodes: failures, measuredTokensBefore: measured }
   } finally {
     try { await ctx?.fiber.dispose() } finally {
       globalThis.fetch = priorFetch

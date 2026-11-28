@@ -157,7 +157,7 @@ assertContract('all actions are pinned to full commit SHAs', (() => {
   const uses = [...workflow.matchAll(/^\s+uses:\s+([^\s#]+)/gm)].map(match => match[1])
   return uses.length > 0 && uses.every(ref => /@[0-9a-f]{40}$/.test(ref))
 })())
-assertContract('Node version is pinned', /node-version:\s*24\.15\.0/.test(workflow))
+assertContract('candidate job pins Node 24.22.3', /^  canary:\s*$[\s\S]*?node-version:\s*24\.22\.3\s*$/m.test(workflow))
 assertContract('pnpm version is pinned', /pnpm\/action-setup@[0-9a-f]{40}[\s\S]*?version:\s*10\.30\.3/.test(workflow))
 assertContract('dependency installation is frozen', /pnpm\s+--config\.minimum-release-age=0\s+install\s+--frozen-lockfile/.test(workflow))
 assertContract('latest, next, and alpha channels are monitored', /channel:\s*latest[\s\S]*?channel:\s*next[\s\S]*?channel:\s*alpha/.test(workflow))

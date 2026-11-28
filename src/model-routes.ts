@@ -7,6 +7,7 @@ import type { OpenAICodexTrustedOriginsStore } from './trusted-origins.ts'
 import type { OpenAICodexModelCatalogEntry } from './model-contract.ts'
 import { OPENAI_CODEX_MODEL_CATALOG_PATH } from './model-contract.ts'
 import { trustedRequestDecision } from './auth-routes.ts'
+import { ANONYMOUS_WEB_ROUTE } from './http-auth.ts'
 
 function json(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, {
@@ -26,6 +27,7 @@ export function registerOpenAICodexModelCatalogRoute(
   ctx.effect(() => ctx.webServer.register({
     kind: 'exact',
     path: OPENAI_CODEX_MODEL_CATALOG_PATH,
+    ...ANONYMOUS_WEB_ROUTE,
     handler: async (req: IncomingMessage, res: ServerResponse) => {
       if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
       const decision = await trustedRequestDecision(req, trustedOrigins)

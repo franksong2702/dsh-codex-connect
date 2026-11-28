@@ -6,15 +6,19 @@ describe('OpenAI Codex browser contribution', () => {
     const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
     expect(client).toContain("ctx.slots.inject('settings.models.footer'")
     expect(client).toContain("id: 'dsh-codex-connect-account'")
-    expect(client).toContain('({ t, configScope, updater, account })')
+    expect(client).toContain('({ t, configScope, updater, account, embedded: true })')
+    expect(client).toContain('({ t, configScope, updater, account, embedded: false })')
     expect(client).toContain('inject: () => ({ t, account, configScope })')
     expect(client).toContain('const configScope = new OpenAICodexConfigForm(')
     expect(client).toContain('account.dispose()')
     expect(client.match(/new OpenAICodexAccountStore\(\)/g)).toHaveLength(1)
     expect(client).not.toContain("ctx.slots.inject('settings.models.provider-card'")
   })
-  it('registers a Plugin settings tab only while the Host serves Codex Connect settings', async () => {
-    const client = await readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8')
+  it('keeps the legacy settings tab and contributes a section when the Host supplies its shared view', async () => {
+    const [client, manifest] = await Promise.all([
+      readFile(new URL('../src/client/index.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../package.json', import.meta.url), 'utf8'),
+    ])
     expect(client).toContain('ctx.configForms.whileServed([OPENAI_CODEX_SETTINGS_NAMESPACE]')
     expect(client).toContain("name: 'settings.plugins.tab'")
     expect(client).toContain("id: 'codex-connect'")
@@ -22,7 +26,10 @@ describe('OpenAI Codex browser contribution', () => {
     expect(client).toContain('OPENAI_CODEX_SETTINGS_NAMESPACE')
     expect(client).not.toContain("namespace: 'web'")
     expect(client).not.toContain("settings.plugin.item")
-    expect(client).not.toContain("ctx.slots.inject('settings.section'")
+    expect(client).toContain("ctx.slots.inject('settings.section'")
+    expect(client).toContain("ctx.slots.snapshot('factory:settings.section.view')")
+    const parsed = JSON.parse(manifest) as { dsh: { client: { inject: string[] } } }
+    expect(parsed.dsh.client.inject).not.toContain('@deepseek-ai/dsh-client-ui-settings-plugins')
   })
 
   it('registers the weekly quota in the additive right-side Composer list slot', async () => {

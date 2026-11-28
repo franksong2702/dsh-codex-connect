@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import semver from 'semver'
-import { dshPluginApi } from '../src/dsh-admission.mjs'
+import { dshHostCordisRange } from '../src/dsh-admission.mjs'
 import { checkInstalledRetiredReserve } from './check-installed-retired-reserve.mjs'
 import { checkInstalledNativeCompaction } from './check-installed-native-compaction.mjs'
 import { checkInstalledImages } from './check-installed-images.mjs'
@@ -96,6 +96,25 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
       if (prepared.config.provider !== PROVIDER_ID || prepared.config.model !== model.id) {
         throw new Error(`runtime prepared the wrong model for ${model.id}`)
       }
+      if (typeof ctx.llm.imageRequestTarget === 'function') {
+        const target = ctx.llm.imageRequestTarget(PROVIDER_ID, model.id, {
+          attachmentId: 'runtime-image-target',
+          mediaType: 'image/png',
+          width: 2048,
+          height: 2048,
+          bytes: 2048,
+        })
+        const byteFields = ['maxBytes', 'maxImageBytes', 'imageTargetBytes'].filter(field => field in target)
+        if (!Number.isSafeInteger(target?.width) || target.width <= 0
+          || !Number.isSafeInteger(target?.height) || target.height <= 0
+          || byteFields.length === 0
+          || byteFields.some(field => !Number.isSafeInteger(target[field]) || target[field] <= 0)) {
+          throw new Error(`runtime resolved an invalid image request target for ${model.id}`)
+        }
+        if ('imageTargetBytes' in target && 'maxImageBytes' in target && target.imageTargetBytes > target.maxImageBytes) {
+          throw new Error(`runtime imageTargetBytes exceeded maxImageBytes for ${model.id}`)
+        }
+      }
     }
 
     await plugin.dispose()
@@ -111,10 +130,11 @@ export async function checkInstalledRuntime(profilePackagePath, hostPackagePath 
     const reserveRetirement = await checkInstalledRetiredReserve(importHost, OpenAICodex)
     const nativeCompactionLifecycle = await checkInstalledNativeCompaction(packagePath, hostPath)
     const toolsManifest = JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/dsh-tools/package.json'), 'utf8'))
-    const cordis = dshPluginApi.cordis.dshVersions.includes(toolsManifest.version)
-      ? JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/cordis/package.json'), 'utf8')).version : undefined
-    if (cordis !== undefined && !semver.satisfies(cordis, dshPluginApi.cordis.range)) {
-      throw new Error(`DSH ${toolsManifest.version} requires Cordis ${dshPluginApi.cordis.range}`)
+    const cordisRange = dshHostCordisRange(toolsManifest.version)
+    const cordis = cordisRange === undefined ? undefined
+      : JSON.parse(await readFile(createRequire(hostPath).resolve('@deepseek-ai/cordis/package.json'), 'utf8')).version
+    if (cordisRange !== undefined && !semver.satisfies(cordis, cordisRange)) {
+      throw new Error(`DSH ${toolsManifest.version} requires Cordis ${cordisRange}`)
     }
     if (toolsManifest.version === '0.2.1-rc.5') await checkInstalledStockReview(importHost, OpenAICodex)
     const toolsModule = await importHost('@deepseek-ai/dsh-tools')

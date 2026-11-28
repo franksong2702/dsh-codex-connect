@@ -44,7 +44,14 @@ export const dshAdmission = createDshAdmission(dshPluginApi.versions, dshPluginA
 
 /** Additional Node.js requirement for an exact DSH host, when declared. */
 export function dshHostNodeRange(version) {
-  return dshPluginApi.node.dshVersions.includes(version) ? dshPluginApi.node.range : undefined
+  return dshPluginApi.hostRequirements[version]?.node
+    ?? (dshPluginApi.node.dshVersions.includes(version) ? dshPluginApi.node.range : undefined)
+}
+
+/** Additional Cordis requirement for an exact DSH host, when declared. */
+export function dshHostCordisRange(version) {
+  return dshPluginApi.hostRequirements[version]?.cordis
+    ?? (dshPluginApi.cordis.dshVersions.includes(version) ? dshPluginApi.cordis.range : undefined)
 }
 
 /** Whether the Node.js version satisfies the host-specific requirement. */

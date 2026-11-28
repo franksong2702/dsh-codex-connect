@@ -630,8 +630,8 @@ export function registerOpenAICodexAuthRoutes(
     const auth = new OpenAICodexWebAuth(store, { proxyManager, resolveProxyUrl, authorizationTimeoutMs, quotaState })
     // Cordis collects each yield immediately and disposes in reverse order, including on setup failure.
     yield () => auth.dispose()
-    const authorize = async (req: IncomingMessage, res: ServerResponse): Promise<boolean> => {
-      const rejection = harnessHttpRejection(ctx, req)
+    const authorize = async (req: IncomingMessage, res: ServerResponse, peer: unknown): Promise<boolean> => {
+      const rejection = harnessHttpRejection(ctx, req, peer)
       if (rejection !== undefined) {
         json(res, rejection.status, { error: rejection.error })
         return false
@@ -644,9 +644,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_STATUS_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         const snapshot = await store.captureActiveAccount()
         const [status, accounts] = await Promise.all([auth.status(snapshot), snapshot.accounts()])
         json(res, 200, { ...status, accounts })
@@ -655,9 +655,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_LOGIN_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         try {
           if (fastMode instanceof ConversationSpeedRegistry) fastMode.invalidateAccountSelections()
           json(res, 200, await auth.signIn())
@@ -669,9 +669,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_CALLBACK_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         const type = header(req, 'content-type')
         if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
           return json(res, 415, { error: 'unsupported content type' })
@@ -697,9 +697,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_CANCEL_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         try {
           await auth.cancel()
           json(res, 200, await auth.status())
@@ -711,9 +711,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_LOGOUT_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         try {
           if (fastMode instanceof ConversationSpeedRegistry) fastMode.invalidateAccountSelections()
           await auth.signOut()
@@ -726,11 +726,11 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_AUTH_ACCOUNTS_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'DELETE') {
           return json(res, 405, { error: 'method not allowed' })
         }
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         if (req.method === 'GET') return json(res, 200, { accounts: await store.accounts() })
         const type = header(req, 'content-type')
         if (type === undefined || !/^application\/json(?:\s*;|$)/iu.test(type.trim())) {
@@ -759,9 +759,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_FAST_MODE_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         if (req.method === 'GET') {
           const sessionId = fastModeSessionIdFromQuery(req)
           if (sessionId === undefined) return json(res, 400, { error: 'invalid input' })
@@ -787,9 +787,9 @@ export function registerOpenAICodexAuthRoutes(
     yield ctx.webServer.register({
       kind: 'exact',
       path: OPENAI_CODEX_SPEED_MODE_PATH,
-      handler: async (req, res) => {
+      handler: async (req, res, peer?: unknown) => {
         if (req.method !== 'GET' && req.method !== 'POST') return json(res, 405, { error: 'method not allowed' })
-        if (!await authorize(req, res)) return
+        if (!await authorize(req, res, peer)) return
         if (!(fastMode instanceof ConversationSpeedRegistry)) return json(res, 503, { error: 'speed selection unavailable' })
         const scoped = async (sessionId: string, model: string) => ({
           workspace: fastMode.workspaceFor(sessionId), accountKey: (await store.accounts()).find(account => account.active)?.accountKey,

@@ -14,8 +14,10 @@ const JSON_SCHEMA_VERSION = 1
 const REQUIRED_NODE_RANGE = '^22.19.0 || >=24.0.0'
 const REQUIRED_DSH_VERSION = '0.2.1-alpha.1'
 const DEV_DSH_VERSION = '0.1.7-rc.1'
-const NEW_DSH_VERSIONS = ['0.2.2-rc.4', '0.2.2-rc.5']
-const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3', ...NEW_DSH_VERSIONS]
+const RC4_AND_RC5 = ['0.2.2-rc.4', '0.2.2-rc.5']
+const ALPHA2 = '0.2.3-alpha.2'
+const ALPHA2_REQUIREMENTS = { node: '^24.22.3 || >=26.13.1', cordis: '4.2.0-alpha.1' }
+const REQUIRED_DSH_VERSIONS = [REQUIRED_DSH_VERSION, '0.2.1-alpha.2', '0.2.1-alpha.3', '0.2.1-alpha.4', '0.2.1-alpha.5', '0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.1-rc.5', '0.2.2-alpha.3', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3', ...RC4_AND_RC5, ALPHA2]
 const REQUIRED_DSH_RANGE = dshAdmission.range
 const REQUIRED_PI_AI_RANGE = '0.85.1'
 const PI_AI_PACKAGE = '@earendil-works/pi-ai'
@@ -110,13 +112,21 @@ async function main() {
   if (packageJson.engines?.node !== REQUIRED_NODE_RANGE) fail('package.json Node engine mismatch')
 
   const peers = packageJson.peerDependencies ?? {}
+  if (JSON.stringify(compatibility.dshPluginApi.hostRequirements) !== JSON.stringify({ [ALPHA2]: ALPHA2_REQUIREMENTS })) {
+    fail('compatibility.json must declare the exact DSH 0.2.3-alpha.2 runtime requirements')
+  }
   const hostNode = compatibility.dshPluginApi.node
-  if (hostNode?.range !== '>=24.9.0' || JSON.stringify(hostNode.dshVersions) !== JSON.stringify(NEW_DSH_VERSIONS)
-    || !semver.subset(hostNode.range, REQUIRED_NODE_RANGE)) fail('Node engine requirements must match the new DSH Hosts')
+  if (hostNode?.range !== '>=24.9.0' || JSON.stringify(hostNode.dshVersions) !== JSON.stringify(RC4_AND_RC5)
+    || ![hostNode.range, ALPHA2_REQUIREMENTS.node].every(range => semver.subset(range, REQUIRED_NODE_RANGE))) {
+    fail('Node engine requirements must match the declared DSH Hosts')
+  }
   const cordis = compatibility.dshPluginApi.cordis
-  if (cordis?.range !== '^4.1.0' || JSON.stringify(cordis.dshVersions) !== JSON.stringify(NEW_DSH_VERSIONS)
-    || typeof peers['@deepseek-ai/cordis'] !== 'string'
-    || !semver.subset(cordis.range, peers['@deepseek-ai/cordis'])) fail('Cordis peer range must admit the new DSH Host requirements')
+  const cordisPeer = peers['@deepseek-ai/cordis']
+  if (cordis?.range !== '^4.1.0' || JSON.stringify(cordis.dshVersions) !== JSON.stringify(RC4_AND_RC5)
+    || typeof cordisPeer !== 'string'
+    || ![cordis.range, ALPHA2_REQUIREMENTS.cordis].every(range => semver.subset(range, cordisPeer))) {
+    fail('Cordis peer range must admit the declared DSH Host requirements')
+  }
   for (const [name, version] of Object.entries(peers)) {
     if (name.startsWith('@deepseek-ai/dsh-') && version !== REQUIRED_DSH_RANGE) {
       fail(`peer dependency ${name} must match ${REQUIRED_DSH_RANGE}`)

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { taskFailure } from './adaptive-task-store.ts'
 import { dshAdmission } from './dsh-admission.mjs'
+import { hasVerifiedTaskHostOwnershipVersion } from './adaptive-task-host-versions.mjs'
 
 export const TASK_HOST_RECOVERY_ONLY = 'TASK_HOST_RECOVERY_ONLY'
 const require = createRequire(import.meta.url)
@@ -31,7 +32,7 @@ function recoveryVersion(versions = taskHostPackageVersions()): string | undefin
 
 function verifiedTaskHost(versions: readonly (string | undefined)[]): boolean {
   const [version] = versions
-  return dshAdmission.classify(version) === 'verified' && versions.every(peer => peer === version)
+  return hasVerifiedTaskHostOwnershipVersion(version) && versions.every(peer => peer === version)
 }
 
 /** Existing ownership APIs confer authority only on their verified exact Host. */

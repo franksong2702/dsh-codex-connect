@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { isSubagentRecoveryHost, isRecoveryHost, recoveryRuntimePackages, assertRecoveryCrashes } from './adaptive-task-recovery-contract.mjs'
 import { checkRecoveryCrashes } from './check-adaptive-task-recovery-crashes.mjs'
-import { dshAdmission, dshHostNodeRange, dshHostSupportsNode } from '../src/dsh-admission.mjs'
+import { verifiedTaskHostVersions } from '../src/adaptive-task-host-versions.mjs'
+import { dshHostNodeRange, dshHostSupportsNode } from '../src/dsh-admission.mjs'
 /** Exact-host Phase 2 synthetic matrix. This is separate from the Phase 1 matrix. */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -34,7 +35,7 @@ async function main() {
   const reportPath = argv[1] === undefined ? undefined : resolve(ROOT, argv[1])
   if (reportPath) assert.ok(reportPath.startsWith(join(ROOT, 'docs', 'experiments') + '/') && reportPath.endsWith('.json'))
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
-  const versions = dshAdmission.verifiedVersions.filter(version => {
+  const versions = verifiedTaskHostVersions.filter(version => {
     if (dshHostSupportsNode(version, process.version)) return true
     console.error(`Skipping DSH ${version} on Node ${process.version} (requires Node ${dshHostNodeRange(version)})`)
     return false
